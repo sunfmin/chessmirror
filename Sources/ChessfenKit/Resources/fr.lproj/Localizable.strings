@@ -305,3 +305,26 @@
 "lines.record" = "La noter";
 "lines.enqueue" = "La travailler";
 "lines.explained" = "Ce qu'un coup doit céder pour compter. Au-delà du premier il est noté dans la partie ; au-delà du second il prend aussi du temps de travail, donc celui-ci doit être plus haut. Près de l'égalité, un pion vaut à peu près 10%.";
+
+/* ------------------------------------------------------------ le carnet */
+"book" = "Erreurs";
+"book.empty" = "Rien encore. Les positions que vous ratez arrivent toutes seules.";
+"book.fell" = "Vous êtes tombé %d fois sur cette position";
+"book.played" = "%1$d fois %2$@";
+"book.lastTime" = "la dernière fois %@";
+"book.cost" = "coûte %d%%";
+"book.times" = "%d fois";
+"book.open" = "Aller à cette partie";
+"book.remove" = "La retirer du carnet";
+"book.encounters" = "Fois";
+"ago.days" = "il y a %d jours";
+"ago.hours" = "il y a %d heures";
+"ago.justNow" = "à l'instant";
+"book.items" = "%d positions";
+"book.yourMove" = "vous avez joué";
+"book.better" = "il fallait jouer";
+"book.items.one" = "%d position";
+"book.fell.one" = "Vous êtes tombé %d fois dans cette position";
+"book.times.one" = "%d fois";
+"ago.days.one" = "il y a %d jour";
+"ago.hours.one" = "il y a %d heure";

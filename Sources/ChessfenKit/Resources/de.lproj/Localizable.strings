@@ -305,3 +305,26 @@
 "lines.record" = "Aufschreiben";
 "lines.enqueue" = "Üben";
 "lines.explained" = "Wie viel ein Zug verschenken muss, um zu zählen. Über der ersten wird er in die Partie geschrieben, über der zweiten kostet er auch Übungszeit — die sollte also höher liegen. Nahe am Ausgleich entspricht ein Bauer etwa 10%.";
+
+/* ------------------------------------------------------------ das Heft */
+"book" = "Fehlerheft";
+"book.empty" = "Noch nichts hier. Stellungen, die du verhaust, landen von selbst hier.";
+"book.fell" = "Auf diese Stellung bist du %d Mal hereingefallen";
+"book.played" = "%1$d Mal %2$@";
+"book.lastTime" = "zuletzt %@";
+"book.cost" = "kostet %d%%";
+"book.times" = "%d Mal";
+"book.open" = "Zu der Partie";
+"book.remove" = "Aus dem Heft nehmen";
+"book.encounters" = "Male";
+"ago.days" = "vor %d Tagen";
+"ago.hours" = "vor %d Stunden";
+"ago.justNow" = "gerade eben";
+"book.items" = "%d Stellungen";
+"book.yourMove" = "gespielt";
+"book.better" = "besser wäre";
+"book.items.one" = "%d Stellung";
+"book.fell.one" = "Auf diese Stellung bist du %d Mal hereingefallen";
+"book.times.one" = "%d Mal";
+"ago.days.one" = "vor %d Tag";
+"ago.hours.one" = "vor %d Stunde";

@@ -35,6 +35,7 @@ struct LibraryScreenScreenshots {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library(in: tempDir))
+                .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
                 .environment(LanguageSetting.shared)
         }
 
@@ -78,5 +79,122 @@ struct LibraryScreenScreenshots {
             #expect(localized("library.paste") == "粘贴截图")
             #expect(localized("library.fromFiles") == "从文件选")
         }
+    }
+}
+
+/// The 错题本, photographed: one position, two occasions, and the sentence only that identity can
+/// produce (docs/adr/0028).
+@MainActor
+@Suite(.serialized, .speaking(.chinese))
+struct BookScreenshots {
+    private func tempDir() -> URL {
+        URL(filePath: NSTemporaryDirectory())
+            .appending(path: "chessfen-book-\(UUID().uuidString)", directoryHint: .isDirectory)
+    }
+
+    /// Two games on disk that reach the same position by different move orders, and throw it
+    /// away there both times. Written as files rather than handed over as values, because what
+    /// this screen has to prove is that the book comes off the library the app actually lists.
+    private func library(in tempDir: URL) throws -> GameLibrary {
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        // 1. e4 e5 2. Nf3, and 1. Nf3 e5 2. e4 — the same position, and Black hangs the queen
+        // out to h4 in both.
+        let roads = [
+            ("monday", ["e2e4", "e7e5", "g1f3", "d8h4"]),
+            ("tuesday", ["g1f3", "e7e5", "e2e4", "d8h4"]),
+        ]
+        for (name, ucis) in roads {
+            var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ucis))
+            game.applyReview(
+                [20, 20, 20, 420].map { Score.centipawns($0) },
+                startEvaluation: .centipawns(20),
+                depth: 16
+            )
+            let pgn = PGN(
+                game: game,
+                tags: [
+                    PGN.Tag("White", Controller.hand.playerName),
+                    PGN.Tag("Black", Controller.hand.playerName),
+                ]
+            )
+            try pgn.text.write(
+                to: tempDir.appending(path: "\(name).pgn"), atomically: true, encoding: .utf8
+            )
+        }
+        return GameLibrary(folder: GameFolder(url: tempDir))
+    }
+
+    @Test("the book shows one position, said as a count and the moves that were played")
+    func theBookMergesTwoRoadsIntoOneItem() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = try library(in: tempDir)
+        #expect(library.entries.count == 2)
+
+        let index = MistakeIndex(
+            log: PracticeLog(url: tempDir.appending(path: "practice.jsonl"))
+        )
+        index.update(from: library.entries)
+        #expect(index.book.mistakes.count == 1, "two roads, one position, one 错题")
+
+        // In a stack, because the title is part of what this screen says and a bare view has
+        // no bar to put it in.
+        let rendered = await ScreenImage.write("book-list") {
+            NavigationStack {
+                BookScreen(path: .constant([]))
+            }
+            .environment(library)
+            .environment(index)
+            .environment(EngineHost(ScriptedEngine([])))
+        }
+
+        #expect(rendered.says("错题本"))
+        #expect(rendered.says("这个局面你栽过 2 次"), "the sentence no other identity can produce")
+        #expect(rendered.says("2 次走 Qh4"), "and what was played there, counted")
+        #expect(!rendered.says("还没有错题"))
+    }
+
+    @Test("an opened 错题 lists its occasions and offers to strike it off")
+    func oneOpenedShowsItsHistory() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = try library(in: tempDir)
+        let index = MistakeIndex(
+            log: PracticeLog(url: tempDir.appending(path: "practice.jsonl"))
+        )
+        index.update(from: library.entries)
+        let mistake = try #require(index.book.mistakes.first)
+
+        let rendered = await ScreenImage.write("book-entry") {
+            NavigationStack {
+                BookEntryScreen(mistake: mistake, path: .constant([]))
+            }
+            .environment(library)
+            .environment(index)
+            .environment(EngineHost(ScriptedEngine([])))
+        }
+
+        #expect(rendered.says("遭遇"))
+        #expect(rendered.count(of: "你走了") == 2, "both occasions, not one merged line")
+        #expect(rendered.says("Qh4"))
+        #expect(rendered.says("从本子里删掉"), "and no reason is asked for")
+    }
+
+    @Test("an empty book says what puts something in it")
+    func anEmptyBookSaysSo() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        let rendered = await ScreenImage.write("book-empty") {
+            NavigationStack {
+                BookScreen(path: .constant([]))
+            }
+            .environment(GameLibrary(folder: GameFolder(url: tempDir)))
+            .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
+            .environment(EngineHost(ScriptedEngine([])))
+        }
+
+        #expect(rendered.says("还没有错题"))
     }
 }

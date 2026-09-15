@@ -286,3 +286,21 @@
 "lines.record" = "적어 두기";
 "lines.enqueue" = "연습에 넣기";
 "lines.explained" = "한 수로 승률을 얼마나 잃어야 세느냐. 앞의 선을 넘으면 기보에 적고, 뒤의 선을 넘으면 앞으로의 연습 시간까지 가져간다 — 그러니 뒤쪽을 더 높게 둔다. 호각인 국면에서 폰 하나가 대략 10%.";
+
+/* ------------------------------------------------------------ 오답 노트 */
+"book" = "오답 노트";
+"book.empty" = "아직 없다. 틀린 국면은 알아서 여기로 들어온다.";
+"book.fell" = "이 국면에서 %d 번 넘어졌다";
+"book.played" = "그중 %1$d 번은 %2$@";
+"book.lastTime" = "가장 최근은 %@";
+"book.cost" = "%d%% 를 잃는다";
+"book.times" = "%d 번";
+"book.open" = "그 대국으로";
+"book.remove" = "노트에서 빼기";
+"book.encounters" = "횟수";
+"ago.days" = "%d 일 전";
+"ago.hours" = "%d 시간 전";
+"ago.justNow" = "방금";
+"book.items" = "%d 개";
+"book.yourMove" = "둔 수";
+"book.better" = "바른 수";

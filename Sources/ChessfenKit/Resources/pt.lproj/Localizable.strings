@@ -305,3 +305,26 @@
 "lines.record" = "Anotar";
 "lines.enqueue" = "Praticar";
 "lines.explained" = "Quanto uma jogada tem de dar para contar. Acima do primeiro fica escrita na partida; acima do segundo também ocupa tempo de prática, por isso esse deve ser mais alto. Perto da igualdade, um peão é mais ou menos 10%.";
+
+/* ------------------------------------------------------------ o caderno */
+"book" = "Erros";
+"book.empty" = "Ainda não há nada. As posições que falhas aparecem sozinhas.";
+"book.fell" = "Já caíste nesta posição %d vezes";
+"book.played" = "%1$d delas %2$@";
+"book.lastTime" = "a última foi %@";
+"book.cost" = "custa %d%%";
+"book.times" = "%d vezes";
+"book.open" = "Ir a essa partida";
+"book.remove" = "Tirar do caderno";
+"book.encounters" = "Vezes";
+"ago.days" = "há %d dias";
+"ago.hours" = "há %d horas";
+"ago.justNow" = "agora mesmo";
+"book.items" = "%d posições";
+"book.yourMove" = "você jogou";
+"book.better" = "melhor era";
+"book.items.one" = "%d posição";
+"book.fell.one" = "Você caiu nesta posição %d vez";
+"book.times.one" = "%d vez";
+"ago.days.one" = "há %d dia";
+"ago.hours.one" = "há %d hora";

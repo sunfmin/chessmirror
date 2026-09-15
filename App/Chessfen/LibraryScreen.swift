@@ -11,8 +11,12 @@ import UniformTypeIdentifiers
 enum Step: Hashable {
     case confirm(PositionProposal)
     case game(GameSession)
-    /// The tally over the library. It carries nothing, because it is counted when it is opened
-    /// and stored nowhere (docs/adr/0018).
+    /// The 错题本. It carries nothing, because it is derived from the games every time it is
+    /// opened and is not a second store of anything (docs/adr/0028, docs/adr/0029).
+    case book
+    /// One 错题, carried by value: it is a position and the occasions hanging off it, and both
+    /// were computed before this screen was pushed.
+    case mistake(Mistake)
 }
 
 /// A typed name, or nil for one that was only spaces — which is how a name is taken back off.
@@ -24,6 +28,8 @@ private func trimmed(_ text: String) -> String? {
 struct LibraryScreen: View {
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
+    @Environment(MistakeIndex.self) private var index
+    private let judgement = JudgementSetting.shared
 
     @State private var path: [Step] = []
     @State private var isCameraOpen = false
@@ -45,6 +51,7 @@ struct LibraryScreen: View {
                         note(reason, symbol: "exclamationmark.triangle.fill")
                     }
                     entries
+                    bookDoor
                     games
                 }
                 .padding(.horizontal, 16)
@@ -81,6 +88,10 @@ struct LibraryScreen: View {
                     ConfirmPositionScreen(proposal: proposal, path: $path)
                 case .game(let session):
                     GameScreen(session: session, path: $path)
+                case .book:
+                    BookScreen(path: $path)
+                case .mistake(let mistake):
+                    BookEntryScreen(mistake: mistake, path: $path)
                 }
             }
             .overlay {
@@ -142,6 +153,15 @@ struct LibraryScreen: View {
             takeWhatWasShared()
         }
         .onOpenURL { _ in takeWhatWasShared() }
+        // The 错题本 is derived, so it is brought up to date whenever the games change or a line
+        // moves — and costs nothing when neither has, because the index walks only what is new
+        // (docs/adr/0028). `initial` covers the launch, where the library is already listed.
+        .onChange(of: library.entries, initial: true) { _, entries in
+            index.update(from: entries, lines: judgement.lines)
+        }
+        .onChange(of: judgement.lines) { _, lines in
+            index.update(from: library.entries, lines: lines)
+        }
     }
 
     // ------------------------------------------------------------------ parts
@@ -251,6 +271,34 @@ struct LibraryScreen: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    /// The way into the 错题本, carrying how many are in it (docs/adr/0028).
+    ///
+    /// Always on the screen, including when it is empty: a door that appears only once there is
+    /// something behind it is a door nobody learns about, and the sentence behind it when it is
+    /// empty says what puts things there.
+    private var bookDoor: some View {
+        Button {
+            path.append(.book)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "book.closed")
+                Text(localized("book")).font(.subheadline.weight(.medium))
+                Spacer(minLength: 0)
+                if !index.book.isEmpty {
+                    Text(localized("book.items", plural: index.book.mistakes.count))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Palette.alarm)
+                }
+                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Palette.inkSoft)
+            }
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 13)
+            .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
     }
 
     /// The games, as one flat list.

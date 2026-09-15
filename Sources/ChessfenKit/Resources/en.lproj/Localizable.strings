@@ -351,3 +351,26 @@
 "lines.record" = "Write it down";
 "lines.enqueue" = "Drill it";
 "lines.explained" = "How much of the game a move has to give away to count. Past the first it is written into the game; past the second it also takes practice time, so that one should be higher. Near equality, a pawn is about 10%.";
+
+/* ------------------------------------------------------------ the book */
+"book" = "Mistakes";
+"book.empty" = "Nothing here yet. Positions you get wrong turn up on their own.";
+"book.fell" = "You have fallen for this position %d times";
+"book.played" = "%1$d of them %2$@";
+"book.lastTime" = "last time was %@";
+"book.cost" = "cost %d%%";
+"book.times" = "%d times";
+"book.open" = "Go to that game";
+"book.remove" = "Take it out of the book";
+"book.encounters" = "Times";
+"ago.days" = "%d days ago";
+"ago.hours" = "%d hours ago";
+"ago.justNow" = "just now";
+"book.items" = "%d positions";
+"book.yourMove" = "you played";
+"book.better" = "better was";
+"book.items.one" = "%d position";
+"book.fell.one" = "You have fallen for this position %d time";
+"book.times.one" = "%d time";
+"ago.days.one" = "%d day ago";
+"ago.hours.one" = "%d hour ago";

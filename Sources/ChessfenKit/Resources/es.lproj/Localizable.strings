@@ -305,3 +305,26 @@
 "lines.record" = "Anotarla";
 "lines.enqueue" = "Practicarla";
 "lines.explained" = "Cuánto tiene que regalar una jugada para contar. Pasado el primero se anota en la partida; pasado el segundo también ocupa tiempo de práctica, así que ese debería ser más alto. Cerca de la igualdad, un peón es más o menos un 10%.";
+
+/* ------------------------------------------------------------ el cuaderno */
+"book" = "Errores";
+"book.empty" = "Aún no hay nada. Las posiciones que falles llegan solas.";
+"book.fell" = "Has caído en esta posición %d veces";
+"book.played" = "%1$d veces %2$@";
+"book.lastTime" = "la última fue %@";
+"book.cost" = "cuesta %d%%";
+"book.times" = "%d veces";
+"book.open" = "Ir a esa partida";
+"book.remove" = "Sacarla del cuaderno";
+"book.encounters" = "Veces";
+"ago.days" = "hace %d días";
+"ago.hours" = "hace %d horas";
+"ago.justNow" = "ahora mismo";
+"book.items" = "%d posiciones";
+"book.yourMove" = "jugaste";
+"book.better" = "mejor era";
+"book.items.one" = "%d posición";
+"book.fell.one" = "Has caído en esta posición %d vez";
+"book.times.one" = "%d vez";
+"ago.days.one" = "hace %d día";
+"ago.hours.one" = "hace %d hora";

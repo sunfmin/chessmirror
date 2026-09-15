@@ -34,6 +34,23 @@ public struct PGN: Hashable, Sendable {
         tags.first { $0.name == name }?.value
     }
 
+    /// The colours the player moved themselves, read off the roster.
+    ///
+    /// What the 错题本 is counted over: a game where the engine had Black is a game where Black's
+    /// mistakes belong to Stockfish (docs/adr/0028). `Controller.hand.playerName` is written into
+    /// the file rather than localized for exactly this — a game saved in one language has to
+    /// still be readable in another.
+    ///
+    /// An imported game names two real people and so has no hand here. Which of those two is the
+    /// person holding the phone is a question the import knows the answer to and this does not,
+    /// and answering it by guessing would fill the book with somebody else's blunders.
+    public var handColours: Set<PieceColour> {
+        var found: Set<PieceColour> = []
+        if tag("White") == Controller.hand.playerName { found.insert(.white) }
+        if tag("Black") == Controller.hand.playerName { found.insert(.black) }
+        return found
+    }
+
     /// Sets a tag, adds it if it was not there, and removes it for nil.
     ///
     /// In place where it already sits, because the order tags are written in is part of the file:

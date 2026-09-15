@@ -286,3 +286,21 @@
 "lines.record" = "書き残す";
 "lines.enqueue" = "練習に回す";
 "lines.explained" = "一手でどれだけ勝率を落としたら数えるか。前者を越えれば棋譜に書き、後者を越えれば今後の練習時間も取る——だから後者のほうを高くしておく。互角の局面では、ポーン一つがだいたい 10%。";
+
+/* ------------------------------------------------------------ 間違いノート */
+"book" = "間違いノート";
+"book.empty" = "まだ何もない。間違えた局面は勝手にここへ入る。";
+"book.fell" = "この局面では %d 回やらかしている";
+"book.played" = "%1$d 回は %2$@";
+"book.lastTime" = "直近は%@";
+"book.cost" = "%d%% 落とす";
+"book.times" = "%d 回";
+"book.open" = "その対局へ";
+"book.remove" = "ノートから外す";
+"book.encounters" = "回数";
+"ago.days" = "%d 日前";
+"ago.hours" = "%d 時間前";
+"ago.justNow" = "たった今";
+"book.items" = "%d 件";
+"book.yourMove" = "指したのは";
+"book.better" = "正しくは";

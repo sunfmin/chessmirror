@@ -331,3 +331,21 @@
 "lines.record" = "记下来";
 "lines.enqueue" = "进练习";
 "lines.explained" = "一招掉多少胜率才算失误。掉过「记下来」就写进棋谱，掉过「进练习」还要占以后的练习时间——所以后者应该更高。均势局面里，一个兵大约就是 10%。";
+
+/* ---------------------------------------------------------------- 错题本 */
+"book" = "错题本";
+"book.empty" = "还没有错题。下一局，走错的局面会自己进来。";
+"book.fell" = "这个局面你栽过 %d 次";
+"book.played" = "%1$d 次走 %2$@";
+"book.lastTime" = "最近一次是%@";
+"book.cost" = "掉 %d%%";
+"book.times" = "%d 次";
+"book.open" = "去那局棋";
+"book.remove" = "从本子里删掉";
+"book.encounters" = "遭遇";
+"ago.days" = "%d 天前";
+"ago.hours" = "%d 小时前";
+"ago.justNow" = "刚刚";
+"book.items" = "%d 条";
+"book.yourMove" = "你走了";
+"book.better" = "该走";
