@@ -2,6 +2,64 @@
 import Foundation
 import Testing
 
+/// Contract: hold the resulting position at depth 19. Neither side can move and no
+/// opponent clock may start. Only depth 20 can publish the percentage and release or refuse.
+@MainActor
+@Test(arguments: [true, false], [0, -300])
+func opponentWaitsForThePlayedPositionAtDepth20(_ enabled: Bool, _ score: Int) async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let after = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let gate = AsyncStream<Analysis>.makeStream()
+    let requested = AsyncStream<Void>.makeStream()
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
+        .init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+    ])], byPosition: [after.state.fen: Analysis(depth: 20, lines: [
+        .init(score: .centipawns(score), uciMoves: ["e7e5"], san: ["e5"])
+    ])], controlled: { game, budget in
+        guard game.state.fen == after.state.fen, budget == .depth(20) else { return nil }
+        requested.continuation.yield(())
+        requested.continuation.finish()
+        return gate.stream
+    })
+    let session = GameSession.fresh(start, controllers: [.white: .hand, .black: .engine], engine: engine)
+    session.showPositionFeedback()
+    session.setThinkingTime(.fixed(seconds: 1))
+    session.setTilling(enabled)
+    defer { gate.continuation.finish(); session.suspend() }
+    session.play(try #require(start.state.move(matching: "e2e4")))
+    var request = requested.stream.makeAsyncIterator()
+    _ = await request.next()
+    gate.continuation.yield(Analysis(depth: 19, lines: [
+        .init(score: .centipawns(score), uciMoves: ["e7e5"], san: ["e5"])
+    ]))
+    let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+    while session.searchProgress?.depth != 19, ContinuousClock.now < deadline { await Task.yield() }
+    try #require(session.searchProgress?.depth == 19, "the judgement must actually consume the held depth-19 result")
+    #expect(session.isWeighing)
+    #expect(!session.isHandTurn)
+    #expect(!session.isEngineTurn)
+    #expect(!session.canPlayBestMove)
+    #expect(session.moveChange == nil)
+    #expect(engine.budgets.allSatisfy { $0 == .depth(20) })
+    gate.continuation.yield(Analysis(depth: 20, lines: [
+        .init(score: .centipawns(score), uciMoves: ["e7e5"], san: ["e5"])
+    ]))
+    gate.continuation.finish()
+    await session.waitForJudgement()
+    #expect(!session.isWeighing)
+    if enabled && score < 0 {
+        #expect(session.game == start)
+        #expect(session.refused?.san == "e4")
+        #expect(engine.budgets.allSatisfy { $0 == .depth(20) })
+    } else {
+        #expect(session.game.plies.first?.judgement?.depth == 20)
+        #expect(session.game.plies.first?.judgement?.score == .centipawns(score))
+        await session.waitForPreparedInterception()
+        #expect(session.game.uciMoves == ["e2e4", "e7e5"])
+        #expect(engine.budgets.contains(.time(.seconds(1))))
+    }
+}
+
 @MainActor
 @Test(arguments: [-133, 133])
 func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
@@ -20,6 +78,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     defer { session.suspend() }
     #expect(session.moveChange == nil)
     session.play(try #require(start.state.move(matching: "e2e4")))
+    await session.waitForJudgement()
     await session.measureLatestMoveChange()
     let change = try #require(session.moveChange)
     #expect(change.before == .centipawns(0))
@@ -35,6 +94,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     #expect(session.moveChange == change)
     session.play(try #require(session.game.state.move(matching: "e7e5")))
     #expect(session.moveChange == nil, "the old badge must not describe a new move")
+    await session.waitForJudgement()
     await session.measureLatestMoveChange()
     #expect(session.game.plies.count == 2)
     #expect(session.historyScore(atPly: 2) == .centipawns(2 * score))
@@ -81,9 +141,9 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     #expect(reopened.game == game)
 }
 
-/// Real cached MultiPV acceptance, followed by an actual opponent reply on its own clock.
+/// A real post-move depth-20 judgement, followed by an opponent reply on its own clock.
 @MainActor
-@Test func realPreparedMoveHasNoJudgementWaitBeforeTheOpponentSearch() async throws {
+@Test func realPreparedMoveWaitsForThePlayedPositionBeforeTheOpponentSearch() async throws {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -98,8 +158,10 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     let started = ContinuousClock.now
     session.play(try #require(game.state.move(matching: "e2e4")))
     let gateTime = started.duration(to: .now)
-    try #require(!session.isWeighing, "a cached passing move must stand synchronously")
+    try #require(session.isWeighing, "the resulting position still needs its own depth-20 judgement")
+    #expect(!session.isEngineTurn)
     #expect(session.game.uciMoves == ["e2e4"])
+    await session.waitForJudgement()
     await session.waitForPreparedInterception()
     #expect(session.game.plies.count == 2)
     let judgement = try #require(session.game.plies[0].judgement)
@@ -223,9 +285,12 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
 @MainActor
 @Test func revealingAfterARefusalKeepsExactlyOneEncounter() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let after = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
     let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
         Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"]),
+    ])], byPosition: [after.state.fen: Analysis(depth: 20, lines: [
+        Line(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
@@ -240,6 +305,7 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     #expect(session.game == game, "Reveal requires all three explicit hint requests")
     for _ in 0..<3 { session.requestHint() }
     session.revealTillingMove()
+    await session.waitForJudgement()
     #expect(session.game.uciMoves == ["e2e4"])
     #expect(session.hintLayer == 0)
     #expect(session.relaxedIntercept == nil)
@@ -257,9 +323,12 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
 @MainActor
 @Test func hintLadderAndRelaxationBelongToOneMove() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let after = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
     let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
         Line(score: .centipawns(-180), uciMoves: ["d2d4"], san: ["d4"]),
+    ])], byPosition: [after.state.fen: Analysis(depth: 20, lines: [
+        Line(score: .centipawns(-180), uciMoves: ["e7e5"], san: ["e5"])
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
@@ -281,6 +350,7 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     #expect(session.relaxedIntercept == 20)
     session.play(try #require(game.state.move(matching: "d2d4")))
     #expect(session.game.uciMoves == ["d2d4"])
+    await session.waitForJudgement()
     #expect(session.hintLayer == 0)
     #expect(session.relaxedIntercept == nil)
     #expect(session.lines.intercept == 10)
@@ -296,7 +366,7 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
 }
 
 @MainActor
-@Test func preparedPassingMoveCommitsSynchronously() async throws {
+@Test func preparedPassingMoveStillJudgesTheResultingPosition() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(20), uciMoves: ["e2e4"], san: ["e4"]),
@@ -312,9 +382,12 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     session.play(try #require(game.state.move(matching: "d2d4")))
     let elapsed = started.duration(to: .now)
     #expect(session.game.uciMoves == ["d2d4"])
+    #expect(session.isWeighing)
+    await session.waitForJudgement()
     #expect(!session.isWeighing)
+    #expect(session.game.plies.first?.judgement?.depth == 20)
     #expect(engine.budgets.allSatisfy { $0 == .depth(20) })
-    #expect(engine.lines.allSatisfy { $0 == 8 })
+    #expect(engine.lines.contains(1), "the actual resulting position gets an independent search")
     print("Prepared passing move committed in \(elapsed)")
 }
 
@@ -366,6 +439,7 @@ func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock(_ line:
     // Switching interception off lets a retry stand, while preserving the earlier refusal.
     session.setIntercept(nil)
     session.play(try #require(game.state.move(matching: "e2e4")))
+    await session.waitForJudgement()
     #expect(session.game.uciMoves == ["f2f3", "e7e5", "e2e4"])
     let read = try PGN(parsing: session.pgn.text)
     #expect(read.game.plies.last?.tried.count == 1)

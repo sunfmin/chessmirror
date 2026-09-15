@@ -37,15 +37,18 @@ final class ScriptedEngine: Engine {
     /// has to get three answers.
     private let byPosition: [String: Analysis]
     private let byBudget: [SearchBudget: [Analysis]]
+    private let controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)?
 
     init(
         _ snapshots: [Analysis], isEndless: Bool = false, byPosition: [String: Analysis] = [:],
-        byBudget: [SearchBudget: [Analysis]] = [:]
+        byBudget: [SearchBudget: [Analysis]] = [:],
+        controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)? = nil
     ) {
         self.snapshots = snapshots
         self.isEndless = isEndless
         self.byPosition = byPosition
         self.byBudget = byBudget
+        self.controlled = controlled
     }
 
     var isPaused: Bool { paused.withLock { $0 } }
@@ -56,6 +59,7 @@ final class ScriptedEngine: Engine {
     func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
         asked.withLock { $0.append(budget) }
         askedLines.withLock { $0.append(lines) }
+        if let stream = controlled?(game, budget) { return stream }
         let scripted = byBudget[budget] ?? byPosition[game.state.fen].map { [$0] } ?? snapshots
         let reachedDepth: Bool
         if case .depth(let target) = budget {

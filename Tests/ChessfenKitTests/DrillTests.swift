@@ -95,6 +95,7 @@ private func engine(
     let before = session.game.uciMoves
     let move = try #require(session.game.state.legalMoves.first)
     session.play(move)
+    await session.waitForJudgement()
     #expect(session.game.uciMoves == before + [move.uci])
     #expect(log.attempts().count == 1, "continuing is not another attempt at the original question")
     let url = try #require(session.url)

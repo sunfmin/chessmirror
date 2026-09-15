@@ -1673,7 +1673,7 @@ struct GameScreen: View {
         if session.activePunishment != nil {
             return session.board.state.sideToMove == colour
         }
-        return !viewed.isOver && viewed.state.sideToMove == colour
+        return !session.isWeighing && !viewed.isOver && viewed.state.sideToMove == colour
     }
 
     private var moveCards: [MoveCard] {

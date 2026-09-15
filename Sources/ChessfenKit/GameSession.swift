@@ -884,7 +884,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil, score: Score? = nil) {
-        if isTilling, let drop, let score {
+        if isTilling || hasTillingFeedback, let drop, let score {
             game.setJudgement(.init(drop: drop, score: score, depth: Self.interceptDepth), atPly: ply)
         }
         if relaxedIntercept != nil, let drop, lines.records(drop) {
@@ -996,7 +996,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     // ------------------------------------------------------------------ moves
 
     public var isEngineTurn: Bool {
-        isAtLatest && !game.isOver && controller(for: viewed.state.sideToMove) == .engine
+        !isWeighing && isAtLatest && !game.isOver && controller(for: viewed.state.sideToMove) == .engine
     }
 
     /// Whether a person may move on the board as it is being looked at. True in the past as
@@ -1004,7 +1004,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// (docs/adr/0028) — what followed it is dropped, and the game carries on from there.
     public var isHandTurn: Bool {
         if let activePunishment { return !activePunishment.isJudging }
-        guard !viewed.isOver else { return false }
+        guard !isWeighing, !viewed.isOver else { return false }
         if !isAtLatest { return true }
         return controller(for: viewed.state.sideToMove) == .hand
     }
@@ -1035,12 +1035,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // 耕棋 measures a move before it is allowed to stand, and only a move being played *now*:
         // a move played back down the game is somebody taking one back, which is a different act
         // and is what 耕棋 is for rather than something to stop them doing.
-        guard isTilling, isAtLatest, !game.isOver else {
-            commit(move, by: .hand)
-            return
-        }
-        if let drop = preparedDrop(for: move, in: game), !interceptsHere(drop) {
-            stopSearching()
+        guard isTilling || hasTillingFeedback, isAtLatest, !game.isOver else {
             commit(move, by: .hand)
             return
         }
@@ -1068,6 +1063,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         game = played
         cursor = game.plies.count
         analysis = nil
+        thinking = nil
         refused = nil
         isWeighing = true
         Sounds.current.play(move, outcome: game.state.outcome)
@@ -1077,8 +1073,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
-    /// Complete the depth gate when a move arrives before the prepared table. A move outside
-    /// that table needs its resulting position searched before it can be refused.
+    /// The cached table supplies only the baseline. Every played position must independently
+    /// reach depth 20 before its assessment is published and the opponent is allowed to move.
     private func settle(_ move: Move, san: String, from position: Game, to played: Game) async {
         guard let engine else { return }
         if interceptTable?.fen != position.state.fen {
@@ -1091,10 +1087,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             }
         }
         guard !Task.isCancelled else { return }
-        var drop = preparedDrop(for: move, in: position)
-        var judgedScore = interceptTable?.analysis.lines.first { $0.bestMove == move.uci }?.score
-        let outsideTable = drop == nil
-        if drop == nil, let table = interceptTable, table.fen == position.state.fen {
+        let outsideTable = preparedDrop(for: move, in: position) == nil
+        var drop: Double?
+        var judgedScore: Score?
+        if let table = interceptTable, table.fen == position.state.fen {
             var after: Score?
             if played.state.outcome == .checkmate {
                 after = .mate(in: played.state.sideToMove == .white ? -1 : 1)
@@ -1148,6 +1144,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // It stands. Whatever was refused on the way here rides along with it, as a comment
             // on the move that was actually played (docs/adr/0028).
             recordHelp(atPly: cursor - 1, san: san, drop: drop, score: judgedScore)
+            if let before = interceptTable?.analysis.best?.score, let after = judgedScore {
+                measuredMove = (game.uciMoves, game.state.fen, MoveChange(before: before, after: after))
+            }
             save()
             retune()
             return
@@ -1186,9 +1185,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 game = practice.game
                 cursor = game.plies.count
                 isWeighing = false
+                if let verdict = practice.verdict, interceptsHere(verdict.drop) {
+                    triedHere.append(.init(san: verdict.played, drop: verdict.drop))
+                    refused = Refusal(san: verdict.played, drop: verdict.drop)
+                    if let start = game.rewound(to: 0) { game = start }
+                    cursor = 0
+                    Sounds.current.play(.refused)
+                    return
+                }
+                if let before = practice.startingScore, let after = game.plies.first?.judgement?.score {
+                    measuredMove = (game.uciMoves, game.state.fen, MoveChange(before: before, after: after))
+                }
                 save()
                 retune()
             }
+            return
+        }
+        if mover == .asked, isTilling || hasTillingFeedback, isAtLatest {
+            weigh(move)
             return
         }
         let measuredDrop = preparedDrop(for: move, in: viewed)

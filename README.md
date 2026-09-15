@@ -22,6 +22,8 @@ through your own iCloud Drive.
   Feedback remains visible while off; answers are explicit multi-move reveals, never a single
   recommendation arrow or a separate practice/analysis eye switch.
   Refused moves return to their original position and become PGN comments on the eventual move.
+  Every live human move waits for a depth-20 evaluation of the resulting position before the
+  opponent starts. Turning interception off disables rollback, not this assessment gate.
 - Always-visible advantage and per-move cost bars in No Slips, including refused attempts.
   Completed depth-20 judgements are preserved in PGN; older records are backfilled locally.
 - An optional opponent-reply exercise on a temporary board. Replies within two percentage

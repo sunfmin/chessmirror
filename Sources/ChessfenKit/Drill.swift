@@ -82,6 +82,7 @@ public struct DrillVerdict: Hashable, Sendable {
     /// Whether the engine is still working out what the move cost.
     public private(set) var isJudging = false
     public private(set) var couldNotJudge = false
+    public private(set) var startingScore: Score?
     /// How long the player took over the move, in seconds. Nil until they have moved.
     public private(set) var seconds: Double?
 
@@ -188,6 +189,7 @@ public struct DrillVerdict: Hashable, Sendable {
         ) else { return }
 
         let wanted = best.flatMap { before.reading(of: $0.san) }?.opening
+        startingScore = best?.score
         if let afterScore {
             game.setJudgement(.init(drop: drop, score: afterScore, depth: Self.depth), atPly: 0)
         }
