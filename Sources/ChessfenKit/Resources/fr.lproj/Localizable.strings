@@ -1,0 +1,397 @@
+/* Chessfen — français. Traduit du zh-Hans, la langue d'origine. Mêmes clés, même ordre.
+   Les clés « .one » sont le singulier, que le français prend aussi à zéro. */
+
+"colour.white" = "Blancs";
+"colour.black" = "Noirs";
+
+"piece.pawn" = "Pion";
+"piece.knight" = "Cavalier";
+"piece.bishop" = "Fou";
+"piece.rook" = "Tour";
+"piece.queen" = "Dame";
+"piece.king" = "Roi";
+
+"controller.hand" = "À la main";
+"controller.engine" = "Moteur";
+
+"outcome.ongoing" = "En cours";
+"outcome.checkmate" = "Échec et mat";
+"outcome.stalemate" = "Pat";
+"outcome.fiftyMove" = "Nulle par la règle des cinquante coups";
+"outcome.threefold" = "Nulle par triple répétition";
+"outcome.insufficientMaterial" = "Nulle — matériel insuffisant";
+
+"origin.fresh" = "Posée";
+"origin.recognised" = "Photographiée";
+"origin.imported" = "Importée";
+
+"quality.blunder" = "Gaffe";
+"quality.mistake" = "Erreur";
+"quality.inaccuracy" = "Imprécision";
+"quality.fine" = "Correct";
+
+"verb.take" = "Prendre";
+"verb.trade" = "Échanger";
+"verb.attack" = "Attaquer";
+"verb.defend" = "Défendre";
+"verb.flee" = "Fuir";
+"verb.block" = "Bloquer";
+"verb.hold" = "Occuper";
+"intent.unclear" = "Je ne sais pas";
+
+"time.mirrored" = "Comme moi";
+"time.fixed" = "%d secondes";
+"time.fixed.one" = "%d seconde";
+
+"list.separator" = ", ";
+"clause.separator" = " ; ";
+"sentence.end" = ".";
+
+"game.toMove" = "Aux %@ de jouer";
+"game.checkmated" = "%@ : échec et mat";
+"board.shaky" = "%d cases cerclées d'orange restent douteuses";
+"board.shaky.one" = "%d case cerclée d'orange reste douteuse";
+
+"fen.malformed" = "Cette position est illisible";
+"fen.badPieceCharacter" = "Une pièce n'est pas reconnue";
+"fen.badRankWidth" = "Une rangée n'a pas 8 cases";
+"fen.badRankCount" = "Il n'y a pas 8 rangées";
+"fen.tooManyPieces" = "Trop de pièces";
+"fen.tooManyPawns" = "Trop de pions";
+"fen.missingKing" = "Il manque un roi — un par camp";
+"fen.extraKing" = "Trop de rois — un seul par camp";
+"fen.pawnOnBackRank" = "Un pion ne peut pas être sur la première ni la huitième rangée";
+"fen.badSideToMove" = "Le trait n'est pas indiqué";
+"fen.badCastling" = "Les droits de roque sont faux";
+"fen.castlingWithoutRook" = "Le roque est annoncé, mais la tour n'est pas dans son coin";
+"fen.castlingWithoutKing" = "Le roque est annoncé, mais le roi n'est pas à sa case";
+"fen.badEnPassant" = "La case de prise en passant est fausse";
+"fen.badClock" = "Le compte des coups est faux";
+"fen.sideNotToMoveInCheck" = "Le camp qui n'a pas le trait est en échec, ce qui est impossible";
+
+"engine.networkMissing" = "Le fichier du réseau de neurones est introuvable : le moteur ne peut pas démarrer.";
+"engine.networkTooSmall" = "Le fichier du réseau est incomplet : le moteur ne peut pas démarrer.";
+"engine.allocationFailed" = "Mémoire insuffisante : le moteur ne peut pas démarrer.";
+"engine.unknown" = "Le moteur n'a pas démarré.";
+
+"intake.unreadable.title" = "Image illisible";
+"intake.unreadable.message" = "Cette image ne s'ouvre pas.";
+"intake.noBoard.title" = "Aucun échiquier trouvé";
+"intake.noBoard.message" = "Il n'y a pas d'échiquier sur cette image. Cadrez-le plus large, ou photographiez-le de face.";
+
+"library.entry.downloading" = "Téléchargement depuis iCloud…";
+"library.entry.unreadable" = "Illisible";
+"library.entry.moves" = "%d coups";
+"library.entry.moves.one" = "%d coup";
+"library.entry.unfinished" = "Inachevée";
+"library.entry.branches" = "%d variantes";
+"library.entry.branches.one" = "%d variante";
+
+"habit.giveaway" = "Pièces données";
+"habit.missedReply" = "Réponse non calculée";
+"habit.untrueReason" = "Raison qui ne tient pas";
+"habit.noReason" = "Sans raison";
+"habit.attackWhileHanging" = "Attaquer en laissant pendre";
+
+"habit.giveaway.explained" = "Après ce coup, une de vos pièces n'était plus gardée — cette fois, l'adversaire ne l'a pas prise.";
+"habit.missedReply.explained" = "Après ce coup, une de vos pièces n'était plus gardée, et l'adversaire l'a prise au coup suivant.";
+"habit.untrueReason.explained" = "Vous avez dit à quoi servait ce coup ; l'échiquier dit autre chose.";
+"habit.noReason.explained" = "Joué, sans pouvoir dire pourquoi.";
+"habit.attackWhileHanging.explained" = "Vous attaquiez et preniez alors qu'une de vos pièces pendait déjà.";
+
+"habit.excluded.unreviewed" = "pas encore notées";
+"habit.excluded.unreadable" = "illisibles";
+"habit.excluded.waiting" = "encore en téléchargement depuis iCloud";
+
+"habit.note.taken" = "rien ne gardait %@, et l'adversaire l'a pris au coup suivant";
+"habit.note.exposed" = "après ce coup, rien ne gardait %@";
+"habit.note.hanging" = "votre propre %@ n'était gardé par personne à ce moment-là";
+
+"check.take.notHere" = "ce coup ne prend rien en %@";
+"check.take.won" = "prendre en %@ a gagné du matériel";
+"check.take.notWorth" = "l'échange en %@ ne paie pas : la reprise ne coûte rien à l'adversaire";
+"check.trade.notHere" = "ce coup n'échange rien en %@";
+"check.trade.losing" = "l'échange en %@ perd du matériel";
+"check.trade.affordable" = "l'échange en %@ est acceptable";
+"check.attack.noPiece" = "il n'y a aucune pièce adverse en %@";
+"check.attack.noNewThreat" = "ce coup n'ajoute aucun attaquant sur %@";
+"check.attack.defended" = "l'adversaire tient %1$@ : %2$d attaquants, %3$d défenseurs";
+"check.attack.held" = "la pièce en %@ est attaquée et ne peut pas être tenue";
+"check.defend.held" = "les défenseurs de %1$@ passent de %2$d à %3$d";
+"check.defend.unchanged" = "%1$@ n'a pas gagné de défenseur — toujours %2$d";
+"check.flee.noAttacker" = "il n'y avait aucune pièce adverse en %@ au départ";
+"check.flee.notHanging" = "%1$@ ne pendait pas : %2$d attaquants, %3$d défenseurs";
+"check.flee.stillTaken" = "en %@ elle est prise tout autant";
+"check.flee.held" = "elle a fui %2$@ en quittant %1$@";
+"check.block.notThere" = "ce coup ne va pas en %@";
+"check.block.nothing" = "aller en %@ ne bloque rien";
+"check.block.held" = "bloquer en %1$@ enlève ce coup de %2$@";
+"check.hold.notYours" = "%1$@ n'est pas encore à vous : %2$d contre %3$d";
+"check.hold.held" = "la lutte pour %1$@ passe de %2$d à %3$d — elle est à vous";
+"check.hold.unchanged" = "%@ était déjà à vous ; ce coup n'a rien changé";
+
+"import.notALink.title" = "Ce n'est pas un lien";
+"import.notALink.message" = "Il faut une adresse web, par exemple un lien vers une étude lichess publique.";
+"import.privateStudy.title" = "Cette étude est privée";
+"import.privateStudy.message" = "Elle n'est pas publique, donc impossible à télécharger. Seules les études publiques peuvent être importées.";
+"import.privateGame.title" = "Cette partie est privée";
+"import.privateGame.message" = "lichess indique que cette partie n'est pas publique : impossible de la télécharger.";
+"import.missingGame.title" = "Partie introuvable";
+"import.missingGame.message" = "lichess n'a pas cette partie — le lien est peut-être faux, ou la partie a été supprimée.";
+"import.unknownPlayer.title" = "Utilisateur inconnu";
+"import.unknownPlayer.message" = "lichess ne connaît pas ce nom d'utilisateur. La casse n'a pas d'importance, l'orthographe si.";
+"import.notAPlayer.title" = "Ce n'est pas un nom d'utilisateur";
+"import.notAPlayer.message" = "Entrez un nom d'utilisateur lichess, comme DrNykterstein.";
+"import.notPGN.title" = "Ce n'est pas une partie";
+"import.notPGN.message" = "Ce que ce lien télécharge n'est pas un fichier PGN.";
+"import.noReadableGames.title" = "Aucune partie lisible";
+"import.noReadableGames.message" = "Rien de ce qui a été téléchargé n'a pu être lu.";
+"import.http.title" = "Échec du téléchargement";
+"import.http.message" = "Le serveur a répondu HTTP %d.";
+"import.network.title" = "Pas de connexion";
+"import.network.message" = "Le réseau a échoué pendant le téléchargement : %@";
+"import.network.notHTTP" = "réponse non HTTP";
+
+"import.done" = "%1$d parties importées dans « %2$@ »";
+"import.done.one" = "%1$d partie importée dans « %2$@ »";
+"import.done.skipped" = "%d déjà présentes ignorées";
+"import.done.skipped.one" = "%d déjà présente ignorée";
+"import.done.unreadable" = "%d autres illisibles";
+"import.done.unreadable.one" = "%d autre illisible";
+"import.name.players" = "%1$@ contre %2$@";
+"import.name.chapter" = "Chapitre %d";
+"import.collection.player" = "Parties de %@";
+
+"ok" = "OK";
+"cancel" = "Annuler";
+"done" = "Terminé";
+"retry" = "Réessayer";
+"rename" = "Renommer";
+"delete" = "Supprimer";
+"board" = "Échiquier";
+"move.number" = "Coup %d";
+
+"app.name" = "Chessfen";
+"app.mark" = "棋镜";
+
+"standing.bar" = "Barre d'évaluation";
+"standing.unknown" = "Inconnu";
+"standing.won" = "%@ gagnent";
+"standing.drawn" = "Nulle";
+
+"camera.denied" = "Photographier un échiquier demande l'appareil photo. Activez-le dans Réglages – Chessfen.";
+"camera.missing" = "Aucun appareil photo disponible sur cet appareil. Choisissez plutôt une image dans vos albums ou vos fichiers.";
+"camera.lens.macro" = "Macro";
+"camera.lens.standard" = "Standard";
+
+"library.engineStarting" = "Moteur en démarrage";
+"library.tagline" = "Photographiez l'échiquier, et continuez la partie.";
+"library.photograph" = "Photographier";
+"library.fromAlbum" = "Depuis les albums";
+"library.paste" = "Coller une capture";
+"library.fromFiles" = "Depuis les fichiers";
+"library.fromStart" = "Partir de la position initiale";
+"library.games" = "Parties";
+"library.empty" = "Jouez un coup et la partie s'inscrira ici.";
+"library.unfiled" = "Non classées";
+"library.recognising" = "Lecture de l'échiquier";
+"library.noPicture" = "Image inaccessible";
+"library.noClipboard.title" = "Aucune image dans le presse-papiers";
+"library.noClipboard.message" = "Prenez une capture d'écran et revenez.";
+
+"collection.name" = "Nom du recueil";
+"collection.rename" = "Renommer le recueil";
+"collection.new" = "Nouveau recueil";
+"collection.new.ellipsis" = "Nouveau recueil…";
+"collection.file" = "Classer dans un recueil";
+"collection.remove" = "Retirer du recueil";
+"collection.games" = "%d parties";
+"collection.games.one" = "%d partie";
+"collection.sorted" = "%d parties · par nom";
+"collection.sorted.one" = "%d partie · par nom";
+"collection.empty" = "Ce recueil est vide. Classez-y une partie et il revient dans la liste.";
+
+"game.name.title" = "Nommer cette partie";
+"game.name.field" = "Nom";
+"game.name.field.long" = "Comment s'appelle cette partie";
+"game.name.explained" = "Un recueil est trié par nom : « Exercice 002 » se rangera là où vous l'attendez. Laissez vide pour utiliser l'heure d'enregistrement.";
+"game.file.into" = "Classer dans « %@ »";
+"game.file.explained" = "Le nom décide de sa place dans le recueil, et de l'ordre dans lequel on passe d'une partie à l'autre.";
+
+"habits" = "Vieux réflexes";
+"habits.card" = "Les erreurs que vous répétez, comptées dans vos parties";
+"habits.subtitle" = "Comptées dans les parties que vous avez enregistrées. Aucune note, aucun classement.";
+"habits.counting" = "Comptage…";
+"habits.nothing" = "Aucune partie à compter pour l'instant. Notez-en une, et il y aura quelque chose à dire ici.";
+"habits.clean" = "%d parties comptées, aucun vieux réflexe trouvé.";
+"habits.clean.one" = "%d partie comptée, aucun vieux réflexe trouvé.";
+"habits.counted" = "%d parties comptées.";
+"habits.counted.one" = "%d partie comptée.";
+"habits.excluded" = "%1$d autres parties %2$@, non comptées.";
+"habits.excluded.one" = "%1$d autre partie %2$@, non comptée.";
+"habits.times" = "%d fois";
+"habits.times.one" = "%d fois";
+
+"edit.title" = "Corriger les pièces";
+"edit.seePhoto" = "Voir la photo";
+"edit.advanced.show" = "Roque et prise en passant";
+"edit.advanced.hide" = "Masquer roque et prise en passant";
+"edit.copyFEN" = "Copier la FEN";
+"edit.reset" = "Position initiale";
+"edit.clear" = "Vider l'échiquier";
+"edit.photo" = "Photo";
+"edit.photo.off" = "Sans";
+"edit.photo.under" = "En dessous";
+"edit.photo.alone" = "Photo seule";
+"edit.peek" = "Maintenir";
+"edit.hint.photo" = "C'est la photo elle-même ; toucher ne change rien";
+"edit.hint.pick" = "Choisissez d'abord une pièce, puis touchez une case";
+"edit.hint.erase" = "Touchez une case pour enlever la pièce";
+"edit.hint.place" = "Touchez pour poser ; retouchez la même case pour enlever";
+"edit.castling" = "Roque";
+"edit.castling.K" = "Blancs O-O";
+"edit.castling.Q" = "Blancs O-O-O";
+"edit.castling.k" = "Noirs O-O";
+"edit.castling.q" = "Noirs O-O-O";
+"edit.enPassant" = "Prise en passant";
+"edit.none" = "Aucune";
+"edit.useThis" = "Utiliser cette position";
+"edit.startGame" = "Commencer une partie";
+
+"import.title" = "Importer des parties";
+"import.door.link" = "Lien";
+"import.door.player" = "Parties récentes";
+"import.door.link.explained" = "Collez un lien — une étude lichess, ou une seule partie — et chaque partie qu'il contient devient une partie du recueil.";
+"import.door.player.explained" = "Entrez un nom d'utilisateur lichess pour récupérer ses dernières parties. À faire avant de monter dans l'avion.";
+"import.field.link" = "Lien PGN";
+"import.field.player" = "Nom d'utilisateur lichess";
+"import.howMany" = "Combien";
+"import.fetch" = "Récupérer";
+"import.fetching" = "Téléchargement…";
+"import.writing" = "Écriture…";
+"import.into" = "Dans « %@ »";
+"import.intoCollection" = "Dans le recueil";
+"import.plan.games" = "%d parties";
+"import.plan.games.one" = "%d partie";
+"import.plan.named" = "« %1$@ » · %2$@";
+"import.more" = "%d autres…";
+"import.more.one" = "%d autre…";
+"import.unreadable" = "%d parties illisibles seront ignorées.";
+"import.unreadable.one" = "%d partie illisible sera ignorée.";
+"import.apply" = "Importer %d parties";
+"import.apply.one" = "Importer %d partie";
+"import.again" = "Importer autre chose";
+
+"game.undo" = "Reprendre le coup";
+"game.depth" = "Profondeur %d";
+"game.rescore" = "Renoter la partie";
+"game.sound" = "Son";
+"game.exportPGN" = "Exporter le PGN";
+"game.restart.explained" = "Changer le trait recommence une partie ; celle-ci reste dans vos archives";
+"game.whiteFirst" = "Les Blancs commencent";
+"game.blackFirst" = "Les Noirs commencent";
+"game.more" = "Plus ; les %@ commencent";
+"game.promotion" = "Promouvoir en quoi ?";
+"game.practice" = "Exercice";
+"game.noEngine" = "Sans moteur";
+"game.toPlay" = "Au trait";
+"game.inCheck" = "En échec";
+"game.moveNow" = "Joue maintenant";
+"game.letEngine" = "Fais jouer";
+"game.letEngine.hint" = "Maintenez pour une recherche plus profonde ; relâchez et il joue";
+"game.willPlay" = "Jouera %@";
+"game.suggests" = "Essayez %@";
+"game.thinking" = "Calcule";
+"game.hold.deeper" = "Plus vous maintenez, plus il cherche loin";
+"game.hold.progress" = "%1$.1f s · prof. %2$d";
+"game.settings.expand" = "Ouvrir les réglages des %@";
+"game.settings.collapse" = "Fermer les réglages des %@";
+"game.who" = "Joué par";
+"game.perMove" = "Par coup";
+"game.worst" = "Les trois coups les plus coûteux";
+"game.worst.quiet" = "Les trois coups à revoir";
+"game.changed" = "Ce que ce coup a changé";
+"game.loose" = "Cercle rouge : plus attaquée que défendue";
+"game.wrongPiece" = "La photo s'est trompée de pièce ?";
+"game.alternatives" = "Autres coups";
+"game.over" = "La partie est finie. La courbe et le coût de chaque coup sont ci-dessous.";
+"game.over.quiet" = "La partie est finie. Activez « Avis du moteur » et il notera chaque coup.";
+"game.quiet" = "Exercice : le moteur garde son avis pour lui. Activez « Avis du moteur » au-dessus pour l'entendre.";
+"game.selfPlaying" = "Les deux camps sont le moteur ; il joue tout seul. Reculez d'un coup pour l'arrêter";
+"game.opinion" = "Avis du moteur";
+"game.flip" = "Retourner l'échiquier";
+
+"record.previous" = "Coup précédent";
+"record.next" = "Coup suivant";
+"record.latest" = "Revenir au dernier";
+"record.curve" = "Courbe d'évaluation";
+"record.ply" = "Demi-coup %d";
+"record.jump" = "Revenir à ce coup";
+"record.branch" = "Glissez vers le haut ou le bas pour changer de variante";
+"record.startHere" = "Jouer d'ici";
+"record.opening" = "Départ";
+
+"study.computing" = "Calcul de ce coup…";
+"study.why" = "Vous jouez %@. Pourquoi ?";
+"study.withdraw" = "Reprendre";
+"study.commit" = "C'est mon coup";
+"study.notReady" = "Le moteur n'est pas prêt : ce coup ne peut pas être noté.";
+"study.ask" = "Aux %@ de jouer. Que joueriez-vous ?";
+"study.ask.explained" = "Jouez un coup sur l'échiquier. Le résultat vient une fois le coup joué.";
+"study.place" = "Numéro %1$d des coups les plus coûteux de la partie : %2$@ a été joué, %3$@ pions.";
+"study.place.practising" = "Numéro %d des coups les plus coûteux de la partie. Ce qui a été joué ici ne tient pas au second examen du moteur.";
+"study.reason.unclear" = "Je ne sais pas — c'est noté.";
+"study.reason.because" = "Parce que : %@.";
+"study.reason.where" = "%@ où ? Touchez une case de l'échiquier.";
+"study.reason.prompt" = "Dites d'abord à quoi sert ce coup.";
+"study.headline.both" = "Bon coup, et la raison tient.";
+"study.headline.reasonOnly" = "La raison est bonne ; ce coup ne la réalise pas.";
+"study.headline.moveOnly" = "Le coup va, mais la raison ne tient pas.";
+"study.headline.neither" = "Ni le coup ni la raison n'ont tenu.";
+"study.headline.fine" = "Le coup va.";
+"study.headline.poor" = "Le coup ne tient pas.";
+"verdict.held" = "Tenu";
+"verdict.failed" = "Raté";
+"verdict.noClaim" = "Rien dit";
+"study.verdict.noOpinion" = "Le moteur n'a pas d'avis : seule la comparaison avec le coup joué reste possible.";
+"study.verdict.best" = "C'est le premier choix du moteur.";
+"study.verdict.better" = "Meilleur que le moteur de %@.";
+"study.verdict.pass" = "Ça passe : %@ derrière le moteur.";
+"study.verdict.worse" = "%1$@ : %2$@ derrière le moteur.";
+"study.yours" = "Vous";
+"study.engine" = "Moteur";
+"study.played" = "Joué";
+"study.keep" = "Jouer celui-ci";
+"study.again" = "Recommencer";
+"study.next" = "Question suivante";
+"study.depth.explained" = "Les trois sont calculés à la profondeur %d : ils se comparent.";
+
+"report.running" = "Recalcul à la profondeur %1$d : %2$d/%3$d";
+"report.unscored" = "Cette partie n'a pas été notée.";
+"report.score" = "Noter";
+"report.ply" = "Coup %1$d, %2$@ %3$@";
+"report.start" = "Position de départ";
+
+"series.previous" = "Partie précédente";
+"series.next" = "Partie suivante";
+"series.place" = "Partie %1$d sur %2$d";
+
+"about" = "À propos";
+"about.what" = "Photographiez un échiquier, lisez la position, continuez la partie. La reconnaissance et le moteur tournent sur cet appareil ; les parties sont enregistrées dans votre propre iCloud. Rien n'est téléchargé, sauf quand vous importez une partie depuis un lien.";
+"about.language" = "Langue";
+"about.language.system" = "Suivre le téléphone";
+"about.language.explained" = "Toute l'app change d'un coup, et le choix vous suit sur vos autres appareils. Les parties enregistrées ne changent pas.";
+"about.version" = "Version";
+"about.engine" = "Moteur";
+"about.engineStatus" = "État du moteur";
+"about.ready" = "Prêt";
+"about.starting" = "Démarrage";
+"about.storage" = "Stockage";
+"about.storedIn" = "Parties conservées dans";
+"about.iCloud" = "iCloud Drive";
+"about.thisDevice" = "Cet appareil";
+"about.storage.cloud" = "Chaque partie est un fichier PGN dans le dossier « Chessfen » d'iCloud Drive, que l'app Fichiers peut ouvrir, copier ou supprimer directement. Les modifications se synchronisent avec vos autres appareils connectés au même compte Apple.";
+"about.storage.local" = "Chaque partie est un fichier PGN, et pour l'instant elles ne sont que sur cet appareil. Activez Réglages → Compte Apple → iCloud Drive et les parties déjà là passeront dans iCloud, synchronisées avec vos autres appareils.";
+"about.licence" = "Licence";
+"about.source" = "Code source";
+"about.licence.explained" = "Cette app embarque Stockfish, publié sous licence GNU GPL v3 ; l'app entière est donc elle aussi en GPL v3 : vous pouvez l'utiliser, l'étudier, la modifier et la redistribuer librement, à condition de transmettre le code source et la même licence avec elle. Le texte complet de la licence est dans le fichier LICENSE du dépôt.\n\nLes graphiques des pièces viennent du jeu Cburnett de python-chess (CC BY-SA 3.0).";

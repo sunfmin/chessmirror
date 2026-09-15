@@ -1,0 +1,447 @@
+/* Chessfen — English. Translated from zh-Hans, which is where the words were written first.
+   Same keys, same order. `.one` keys are the singular form English takes at one. */
+
+/* ---------------------------------------------------------------- vocabulary */
+
+"colour.white" = "White";
+"colour.black" = "Black";
+
+"piece.pawn" = "Pawn";
+"piece.knight" = "Knight";
+"piece.bishop" = "Bishop";
+"piece.rook" = "Rook";
+"piece.queen" = "Queen";
+"piece.king" = "King";
+
+"controller.hand" = "By hand";
+"controller.engine" = "Engine";
+
+"outcome.ongoing" = "In progress";
+"outcome.checkmate" = "Checkmate";
+"outcome.stalemate" = "Stalemate";
+"outcome.fiftyMove" = "Draw by the fifty-move rule";
+"outcome.threefold" = "Draw by threefold repetition";
+"outcome.insufficientMaterial" = "Draw — not enough material";
+
+"origin.fresh" = "Set up";
+"origin.recognised" = "Photographed";
+"origin.imported" = "Imported";
+
+"quality.blunder" = "Blunder";
+"quality.mistake" = "Mistake";
+"quality.inaccuracy" = "Inaccuracy";
+"quality.fine" = "Fine";
+
+"verb.take" = "Take";
+"verb.trade" = "Trade";
+"verb.attack" = "Attack";
+"verb.defend" = "Defend";
+"verb.flee" = "Flee";
+"verb.block" = "Block";
+"verb.hold" = "Hold";
+"intent.unclear" = "Not sure";
+
+"time.mirrored" = "Match me";
+"time.fixed" = "%d seconds";
+"time.fixed.one" = "%d second";
+
+/* punctuation that joins things up in a sentence */
+"list.separator" = ", ";
+"clause.separator" = "; ";
+"sentence.end" = ".";
+
+/* ---------------------------------------------------------------- how a game stands */
+
+"game.toMove" = "%@ to move";
+"game.checkmated" = "%@ is checkmated";
+"board.shaky" = "%d squares in orange are the ones it is unsure of";
+"board.shaky.one" = "%d square in orange is one it is unsure of";
+
+/* ---------------------------------------------------------------- whether a position reads */
+
+"fen.malformed" = "This position cannot be read";
+"fen.badPieceCharacter" = "There is a piece it does not recognise";
+"fen.badRankWidth" = "A rank does not have 8 squares";
+"fen.badRankCount" = "There are not 8 ranks";
+"fen.tooManyPieces" = "Too many pieces";
+"fen.tooManyPawns" = "Too many pawns";
+"fen.missingKing" = "A king is missing — each side needs one";
+"fen.extraKing" = "Too many kings — one each";
+"fen.pawnOnBackRank" = "A pawn cannot stand on the first or the eighth rank";
+"fen.badSideToMove" = "It does not say whose move it is";
+"fen.badCastling" = "The castling rights are wrong";
+"fen.castlingWithoutRook" = "Castling is claimed, but the rook is not on its corner";
+"fen.castlingWithoutKing" = "Castling is claimed, but the king is not on its square";
+"fen.badEnPassant" = "The en passant square is wrong";
+"fen.badClock" = "The move count is wrong";
+"fen.sideNotToMoveInCheck" = "The side not to move is in check, which cannot happen";
+
+/* ---------------------------------------------------------------- the engine */
+
+"engine.networkMissing" = "The neural network file is missing, so the engine cannot start.";
+"engine.networkTooSmall" = "The network file is incomplete, so the engine cannot start.";
+"engine.allocationFailed" = "Not enough memory, so the engine cannot start.";
+"engine.unknown" = "The engine failed to start.";
+
+/* ---------------------------------------------------------------- reading a board */
+
+"intake.unreadable.title" = "Cannot open the picture";
+"intake.unreadable.message" = "This picture will not open.";
+"intake.noBoard.title" = "No board found";
+"intake.noBoard.message" = "There is no board in this picture. Fill more of the frame with it, or shoot it straight on.";
+
+/* ---------------------------------------------------------------- a row in the library */
+
+"library.entry.downloading" = "Downloading from iCloud…";
+"library.entry.unreadable" = "Cannot be read";
+"library.entry.moves" = "%d moves";
+"library.entry.moves.one" = "%d move";
+"library.entry.unfinished" = "Unfinished";
+"library.entry.branches" = "%d branches";
+"library.entry.branches.one" = "%d branch";
+
+/* ---------------------------------------------------------------- the habits */
+
+"habit.giveaway" = "Giving pieces away";
+"habit.missedReply" = "Missing their reply";
+"habit.untrueReason" = "Reasons that do not hold";
+"habit.noReason" = "No reason given";
+"habit.attackWhileHanging" = "Attacking with something hanging";
+
+"habit.giveaway.explained" = "After this move something of yours had nobody guarding it — this time they did not take it.";
+"habit.missedReply.explained" = "After this move something of yours had nobody guarding it, and they took it next move.";
+"habit.untrueReason.explained" = "You said what the move was for, and the board says otherwise.";
+"habit.noReason.explained" = "You played it, but could not say why.";
+"habit.attackWhileHanging.explained" = "You were attacking and taking while something of yours was already hanging.";
+
+"habit.excluded.unreviewed" = "not scored yet";
+"habit.excluded.unreadable" = "could not be read";
+"habit.excluded.waiting" = "still downloading from iCloud";
+
+"habit.note.taken" = "nothing was guarding %@, and they took it next move";
+"habit.note.exposed" = "after this move, nothing was guarding %@";
+"habit.note.hanging" = "your own %@ had nobody guarding it at the time";
+
+/* ---------------------------------------------------------------- what you said, against the board */
+
+"check.take.notHere" = "this move takes nothing on %@";
+"check.take.won" = "taking on %@ won material";
+"check.take.notWorth" = "the exchange on %@ does not pay: they take back and are no worse off";
+"check.trade.notHere" = "this move trades nothing on %@";
+"check.trade.losing" = "the trade on %@ loses material";
+"check.trade.affordable" = "the trade on %@ is affordable";
+"check.attack.noPiece" = "there is nothing of theirs on %@";
+"check.attack.noNewThreat" = "this move puts no new attacker on %@";
+"check.attack.defended" = "they hold %1$@: %2$d attacking, %3$d defending";
+"check.attack.held" = "the piece on %@ is under attack and cannot be held";
+"check.defend.held" = "defenders of %1$@ went from %2$d to %3$d";
+"check.defend.unchanged" = "%1$@ gained no defender — still %2$d";
+"check.flee.noAttacker" = "there was nothing of theirs on %@ to begin with";
+"check.flee.notHanging" = "%1$@ was not hanging: %2$d attacking, %3$d defending";
+"check.flee.stillTaken" = "on %@ it is taken just the same";
+"check.flee.held" = "it ran from %2$@ off %1$@";
+"check.block.notThere" = "this move does not go to %@";
+"check.block.nothing" = "going to %@ blocks nothing";
+"check.block.held" = "blocking on %1$@ takes that blow off %2$@";
+"check.hold.notYours" = "%1$@ is not yours yet: %2$d against %3$d";
+"check.hold.held" = "the fight for %1$@ went from %2$d to %3$d — it is yours";
+"check.hold.unchanged" = "%@ was already yours; this move changed nothing";
+
+/* ---------------------------------------------------------------- importing games */
+
+"import.notALink.title" = "Not a link";
+"import.notALink.message" = "This wants a web address — a public lichess study link, for instance.";
+"import.privateStudy.title" = "This study is private";
+"import.privateStudy.message" = "It is not shared publicly, so it cannot be downloaded. Only public studies can be imported.";
+"import.privateGame.title" = "This game is private";
+"import.privateGame.message" = "lichess says this game is not public, so it cannot be downloaded.";
+"import.missingGame.title" = "No such game";
+"import.missingGame.message" = "lichess does not have this game — the link may be wrong, or the game may have been deleted.";
+"import.unknownPlayer.title" = "No such user";
+"import.unknownPlayer.message" = "lichess has no user by that name. Capitals do not matter, but the spelling does.";
+"import.notAPlayer.title" = "Not a username";
+"import.notAPlayer.message" = "Type a lichess username, like DrNykterstein.";
+"import.notPGN.title" = "Not a game record";
+"import.notPGN.message" = "What this link downloads is not a PGN game record.";
+"import.noReadableGames.title" = "No readable games";
+"import.noReadableGames.message" = "Nothing in the record that came down could be read.";
+"import.http.title" = "Download failed";
+"import.http.message" = "The server answered HTTP %d.";
+"import.network.title" = "No connection";
+"import.network.message" = "The network failed during the download: %@";
+"import.network.notHTTP" = "not an HTTP response";
+
+"import.done" = "Imported %1$d games into “%2$@”";
+"import.done.one" = "Imported %1$d game into “%2$@”";
+"import.done.skipped" = "skipped %d already there";
+"import.done.skipped.one" = "skipped %d already there";
+"import.done.unreadable" = "%d more could not be read";
+"import.done.unreadable.one" = "%d more could not be read";
+"import.name.players" = "%1$@ vs %2$@";
+"import.name.chapter" = "Chapter %d";
+"import.collection.player" = "%@’s games";
+
+/* ---------------------------------------------------------------- words used everywhere */
+
+"ok" = "OK";
+"cancel" = "Cancel";
+"done" = "Done";
+"retry" = "Try again";
+"rename" = "Rename";
+"delete" = "Delete";
+"board" = "Board";
+"move.number" = "Move %d";
+
+/* ---------------------------------------------------------------- the app itself */
+
+"app.name" = "Chessfen";
+/* the small mark under the big name — the app's Chinese original */
+"app.mark" = "棋镜";
+
+/* ---------------------------------------------------------------- the evaluation bar */
+
+"standing.bar" = "Evaluation bar";
+"standing.unknown" = "Unknown";
+"standing.won" = "%@ won";
+"standing.drawn" = "Drawn";
+
+/* ---------------------------------------------------------------- the camera */
+
+"camera.denied" = "Photographing a board needs the camera. Turn it on in Settings – Chessfen.";
+"camera.missing" = "No camera is available on this device. Pick a board picture from your albums or files instead.";
+"camera.lens.macro" = "Macro";
+"camera.lens.standard" = "Standard";
+
+/* ---------------------------------------------------------------- the library */
+
+"library.engineStarting" = "Engine starting";
+"library.tagline" = "Photograph the board, and play on.";
+"library.photograph" = "Photograph a board";
+"library.fromAlbum" = "From albums";
+"library.paste" = "Paste a screenshot";
+"library.fromFiles" = "From files";
+"library.fromStart" = "Start from the opening";
+"library.games" = "Games";
+"library.empty" = "Play a move and the game will be filed here.";
+"library.unfiled" = "Unfiled";
+"library.recognising" = "Reading the board";
+"library.noPicture" = "Could not get the picture";
+"library.noClipboard.title" = "No picture on the clipboard";
+"library.noClipboard.message" = "Take a screenshot and come back.";
+
+/* ---------------------------------------------------------------- collections */
+
+"collection.name" = "Collection name";
+"collection.rename" = "Rename collection";
+"collection.new" = "New collection";
+"collection.new.ellipsis" = "New collection…";
+"collection.file" = "File in a collection";
+"collection.remove" = "Take out of the collection";
+"collection.games" = "%d games";
+"collection.games.one" = "%d game";
+"collection.sorted" = "%d games · by name";
+"collection.sorted.one" = "%d game · by name";
+"collection.empty" = "This collection is empty. File a game into it and it comes back to the list.";
+
+"game.name.title" = "Name this game";
+"game.name.field" = "Name";
+"game.name.field.long" = "What is this game called";
+"game.name.explained" = "A collection is ordered by name, so a name like “Puzzle 002” lands where you expect it. Leave it blank to use the time it was saved.";
+"game.file.into" = "File into “%@”";
+"game.file.explained" = "The name decides where it sits in the collection, and the order the previous and next game follow.";
+
+/* ---------------------------------------------------------------- the habits screen */
+
+"habits" = "Old habits";
+"habits.card" = "The mistakes you keep making, counted from your games";
+"habits.subtitle" = "Counted from the games you have saved. No score, no ranking.";
+"habits.counting" = "Counting…";
+"habits.nothing" = "No games to count yet. Score one, and there will be something to say here.";
+"habits.clean" = "Counted %d games, and found no old habits.";
+"habits.clean.one" = "Counted %d game, and found no old habits.";
+"habits.counted" = "Counted %d games.";
+"habits.counted.one" = "Counted %d game.";
+"habits.excluded" = "%1$d more games %2$@, left out.";
+"habits.excluded.one" = "%1$d more game %2$@, left out.";
+"habits.times" = "%d times";
+"habits.times.one" = "%d time";
+
+/* ---------------------------------------------------------------- editing the pieces */
+
+"edit.title" = "Fix the pieces";
+"edit.seePhoto" = "See the photo";
+"edit.advanced.show" = "Castling and en passant";
+"edit.advanced.hide" = "Hide castling and en passant";
+"edit.copyFEN" = "Copy FEN";
+"edit.reset" = "Set up the opening";
+"edit.clear" = "Clear the board";
+"edit.photo" = "Photo";
+"edit.photo.off" = "Off";
+"edit.photo.under" = "Underneath";
+"edit.photo.alone" = "Photo only";
+"edit.peek" = "Hold to see";
+"edit.hint.photo" = "This is the photo itself; tapping changes nothing";
+"edit.hint.pick" = "Pick a piece first, then tap a square";
+"edit.hint.erase" = "Tap a square to take the piece off";
+"edit.hint.place" = "Tap to place; tap the same square to take it off";
+"edit.castling" = "Castling";
+"edit.castling.K" = "White O-O";
+"edit.castling.Q" = "White O-O-O";
+"edit.castling.k" = "Black O-O";
+"edit.castling.q" = "Black O-O-O";
+"edit.enPassant" = "En passant";
+"edit.none" = "None";
+"edit.useThis" = "Use this position";
+"edit.startGame" = "Start a new game";
+
+/* ---------------------------------------------------------------- the import sheet */
+
+"import.title" = "Import games";
+"import.door.link" = "Link";
+"import.door.player" = "Recent games";
+"import.door.link.explained" = "Paste a link — a lichess study, or a single game — and every game in it becomes one game in a collection.";
+"import.door.player.explained" = "Type a lichess username to pull down their last few games. Do this before you get on the plane.";
+"import.field.link" = "PGN link";
+"import.field.player" = "lichess username";
+"import.howMany" = "How many";
+"import.fetch" = "Fetch the games";
+"import.fetching" = "Downloading…";
+"import.writing" = "Writing…";
+"import.into" = "Into “%@”";
+"import.intoCollection" = "Into collection";
+"import.plan.games" = "%d games";
+"import.plan.games.one" = "%d game";
+"import.plan.named" = "“%1$@” · %2$@";
+"import.more" = "%d more…";
+"import.more.one" = "%d more…";
+"import.unreadable" = "%d could not be read and will be skipped.";
+"import.unreadable.one" = "%d could not be read and will be skipped.";
+"import.apply" = "Import %d games";
+"import.apply.one" = "Import %d game";
+"import.again" = "Import another";
+
+/* ---------------------------------------------------------------- the game screen */
+
+"game.undo" = "Take back";
+"game.depth" = "Depth %d";
+"game.rescore" = "Score it again";
+"game.sound" = "Sound";
+"game.exportPGN" = "Export PGN";
+"game.restart.explained" = "Changing who moves first starts a new game; this one stays in your records";
+"game.whiteFirst" = "White moves first";
+"game.blackFirst" = "Black moves first";
+"game.more" = "More; %@ moves first";
+"game.promotion" = "Promote to what?";
+"game.practice" = "Practice";
+"game.noEngine" = "No engine";
+"game.toPlay" = "To play";
+"game.inCheck" = "In check";
+"game.moveNow" = "Move now";
+"game.letEngine" = "Let it play";
+"game.letEngine.hint" = "Hold for a deeper search; let go and it plays";
+"game.willPlay" = "Playing %@";
+"game.suggests" = "Try %@";
+"game.thinking" = "Thinking";
+"game.hold.deeper" = "The longer you hold, the deeper it looks";
+"game.hold.progress" = "%1$.1fs · depth %2$d";
+"game.settings.expand" = "Open %@’s settings";
+"game.settings.collapse" = "Close %@’s settings";
+"game.who" = "Played by";
+"game.perMove" = "Per move";
+"game.worst" = "The three costliest moves";
+"game.worst.quiet" = "The three worth a look";
+"game.changed" = "What this move changed";
+"game.loose" = "Red ring: attacked more than it is defended";
+"game.wrongPiece" = "Did the photo get a piece wrong?";
+"game.alternatives" = "Other moves";
+"game.over" = "The game is over. The curve and what each move cost are below.";
+"game.over.quiet" = "The game is over. Turn on “Engine opinion” and it will score every move.";
+"game.quiet" = "Practice: the engine keeps its opinion to itself. Turn on “Engine opinion” above to hear it.";
+"game.selfPlaying" = "Both sides are the engine; it plays on by itself. Step back a move to stop it";
+"game.opinion" = "Engine opinion";
+"game.flip" = "Turn the board round";
+
+/* ---------------------------------------------------------------- the record strip */
+
+"record.previous" = "Previous move";
+"record.next" = "Next move";
+"record.latest" = "Back to the latest";
+"record.curve" = "Evaluation curve";
+"record.ply" = "Ply %d";
+"record.jump" = "Go back to this move";
+"record.branch" = "Swipe up or down to change branch";
+"record.startHere" = "Play from here";
+"record.opening" = "Opening";
+
+/* ---------------------------------------------------------------- asking yourself */
+
+"study.computing" = "Working this move out…";
+"study.why" = "You play %@. Why?";
+"study.withdraw" = "Take it back";
+"study.commit" = "This is my move";
+"study.notReady" = "The engine is not ready, so this move cannot be scored.";
+"study.ask" = "%@ to move. What would you play?";
+"study.ask.explained" = "Play a move on the board. You will hear how it went once you have.";
+"study.place" = "Number %1$d on this game's costliest list: %2$@ was played, %3$@ pawns.";
+"study.place.practising" = "Number %d on this game's costliest list. What was played here does not hold up once the engine looks again.";
+"study.reason.unclear" = "Not sure — noted.";
+"study.reason.because" = "Because: %@.";
+"study.reason.where" = "%@ where? Tap a square on the board.";
+"study.reason.prompt" = "Say what this move is for first.";
+"study.headline.both" = "Right move, and the reason holds.";
+"study.headline.reasonOnly" = "The reason is right; this move does not do it.";
+"study.headline.moveOnly" = "The move is fine, but the reason does not hold.";
+"study.headline.neither" = "Neither the move nor the reason held.";
+"study.headline.fine" = "The move is fine.";
+"study.headline.poor" = "The move does not hold.";
+"verdict.held" = "Held";
+"verdict.failed" = "Did not";
+"verdict.noClaim" = "Not said";
+"study.verdict.noOpinion" = "The engine has no opinion, so this can only be compared with what was played.";
+"study.verdict.best" = "The engine's own first choice.";
+"study.verdict.better" = "Better than the engine's by %@.";
+"study.verdict.pass" = "Passes: %@ behind the engine.";
+"study.verdict.worse" = "%1$@: %2$@ behind the engine.";
+"study.yours" = "You";
+"study.engine" = "Engine";
+"study.played" = "Played";
+"study.keep" = "Play this instead";
+"study.again" = "Try again";
+"study.next" = "Next question";
+"study.depth.explained" = "All three are searched to depth %d, so they compare.";
+
+/* ---------------------------------------------------------------- the report */
+
+"report.running" = "Rescoring at depth %1$d: %2$d/%3$d";
+"report.unscored" = "This game has not been scored.";
+"report.score" = "Score it";
+"report.ply" = "Move %1$d, %2$@ %3$@";
+"report.start" = "Starting position";
+
+/* ---------------------------------------------------------------- one game after another */
+
+"series.previous" = "Previous game";
+"series.next" = "Next game";
+"series.place" = "Game %1$d of %2$d";
+
+/* ---------------------------------------------------------------- about */
+
+"about" = "About";
+"about.what" = "Photograph a board, read the position, play on. Recognition and the engine both run on this device; games are saved in your own iCloud. The only time anything is downloaded is when you import a game from a link.";
+"about.language" = "Language";
+"about.language.system" = "Follow the phone";
+"about.language.explained" = "The whole app changes over at once, and the choice follows you to Chessfen on your other devices. Saved games are untouched.";
+"about.version" = "Version";
+"about.engine" = "Engine";
+"about.engineStatus" = "Engine status";
+"about.ready" = "Ready";
+"about.starting" = "Starting";
+"about.storage" = "Storage";
+"about.storedIn" = "Games are kept in";
+"about.iCloud" = "iCloud Drive";
+"about.thisDevice" = "This device";
+"about.storage.cloud" = "Every game is a PGN file in the “Chessfen” folder of iCloud Drive, which the Files app can open, copy or delete directly. Changes sync to your other devices signed in to the same Apple Account.";
+"about.storage.local" = "Every game is a PGN file, and for now they are only on this device. Turn on Settings → Apple Account → iCloud Drive and the games already here move into iCloud and sync to your other devices.";
+"about.licence" = "Licence";
+"about.source" = "Source code";
+"about.licence.explained" = "This app has Stockfish inside it, released under the GNU GPL v3, so the app as a whole is GPL v3 too: you may use, study, modify and redistribute it freely, provided you pass on the source and the same licence with it. The full licence text is in the LICENSE file in the source repository.\n\nThe piece graphics are the Cburnett set from python-chess (CC BY-SA 3.0).";

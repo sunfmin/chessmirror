@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Chessfen";
+"NSCameraUsageDescription" = "Fotografar um tabuleiro e ler a posição. O reconhecimento é feito neste dispositivo; as partidas e fotos guardadas sincronizam com o teu próprio iCloud e não vão para mais ninguém.";
+"NSPhotoLibraryUsageDescription" = "Escolher dos teus álbuns uma foto de tabuleiro ou uma captura para ler. O reconhecimento é feito neste dispositivo; as partidas e fotos guardadas sincronizam com o teu próprio iCloud.";

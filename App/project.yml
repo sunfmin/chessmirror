@@ -1,0 +1,125 @@
+# Generated with `xcodegen` from this file — the .xcodeproj is not in the repository.
+# A pbxproj is a merge conflict waiting to happen and says nothing a reader wants to
+# read; this says the same thing in twenty lines. Run `xcodegen generate` in ios/App
+# after changing it, or after a fresh clone.
+name: Chessfen
+options:
+  bundleIdPrefix: com.sunfmin
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  # The language the app was written in, and the one every other falls back to. The eight it
+  # speaks are the eight `Chessfen/*.lproj` folders below — the words themselves live in the
+  # package (docs/adr/0019); what is here is only what the system reads out of the bundle
+  # before the app has run: the name under the icon and the two permission sentences.
+  developmentLanguage: zh-Hans
+
+packages:
+  ChessfenKit:
+    path: ..
+
+targets:
+  Chessfen:
+    type: application
+    platform: iOS
+    sources:
+      - path: Chessfen
+      # A folder reference, so both nets land in the bundle as files the engine can be
+      # given a path to. They are 112 MiB of the app's size and the reason it can play
+      # chess on a plane.
+      - path: ../Resources/Nets
+        type: folder
+    dependencies:
+      - package: ChessfenKit
+        product: ChessfenKit
+    # A shared scheme, so `xcodebuild test` finds the screenshots from a terminal rather than
+    # only from Xcode's UI.
+    scheme:
+      testTargets:
+        - ScreenTests
+    info:
+      path: Chessfen/Info.plist
+      properties:
+        CFBundleDisplayName: 棋镜
+        UILaunchScreen:
+          UIColorName: ""
+        # The phone is held in portrait (docs/adr/0025). The deck is the bottom of this screen and
+        # it is sized out of what the board leaves behind; on a phone on its side there is 402pt of
+        # height for a board, two bars, a record and five cards, and what the deck did about that
+        # was disappear — taking every card's actions with it. The iPad has the height for all four
+        # ways up, so it keeps them.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # Recognition itself never leaves the device. What does leave it is the saved game and
+        # the photograph filed beside it, into the person's own iCloud — which the strings say,
+        # because "不会上传" would no longer be true (docs/adr/0012).
+        NSCameraUsageDescription: 拍下棋盘，识别出局面。识别在这台设备上完成；存下来的对局和照片会同步到你自己的 iCloud，不会发给任何别人。
+        NSPhotoLibraryUsageDescription: 从相册里挑一张棋盘照片或截图来识别。识别在这台设备上完成；存下来的对局和照片会同步到你自己的 iCloud。
+        ITSAppUsesNonExemptEncryption: false
+        # What makes the container a folder in the Files app rather than a hidden one. iOS reads
+        # this once, when it first sets the container up, so changing the name here only takes
+        # on a device that has never run the app — or after CFBundleVersion goes up.
+        NSUbiquitousContainers:
+          iCloud.com.sunfmin.chessfen:
+            NSUbiquitousContainerIsDocumentScopePublic: true
+            NSUbiquitousContainerName: 棋镜
+            NSUbiquitousContainerSupportedFolderLevels: Any
+    # Generated from here like the Info.plist is, so that project.yml stays the one place the
+    # app's shape is described. The container is named once, and `GameFolder` asks for "the
+    # first container this app is entitled to" rather than naming it a second time.
+    entitlements:
+      path: Chessfen/Chessfen.entitlements
+      properties:
+        com.apple.developer.icloud-services:
+          - CloudDocuments
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.sunfmin.chessfen
+        com.apple.developer.ubiquity-container-identifiers:
+          - iCloud.com.sunfmin.chessfen
+        # The settings that travel — one small key-value store, keyed to this app.
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen
+        # Drawn by `swift run chessfen-cli icon <path>` from the same knight the app puts on
+        # the board, so the icon can be rebuilt rather than only replaced.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        DEVELOPMENT_TEAM: HL27PWAKDF
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        # Xcode 26's approachable concurrency: view code is main-actor by default, so the
+        # only things that have to say anything about isolation are the ones that really
+        # do leave the main thread — recognition and the engine.
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        DEAD_CODE_STRIPPING: YES
+
+  # The screens, drawn into PNGs by the real app code and checked for what they must show.
+  # Hosted by the app rather than standing alone, because what it renders is the app's own
+  # views and it reaches them with `@testable import Chessfen`.
+  ScreenTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ScreenTests
+    dependencies:
+      - target: Chessfen
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen.screentests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Chessfen.app/Chessfen
+        BUNDLE_LOADER: $(TEST_HOST)

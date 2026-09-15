@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Chessfen";
+"NSCameraUsageDescription" = "盤を撮って局面を読み取る。認識はこの端末の中で行い、残した対局と写真は自分の iCloud に同期する。ほかの誰にも送らない。";
+"NSPhotoLibraryUsageDescription" = "アルバムから盤の写真やスクリーンショットを選んで読み取る。認識はこの端末の中で行い、残した対局と写真は自分の iCloud に同期する。";

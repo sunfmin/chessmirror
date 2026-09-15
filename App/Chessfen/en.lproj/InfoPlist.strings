@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Chessfen";
+"NSCameraUsageDescription" = "Photograph a board and read the position off it. Recognition happens on this device; the games and photos you keep sync to your own iCloud and go to nobody else.";
+"NSPhotoLibraryUsageDescription" = "Pick a board photo or screenshot from your albums to read. Recognition happens on this device; the games and photos you keep sync to your own iCloud.";

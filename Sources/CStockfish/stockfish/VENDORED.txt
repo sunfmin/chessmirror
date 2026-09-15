@@ -1,0 +1,2 @@
+Vendored from https://github.com/official-stockfish/Stockfish tag sf_18
+main.cpp and Makefile removed; everything else verbatim.

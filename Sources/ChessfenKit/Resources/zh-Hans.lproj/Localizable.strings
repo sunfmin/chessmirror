@@ -1,0 +1,430 @@
+/* 棋镜 — 中文（简体）。这是原文：其它七种语言都从这里翻过去，缺了的键也回落到这里。
+   键按屏幕和话题分组，和 CONTEXT.md 里的词汇表对得上。 */
+
+/* ---------------------------------------------------------------- 词汇 */
+
+"colour.white" = "白方";
+"colour.black" = "黑方";
+
+"piece.pawn" = "兵";
+"piece.knight" = "马";
+"piece.bishop" = "象";
+"piece.rook" = "车";
+"piece.queen" = "后";
+"piece.king" = "王";
+
+"controller.hand" = "手动";
+"controller.engine" = "引擎";
+
+"outcome.ongoing" = "进行中";
+"outcome.checkmate" = "将杀";
+"outcome.stalemate" = "逼和";
+"outcome.fiftyMove" = "五十回合和棋";
+"outcome.threefold" = "三次重复和棋";
+"outcome.insufficientMaterial" = "子力不足，和棋";
+
+"origin.fresh" = "手摆";
+"origin.recognised" = "识别";
+"origin.imported" = "导入";
+
+"quality.blunder" = "漏着";
+"quality.mistake" = "失误";
+"quality.inaccuracy" = "不精确";
+"quality.fine" = "正常";
+
+"verb.take" = "吃";
+"verb.trade" = "换";
+"verb.attack" = "攻";
+"verb.defend" = "护";
+"verb.flee" = "躲";
+"verb.block" = "挡";
+"verb.hold" = "占";
+"intent.unclear" = "说不清";
+
+"time.mirrored" = "跟着我";
+"time.fixed" = "%d 秒";
+
+/* 一句话里把几样东西连起来的标点 */
+"list.separator" = "、";
+"clause.separator" = "，";
+"sentence.end" = "。";
+
+/* ---------------------------------------------------------------- 一局棋的状态 */
+
+"game.toMove" = "%@走棋";
+"game.checkmated" = "%@将杀";
+"board.shaky" = "橙框那 %d 个格子拿不太准";
+
+/* ---------------------------------------------------------------- 局面读不读得出来 */
+
+"fen.malformed" = "局面读不出来";
+"fen.badPieceCharacter" = "有认不出的棋子";
+"fen.badRankWidth" = "某一行不是 8 格";
+"fen.badRankCount" = "不是 8 行";
+"fen.tooManyPieces" = "棋子太多了";
+"fen.tooManyPawns" = "兵太多了";
+"fen.missingKing" = "缺了王，两方各要有一个";
+"fen.extraKing" = "王多了，每方只能有一个";
+"fen.pawnOnBackRank" = "兵不能站在第一或第八行";
+"fen.badSideToMove" = "该谁走没说清";
+"fen.badCastling" = "易位权写错了";
+"fen.castlingWithoutRook" = "标了易位权，但车不在角上";
+"fen.castlingWithoutKing" = "标了易位权，但王不在原位";
+"fen.badEnPassant" = "吃过路兵的格子不对";
+"fen.badClock" = "回合数不对";
+"fen.sideNotToMoveInCheck" = "不该走的一方被将着，这个局面不可能出现";
+
+/* ---------------------------------------------------------------- 引擎 */
+
+"engine.networkMissing" = "找不到神经网络权重文件，引擎无法启动。";
+"engine.networkTooSmall" = "权重文件不完整，引擎无法启动。";
+"engine.allocationFailed" = "内存不足，引擎无法启动。";
+"engine.unknown" = "引擎启动失败。";
+
+/* ---------------------------------------------------------------- 认棋盘 */
+
+"intake.unreadable.title" = "打不开图片";
+"intake.unreadable.message" = "这张图片打不开。";
+"intake.noBoard.title" = "没认出棋盘";
+"intake.noBoard.message" = "这张图里没找到棋盘。把棋盘拍满一点，或者换个正面的角度。";
+
+/* ---------------------------------------------------------------- 对局列表里的一行 */
+
+"library.entry.downloading" = "正在从 iCloud 下载…";
+"library.entry.unreadable" = "无法读取";
+"library.entry.moves" = "%d 回合";
+"library.entry.unfinished" = "未结束";
+"library.entry.branches" = "%d 条分叉";
+
+/* ---------------------------------------------------------------- 老毛病 */
+
+"habit.giveaway" = "送子";
+"habit.missedReply" = "没算对手那一步";
+"habit.untrueReason" = "理由不成立";
+"habit.noReason" = "说不清";
+"habit.attackWhileHanging" = "只顾进攻";
+
+"habit.giveaway.explained" = "走完这步，你有子没人守 —— 这次对手没吃。";
+"habit.missedReply.explained" = "走完这步你有子没人守，对手下一步就吃了。";
+"habit.untrueReason.explained" = "你说了这步是干什么的，棋盘上没发生。";
+"habit.noReason.explained" = "走了，但说不清为什么。";
+"habit.attackWhileHanging.explained" = "你在攻、在吃，自己却有子挂着。";
+
+"habit.excluded.unreviewed" = "还没打过分";
+"habit.excluded.unreadable" = "读不出来";
+"habit.excluded.waiting" = "还在从 iCloud 下载";
+
+"habit.note.taken" = "%@ 上的子没人守，对手下一步吃了它";
+"habit.note.exposed" = "走完这步，%@ 上的子没人守";
+"habit.note.hanging" = "你自己的 %@ 当时就没人守";
+
+/* ---------------------------------------------------------------- 说了干什么，棋盘认不认 */
+
+"check.take.notHere" = "这一步没有在 %@ 吃子";
+"check.take.won" = "在 %@ 吃子赢了子";
+"check.take.notWorth" = "%@ 上的交换不赚：对方吃回来不亏";
+"check.trade.notHere" = "这一步没有在 %@ 换子";
+"check.trade.losing" = "%@ 上这个换子是亏的";
+"check.trade.affordable" = "%@ 上换得起";
+"check.attack.noPiece" = "%@ 上没有对方的子";
+"check.attack.noNewThreat" = "%@ 上的子并没有因为这一步多受一次攻击";
+"check.attack.defended" = "%1$@ 对方守得住：%2$d 攻 %3$d 守";
+"check.attack.held" = "%@ 上的子挨打了，而且守不住";
+"check.defend.held" = "%1$@ 的守子从 %2$d 变成 %3$d";
+"check.defend.unchanged" = "%1$@ 的守子没有增加，还是 %2$d";
+"check.flee.noAttacker" = "%@ 上原本没有对方的子";
+"check.flee.notHanging" = "%1$@ 本来不算悬着：%2$d 攻 %3$d 守";
+"check.flee.stillTaken" = "走到 %@ 一样会被吃";
+"check.flee.held" = "从 %1$@ 躲开了 %2$@";
+"check.block.notThere" = "这一步没有走到 %@";
+"check.block.nothing" = "走到 %@ 没有挡住什么";
+"check.block.held" = "挡在 %1$@，%2$@ 上的子不再挨那一击";
+"check.hold.notYours" = "%1$@ 还算不上你的：%2$d 对 %3$d";
+"check.hold.held" = "%1$@ 的争夺从 %2$d 变成 %3$d，归你了";
+"check.hold.unchanged" = "%@ 本来就归你，这一步没有改变什么";
+
+/* ---------------------------------------------------------------- 导入棋谱 */
+
+"import.notALink.title" = "不是链接";
+"import.notALink.message" = "这里要的是一个网址，比如一个公开的 lichess 研究链接。";
+"import.privateStudy.title" = "这个棋谱不公开";
+"import.privateStudy.message" = "它没有对外公开，所以下载不下来。目前只能导入公开的棋谱。";
+"import.privateGame.title" = "这局棋不公开";
+"import.privateGame.message" = "lichess 说这局不对外开放，下载不下来。";
+"import.missingGame.title" = "找不到这局棋";
+"import.missingGame.message" = "lichess 上没有这局 —— 链接可能不对，或者这局已经被删了。";
+"import.unknownPlayer.title" = "没有这个用户";
+"import.unknownPlayer.message" = "lichess 上找不到这个用户名。注意大小写不影响，但拼写要对。";
+"import.notAPlayer.title" = "这不是用户名";
+"import.notAPlayer.message" = "填一个 lichess 用户名，比如 DrNykterstein。";
+"import.notPGN.title" = "不是棋谱";
+"import.notPGN.message" = "这个链接下载下来的内容不是 PGN 棋谱。";
+"import.noReadableGames.title" = "没有能读出来的棋局";
+"import.noReadableGames.message" = "下载下来的棋谱里，没有一局能读出来。";
+"import.http.title" = "下载失败";
+"import.http.message" = "服务器回了一个 HTTP %d。";
+"import.network.title" = "网络不通";
+"import.network.message" = "下载的时候网络出错了：%@";
+"import.network.notHTTP" = "不是 HTTP 响应";
+
+"import.done" = "导入 %1$d 局到「%2$@」";
+"import.done.skipped" = "跳过 %d 局已有的";
+"import.done.unreadable" = "另有 %d 局没能读出来";
+"import.name.players" = "%1$@ 对 %2$@";
+"import.name.chapter" = "第 %d 章";
+"import.collection.player" = "%@ 的对局";
+
+/* ---------------------------------------------------------------- 到处都用的几个词 */
+
+"ok" = "好";
+"cancel" = "取消";
+"done" = "完成";
+"retry" = "重试";
+"rename" = "重命名";
+"delete" = "删除";
+"board" = "棋盘";
+"move.number" = "第 %d 回合";
+
+/* ---------------------------------------------------------------- 应用本身 */
+
+"app.name" = "棋镜";
+/* 大字下面的小字：中文版写英文，其它语言写中文原名 */
+"app.mark" = "CHESSFEN";
+
+/* ---------------------------------------------------------------- 优势条 */
+
+"standing.bar" = "优势条";
+"standing.unknown" = "未知";
+"standing.won" = "%@胜";
+"standing.drawn" = "和棋";
+
+/* ---------------------------------------------------------------- 相机 */
+
+"camera.denied" = "要用相机才能拍棋盘。到「设置 - 棋镜」里打开相机权限。";
+"camera.missing" = "这台设备上找不到可用的相机。从相册或文件里挑一张棋盘图吧。";
+"camera.lens.macro" = "微距";
+"camera.lens.standard" = "标准";
+
+/* ---------------------------------------------------------------- 首页 */
+
+"library.engineStarting" = "引擎启动中";
+"library.tagline" = "对着棋盘拍一张，接着往下下。";
+"library.photograph" = "拍棋盘";
+"library.fromAlbum" = "从相册选";
+"library.paste" = "粘贴截图";
+"library.fromFiles" = "从文件选";
+"library.fromStart" = "从开局摆起";
+"library.games" = "对局记录";
+"library.empty" = "走出第一步，这局就会记在这里。";
+"library.unfiled" = "未归类";
+"library.recognising" = "在认棋盘";
+"library.noPicture" = "没能拿到图片";
+"library.noClipboard.title" = "剪贴板里没有图片";
+"library.noClipboard.message" = "截个图再回来试试。";
+
+/* ---------------------------------------------------------------- 作品集 */
+
+"collection.name" = "作品集名字";
+"collection.rename" = "重命名作品集";
+"collection.new" = "新建作品集";
+"collection.new.ellipsis" = "新建作品集…";
+"collection.file" = "归到作品集";
+"collection.remove" = "移出作品集";
+"collection.games" = "%d 局";
+"collection.sorted" = "%d 局 · 按名字排";
+"collection.empty" = "这个作品集空了。把棋局归进来，它就回到列表里。";
+
+"game.name.title" = "给这一局起个名字";
+"game.name.field" = "名字";
+"game.name.field.long" = "这一局叫什么";
+"game.name.explained" = "作品集里按名字排，所以「第 002 题」这样的名字会排在你想的地方。留空就用存下来的时间。";
+"game.file.into" = "归到「%@」";
+"game.file.explained" = "名字决定它在作品集里排第几，也决定练习时上一局下一局的顺序。";
+
+/* ---------------------------------------------------------------- 老毛病（屏幕） */
+
+"habits" = "老毛病";
+"habits.card" = "你反复犯的那几个错，从对局里数出来";
+"habits.subtitle" = "从你存下的对局里数出来的。不打分，不排名。";
+"habits.counting" = "在数…";
+"habits.nothing" = "还没有能数的对局。先给一局打分，这里才有话说。";
+"habits.clean" = "数了 %d 局，没找到老毛病。";
+"habits.counted" = "数了 %d 局。";
+"habits.excluded" = "另外 %1$d 局%2$@，没算进去。";
+"habits.times" = "%d 次";
+
+/* ---------------------------------------------------------------- 改棋子 */
+
+"edit.title" = "改棋子";
+"edit.seePhoto" = "看照片";
+"edit.advanced.show" = "易位和吃过路兵";
+"edit.advanced.hide" = "收起易位和吃过路兵";
+"edit.copyFEN" = "复制 FEN";
+"edit.reset" = "摆成开局";
+"edit.clear" = "清空棋盘";
+"edit.photo" = "照片";
+"edit.photo.off" = "关";
+"edit.photo.under" = "叠着看";
+"edit.photo.alone" = "只看照片";
+"edit.peek" = "按住看";
+"edit.hint.photo" = "这是照片本身，点格子不改子";
+"edit.hint.pick" = "先选一个棋子，再点格子";
+"edit.hint.erase" = "点格子把子拿走";
+"edit.hint.place" = "点格子放下，点同一格拿走";
+"edit.castling" = "易位权";
+"edit.castling.K" = "白 O-O";
+"edit.castling.Q" = "白 O-O-O";
+"edit.castling.k" = "黑 O-O";
+"edit.castling.q" = "黑 O-O-O";
+"edit.enPassant" = "吃过路兵";
+"edit.none" = "无";
+"edit.useThis" = "用这个局面";
+"edit.startGame" = "开始新对局";
+
+/* ---------------------------------------------------------------- 导入（界面） */
+
+"import.title" = "导入棋局";
+"import.door.link" = "链接";
+"import.door.player" = "最近对局";
+"import.door.link.explained" = "贴一个链接——一个 lichess 研究，或者一局棋——里面的每一局会变成作品集里的一局。";
+"import.door.player.explained" = "填一个 lichess 用户名，把最近几局拉下来。上飞机前干这一步。";
+"import.field.link" = "PGN 链接";
+"import.field.player" = "lichess 用户名";
+"import.howMany" = "拉几局";
+"import.fetch" = "获取棋谱";
+"import.fetching" = "在下载棋谱…";
+"import.writing" = "在写入…";
+"import.into" = "导入到「%@」";
+"import.intoCollection" = "导入到作品集";
+"import.plan.games" = "%d 局";
+"import.plan.named" = "「%1$@」· %2$@";
+"import.more" = "还有 %d 局…";
+"import.unreadable" = "有 %d 局没能读出来，会跳过。";
+"import.apply" = "导入 %d 局";
+"import.again" = "再导入一个";
+
+/* ---------------------------------------------------------------- 棋局屏幕 */
+
+"game.undo" = "悔棋";
+"game.depth" = "深度 %d";
+"game.rescore" = "重新打分";
+"game.sound" = "音效";
+"game.exportPGN" = "导出 PGN";
+"game.restart.explained" = "换先走方会重开一局，走过的这局留在记录里";
+"game.whiteFirst" = "白先走";
+"game.blackFirst" = "黑先走";
+"game.more" = "更多，先走的是%@";
+"game.promotion" = "升变成什么？";
+"game.practice" = "练习";
+"game.noEngine" = "没有引擎";
+"game.toPlay" = "该走了";
+"game.inCheck" = "被将";
+"game.moveNow" = "马上走";
+"game.letEngine" = "让引擎走";
+"game.letEngine.hint" = "按住不放，引擎算得更深；松手就走";
+"game.willPlay" = "会走 %@";
+"game.suggests" = "建议 %@";
+"game.thinking" = "在算";
+"game.hold.deeper" = "按住越久算得越深";
+"game.hold.progress" = "%1$.1f 秒 · 深 %2$d";
+"game.settings.expand" = "打开%@的设置";
+"game.settings.collapse" = "收起%@的设置";
+"game.who" = "谁走";
+"game.perMove" = "每步";
+"game.worst" = "这局最贵的三步";
+"game.worst.quiet" = "最该看的三步";
+"game.changed" = "这步改了什么";
+"game.loose" = "红圈：被吃的子比守的多";
+"game.wrongPiece" = "照片认错了棋子？";
+"game.alternatives" = "其它选择";
+"game.over" = "这局走完了。曲线和每一步的得失都在下面。";
+"game.over.quiet" = "这局走完了。打开「引擎意见」，它会把每一步重新打一遍分。";
+"game.quiet" = "练习中，引擎不给意见。想看它怎么说，打开上面的「引擎意见」。";
+"game.selfPlaying" = "双方都是引擎，程序自己走下去；翻回上一步就停";
+"game.opinion" = "引擎意见";
+"game.flip" = "翻转棋盘";
+
+/* ---------------------------------------------------------------- 记录条 */
+
+"record.previous" = "上一步";
+"record.next" = "下一步";
+"record.latest" = "回到最新";
+"record.curve" = "分数曲线";
+"record.ply" = "第 %d 步";
+"record.jump" = "回到这一步";
+"record.branch" = "上下滑动切换分支";
+"record.startHere" = "从这里开始走";
+"record.opening" = "开局";
+
+/* ---------------------------------------------------------------- 一步一步问自己 */
+
+"study.computing" = "正在算这一步…";
+"study.why" = "你走 %@。为什么？";
+"study.withdraw" = "收回";
+"study.commit" = "就是这步";
+"study.notReady" = "引擎还没准备好，没法给这步打分。";
+"study.ask" = "轮到%@走。你会走哪一步？";
+"study.ask.explained" = "直接在棋盘上走一步。走完才会告诉你结果。";
+"study.place" = "这局得失第 %1$d 大的一步：实战走的 %2$@，%3$@ 分。";
+"study.place.practising" = "这是这局得失最大的第 %d 步。实战在这儿走的那步，引擎重算下来不值。";
+"study.reason.unclear" = "说不清 —— 记下来了。";
+"study.reason.because" = "因为 %@。";
+"study.reason.where" = "%@ 哪里？点棋盘上的格子。";
+"study.reason.prompt" = "先说说这步是干什么的。";
+"study.headline.both" = "走对了，理由也站得住。";
+"study.headline.reasonOnly" = "理由是对的，这步棋没做到。";
+"study.headline.moveOnly" = "这步棋没问题，但理由不成立。";
+"study.headline.neither" = "棋和理由都没站住。";
+"study.headline.fine" = "这步棋没问题。";
+"study.headline.poor" = "这步棋没站住。";
+"verdict.held" = "说对了";
+"verdict.failed" = "没做到";
+"verdict.noClaim" = "没说";
+"study.verdict.noOpinion" = "引擎没给出意见，只能跟实战比。";
+"study.verdict.best" = "就是引擎的第一选择。";
+"study.verdict.better" = "比引擎的还好 %@。";
+"study.verdict.pass" = "过关：跟引擎差 %@。";
+"study.verdict.worse" = "%1$@：比引擎差 %2$@。";
+"study.yours" = "你走";
+"study.engine" = "引擎";
+"study.played" = "实战";
+"study.keep" = "改走这步";
+"study.again" = "再来一次";
+"study.next" = "下一题";
+"study.depth.explained" = "三步都按深度 %d 算，所以彼此可以比。";
+
+/* ---------------------------------------------------------------- 复盘 */
+
+"report.running" = "正在用深度 %1$d 重算：%2$d/%3$d";
+"report.unscored" = "这局还没打过分。";
+"report.score" = "打分";
+"report.ply" = "第 %1$d 回合 %2$@ %3$@";
+"report.start" = "起始局面";
+
+/* ---------------------------------------------------------------- 一局接一局 */
+
+"series.previous" = "上一局";
+"series.next" = "下一局";
+"series.place" = "第 %1$d/%2$d 局";
+
+/* ---------------------------------------------------------------- 关于 */
+
+"about" = "关于";
+"about.what" = "拍下棋盘，认出局面，接着下。识别和引擎都在这台设备上跑；对局存在你自己的 iCloud 里。只有你从链接导入棋谱的时候，才会去下载那个链接。";
+"about.language" = "语言";
+"about.language.system" = "跟随系统";
+"about.language.explained" = "改了以后整个应用马上换成这个语言，并同步到你其他设备上的棋镜。存下来的对局不受影响。";
+"about.version" = "版本";
+"about.engine" = "引擎";
+"about.engineStatus" = "引擎状态";
+"about.ready" = "已就绪";
+"about.starting" = "启动中";
+"about.storage" = "存储";
+"about.storedIn" = "对局存放在";
+"about.iCloud" = "iCloud 云盘";
+"about.thisDevice" = "本机";
+"about.storage.cloud" = "每一局都是一个 PGN 文件，存在 iCloud 云盘的「棋镜」文件夹里，在「文件」App 里可以直接打开、拷走或删掉。改动会同步到你登录同一个 Apple 账户的其他设备。";
+"about.storage.local" = "每一局都是一个 PGN 文件，目前只存在这台设备上。打开「设置 → Apple 账户 → iCloud 云盘」之后，已有的对局会自动搬进 iCloud，并同步到你的其他设备。";
+"about.licence" = "许可";
+"about.source" = "源代码";
+"about.licence.explained" = "本应用内置 Stockfish，按 GNU GPL v3 发布，因此本应用整体也按 GPL v3 发布：你可以自由使用、研究、修改和再分发它，条件是分发时一并给出源代码和同样的许可。完整许可文本见源代码仓库里的 LICENSE 文件。\n\n棋子图形来自 python-chess 的 Cburnett 棋子集（CC BY-SA 3.0）。";

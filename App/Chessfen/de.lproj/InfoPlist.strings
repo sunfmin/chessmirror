@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Chessfen";
+"NSCameraUsageDescription" = "Ein Brett fotografieren und die Stellung daraus lesen. Die Erkennung läuft auf diesem Gerät; die aufbewahrten Partien und Fotos gleichen sich mit deinem eigenen iCloud ab und gehen an niemanden sonst.";
+"NSPhotoLibraryUsageDescription" = "Ein Brettfoto oder einen Screenshot aus den Alben zum Lesen auswählen. Die Erkennung läuft auf diesem Gerät; die aufbewahrten Partien und Fotos gleichen sich mit deinem eigenen iCloud ab.";

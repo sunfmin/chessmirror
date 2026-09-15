@@ -1,0 +1,380 @@
+/* 棋镜 Chessfen — 한국어. 원문은 zh-Hans. 키와 순서는 같다. 한국어에는 단수형이 따로
+   없으므로 “.one” 키는 두지 않는다. */
+
+"colour.white" = "백";
+"colour.black" = "흑";
+
+"piece.pawn" = "폰";
+"piece.knight" = "나이트";
+"piece.bishop" = "비숍";
+"piece.rook" = "룩";
+"piece.queen" = "퀸";
+"piece.king" = "킹";
+
+"controller.hand" = "직접";
+"controller.engine" = "엔진";
+
+"outcome.ongoing" = "진행 중";
+"outcome.checkmate" = "체크메이트";
+"outcome.stalemate" = "스테일메이트";
+"outcome.fiftyMove" = "50수 규칙으로 무승부";
+"outcome.threefold" = "동형 3회 반복으로 무승부";
+"outcome.insufficientMaterial" = "기물 부족으로 무승부";
+
+"origin.fresh" = "직접 놓음";
+"origin.recognised" = "사진";
+"origin.imported" = "가져옴";
+
+"quality.blunder" = "대실수";
+"quality.mistake" = "실수";
+"quality.inaccuracy" = "부정확";
+"quality.fine" = "무난함";
+
+"verb.take" = "잡기";
+"verb.trade" = "교환";
+"verb.attack" = "공격";
+"verb.defend" = "수비";
+"verb.flee" = "피함";
+"verb.block" = "차단";
+"verb.hold" = "장악";
+"intent.unclear" = "모르겠음";
+
+"time.mirrored" = "나와 같게";
+"time.fixed" = "%d초";
+
+"list.separator" = ", ";
+"clause.separator" = ", ";
+"sentence.end" = ".";
+
+"game.toMove" = "%@ 차례";
+"game.checkmated" = "%@ 체크메이트";
+"board.shaky" = "주황 테두리 %d칸은 확신이 없다";
+
+"fen.malformed" = "이 국면을 읽을 수 없다";
+"fen.badPieceCharacter" = "알아보지 못한 기물이 있다";
+"fen.badRankWidth" = "어떤 랭크가 8칸이 아니다";
+"fen.badRankCount" = "8랭크가 아니다";
+"fen.tooManyPieces" = "기물이 너무 많다";
+"fen.tooManyPawns" = "폰이 너무 많다";
+"fen.missingKing" = "킹이 없다. 양쪽에 하나씩 있어야 한다";
+"fen.extraKing" = "킹이 많다. 한쪽에 하나씩만";
+"fen.pawnOnBackRank" = "폰은 1랭크나 8랭크에 설 수 없다";
+"fen.badSideToMove" = "누구 차례인지 적혀 있지 않다";
+"fen.badCastling" = "캐슬링 권리가 잘못됐다";
+"fen.castlingWithoutRook" = "캐슬링이 표시됐지만 룩이 구석에 없다";
+"fen.castlingWithoutKing" = "캐슬링이 표시됐지만 킹이 제자리에 없다";
+"fen.badEnPassant" = "앙파상 칸이 맞지 않다";
+"fen.badClock" = "수 번호가 맞지 않다";
+"fen.sideNotToMoveInCheck" = "차례가 아닌 쪽이 체크를 받고 있다. 있을 수 없는 국면";
+
+"engine.networkMissing" = "신경망 가중치 파일이 없어 엔진을 켤 수 없다.";
+"engine.networkTooSmall" = "가중치 파일이 불완전해 엔진을 켤 수 없다.";
+"engine.allocationFailed" = "메모리가 모자라 엔진을 켤 수 없다.";
+"engine.unknown" = "엔진을 켜지 못했다.";
+
+"intake.unreadable.title" = "사진을 열 수 없음";
+"intake.unreadable.message" = "이 사진은 열리지 않는다.";
+"intake.noBoard.title" = "체스판을 찾지 못함";
+"intake.noBoard.message" = "이 사진에는 체스판이 없다. 판을 더 크게 담거나 정면에서 다시 찍어 보라.";
+
+"library.entry.downloading" = "iCloud에서 받는 중…";
+"library.entry.unreadable" = "읽을 수 없음";
+"library.entry.moves" = "%d수";
+"library.entry.unfinished" = "미완";
+"library.entry.branches" = "분기 %d";
+
+"habit.giveaway" = "기물 내주기";
+"habit.missedReply" = "상대 응수를 안 봄";
+"habit.untrueReason" = "이유가 성립하지 않음";
+"habit.noReason" = "이유 없음";
+"habit.attackWhileHanging" = "공격만 함";
+
+"habit.giveaway.explained" = "이 수 뒤에 내 기물이 지켜지지 않았다. 이번에는 상대가 잡지 않았다.";
+"habit.missedReply.explained" = "이 수 뒤에 내 기물이 지켜지지 않았고, 상대가 다음 수에 잡았다.";
+"habit.untrueReason.explained" = "이 수가 무엇을 위한 것인지 말했지만, 판에서는 일어나지 않았다.";
+"habit.noReason.explained" = "두긴 했지만 왜인지 말하지 못했다.";
+"habit.attackWhileHanging.explained" = "내 기물이 이미 떠 있는데 공격하고 잡고 있었다.";
+
+"habit.excluded.unreviewed" = "아직 채점하지 않음";
+"habit.excluded.unreadable" = "읽을 수 없음";
+"habit.excluded.waiting" = "아직 iCloud에서 받는 중";
+
+"habit.note.taken" = "%@의 기물을 아무도 지키지 않았고, 상대가 다음 수에 잡았다";
+"habit.note.exposed" = "이 수 뒤에 %@의 기물을 아무도 지키지 않았다";
+"habit.note.hanging" = "그때 내 %@이(가) 지켜지지 않고 있었다";
+
+"check.take.notHere" = "이 수는 %@에서 아무것도 잡지 않는다";
+"check.take.won" = "%@에서 잡아 기물을 벌었다";
+"check.take.notWorth" = "%@의 교환은 남지 않는다. 되잡혀도 상대는 손해가 없다";
+"check.trade.notHere" = "이 수는 %@에서 교환하지 않는다";
+"check.trade.losing" = "%@의 이 교환은 손해다";
+"check.trade.affordable" = "%@의 교환은 감당할 만하다";
+"check.attack.noPiece" = "%@에는 상대 기물이 없다";
+"check.attack.noNewThreat" = "이 수로 %@에 대한 공격이 늘지 않았다";
+"check.attack.defended" = "상대가 %1$@을(를) 지켜낸다. 공격 %2$d, 수비 %3$d";
+"check.attack.held" = "%@의 기물이 공격받고 있고 지켜낼 수 없다";
+"check.defend.held" = "%1$@의 수비가 %2$d에서 %3$d로 늘었다";
+"check.defend.unchanged" = "%1$@의 수비가 늘지 않았다. 여전히 %2$d";
+"check.flee.noAttacker" = "%@에는 애초에 상대 기물이 없었다";
+"check.flee.notHanging" = "%1$@은(는) 떠 있지 않았다. 공격 %2$d, 수비 %3$d";
+"check.flee.stillTaken" = "%@로 가도 똑같이 잡힌다";
+"check.flee.held" = "%1$@에서 %2$@을(를) 피했다";
+"check.block.notThere" = "이 수는 %@로 가지 않는다";
+"check.block.nothing" = "%@로 가도 아무것도 막지 못한다";
+"check.block.held" = "%1$@에서 막아 %2$@의 기물이 그 공격을 받지 않는다";
+"check.hold.notYours" = "%1$@은(는) 아직 내 것이 아니다. %2$d 대 %3$d";
+"check.hold.held" = "%1$@의 다툼이 %2$d에서 %3$d로 바뀌어 내 것이 됐다";
+"check.hold.unchanged" = "%@은(는) 원래 내 것이었고, 이 수로 달라진 게 없다";
+
+"import.notALink.title" = "링크가 아님";
+"import.notALink.message" = "여기에는 주소를 넣는다. 예를 들어 공개된 lichess 스터디 링크.";
+"import.privateStudy.title" = "이 스터디는 비공개";
+"import.privateStudy.message" = "공개되어 있지 않아 받을 수 없다. 공개된 것만 가져올 수 있다.";
+"import.privateGame.title" = "이 대국은 비공개";
+"import.privateGame.message" = "lichess가 이 대국은 공개가 아니라고 한다. 받을 수 없다.";
+"import.missingGame.title" = "대국을 찾을 수 없음";
+"import.missingGame.message" = "lichess에 이 대국이 없다. 링크가 틀렸거나 이미 지워졌을 수 있다.";
+"import.unknownPlayer.title" = "그런 사용자가 없음";
+"import.unknownPlayer.message" = "lichess에 그런 사용자 이름이 없다. 대소문자는 상관없지만 철자는 맞아야 한다.";
+"import.notAPlayer.title" = "사용자 이름이 아님";
+"import.notAPlayer.message" = "lichess 사용자 이름을 넣어라. 예: DrNykterstein.";
+"import.notPGN.title" = "기보가 아님";
+"import.notPGN.message" = "이 링크로 받은 것은 PGN 기보가 아니다.";
+"import.noReadableGames.title" = "읽을 수 있는 대국이 없음";
+"import.noReadableGames.message" = "받은 기보 중 한 판도 읽지 못했다.";
+"import.http.title" = "받기 실패";
+"import.http.message" = "서버가 HTTP %d로 답했다.";
+"import.network.title" = "연결되지 않음";
+"import.network.message" = "받는 도중 네트워크 오류: %@";
+"import.network.notHTTP" = "HTTP 응답이 아님";
+
+"import.done" = "%2$@에 %1$d판을 가져왔다";
+"import.done.skipped" = "이미 있는 %d판은 건너뛰었다";
+"import.done.unreadable" = "다른 %d판은 읽지 못했다";
+"import.name.players" = "%1$@ 대 %2$@";
+"import.name.chapter" = "%d장";
+"import.collection.player" = "%@의 대국";
+
+"ok" = "확인";
+"cancel" = "취소";
+"done" = "완료";
+"retry" = "다시 시도";
+"rename" = "이름 바꾸기";
+"delete" = "삭제";
+"board" = "체스판";
+"move.number" = "%d수째";
+
+"app.name" = "Chessfen";
+"app.mark" = "棋镜";
+
+"standing.bar" = "형세 막대";
+"standing.unknown" = "알 수 없음";
+"standing.won" = "%@ 승";
+"standing.drawn" = "무승부";
+
+"camera.denied" = "판을 찍으려면 카메라가 필요하다. 「설정 - Chessfen」에서 카메라를 켜라.";
+"camera.missing" = "이 기기에서 쓸 수 있는 카메라가 없다. 앨범이나 파일에서 판 사진을 고르라.";
+"camera.lens.macro" = "접사";
+"camera.lens.standard" = "기본";
+
+"library.engineStarting" = "엔진 켜는 중";
+"library.tagline" = "판을 한 장 찍고, 그대로 이어서 둔다.";
+"library.photograph" = "판 찍기";
+"library.fromAlbum" = "앨범에서 고르기";
+"library.paste" = "스크린샷 붙이기";
+"library.fromFiles" = "파일에서 고르기";
+"library.fromStart" = "초기 국면부터";
+"library.games" = "대국 기록";
+"library.empty" = "한 수 두면 이 대국이 여기에 남는다.";
+"library.unfiled" = "미분류";
+"library.recognising" = "판을 읽는 중";
+"library.noPicture" = "사진을 가져오지 못함";
+"library.noClipboard.title" = "클립보드에 사진이 없음";
+"library.noClipboard.message" = "스크린샷을 찍고 다시 오라.";
+
+"collection.name" = "모음집 이름";
+"collection.rename" = "모음집 이름 바꾸기";
+"collection.new" = "새 모음집";
+"collection.new.ellipsis" = "새 모음집…";
+"collection.file" = "모음집에 넣기";
+"collection.remove" = "모음집에서 빼기";
+"collection.games" = "%d판";
+"collection.sorted" = "%d판 · 이름순";
+"collection.empty" = "이 모음집은 비어 있다. 대국을 넣으면 목록에 다시 나타난다.";
+
+"game.name.title" = "이 대국에 이름 붙이기";
+"game.name.field" = "이름";
+"game.name.field.long" = "이 대국의 이름";
+"game.name.explained" = "모음집은 이름순으로 늘어서므로 「002번 문제」 같은 이름은 생각한 자리에 들어간다. 비워 두면 저장한 시각을 쓴다.";
+"game.file.into" = "「%@」에 넣기";
+"game.file.explained" = "이름이 모음집 안의 순서를 정하고, 이전 대국·다음 대국의 차례도 정한다.";
+
+"habits" = "버릇";
+"habits.card" = "되풀이하는 실수를 대국에서 세어 본다";
+"habits.subtitle" = "저장한 대국에서 센 것. 점수도 순위도 매기지 않는다.";
+"habits.counting" = "세는 중…";
+"habits.nothing" = "아직 셀 대국이 없다. 한 판 채점하면 여기에 할 말이 생긴다.";
+"habits.clean" = "%d판을 셌지만 버릇은 찾지 못했다.";
+"habits.counted" = "%d판을 셌다.";
+"habits.excluded" = "다른 %1$d판은 %2$@ 세지 않았다.";
+"habits.times" = "%d회";
+
+"edit.title" = "기물 고치기";
+"edit.seePhoto" = "사진 보기";
+"edit.advanced.show" = "캐슬링과 앙파상";
+"edit.advanced.hide" = "캐슬링과 앙파상 접기";
+"edit.copyFEN" = "FEN 복사";
+"edit.reset" = "초기 국면으로";
+"edit.clear" = "판 비우기";
+"edit.photo" = "사진";
+"edit.photo.off" = "끔";
+"edit.photo.under" = "겹쳐 보기";
+"edit.photo.alone" = "사진만";
+"edit.peek" = "길게 눌러 보기";
+"edit.hint.photo" = "이건 사진 자체다. 눌러도 기물은 바뀌지 않는다";
+"edit.hint.pick" = "먼저 기물을 고르고 칸을 누르라";
+"edit.hint.erase" = "칸을 누르면 기물을 치운다";
+"edit.hint.place" = "누르면 놓고, 같은 칸을 다시 누르면 치운다";
+"edit.castling" = "캐슬링 권리";
+"edit.castling.K" = "백 O-O";
+"edit.castling.Q" = "백 O-O-O";
+"edit.castling.k" = "흑 O-O";
+"edit.castling.q" = "흑 O-O-O";
+"edit.enPassant" = "앙파상";
+"edit.none" = "없음";
+"edit.useThis" = "이 국면 쓰기";
+"edit.startGame" = "새 대국 시작";
+
+"import.title" = "기보 가져오기";
+"import.door.link" = "링크";
+"import.door.player" = "최근 대국";
+"import.door.link.explained" = "링크를 붙여 넣으라. lichess 스터디든 한 판이든, 그 안의 대국이 각각 모음집의 한 판이 된다.";
+"import.door.player.explained" = "lichess 사용자 이름을 넣으면 최근 몇 판을 받아 온다. 비행기 타기 전에 해 두라.";
+"import.field.link" = "PGN 링크";
+"import.field.player" = "lichess 사용자 이름";
+"import.howMany" = "몇 판";
+"import.fetch" = "기보 받기";
+"import.fetching" = "받는 중…";
+"import.writing" = "저장하는 중…";
+"import.into" = "「%@」에 넣기";
+"import.intoCollection" = "넣을 모음집";
+"import.plan.games" = "%d판";
+"import.plan.named" = "「%1$@」· %2$@";
+"import.more" = "%d판 더…";
+"import.unreadable" = "%d판은 읽지 못해 건너뛴다.";
+"import.apply" = "%d판 가져오기";
+"import.again" = "하나 더 가져오기";
+
+"game.undo" = "무르기";
+"game.depth" = "깊이 %d";
+"game.rescore" = "다시 채점";
+"game.sound" = "소리";
+"game.exportPGN" = "PGN 내보내기";
+"game.restart.explained" = "선수를 바꾸면 새 대국이 시작된다. 지금 판은 기록에 남는다";
+"game.whiteFirst" = "백부터";
+"game.blackFirst" = "흑부터";
+"game.more" = "더 보기. 선수는 %@";
+"game.promotion" = "무엇으로 승격할까?";
+"game.practice" = "연습";
+"game.noEngine" = "엔진 없음";
+"game.toPlay" = "둘 차례";
+"game.inCheck" = "체크";
+"game.moveNow" = "바로 두기";
+"game.letEngine" = "엔진이 두기";
+"game.letEngine.hint" = "누르고 있을수록 깊이 읽고, 떼면 둔다";
+"game.willPlay" = "%@ 둘 것";
+"game.suggests" = "%@ 어떨까";
+"game.thinking" = "계산 중";
+"game.hold.deeper" = "오래 누를수록 깊이 읽는다";
+"game.hold.progress" = "%1$.1f초 · 깊이 %2$d";
+"game.settings.expand" = "%@ 설정 열기";
+"game.settings.collapse" = "%@ 설정 닫기";
+"game.who" = "누가 두나";
+"game.perMove" = "한 수당";
+"game.worst" = "이 판에서 가장 비쌌던 세 수";
+"game.worst.quiet" = "다시 볼 세 수";
+"game.changed" = "이 수가 바꾼 것";
+"game.loose" = "빨간 동그라미: 지키는 쪽보다 잡는 쪽이 많다";
+"game.wrongPiece" = "사진이 기물을 잘못 봤나?";
+"game.alternatives" = "다른 수";
+"game.over" = "이 판은 끝났다. 곡선과 수마다의 손익은 아래에 있다.";
+"game.over.quiet" = "이 판은 끝났다. 「엔진 의견」을 켜면 모든 수를 다시 채점한다.";
+"game.quiet" = "연습 중이라 엔진이 의견을 내지 않는다. 위의 「엔진 의견」을 켜면 들을 수 있다.";
+"game.selfPlaying" = "양쪽 다 엔진이라 알아서 계속 둔다. 한 수 되돌리면 멈춘다";
+"game.opinion" = "엔진 의견";
+"game.flip" = "판 뒤집기";
+
+"record.previous" = "이전 수";
+"record.next" = "다음 수";
+"record.latest" = "최신으로";
+"record.curve" = "점수 곡선";
+"record.ply" = "%d수째";
+"record.jump" = "이 수로 돌아가기";
+"record.branch" = "위아래로 쓸어 분기를 바꾼다";
+"record.startHere" = "여기서부터 두기";
+"record.opening" = "시작";
+
+"study.computing" = "이 수를 계산하는 중…";
+"study.why" = "%@을(를) 둔다. 왜?";
+"study.withdraw" = "물리기";
+"study.commit" = "이 수로 간다";
+"study.notReady" = "엔진이 준비되지 않아 이 수를 채점할 수 없다.";
+"study.ask" = "%@ 차례다. 어떤 수를 두겠나?";
+"study.ask.explained" = "판 위에서 그대로 한 수 두라. 두고 나면 결과를 알려 준다.";
+"study.place" = "이 판에서 비쌌던 수 %1$d 위: 실전은 %2$@, %3$@ 폰.";
+"study.place.practising" = "이 판에서 가장 비쌌던 %d 번째 수. 여기서 실전에 둔 수는 엔진이 다시 계산하면 값어치가 없다.";
+"study.reason.unclear" = "모르겠음 — 적어 두었다.";
+"study.reason.because" = "이유: %@.";
+"study.reason.where" = "%@ 어디에? 판의 칸을 누르라.";
+"study.reason.prompt" = "먼저 이 수가 무엇을 위한 것인지 말하라.";
+"study.headline.both" = "수도 맞고 이유도 선다.";
+"study.headline.reasonOnly" = "이유는 맞지만 이 수가 해내지 못했다.";
+"study.headline.moveOnly" = "수는 괜찮지만 이유가 성립하지 않는다.";
+"study.headline.neither" = "수도 이유도 서지 못했다.";
+"study.headline.fine" = "이 수는 괜찮다.";
+"study.headline.poor" = "이 수는 서지 못한다.";
+"verdict.held" = "맞음";
+"verdict.failed" = "못 해냄";
+"verdict.noClaim" = "말 안 함";
+"study.verdict.noOpinion" = "엔진이 의견을 내지 않아 실전 수와만 견줄 수 있다.";
+"study.verdict.best" = "엔진의 첫 선택 그대로다.";
+"study.verdict.better" = "엔진보다 %@ 낫다.";
+"study.verdict.pass" = "통과: 엔진과 %@ 차이.";
+"study.verdict.worse" = "%1$@: 엔진보다 %2$@ 못하다.";
+"study.yours" = "내 수";
+"study.engine" = "엔진";
+"study.played" = "실전";
+"study.keep" = "이 수로 바꾸기";
+"study.again" = "다시";
+"study.next" = "다음 문제";
+"study.depth.explained" = "세 수 모두 깊이 %d로 계산해 서로 견줄 수 있다.";
+
+"report.running" = "깊이 %1$d로 다시 계산 중: %2$d/%3$d";
+"report.unscored" = "이 대국은 아직 채점하지 않았다.";
+"report.score" = "채점";
+"report.ply" = "%1$d수째 %2$@ %3$@";
+"report.start" = "시작 국면";
+
+"series.previous" = "이전 대국";
+"series.next" = "다음 대국";
+"series.place" = "%2$d판 중 %1$d판째";
+
+"about" = "정보";
+"about.what" = "판을 찍고, 국면을 읽고, 이어서 둔다. 인식도 엔진도 이 기기 안에서 돌아가고, 대국은 자신의 iCloud에 들어간다. 밖으로 나가는 것은 링크에서 기보를 가져올 때뿐이다.";
+"about.language" = "언어";
+"about.language.system" = "기기 설정 따르기";
+"about.language.explained" = "고르면 앱 전체가 바로 그 언어로 바뀌고, 다른 기기의 Chessfen에도 따라간다. 저장한 대국은 그대로다.";
+"about.version" = "버전";
+"about.engine" = "엔진";
+"about.engineStatus" = "엔진 상태";
+"about.ready" = "준비됨";
+"about.starting" = "켜는 중";
+"about.storage" = "저장";
+"about.storedIn" = "대국 저장 위치";
+"about.iCloud" = "iCloud Drive";
+"about.thisDevice" = "이 기기";
+"about.storage.cloud" = "대국은 한 판마다 PGN 파일이고 iCloud Drive의 「Chessfen」 폴더에 들어간다. 「파일」 앱에서 바로 열고 복사하고 지울 수 있다. 바뀐 내용은 같은 Apple 계정의 다른 기기에도 동기화된다.";
+"about.storage.local" = "대국은 한 판마다 PGN 파일이고 지금은 이 기기에만 있다. 「설정 → Apple 계정 → iCloud Drive」를 켜면 이미 있는 대국이 iCloud로 옮겨 가고 다른 기기와도 동기화된다.";
+"about.licence" = "라이선스";
+"about.source" = "소스 코드";
+"about.licence.explained" = "이 앱에는 Stockfish가 들어 있다. Stockfish는 GNU GPL v3로 공개되어 있으므로 이 앱 전체도 GPL v3다. 자유롭게 쓰고, 살펴보고, 고치고, 다시 배포할 수 있다. 다만 배포할 때는 소스 코드와 같은 라이선스를 함께 넘겨야 한다. 전문은 소스 저장소의 LICENSE 파일에 있다.\n\n기물 그림은 python-chess의 Cburnett 세트(CC BY-SA 3.0)다.";

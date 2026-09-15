@@ -1,0 +1,5 @@
+# The NNUE weights are committed so that a clone can build an app that plays chess
+# without going near the network — that is the whole point of the thing. The big net is
+# 104 MiB, past GitHub's 100 MiB hard limit for a blob, so LFS carries both of them.
+# A clone therefore needs `git lfs install` before the files arrive as files.
+Resources/Nets/*.nnue filter=lfs diff=lfs merge=lfs -text

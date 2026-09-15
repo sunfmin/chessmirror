@@ -1,0 +1,380 @@
+/* 棋镜 Chessfen — 日本語。原文は zh-Hans。キーも順序も同じ。日本語に単数形はないので
+   「.one」のキーは持たない。 */
+
+"colour.white" = "白";
+"colour.black" = "黒";
+
+"piece.pawn" = "ポーン";
+"piece.knight" = "ナイト";
+"piece.bishop" = "ビショップ";
+"piece.rook" = "ルーク";
+"piece.queen" = "クイーン";
+"piece.king" = "キング";
+
+"controller.hand" = "手動";
+"controller.engine" = "エンジン";
+
+"outcome.ongoing" = "対局中";
+"outcome.checkmate" = "チェックメイト";
+"outcome.stalemate" = "ステイルメイト";
+"outcome.fiftyMove" = "50手ルールで引き分け";
+"outcome.threefold" = "同一局面3回で引き分け";
+"outcome.insufficientMaterial" = "駒不足で引き分け";
+
+"origin.fresh" = "手並べ";
+"origin.recognised" = "写真";
+"origin.imported" = "取り込み";
+
+"quality.blunder" = "大悪手";
+"quality.mistake" = "悪手";
+"quality.inaccuracy" = "不正確";
+"quality.fine" = "問題なし";
+
+"verb.take" = "取る";
+"verb.trade" = "交換";
+"verb.attack" = "攻め";
+"verb.defend" = "守り";
+"verb.flee" = "逃げ";
+"verb.block" = "合駒";
+"verb.hold" = "確保";
+"intent.unclear" = "わからない";
+
+"time.mirrored" = "私と同じ";
+"time.fixed" = "%d 秒";
+
+"list.separator" = "、";
+"clause.separator" = "、";
+"sentence.end" = "。";
+
+"game.toMove" = "%@ の手番";
+"game.checkmated" = "%@ がチェックメイト";
+"board.shaky" = "オレンジ枠の %d マスは読み取りに自信がない";
+
+"fen.malformed" = "この局面は読み取れない";
+"fen.badPieceCharacter" = "見分けられない駒がある";
+"fen.badRankWidth" = "8マスでない段がある";
+"fen.badRankCount" = "8段になっていない";
+"fen.tooManyPieces" = "駒が多すぎる";
+"fen.tooManyPawns" = "ポーンが多すぎる";
+"fen.missingKing" = "キングが足りない。両方に1枚ずつ必要";
+"fen.extraKing" = "キングが多い。片側1枚まで";
+"fen.pawnOnBackRank" = "ポーンは1段目にも8段目にも置けない";
+"fen.badSideToMove" = "どちらの手番か書かれていない";
+"fen.badCastling" = "キャスリングの権利が間違っている";
+"fen.castlingWithoutRook" = "キャスリング可となっているが、ルークが隅にいない";
+"fen.castlingWithoutKing" = "キャスリング可となっているが、キングが定位置にいない";
+"fen.badEnPassant" = "アンパッサンのマスが正しくない";
+"fen.badClock" = "手数が正しくない";
+"fen.sideNotToMoveInCheck" = "手番でない側がチェックを受けている。ありえない局面";
+
+"engine.networkMissing" = "ニューラルネットの重みファイルが見つからず、エンジンを起動できない。";
+"engine.networkTooSmall" = "重みファイルが不完全で、エンジンを起動できない。";
+"engine.allocationFailed" = "メモリが足りず、エンジンを起動できない。";
+"engine.unknown" = "エンジンの起動に失敗した。";
+
+"intake.unreadable.title" = "画像を開けない";
+"intake.unreadable.message" = "この画像は開けない。";
+"intake.noBoard.title" = "盤が見つからない";
+"intake.noBoard.message" = "この画像に盤がない。もっと大きく写すか、正面から撮り直して。";
+
+"library.entry.downloading" = "iCloud からダウンロード中…";
+"library.entry.unreadable" = "読み取れない";
+"library.entry.moves" = "%d 手";
+"library.entry.unfinished" = "未了";
+"library.entry.branches" = "分岐 %d";
+
+"habit.giveaway" = "駒を渡す";
+"habit.missedReply" = "相手の応手を読まない";
+"habit.untrueReason" = "理由が成り立たない";
+"habit.noReason" = "理由なし";
+"habit.attackWhileHanging" = "攻めるだけ";
+
+"habit.giveaway.explained" = "この手のあと、自分の駒に守りがなかった。今回は取られなかった。";
+"habit.missedReply.explained" = "この手のあと自分の駒に守りがなく、相手に次の手で取られた。";
+"habit.untrueReason.explained" = "何のための手か言ったが、盤の上では起きていない。";
+"habit.noReason.explained" = "指したが、理由を言えなかった。";
+"habit.attackWhileHanging.explained" = "自分の駒が浮いたまま、攻めたり取ったりしている。";
+
+"habit.excluded.unreviewed" = "まだ採点していない";
+"habit.excluded.unreadable" = "読み取れない";
+"habit.excluded.waiting" = "iCloud からダウンロード中";
+
+"habit.note.taken" = "%@ の駒に守りがなく、相手に次の手で取られた";
+"habit.note.exposed" = "この手のあと、%@ の駒に守りがない";
+"habit.note.hanging" = "自分の %@ がそのとき浮いていた";
+
+"check.take.notHere" = "この手は %@ で何も取っていない";
+"check.take.won" = "%@ で取って駒得になった";
+"check.take.notWorth" = "%@ の交換は得しない。取り返されても相手は損しない";
+"check.trade.notHere" = "この手は %@ で交換していない";
+"check.trade.losing" = "%@ のこの交換は損";
+"check.trade.affordable" = "%@ の交換なら見合う";
+"check.attack.noPiece" = "%@ に相手の駒はない";
+"check.attack.noNewThreat" = "この手で %@ への当たりは増えていない";
+"check.attack.defended" = "%1$@ は相手が支えている。attack %2$d、defend %3$d";
+"check.attack.held" = "%@ の駒は当たっていて、支えきれない";
+"check.defend.held" = "%1$@ の守りが %2$d から %3$d になった";
+"check.defend.unchanged" = "%1$@ の守りは増えていない。%2$d のまま";
+"check.flee.noAttacker" = "%@ にはもともと相手の駒がない";
+"check.flee.notHanging" = "%1$@ は浮いていなかった。attack %2$d、defend %3$d";
+"check.flee.stillTaken" = "%@ に行っても同じように取られる";
+"check.flee.held" = "%1$@ から %2$@ を避けた";
+"check.block.notThere" = "この手は %@ に行っていない";
+"check.block.nothing" = "%@ に行っても何も遮っていない";
+"check.block.held" = "%1$@ で遮り、%2$@ の駒はその当たりを受けなくなった";
+"check.hold.notYours" = "%1$@ はまだ自分のものではない。%2$d 対 %3$d";
+"check.hold.held" = "%1$@ の取り合いが %2$d から %3$d になり、自分のものになった";
+"check.hold.unchanged" = "%@ はもともと自分のもので、この手では変わっていない";
+
+"import.notALink.title" = "リンクではない";
+"import.notALink.message" = "ここに入れるのは URL。たとえば公開された lichess スタディのリンク。";
+"import.privateStudy.title" = "このスタディは非公開";
+"import.privateStudy.message" = "公開されていないのでダウンロードできない。取り込めるのは公開のものだけ。";
+"import.privateGame.title" = "この対局は非公開";
+"import.privateGame.message" = "lichess によるとこの対局は公開されておらず、ダウンロードできない。";
+"import.missingGame.title" = "対局が見つからない";
+"import.missingGame.message" = "lichess にこの対局はない。リンクが違うか、すでに削除されたか。";
+"import.unknownPlayer.title" = "そのユーザーはいない";
+"import.unknownPlayer.message" = "lichess にそのユーザー名は見つからない。大文字小文字は関係ないが、綴りは合わせて。";
+"import.notAPlayer.title" = "ユーザー名ではない";
+"import.notAPlayer.message" = "lichess のユーザー名を入れて。たとえば DrNykterstein。";
+"import.notPGN.title" = "棋譜ではない";
+"import.notPGN.message" = "このリンクで落ちてきたものは PGN 棋譜ではない。";
+"import.noReadableGames.title" = "読める対局がない";
+"import.noReadableGames.message" = "落ちてきた棋譜のうち、一局も読めなかった。";
+"import.http.title" = "ダウンロード失敗";
+"import.http.message" = "サーバーが HTTP %d を返した。";
+"import.network.title" = "ネットワークに繋がらない";
+"import.network.message" = "ダウンロード中にネットワークエラー：%@";
+"import.network.notHTTP" = "HTTP 応答ではない";
+
+"import.done" = "%2$@ に %1$d 局を取り込んだ";
+"import.done.skipped" = "すでにある %d 局は飛ばした";
+"import.done.unreadable" = "ほかに %d 局は読めなかった";
+"import.name.players" = "%1$@ 対 %2$@";
+"import.name.chapter" = "第 %d 章";
+"import.collection.player" = "%@ の対局";
+
+"ok" = "OK";
+"cancel" = "キャンセル";
+"done" = "完了";
+"retry" = "やり直す";
+"rename" = "名前を変更";
+"delete" = "削除";
+"board" = "盤";
+"move.number" = "%d 手目";
+
+"app.name" = "Chessfen";
+"app.mark" = "棋镜";
+
+"standing.bar" = "形勢バー";
+"standing.unknown" = "不明";
+"standing.won" = "%@ の勝ち";
+"standing.drawn" = "引き分け";
+
+"camera.denied" = "盤を撮るにはカメラが要る。「設定 - Chessfen」でカメラを許可して。";
+"camera.missing" = "この端末に使えるカメラがない。アルバムかファイルから盤の画像を選んで。";
+"camera.lens.macro" = "マクロ";
+"camera.lens.standard" = "標準";
+
+"library.engineStarting" = "エンジン起動中";
+"library.tagline" = "盤を一枚撮って、そのまま指し継ぐ。";
+"library.photograph" = "盤を撮る";
+"library.fromAlbum" = "アルバムから選ぶ";
+"library.paste" = "スクショを貼る";
+"library.fromFiles" = "ファイルから選ぶ";
+"library.fromStart" = "初期局面から";
+"library.games" = "対局の記録";
+"library.empty" = "一手指せば、この対局はここに残る。";
+"library.unfiled" = "未分類";
+"library.recognising" = "盤を読んでいる";
+"library.noPicture" = "画像を取得できなかった";
+"library.noClipboard.title" = "クリップボードに画像がない";
+"library.noClipboard.message" = "スクリーンショットを撮ってから、もう一度。";
+
+"collection.name" = "作品集の名前";
+"collection.rename" = "作品集の名前を変更";
+"collection.new" = "新しい作品集";
+"collection.new.ellipsis" = "新しい作品集…";
+"collection.file" = "作品集に入れる";
+"collection.remove" = "作品集から出す";
+"collection.games" = "%d 局";
+"collection.sorted" = "%d 局・名前順";
+"collection.empty" = "この作品集は空。対局を入れれば一覧に戻る。";
+
+"game.name.title" = "この対局に名前をつける";
+"game.name.field" = "名前";
+"game.name.field.long" = "この対局の名前";
+"game.name.explained" = "作品集は名前順に並ぶので、「第 002 問」のような名前は思ったところに入る。空にすれば保存した時刻を使う。";
+"game.file.into" = "「%@」に入れる";
+"game.file.explained" = "名前が作品集の中の順番を決め、前の一局・次の一局の順番も決める。";
+
+"habits" = "くせ";
+"habits.card" = "繰り返している間違いを、対局から数える";
+"habits.subtitle" = "保存した対局から数えたもの。採点もランキングもしない。";
+"habits.counting" = "数えている…";
+"habits.nothing" = "まだ数えられる対局がない。まず一局採点すれば、ここに書くことができる。";
+"habits.clean" = "%d 局を数えたが、くせは見つからなかった。";
+"habits.counted" = "%d 局を数えた。";
+"habits.excluded" = "ほかに %1$d 局は%2$@ため、数に入れていない。";
+"habits.times" = "%d 回";
+
+"edit.title" = "駒を直す";
+"edit.seePhoto" = "写真を見る";
+"edit.advanced.show" = "キャスリングとアンパッサン";
+"edit.advanced.hide" = "キャスリングとアンパッサンを閉じる";
+"edit.copyFEN" = "FEN をコピー";
+"edit.reset" = "初期局面に並べる";
+"edit.clear" = "盤を空にする";
+"edit.photo" = "写真";
+"edit.photo.off" = "なし";
+"edit.photo.under" = "重ねて見る";
+"edit.photo.alone" = "写真だけ";
+"edit.peek" = "長押しで表示";
+"edit.hint.photo" = "これは写真そのもの。タップしても駒は変わらない";
+"edit.hint.pick" = "先に駒を選んでから、マスをタップ";
+"edit.hint.erase" = "マスをタップすると駒を外す";
+"edit.hint.place" = "タップで置く。同じマスをもう一度で外す";
+"edit.castling" = "キャスリング";
+"edit.castling.K" = "白 O-O";
+"edit.castling.Q" = "白 O-O-O";
+"edit.castling.k" = "黒 O-O";
+"edit.castling.q" = "黒 O-O-O";
+"edit.enPassant" = "アンパッサン";
+"edit.none" = "なし";
+"edit.useThis" = "この局面を使う";
+"edit.startGame" = "新しい対局を始める";
+
+"import.title" = "棋譜を取り込む";
+"import.door.link" = "リンク";
+"import.door.player" = "最近の対局";
+"import.door.link.explained" = "リンクを貼る。lichess のスタディでも一局でもよく、その中の各対局が作品集の一局になる。";
+"import.door.player.explained" = "lichess のユーザー名を入れて、最近の対局を落としてくる。飛行機に乗る前にどうぞ。";
+"import.field.link" = "PGN リンク";
+"import.field.player" = "lichess ユーザー名";
+"import.howMany" = "何局";
+"import.fetch" = "棋譜を取得";
+"import.fetching" = "ダウンロード中…";
+"import.writing" = "書き込み中…";
+"import.into" = "「%@」に取り込む";
+"import.intoCollection" = "取り込む作品集";
+"import.plan.games" = "%d 局";
+"import.plan.named" = "「%1$@」・%2$@";
+"import.more" = "ほかに %d 局…";
+"import.unreadable" = "%d 局は読めないので飛ばす。";
+"import.apply" = "%d 局を取り込む";
+"import.again" = "もう一つ取り込む";
+
+"game.undo" = "待った";
+"game.depth" = "深さ %d";
+"game.rescore" = "採点し直す";
+"game.sound" = "効果音";
+"game.exportPGN" = "PGN を書き出す";
+"game.restart.explained" = "先手を変えると対局をやり直す。今の一局は記録に残る";
+"game.whiteFirst" = "白から指す";
+"game.blackFirst" = "黒から指す";
+"game.more" = "その他。先手は %@";
+"game.promotion" = "何に成る？";
+"game.practice" = "練習";
+"game.noEngine" = "エンジンなし";
+"game.toPlay" = "手番";
+"game.inCheck" = "チェック";
+"game.moveNow" = "すぐ指す";
+"game.letEngine" = "エンジンに指させる";
+"game.letEngine.hint" = "押し続けるほど深く読む。離すと指す";
+"game.willPlay" = "%@ を指す";
+"game.suggests" = "%@ はどう";
+"game.thinking" = "考え中";
+"game.hold.deeper" = "長く押すほど深く読む";
+"game.hold.progress" = "%1$.1f 秒・深さ %2$d";
+"game.settings.expand" = "%@ の設定を開く";
+"game.settings.collapse" = "%@ の設定を閉じる";
+"game.who" = "誰が指す";
+"game.perMove" = "一手あたり";
+"game.worst" = "この対局で最も高くついた3手";
+"game.worst.quiet" = "見直すべき3手";
+"game.changed" = "この手が変えたもの";
+"game.loose" = "赤い丸：当たりが守りより多い";
+"game.wrongPiece" = "写真が駒を読み違えた？";
+"game.alternatives" = "ほかの手";
+"game.over" = "この対局は終わり。曲線と各手の損得は下にある。";
+"game.over.quiet" = "この対局は終わり。「エンジンの意見」を入れれば、全手を採点し直す。";
+"game.quiet" = "練習中。エンジンは意見を出さない。上の「エンジンの意見」を入れれば聞ける。";
+"game.selfPlaying" = "両方エンジン。そのまま指し続ける。一手戻せば止まる";
+"game.opinion" = "エンジンの意見";
+"game.flip" = "盤を反転";
+
+"record.previous" = "前の手";
+"record.next" = "次の手";
+"record.latest" = "最新に戻る";
+"record.curve" = "評価の曲線";
+"record.ply" = "%d 手目";
+"record.jump" = "この手に戻る";
+"record.branch" = "上下にスワイプして分岐を切り替える";
+"record.startHere" = "ここから指す";
+"record.opening" = "開始";
+
+"study.computing" = "この手を計算中…";
+"study.why" = "%@ と指す。なぜ？";
+"study.withdraw" = "取り消す";
+"study.commit" = "これでいく";
+"study.notReady" = "エンジンの準備ができておらず、この手を採点できない。";
+"study.ask" = "%@ の手番。あなたならどう指す？";
+"study.ask.explained" = "そのまま盤の上で指して。指したあとに結果が出る。";
+"study.place" = "この対局で高くついた手の第 %1$d 位：実戦は %2$@、%3$@ ポーン。";
+"study.place.practising" = "この対局で最も高くついた第 %d 手。ここで実戦に指された手は、エンジンが読み直すと割に合わない。";
+"study.reason.unclear" = "わからない — 記録した。";
+"study.reason.because" = "理由：%@。";
+"study.reason.where" = "%@ どこ？盤のマスをタップ。";
+"study.reason.prompt" = "まず、この手が何のためか言って。";
+"study.headline.both" = "手も正しく、理由も通っている。";
+"study.headline.reasonOnly" = "理由は正しいが、この手では実現していない。";
+"study.headline.moveOnly" = "手は悪くないが、理由が成り立たない。";
+"study.headline.neither" = "手も理由も通らなかった。";
+"study.headline.fine" = "この手は悪くない。";
+"study.headline.poor" = "この手は通らない。";
+"verdict.held" = "その通り";
+"verdict.failed" = "できていない";
+"verdict.noClaim" = "言っていない";
+"study.verdict.noOpinion" = "エンジンの意見がないので、実戦の手とだけ比べられる。";
+"study.verdict.best" = "エンジンの第一候補そのもの。";
+"study.verdict.better" = "エンジンより %@ 良い。";
+"study.verdict.pass" = "合格：エンジンとの差は %@。";
+"study.verdict.worse" = "%1$@：エンジンより %2$@ 悪い。";
+"study.yours" = "あなた";
+"study.engine" = "エンジン";
+"study.played" = "実戦";
+"study.keep" = "この手に差し替える";
+"study.again" = "もう一度";
+"study.next" = "次の問題";
+"study.depth.explained" = "3手とも深さ %d で計算しているので、そのまま比べられる。";
+
+"report.running" = "深さ %1$d で計算し直している：%2$d/%3$d";
+"report.unscored" = "この対局はまだ採点していない。";
+"report.score" = "採点する";
+"report.ply" = "%1$d 手目 %2$@ %3$@";
+"report.start" = "開始局面";
+
+"series.previous" = "前の一局";
+"series.next" = "次の一局";
+"series.place" = "%2$d 局中 %1$d 局目";
+
+"about" = "このアプリについて";
+"about.what" = "盤を撮って、局面を読んで、そのまま指し継ぐ。認識もエンジンもこの端末の中で動き、対局は自分の iCloud に入る。ネットに出るのは、リンクから棋譜を取り込むときだけ。";
+"about.language" = "言語";
+"about.language.system" = "端末に合わせる";
+"about.language.explained" = "選ぶとアプリ全体がすぐその言語になり、ほかの端末の Chessfen にも同期する。保存した対局は変わらない。";
+"about.version" = "バージョン";
+"about.engine" = "エンジン";
+"about.engineStatus" = "エンジンの状態";
+"about.ready" = "準備完了";
+"about.starting" = "起動中";
+"about.storage" = "保存先";
+"about.storedIn" = "対局の保存先";
+"about.iCloud" = "iCloud Drive";
+"about.thisDevice" = "この端末";
+"about.storage.cloud" = "対局は一局ごとに PGN ファイルで、iCloud Drive の「Chessfen」フォルダに入る。「ファイル」App からそのまま開いたり、コピーしたり、消したりできる。変更は同じ Apple アカウントのほかの端末にも同期する。";
+"about.storage.local" = "対局は一局ごとに PGN ファイルで、いまはこの端末にしかない。「設定 → Apple アカウント → iCloud Drive」を入れると、すでにある対局が iCloud に移り、ほかの端末にも同期する。";
+"about.licence" = "ライセンス";
+"about.source" = "ソースコード";
+"about.licence.explained" = "このアプリは Stockfish を内蔵している。Stockfish は GNU GPL v3 で公開されているため、このアプリ全体も GPL v3 となる。自由に使い、調べ、改変し、再配布できる。ただし配るときはソースコードと同じライセンスを一緒に渡すこと。全文はソースリポジトリの LICENSE ファイルにある。\n\n駒の図は python-chess の Cburnett セット（CC BY-SA 3.0）。";

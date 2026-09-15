@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Chessfen";
+"NSCameraUsageDescription" = "Photographier un échiquier et en lire la position. La reconnaissance se fait sur cet appareil ; les parties et les photos conservées se synchronisent avec votre propre iCloud et ne vont à personne d'autre.";
+"NSPhotoLibraryUsageDescription" = "Choisir dans vos albums une photo d'échiquier ou une capture à lire. La reconnaissance se fait sur cet appareil ; les parties et les photos conservées se synchronisent avec votre propre iCloud.";
