@@ -281,6 +281,35 @@ public struct Game: Hashable, Sendable {
         )
     }
 
+    /// How much win probability the move at `ply` gave away, from its own mover's point of view
+    /// (docs/adr/0027). Nil for a Game no Review has been over — which is not zero.
+    public func drop(atPly ply: Int) -> Double? {
+        guard ply > 0 else { return nil }
+        return MoveQuality.drop(
+            move: mover(ofPly: ply),
+            before: reviewScore(atPly: ply - 1),
+            after: reviewScore(atPly: ply)
+        )
+    }
+
+    /// What came of the opponent's mistake the move at `ply` was the reply to, or nil when the
+    /// move before it gave nothing away.
+    ///
+    /// Asked about the *reply*, which is what makes this a settlement rather than a warning: it
+    /// can only be answered once the reply exists, so there is no state in which the screen knows
+    /// there is something to win and the player does not (docs/adr/0027). Every Score it reads
+    /// comes from the one Review, so all three are at one depth (docs/adr/0016).
+    public func settlement(atPly ply: Int, lines: JudgementLines = .standard) -> Settlement? {
+        guard ply > 1 else { return nil }
+        return Settlement(
+            player: mover(ofPly: ply),
+            before: reviewScore(atPly: ply - 2),
+            afterTheirMove: reviewScore(atPly: ply - 1),
+            afterMyReply: reviewScore(atPly: ply),
+            lines: lines
+        )
+    }
+
     /// Where a PGN's `[%eval]` comments land while a file is being read. Which of the two
     /// slots they go to is decided once, by whether the file carried a Review Depth.
     mutating func setEvaluation(_ score: Score?, atPly ply: Int, reviewed: Bool) {

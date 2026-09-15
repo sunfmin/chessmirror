@@ -142,29 +142,54 @@ func aFixedThinkingTimeIgnoresTheMirror() {
 
 @Test("a move is graded from the point of view of whoever played it")
 func moveQualityIsRelativeToTheMover() {
-    // White's score fell by two pawns: White's mistake.
+    // Level, then two and a half pawns down: 23 points of win probability, a mistake.
     #expect(
-        MoveQuality.of(move: .white, before: .centipawns(20), after: .centipawns(-180))
+        MoveQuality.of(move: .white, before: .centipawns(20), after: .centipawns(-250))
             == .mistake
     )
     // The same drop is Black's *gain*, so it is not Black's mistake.
     #expect(
-        MoveQuality.of(move: .black, before: .centipawns(20), after: .centipawns(-180))
+        MoveQuality.of(move: .black, before: .centipawns(20), after: .centipawns(-250))
             == .fine
     )
     #expect(
-        MoveQuality.of(move: .black, before: .centipawns(-180), after: .centipawns(20))
+        MoveQuality.of(move: .black, before: .centipawns(-250), after: .centipawns(20))
             == .mistake
     )
     #expect(
         MoveQuality.of(move: .white, before: .centipawns(0), after: .centipawns(-500))
             == .blunder
     )
+    // 10% works out to about 109 centipawns near equality, which is where the familiar
+    // "a pawn from level is an inaccuracy" lands (docs/adr/0027).
     #expect(
-        MoveQuality.of(move: .white, before: .centipawns(0), after: .centipawns(-70))
+        MoveQuality.of(move: .white, before: .centipawns(0), after: .centipawns(-120))
             == .inaccuracy
     )
+    #expect(
+        MoveQuality.of(move: .white, before: .centipawns(0), after: .centipawns(-70)) == .fine,
+        "and under it is nothing at all"
+    )
     #expect(MoveQuality.of(move: .white, before: nil, after: .centipawns(0)) == nil)
+}
+
+@Test("the same centipawns cost different amounts depending on the position")
+func centipawnsAreWorthDifferentAmountsInDifferentPositions() {
+    // Three pawns given away from a won game barely changes who wins, and this is the whole
+    // reason the scale changed: the old bands called it a blunder (docs/adr/0027).
+    #expect(
+        MoveQuality.of(move: .white, before: .centipawns(800), after: .centipawns(500)) == .fine
+    )
+    #expect(
+        MoveQuality.of(move: .white, before: .centipawns(600), after: .centipawns(300))
+            == .inaccuracy,
+        "the same 300 centipawns, closer to level, has started to matter"
+    )
+    // And the same three pawns from a level position decides the game.
+    #expect(
+        MoveQuality.of(move: .white, before: .centipawns(0), after: .centipawns(-300))
+            == .mistake
+    )
 }
 
 @Test("walking into a mate is a blunder, and mating is not")
@@ -175,8 +200,9 @@ func mateScoresAreGradedFinitely() {
     #expect(
         MoveQuality.of(move: .white, before: .centipawns(50), after: .mate(in: 2)) == .fine
     )
-    // Mate in three instead of mate in two is not a blunder; it is still mate.
+    // Mate in three instead of mate in two is not a move worth a name: it is still mate, and
+    // who wins has not changed by one point.
     #expect(
-        MoveQuality.of(move: .white, before: .mate(in: 2), after: .mate(in: 3)) == .inaccuracy
+        MoveQuality.of(move: .white, before: .mate(in: 2), after: .mate(in: 3)) == .fine
     )
 }

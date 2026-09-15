@@ -124,7 +124,11 @@ struct GameScreen: View {
                 board.frame(width: side, height: side)
                 standing.frame(width: side).padding(.vertical, 6).chromeType()
                 playerBar(bottomColour).chromeType()
-                record.chromeType()
+                VStack(spacing: 0) {
+                    record
+                    settlement
+                }
+                .chromeType()
                 deck
             }
             .frame(maxWidth: .infinity)
@@ -875,6 +879,25 @@ struct GameScreen: View {
             .buttonStyle(.plain)
             .disabled(session.tactic?.line.isEmpty != false)
             .accessibilityLabel(prompt)
+        }
+    }
+
+    /// What came of the opponent's last mistake, said **after** the reply landed (docs/adr/0027).
+    ///
+    /// Never before. "There is something to win here" is the strongest hint in chess, and a line
+    /// that appeared while the player was still thinking would be answering the question it is
+    /// supposed to be asking. Standing on a move is what asks for it, so walking back through a
+    /// game replays the settlements one at a time and nothing is ever said about a position the
+    /// eye has not yet moved past.
+    ///
+    /// Practice hides it with everything else the engine thinks: a Score is the engine's opinion
+    /// and so is a percentage of it (docs/adr/0015).
+    @ViewBuilder private var settlement: some View {
+        if !session.isPractising, let settled = session.settlement {
+            sentence(settled.sentence, colour: settled.isClean ? Palette.analysis : Palette.alarm)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 6)
+                .transition(.opacity)
         }
     }
 

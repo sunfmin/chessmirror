@@ -16,10 +16,15 @@ public struct Tactic: Hashable, Sendable {
     /// engine reply, deep enough to see a short combination.
     public static let probeDepth = 10
 
-    /// How much better the Best Move has to be than the second, in centipawns for the side
-    /// to move, before a line the rules did not name counts as a Tactic. The same band
-    /// `MoveQuality` calls a 失误 — quieter gaps are just a preference.
-    public static let uniqueGain = 150
+    /// How much better the Best Move has to be than the second before a line the rules did not
+    /// name counts as a Tactic, in percentage points of win probability for the side to move.
+    /// Literally the band `MoveQuality` calls a 失误 — playing the second here would be one —
+    /// and quieter gaps are just a preference.
+    ///
+    /// Win probability rather than centipawns, with everything else that judges a move
+    /// (docs/adr/0027). It used to be 150 centipawns, which in a won position is a gap between
+    /// two moves that both win and so is no tactic at all.
+    public static let uniqueGain = MoveQuality.mistakeFrom
 
     /// What the rules can see, with no search. Nil when none of the legal moves is a mate,
     /// a winning capture, or a double attack.
@@ -54,11 +59,14 @@ public struct Tactic: Hashable, Sendable {
         if case .mate = best.score {
             unique = true
         } else if analysis.lines.count >= 2 {
-            let swing =
-                MoveQuality.centipawns(best.score)
-                - MoveQuality.centipawns(analysis.lines[1].score)
-            let forMover = game.state.sideToMove == .white ? swing : -swing
-            unique = forMover >= uniqueGain
+            // What the mover gives away by playing the second line instead of the best one,
+            // which is the same subtraction `MoveQuality` makes about a move already played.
+            let given = MoveQuality.drop(
+                move: game.state.sideToMove,
+                before: best.score,
+                after: analysis.lines[1].score
+            )
+            unique = (given ?? 0) >= uniqueGain
         } else {
             unique = false
         }

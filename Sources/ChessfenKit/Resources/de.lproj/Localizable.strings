@@ -295,3 +295,13 @@
 "share.kept.title" = "Angekommen";
 "share.kept.message" = "Öffne 棋镜, dort steht die Stellung.";
 "share.open" = "棋镜 öffnen";
+
+/* ------------------------------------------------------------ Abrechnung */
+"settle.took" = "%d%% geschenkt bekommen und mitgenommen.";
+"settle.missed" = "%1$d%% geschenkt bekommen, %2$d%% behalten, %3$d%% liegen gelassen.";
+
+/* ------------------------------------------------------------ die Linien */
+"lines" = "Grenzen";
+"lines.record" = "Aufschreiben";
+"lines.enqueue" = "Üben";
+"lines.explained" = "Wie viel ein Zug verschenken muss, um zu zählen. Über der ersten wird er in die Partie geschrieben, über der zweiten kostet er auch Übungszeit — die sollte also höher liegen. Nahe am Ausgleich entspricht ein Bauer etwa 10%.";

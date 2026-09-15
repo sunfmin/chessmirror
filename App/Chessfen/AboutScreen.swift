@@ -11,6 +11,7 @@ struct AboutScreen: View {
     @Environment(GameLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
     @Bindable private var language = LanguageSetting.shared
+    @Bindable private var judgement = JudgementSetting.shared
 
     private static let source = URL(string: "https://github.com/sunfmin/chessfen")!
 
@@ -49,6 +50,30 @@ struct AboutScreen: View {
                     Text(localized("about.language"))
                 } footer: {
                     Text(localized("about.language.explained"))
+                }
+
+                // The two lines the player owns, on the one scale everything is judged on
+                // (docs/adr/0027). 拦截线 is not here: it is 耕棋's switch as well as its dial,
+                // and 耕棋 is a thing one game is played under rather than a standing setting.
+                Section {
+                    Picker(selection: $judgement.record) {
+                        ForEach(JudgementSetting.choices, id: \.self) { line in
+                            Text(percent(line)).tag(line)
+                        }
+                    } label: {
+                        Text(localized("lines.record"))
+                    }
+                    Picker(selection: $judgement.enqueue) {
+                        ForEach(JudgementSetting.choices, id: \.self) { line in
+                            Text(percent(line)).tag(line)
+                        }
+                    } label: {
+                        Text(localized("lines.enqueue"))
+                    }
+                } header: {
+                    Text(localized("lines"))
+                } footer: {
+                    Text(localized("lines.explained"))
                 }
 
                 Section(localized("about.version")) {
@@ -104,6 +129,9 @@ struct AboutScreen: View {
             }
         }
     }
+
+    /// A line, as the one thing it is: a percentage of the game given away.
+    private func percent(_ line: Double) -> String { "\(Int(line))%" }
 
     private func row(_ name: String, _ value: String) -> some View {
         HStack {

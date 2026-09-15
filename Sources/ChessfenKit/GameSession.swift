@@ -589,6 +589,20 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public var isAtLatest: Bool { cursor >= game.plies.count }
 
+    /// The three lines this game is judged by (docs/adr/0027). Per game rather than global: the
+    /// 拦截线 is 耕棋's switch as well as its dial, and 耕棋 is a thing one game is played under.
+    public var lines: JudgementLines = .standard
+
+    /// What came of the opponent's mistake the move on screen was the reply to, or nil — which is
+    /// most moves, because most moves are replies to nothing in particular.
+    ///
+    /// Read off the cursor, so it is the settlement for the move the eye is standing on. Nothing
+    /// computes it ahead of the reply: the whole point is that a gift is named only once it has
+    /// been taken or missed.
+    public var settlement: Settlement? {
+        game.settlement(atPly: cursor, lines: lines)
+    }
+
     /// The move that led to the position on screen.
     public var lastMove: MoveSquares? { game.moveSquares(atPly: cursor) }
 

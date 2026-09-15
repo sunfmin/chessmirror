@@ -295,3 +295,13 @@
 "share.kept.title" = "Recibida";
 "share.kept.message" = "Abre 棋镜 y ahí está la posición.";
 "share.open" = "Abrir 棋镜";
+
+/* ------------------------------------------------------------ cuentas */
+"settle.took" = "Te regalaron un %d%% y lo cogiste.";
+"settle.missed" = "Te regalaron un %1$d%%, te quedaste un %2$d%%, dejaste un %3$d%%.";
+
+/* ------------------------------------------------------------ las líneas */
+"lines" = "Umbrales";
+"lines.record" = "Anotarla";
+"lines.enqueue" = "Practicarla";
+"lines.explained" = "Cuánto tiene que regalar una jugada para contar. Pasado el primero se anota en la partida; pasado el segundo también ocupa tiempo de práctica, así que ese debería ser más alto. Cerca de la igualdad, un peón es más o menos un 10%.";

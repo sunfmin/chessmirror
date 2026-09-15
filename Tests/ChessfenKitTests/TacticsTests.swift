@@ -86,7 +86,7 @@ import Testing
             Tactic.confirmed(
                 in: game,
                 analysis: analysis([
-                    (.centipawns(220), "e2e4", "e4", ["e5", "Nf3"]),
+                    (.centipawns(300), "e2e4", "e4", ["e5", "Nf3"]),
                     (.centipawns(20), "d2d4", "d4", []),
                 ])
             )

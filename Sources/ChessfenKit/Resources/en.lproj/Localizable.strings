@@ -341,3 +341,13 @@
 "share.kept.title" = "Got it";
 "share.kept.message" = "Open 棋镜 and the position is there.";
 "share.open" = "Open 棋镜";
+
+/* ------------------------------------------------------------ settling up */
+"settle.took" = "They handed you %d%% and you took it.";
+"settle.missed" = "They handed you %1$d%%, you kept %2$d%%, you left %3$d%%.";
+
+/* ------------------------------------------------------------ the lines */
+"lines" = "Lines";
+"lines.record" = "Write it down";
+"lines.enqueue" = "Drill it";
+"lines.explained" = "How much of the game a move has to give away to count. Past the first it is written into the game; past the second it also takes practice time, so that one should be higher. Near equality, a pawn is about 10%.";

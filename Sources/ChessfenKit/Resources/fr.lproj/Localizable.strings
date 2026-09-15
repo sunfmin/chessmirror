@@ -295,3 +295,13 @@
 "share.kept.title" = "Bien reçue";
 "share.kept.message" = "Ouvrez 棋镜, la position y est.";
 "share.open" = "Ouvrir 棋镜";
+
+/* ------------------------------------------------------------ le compte */
+"settle.took" = "On vous a offert %d%% et vous l'avez pris.";
+"settle.missed" = "On vous a offert %1$d%%, vous en gardez %2$d%%, vous en laissez %3$d%%.";
+
+/* ------------------------------------------------------------ les seuils */
+"lines" = "Seuils";
+"lines.record" = "La noter";
+"lines.enqueue" = "La travailler";
+"lines.explained" = "Ce qu'un coup doit céder pour compter. Au-delà du premier il est noté dans la partie ; au-delà du second il prend aussi du temps de travail, donc celui-ci doit être plus haut. Près de l'égalité, un pion vaut à peu près 10%.";

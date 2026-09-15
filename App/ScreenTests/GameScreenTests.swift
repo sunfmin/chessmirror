@@ -331,6 +331,42 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("第 8 步 Nf6"), "nor of what used to follow that")
     }
 
+    /// What the opponent handed over, settled after the reply and never before (docs/adr/0027).
+    ///
+    /// Two pictures of one rule: standing on Black's blunder the screen says nothing about it —
+    /// "there is something to win here" is the strongest hint in chess — and standing one move
+    /// later, on White's reply, it says what became of it.
+    @Test("a gift is named only once the reply to it has been played")
+    func settlementWaitsForTheReply() async throws {
+        let game = try #require(
+            Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3"])
+        )
+        let session = GameSession.fresh(game)
+        session.setPractising(false)
+        // One pass, one depth: Black's e5 hands over thirty points and Nf3 takes most of them.
+        session.applyReview(
+            [.centipawns(20), .centipawns(400), .centipawns(280)],
+            startEvaluation: .centipawns(20),
+            depth: 16
+        )
+
+        session.step(by: -1)
+        let onTheBlunder = await ScreenImage.write("game-gift-unsettled") {
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(
+            onTheBlunder.count(of: "送了你") == 0,
+            "standing on the gift, the screen must not say there is one"
+        )
+
+        session.step(by: 1)
+        let afterTheReply = await ScreenImage.write("game-gift-settled") {
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(afterTheReply.says("送了你 30%"), "and after the reply it is settled")
+        #expect(afterTheReply.says("你收下了"), "taken whole, so one clause and no arithmetic")
+    }
+
     /// A finished game. The engine has nothing to search and so says nothing, and the screen has to
     /// say who won anyway.
     @Test("a game that ended in mate reads as won, not as level")
