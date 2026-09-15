@@ -44,6 +44,12 @@ targets:
       path: Chessfen/Info.plist
       properties:
         CFBundleDisplayName: 棋镜
+        # XcodeGen's own defaults for these two are the literals `1.0` and `1`, so the build
+        # settings were being written into the project and then ignored: every deploy reported
+        # build 1, and "is the build with the fix actually on the phone" — the first question
+        # worth asking about a report from a device — had no answer.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen:
           UIColorName: ""
         # The phone is held in portrait (docs/adr/0025). The deck is the bottom of this screen and
