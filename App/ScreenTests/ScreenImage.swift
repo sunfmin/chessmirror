@@ -45,6 +45,7 @@ enum ScreenImage {
         _ name: String,
         style: UIUserInterfaceStyle = .light,
         size: CGSize? = nil,
+        interact: ((UIWindow) async -> Void)? = nil,
         of subject: () -> some View
     ) async -> Rendered {
         _ = isListening
@@ -58,6 +59,10 @@ enum ScreenImage {
         window.makeKeyAndVisible()
         window.layoutIfNeeded()
         await settle()
+        if let interact {
+            await interact(window)
+            await settle()
+        }
 
         let image = UIGraphicsImageRenderer(bounds: window.bounds).image { context in
             if !window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) {
@@ -97,17 +102,13 @@ enum ScreenImage {
     /// A window the size of the device the test is running on, on the host app's own scene so
     /// that the safe areas are a real phone's rather than nothing at all.
     private static func newWindow(style: UIUserInterfaceStyle, size: CGSize?) -> UIWindow {
-        if let size {
-            let window = UIWindow(frame: CGRect(origin: .zero, size: size))
-            window.overrideUserInterfaceStyle = style
-            return window
-        }
         let scene = UIApplication.shared.connectedScenes.lazy
             .compactMap { $0 as? UIWindowScene }
             .first
         let window =
             scene.map { UIWindow(windowScene: $0) }
             ?? UIWindow(frame: CGRect(x: 0, y: 0, width: 402, height: 874))
+        if let size { window.frame = CGRect(origin: .zero, size: size) }
         window.overrideUserInterfaceStyle = style
         return window
     }
@@ -117,7 +118,7 @@ enum ScreenImage {
     /// A screen asks for its Analysis in `onAppear`, and the answer arrives on the main actor a
     /// hop later and then animates into place. A picture taken before that is a picture of a
     /// screen nobody has said anything to yet, which is not the screen anyone wanted to see.
-    private static func settle() async {
+    static func settle() async {
         for _ in 0..<14 {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(50))
@@ -134,6 +135,16 @@ enum ScreenImage {
         let bytes: [UInt8]
         let width: Int
         let height: Int
+
+        /// Light-mode board squares touching both edges; inset boards cannot satisfy this.
+        var fullWidthBoardRows: Int {
+            func wood(_ colour: (r: Int, g: Int, b: Int)) -> Bool {
+                colour.r > 176 && colour.b < 192 && colour.r - colour.b > 50
+            }
+            return (0..<height).filter {
+                wood(colour(x: 0, y: $0)) && wood(colour(x: width - 1, y: $0))
+            }.count
+        }
 
         init?(of url: URL) {
             guard let image = UIImage(contentsOfFile: url.path)?.cgImage else { return nil }
@@ -165,11 +176,44 @@ enum ScreenImage {
     }
 
     /// Everything on screen that has a word attached to it.
-    private static func words(in view: UIView) -> [String] {
+    static func words(in view: UIView) -> [String] {
         var found: [String] = []
         var seen: Set<ObjectIdentifier> = []
         harvest(view, into: &found, seen: &seen)
         return found
+    }
+
+    /// Uses the real accessibility action on the rendered control; no app state is bypassed.
+    static func activate(_ label: String, in window: UIWindow) -> Bool {
+        var seen: Set<ObjectIdentifier> = []
+        func visit(_ node: Any) -> Bool {
+            guard let object = node as? NSObject,
+                  seen.insert(ObjectIdentifier(object)).inserted else { return false }
+            if object.accessibilityLabel == label, object.accessibilityActivate() { return true }
+            // UIKit confirmation-dialog rows do not implement accessibilityActivate. Invoke
+            // their native selection action, not the app callback. This private selector stays
+            // in the simulator test helper and is checked at runtime for SDK compatibility.
+            let select = NSSelectorFromString("invokeInterfaceAction")
+            if object.accessibilityLabel == label, object.responds(to: select) {
+                object.perform(select)
+                return true
+            }
+            if let elements = object.accessibilityElements {
+                for element in elements where visit(element) { return true }
+            } else {
+                let count = object.accessibilityElementCount()
+                if count != NSNotFound, count > 0 {
+                    for index in 0..<count {
+                        if let element = object.accessibilityElement(at: index), visit(element) { return true }
+                    }
+                }
+            }
+            if let view = object as? UIView {
+                for child in view.subviews where visit(child) { return true }
+            }
+            return false
+        }
+        return visit(window)
     }
 
     /// Walks views and accessibility elements together, because SwiftUI draws its text into a

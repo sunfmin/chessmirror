@@ -2,7 +2,7 @@ import ChessfenKit
 import Foundation
 import Testing
 
-@Suite struct TacticsTests {
+@Suite(.speaking(.chinese)) struct TacticsTests {
     /// White queen on d1, black rook hanging on d5.
     private static let hangingRook = "4k3/8/8/3r4/8/8/8/3QK3 w - - 0 1"
     /// White knight on c4 can jump to d6 and fork the king and the queen on b7.
@@ -111,7 +111,7 @@ import Testing
     }
 }
 
-@MainActor @Suite struct TacticsSessionTests {
+@MainActor @Suite(.speaking(.chinese)) struct TacticsSessionTests {
     private func hop() async {
         for _ in 0..<20 {
             await Task.yield()

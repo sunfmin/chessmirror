@@ -12,6 +12,40 @@ import Testing
 @MainActor
 @Suite(.serialized, .speaking(.chinese))
 struct ImportScreenScreenshots {
+    @Test(arguments: [PieceColour.white, .black])
+    func openingAGameRequiresChoosingTheTrackedSide(side: PieceColour) async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let session = ImportSession(fetcher: ScriptedFetcher([
+            "https://lichess.org/study/HgiqcIqW.pgn": .success(Self.study)
+        ]))
+        await session.run("https://lichess.org/study/HgiqcIqW.pgn")
+        var opened: GameLibrary.Entry?
+        _ = await ScreenImage.write("import-select-\(side == .white ? "white" : "black")", interact: { window in
+            #expect(ScreenImage.activate("第一题", in: window))
+            await ScreenImage.settle()
+            #expect(opened == nil, "opening the side chooser must not import the game")
+            let files = (try? FileManager.default.contentsOfDirectory(at: directory,
+                includingPropertiesForKeys: nil)) ?? []
+            #expect(!files.contains { $0.pathExtension == "pgn" })
+            #expect(ScreenImage.words(in: window).contains(localized("import.trackSide")))
+            let player = side == .white ? "Sunfmin" : "Stockfish 14"
+            #expect(ScreenImage.activate("\(side.label) · \(player)", in: window))
+            await ScreenImage.settle()
+        }) {
+            ImportSheet(session: session, onOpen: { opened = $0 }).environment(library)
+        }
+        let entry = try #require(opened)
+        let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
+        #expect(pgn.handColours == [side])
+        #expect(pgn.tag("White") == "Sunfmin")
+        #expect(pgn.tag("Black") == "Stockfish 14")
+        let files = try FileManager.default.contentsOfDirectory(at: directory,
+            includingPropertiesForKeys: nil).filter { $0.pathExtension == "pgn" }
+        #expect(files.count == 1, "the other chapter must not be imported")
+    }
+
     /// A two-chapter study in the shape lichess exports, with chapters named like the ones a
     /// person has actually named. Kept here rather than shared with the kit's tests, because
     /// this bundle cannot see the kit's test fixtures — and two chapters is all a sheet needs
@@ -94,7 +128,8 @@ struct ImportScreenScreenshots {
         #expect(rendered.says("2 局"))
         #expect(rendered.says("第一题"))
         #expect(rendered.says("第二题"))
-        #expect(rendered.says("导入 2 局"))
+        #expect(rendered.says("没导入"))
+        #expect(!rendered.says("导入 2 局"))
         // The study's own name is not said at all: it named a collection, and there is no
         // collection to name any more (docs/adr/0028). The chapters are what land.
         #expect(rendered.count(of: "Wood Pecker 1-47") == 0)
@@ -177,7 +212,8 @@ struct ImportScreenScreenshots {
         #expect(rendered.says("2 局"), "how many came down")
         #expect(rendered.says("sunfmin 对 DrNykterstein · 2026.08.30 21:14"))
         #expect(rendered.says("penguingm1 对 sunfmin · 2026.08.29 09:02"), "two games, two names")
-        #expect(rendered.says("导入 2 局"))
+        #expect(rendered.says("没导入"))
+        #expect(!rendered.says("导入 2 局"))
         #expect(rendered.says("填一个 lichess 用户名"), "the door that fetched them is the open one")
         #expect(rendered.says("拉几局"))
     }

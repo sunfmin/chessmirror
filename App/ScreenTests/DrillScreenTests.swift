@@ -82,6 +82,8 @@ struct DrillScreenshots {
         }
 
         #expect(rendered.says("该你走"))
+        let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
+        #expect(pixels.fullWidthBoardRows > pixels.width / 2)
         #expect(!rendered.says("Nc6"), "the engine's move is not on the screen before the move")
         #expect(!rendered.says("掉"), "and neither is a number")
         #expect(!rendered.says("下一题"), "the exits arrive with the verdict")

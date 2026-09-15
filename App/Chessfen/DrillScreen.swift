@@ -38,6 +38,7 @@ struct DrillScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 board
+                Group {
                 if drill.isSettled || drill.isJudging {
                     settlement
                 } else {
@@ -46,8 +47,9 @@ struct DrillScreen: View {
                         .foregroundStyle(Palette.inkSoft)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
+                }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
         .background(Palette.parchment)
@@ -94,7 +96,6 @@ struct DrillScreen: View {
                     onTap: tap
                 )
             }
-            .frame(maxWidth: 340)
             .frame(maxWidth: .infinity, alignment: .center)
     }
 

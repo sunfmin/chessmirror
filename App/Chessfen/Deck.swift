@@ -34,7 +34,7 @@ struct DeckSurface<Head: View, Content: View>: View {
 /// has stopped, so a cache hit does not look like the engine never ran.
 struct CardSearching: View {
     let progress: GameSession.SearchProgress?
-    var phrase: String = "正在算"
+    var phrase: String = localized("till.judging")
     var isRunning: Bool = true
 
     var body: some View {
@@ -46,7 +46,7 @@ struct CardSearching: View {
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Palette.ink)
             } else {
-                Text("算到")
+                Text(localized("search.reached"))
                     .font(.footnote)
                     .foregroundStyle(Palette.inkSoft)
             }
@@ -59,18 +59,18 @@ struct CardSearching: View {
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 2)
-        .accessibilityLabel(isRunning ? phrase : "算到")
+        .accessibilityLabel(isRunning ? phrase : localized("search.reached"))
         .accessibilityValue(depthValue)
     }
 
     private var depthLabel: String {
-        if let depth = progress?.depth, depth > 0 { return "层级 \(depth)" }
-        return isRunning ? "层级" : ""
+        if let depth = progress?.depth, depth > 0 { return localized("game.depth", depth) }
+        return isRunning ? localized("search.depth") : ""
     }
 
     private var depthValue: String {
-        if let depth = progress?.depth, depth > 0 { return "层级 \(depth)" }
-        return isRunning ? "开始" : ""
+        if let depth = progress?.depth, depth > 0 { return localized("game.depth", depth) }
+        return isRunning ? localized("search.starting") : ""
     }
 
     private var depthTint: Color {

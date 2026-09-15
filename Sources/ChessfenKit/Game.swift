@@ -33,18 +33,49 @@ public struct Game: Hashable, Sendable {
         /// no Review" are told apart by `reviewDepth`, which is where every other question about
         /// provenance is already answered.
         public var line: [String] = []
+        /// The moves 耕棋 refused before this one was allowed to stand, in the order they were
+        /// played (docs/adr/0027).
+        ///
+        /// A comment on the move that stands rather than a variation, because that is what they
+        /// are: a game is a list now, and a rolled-back move is a thing that happened at this
+        /// position rather than another game that might have been played (docs/adr/0028). Their
+        /// cost was measured when they were refused and is written down with them — nothing
+        /// recomputes it later, because the position they were refused in is gone.
+        public var tried: [Tried] = []
+        /// How many rungs of the hint ladder were open when the move that stands was played
+        /// (docs/adr/0031). Zero is "unaided", which is the ordinary case.
+        public var hints: Int = 0
+
+        /// One move 耕棋 took back, and what it cost.
+        public struct Tried: Hashable, Sendable {
+            public let san: String
+            /// Percentage points of win probability, from the mover's own side (docs/adr/0027).
+            public let drop: Double
+            public let notFound: Bool
+
+            public init(san: String, drop: Double, notFound: Bool = false) {
+                self.san = san
+                self.drop = drop
+                self.notFound = notFound
+            }
+        }
+
         public init(
             uci: String,
             san: String,
             evaluation: Score? = nil,
             importedEvaluation: Score? = nil,
             line: [String] = [],
+            tried: [Tried] = [],
+            hints: Int = 0,
         ) {
             self.uci = uci
             self.san = san
             self.evaluation = evaluation
             self.importedEvaluation = importedEvaluation
             self.line = line
+            self.tried = tried
+            self.hints = hints
         }
 
         /// How many Ply of a Review's Line are kept.
@@ -64,6 +95,8 @@ public struct Game: Hashable, Sendable {
             evaluation = other.evaluation
             importedEvaluation = other.importedEvaluation
             line = other.line
+            tried = other.tried
+            hints = other.hints
         }
     }
 
@@ -333,6 +366,27 @@ public struct Game: Hashable, Sendable {
         plies[ply].line = Array(line.prefix(Ply.lineLimit))
     }
 
+    /// Where a PGN's `[%tried]` comments land. Not gated on a Review Depth, unlike the Scores:
+    /// a refused move's cost was measured when it was refused and written down with it, so it is
+    /// a fact about what happened at the board rather than a number from somebody's engine at an
+    /// unknown depth (docs/adr/0016 is about the second kind).
+    mutating func addTried(_ attempt: Ply.Tried, atPly ply: Int) {
+        guard plies.indices.contains(ply) else { return }
+        plies[ply].tried.append(attempt)
+    }
+
+    mutating func setHints(_ rungs: Int, atPly ply: Int) {
+        guard plies.indices.contains(ply), rungs > 0 else { return }
+        plies[ply].hints = rungs
+    }
+
+    /// Records what 耕棋 refused before the move at `ply` was allowed to stand.
+    public mutating func setTried(_ attempts: [Ply.Tried], hints: Int = 0, atPly ply: Int) {
+        guard plies.indices.contains(ply) else { return }
+        plies[ply].tried = attempts
+        plies[ply].hints = hints
+    }
+
     /// Set from the file's `[ReviewDepth]` tag as it is read, so the tag has exactly one home.
     mutating func setReviewDepth(_ depth: Int?) {
         reviewDepth = depth
@@ -348,4 +402,3 @@ public struct Game: Hashable, Sendable {
         }
     }
 }
-

@@ -2,7 +2,7 @@ import ChessfenKit
 import Foundation
 import Testing
 
-@Suite struct MateNewsTests {
+@Suite(.speaking(.chinese)) struct MateNewsTests {
     /// Morphy–Duke of Brunswick & Count Isouard, Paris 1858, before 16.Qb8+. White mates in two:
     /// 16.Qb8+ Nxb8 17.Rd8#, and Black's reply is the only legal move on the board — which is what
     /// makes it the right position to hold this code to.
@@ -28,6 +28,21 @@ import Testing
     private static let mateInTwo: [(uci: String, san: String)] = [
         ("b3b8", "Qb8+"), ("d7b8", "Nxb8"), ("d1d8", "Rd8#"),
     ]
+
+    @Test func mateNewsSpeaksEverySupportedLanguage() throws {
+        let position = try game(Self.opera)
+        let analysis = mateAnalysis(.mate(in: 2), Self.mateInTwo)
+        var heads: Set<String> = []
+        for language in Language.allCases {
+            let news = try Speech.speaking(language) {
+                try #require(MateNews.read(analysis, in: position, hands: [.white]))
+            }
+            #expect(!news.sentence.isEmpty)
+            #expect(news.sentence.contains("Qb8+"))
+            heads.insert(news.head)
+        }
+        #expect(heads.count == Language.allCases.count)
+    }
 
     @Test("a mate for the side to move is read out as the player's own")
     func ourMateIsOurs() throws {
@@ -159,7 +174,7 @@ import Testing
     }
 }
 
-@MainActor @Suite struct MateNewsSessionTests {
+@MainActor @Suite(.speaking(.chinese)) struct MateNewsSessionTests {
     private static let opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"
 
     private func hop() async {

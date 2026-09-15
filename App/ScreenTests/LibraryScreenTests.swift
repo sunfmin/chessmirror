@@ -175,6 +175,8 @@ struct BookScreenshots {
         }
 
         #expect(rendered.says("遭遇"))
+        let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
+        #expect(pixels.fullWidthBoardRows > pixels.width / 2)
         #expect(rendered.count(of: "你走了") == 2, "both occasions, not one merged line")
         #expect(rendered.says("Qh4"))
         #expect(rendered.says("从本子里删掉"), "and no reason is asked for")

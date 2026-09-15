@@ -85,7 +85,7 @@ struct LibraryScreen: View {
                 }
             }
             .sheet(isPresented: $isAboutShowing) { AboutScreen() }
-            .sheet(isPresented: $isImporting) { ImportSheet() }
+            .sheet(isPresented: $isImporting) { ImportSheet(onOpen: open) }
             .navigationDestination(for: Step.self) { step in
                 switch step {
                 case .confirm(let proposal):
@@ -253,6 +253,18 @@ struct LibraryScreen: View {
                 }
             }
             .background(Palette.ink, in: RoundedRectangle(cornerRadius: 14))
+
+            Button {
+                start(Game(startFEN: PGN.standardStartFEN), tilling: true)
+            } label: {
+                Label(localized("till.start"), systemImage: "leaf")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(18)
+                    .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .disabled(!engine.isReady)
 
             Button {
                 start(Game(startFEN: PGN.standardStartFEN))
@@ -465,9 +477,11 @@ struct LibraryScreen: View {
         }
     }
 
-    private func start(_ game: Game?) {
+    private func start(_ game: Game?, tilling: Bool = false) {
         guard let game else { return }
         let session = GameSession.playing(game, engine: engine.service, library: library)
+        session.lines = judgement.lines
+        if tilling { session.setIntercept(10) }
         path.append(.game(session))
     }
 
@@ -527,6 +541,11 @@ struct GameList: View {
                     Text(entry.detail)
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
+                    if entry.origin == .imported {
+                        Text(library.importStatus(entry).label)
+                            .font(.caption)
+                            .foregroundStyle(Palette.inkSoft)
+                    }
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")

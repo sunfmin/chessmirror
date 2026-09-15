@@ -9,6 +9,21 @@ import Foundation
 /// and the one thing with state — where the download has got to — is `ImportSession`,
 /// the same split `BoardIntake` and `GameSession` use.
 public enum PGNImport {
+    public enum Status: Equatable, Sendable {
+        case notImported
+        case awaitingReview
+        case scoring
+        case ready(Int)
+
+        public var label: String {
+            switch self {
+            case .notImported: localized("import.status.new")
+            case .awaitingReview: localized("import.status.pending")
+            case .scoring: localized("import.status.scoring")
+            case .ready(let count): localized("import.status.ready", count)
+            }
+        }
+    }
     // ---------------------------------------------------------------- errors
 
     /// What went wrong, one case per way an import can die. The wording of a failure
@@ -629,6 +644,36 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         )
         phase = .done(outcome)
         return outcome
+    }
+
+    public func open(
+        _ chapter: PGNImport.ImportChapter, into library: GameLibrary,
+        tracking side: PieceColour? = nil
+    ) -> GameLibrary.Entry? {
+        if let existing = library.entries.first(where: { entry in
+            guard let pgn = entry.pgn else { return false }
+            return PGNImport.identity(of: pgn, named: entry.name ?? entry.title) == chapter.identity
+        }) {
+            guard let side, var pgn = existing.pgn else { return existing }
+            pgn.setTag("TrackedSide", to: side == .white ? "white" : "black")
+            guard library.write(pgn, to: existing.url) else { return nil }
+            return GameLibrary.Entry(url: existing.url, pgn: pgn, modified: Date())
+        }
+        var pgn = chapter.pgn
+        if let side { pgn.setTag("TrackedSide", to: side == .white ? "white" : "black") }
+        pgn.setTag(GameLibrary.nameTag, to: chapter.name)
+        pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
+        let url = library.newURL()
+        guard library.write(pgn, to: url) else { return nil }
+        return GameLibrary.Entry(url: url, pgn: pgn, modified: Date())
+    }
+
+    public func status(of chapter: PGNImport.ImportChapter, in library: GameLibrary) -> PGNImport.Status {
+        guard let entry = library.entries.first(where: { entry in
+            guard let pgn = entry.pgn else { return false }
+            return PGNImport.identity(of: pgn, named: entry.name ?? entry.title) == chapter.identity
+        }) else { return .notImported }
+        return library.importStatus(entry)
     }
 
     /// Back to a blank slate, for the "再导入一个" that follows a done import.

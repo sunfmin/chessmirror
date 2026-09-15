@@ -1,0 +1,286 @@
+@testable import ChessfenKit
+import Foundation
+import Testing
+
+/// Real cached MultiPV acceptance, followed by an actual opponent reply on its own clock.
+@MainActor
+@Test func realPreparedMoveHasNoJudgementWaitBeforeTheOpponentSearch() async throws {
+    let engine = try EngineService(
+        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
+    )
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine], engine: engine)
+    defer { session.suspend() }
+    session.setThinkingTime(.fixed(seconds: 1))
+    session.setIntercept(10)
+    await session.waitForPreparedInterception()
+    try #require(session.searchProgress?.depth == 16)
+    let started = ContinuousClock.now
+    session.play(try #require(game.state.move(matching: "e2e4")))
+    let gateTime = started.duration(to: .now)
+    try #require(!session.isWeighing, "a cached passing move must stand synchronously")
+    #expect(session.game.uciMoves == ["e2e4"])
+    await session.waitForPreparedInterception()
+    #expect(session.game.plies.count == 2)
+    print("REAL INTERCEPT: cached e4 committed in \(gateTime); opponent replied in \(started.duration(to: .now)) on a 1-second clock")
+}
+
+@MainActor
+@Test func incompleteConfirmationDoesNotTakeBackAMove() async throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    var played = game
+    let applied = played.apply(uci: "f2f3")
+    try #require(applied)
+    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+        Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+    ])], byPosition: [played.state.fen: Analysis(depth: 16, lines: [
+        Line(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
+    ])], byBudget: [.time(.milliseconds(400)): []])
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(10)
+    await session.waitForPreparedInterception()
+    session.play(try #require(game.state.move(matching: "f2f3")))
+    await session.waitForJudgement()
+    #expect(session.game != game)
+    #expect(session.game.uciMoves == played.uciMoves)
+    #expect(session.refused == nil)
+    #expect(session.game.plies.last?.tried.isEmpty == true)
+    #expect(engine.budgets.contains(.time(.milliseconds(400))))
+}
+
+@MainActor
+@Test func unlistedCheckmateCommitsWithoutSearchingTerminalBoard() async throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN,
+                                uciMoves: ["f2f3", "e7e5", "g2g4"]))
+    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+        Line(score: .centipawns(-300), uciMoves: ["b8c6"], san: ["Nc6"])
+    ])])
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(10)
+    await session.waitForPreparedInterception()
+    let searches = engine.searchCount
+    session.play(try #require(game.state.move(matching: "d8h4")))
+    await session.waitForJudgement()
+    #expect(session.game != game)
+    #expect(session.game.state.outcome == .checkmate)
+    #expect(session.game.plies.last?.san == "Qh4#")
+    #expect(session.refused == nil)
+    #expect(engine.searchCount == searches)
+}
+
+@MainActor
+@Test func unlistedLosingMoveRequiresConfirmationBeforeRefusal() async throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    var after = game
+    let applied = after.apply(uci: "f2f3")
+    #expect(applied)
+    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+        Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+    ])], byPosition: [after.state.fen: Analysis(depth: 16, lines: [
+        Line(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
+    ])])
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(10)
+    session.play(try #require(game.state.move(matching: "f2f3")))
+
+    await session.waitForJudgement()
+    #expect(!session.isWeighing)
+    #expect(session.refused?.san == "f3")
+    #expect(session.game == game)
+    #expect(engine.budgets.last == .time(.milliseconds(400)))
+    #expect(engine.budgets.filter { $0 == .time(.milliseconds(400)) }.count == 1)
+}
+
+@MainActor
+@Test func browsingKeepsHintLayersAtTheirOwnPosition() throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    let session = GameSession.fresh(game)
+    session.setIntercept(10)
+    session.requestHint()
+    session.requestHint()
+    session.requestHint()
+    session.relaxIntercept(to: 20)
+    session.jumpToStart()
+    #expect(session.hintLayer == 0)
+    #expect(session.relaxedIntercept == nil)
+    session.jumpToLatest()
+    #expect(session.hintLayer == 3)
+    #expect(session.relaxedIntercept == 20)
+    #expect(session.game == game)
+}
+
+@MainActor
+@Test func revealingAfterARefusalKeepsExactlyOneEncounter() async throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+        Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
+        Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"]),
+    ])])
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(10)
+    session.play(try #require(game.state.move(matching: "d2d4")))
+
+    await session.waitForJudgement()
+    #expect(!session.isWeighing)
+    #expect(session.refused?.san == "d4")
+    #expect(session.game == game)
+    session.revealTillingMove()
+    #expect(session.game == game, "Reveal requires all three explicit hint requests")
+    for _ in 0..<3 { session.requestHint() }
+    session.revealTillingMove()
+    #expect(session.game.uciMoves == ["e2e4"])
+    #expect(session.hintLayer == 0)
+    #expect(session.relaxedIntercept == nil)
+    let pgn = try PGN(parsing: session.pgn.text)
+    #expect(pgn.game.plies[0].hints == 3)
+    let book = MistakeBook.derive(from: [GameLibrary.Entry(
+        url: URL(filePath: "/games/reveal.pgn"), pgn: pgn, modified: Date()
+    )])
+    let mistake = try #require(book.mistakes.first)
+    #expect(mistake.encounters.count == 1)
+    #expect(mistake.encounters[0].played == "d4")
+    #expect(mistake.encounters[0].notFound)
+}
+
+@MainActor
+@Test func hintLadderAndRelaxationBelongToOneMove() async throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+        Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
+        Line(score: .centipawns(-180), uciMoves: ["d2d4"], san: ["d4"]),
+    ])])
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(10)
+
+    await session.waitForPreparedInterception()
+    #expect(session.searchProgress?.depth == 16)
+    #expect(session.hintLayer == 0)
+    #expect(session.hintScore == nil)
+    session.relaxIntercept(to: 20)
+    #expect(session.relaxedIntercept == nil)
+    session.requestHint()
+    #expect(session.hintLayer == 1)
+    #expect(session.hintScore == .centipawns(0))
+    session.requestHint()
+    #expect(session.hintLayer == 2)
+    session.requestHint()
+    session.relaxIntercept(to: 20)
+    #expect(session.relaxedIntercept == 20)
+    session.play(try #require(game.state.move(matching: "d2d4")))
+    #expect(session.game.uciMoves == ["d2d4"])
+    #expect(session.hintLayer == 0)
+    #expect(session.relaxedIntercept == nil)
+    #expect(session.lines.intercept == 10)
+    let read = try PGN(parsing: session.pgn.text)
+    #expect(read.game.plies[0].hints == 3)
+    #expect(read.game.plies[0].tried.count == 1)
+    #expect(read.game.plies[0].tried.first?.notFound == true)
+    let book = MistakeBook.derive(from: [GameLibrary.Entry(
+        url: URL(filePath: "/games/relaxed.pgn"), pgn: read, modified: Date()
+    )])
+    #expect(book.mistakes.count == 1)
+    #expect(book.mistakes.first?.encounters.first?.notFound == true)
+}
+
+@MainActor
+@Test func preparedPassingMoveCommitsSynchronously() async throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+        Line(score: .centipawns(20), uciMoves: ["e2e4"], san: ["e4"]),
+        Line(score: .centipawns(10), uciMoves: ["d2d4"], san: ["d4"]),
+    ])])
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(10)
+
+    await session.waitForPreparedInterception()
+    #expect(session.searchProgress?.depth == 16)
+    let started = ContinuousClock.now
+    session.play(try #require(game.state.move(matching: "d2d4")))
+    let elapsed = started.duration(to: .now)
+    #expect(session.game.uciMoves == ["d2d4"])
+    #expect(!session.isWeighing)
+    #expect(engine.budgets.allSatisfy { $0 == .depth(16) })
+    #expect(engine.lines.allSatisfy { $0 == 8 })
+    print("Prepared passing move committed in \(elapsed)")
+}
+
+@MainActor
+@Test func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock() throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let session = GameSession.fresh(game)
+    session.setThinkingTime(.fixed(seconds: 3))
+    session.setIntercept(20)
+    #expect(session.isTilling)
+    #expect(session.thinkingTime == .fixed(seconds: 3))
+    let pgn = try PGN(parsing: session.pgn.text)
+    let opened = try #require(GameSession.opened(GameLibrary.Entry(
+        url: URL(filePath: "/games/tilling.pgn"), pgn: pgn, modified: Date()
+    )))
+    #expect(opened.lines.intercept == 20)
+    opened.setIntercept(nil)
+    #expect(!opened.isTilling)
+    #expect(opened.pgn.tag("Intercept") == nil)
+}
+
+/// Contract: real Stockfish judges Fool's Mate → session restores the board → a legal retry
+/// stands → PGN retains the refused move once. The disabled setting must allow the same blunder.
+@MainActor
+@Test func tillingRejectsMateAndPreservesTheRetry() async throws {
+    let engine = try EngineService(
+        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
+    )
+    let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3", "e7e5"]))
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(10)
+    let blunder = try #require(game.state.move(matching: "g2g4"))
+    session.play(blunder)
+    #expect(session.isWeighing)
+
+    await session.waitForJudgement()
+    #expect(!session.isWeighing, "Stockfish must finish judging within 30 seconds")
+    #expect(session.game == game, "the rejected move must restore the entire game")
+    #expect(try #require(session.refused).san == "g4")
+    #expect(session.refused!.drop >= 10)
+
+    // Switching interception off lets a retry stand, while preserving the earlier refusal.
+    session.setIntercept(nil)
+    session.play(try #require(game.state.move(matching: "e2e4")))
+    #expect(session.game.uciMoves == ["f2f3", "e7e5", "e2e4"])
+    let read = try PGN(parsing: session.pgn.text)
+    #expect(read.game.plies.last?.tried.count == 1)
+    #expect(read.game.plies.last?.tried.first?.san == "g4")
+
+    let disabled = GameSession.fresh(game, engine: engine)
+    defer { disabled.suspend() }
+    disabled.play(blunder)
+    #expect(!disabled.isWeighing)
+    #expect(disabled.game.uciMoves.last == "g2g4")
+    #expect(disabled.refused == nil)
+}
+
+@MainActor
+@Test func suspendingTillingRestoresTheUnjudgedPosition() async throws {
+    let engine = try EngineService(
+        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1)
+    )
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let session = GameSession.fresh(game, engine: engine)
+    session.setIntercept(10)
+    session.play(try #require(game.state.move(matching: "e2e4")))
+    #expect(session.game != game)
+    session.suspend()
+    #expect(session.game == game)
+    #expect(!session.isWeighing)
+    await Task.yield()
+    #expect(session.game == game)
+}

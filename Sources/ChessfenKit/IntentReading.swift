@@ -87,10 +87,10 @@ public enum Intent: Hashable, Sendable {
     /// neither fits. The seven verbs stay the checkable claim; this is how they are said as a goal.
     public var goal: String {
         switch self {
-        case .claim(.take, _), .claim(.attack, _): "进攻"
-        case .claim(.defend, _), .claim(.flee, _), .claim(.block, _): "防御"
-        case .claim(.trade, _): "交换"
-        case .claim(.hold, _): "占位"
+        case .claim(.take, _), .claim(.attack, _): localized("intent.goal.attack")
+        case .claim(.defend, _), .claim(.flee, _), .claim(.block, _): localized("intent.goal.defend")
+        case .claim(.trade, _): localized("intent.goal.trade")
+        case .claim(.hold, _): localized("intent.goal.hold")
         case .unclear: Self.unclearLabel
         }
     }
@@ -143,7 +143,7 @@ public struct LineReading: Hashable, Sendable {
     /// point at.
     public var sentence: String {
         guard let later else { return opening.label }
-        return "\(opening.label)，\(Self.ahead(later)) 再 \(later.label)"
+        return localized("intent.sequence", opening.label, Self.ahead(later), later.label)
     }
 
     /// The later half as its own line, for 要害. Same facts as `sentence`; the goal is named again
@@ -153,13 +153,13 @@ public struct LineReading: Hashable, Sendable {
         guard let later else { return nil }
         let when = Self.ahead(later)
         if later.intent.goal == opening.intent.goal {
-            return "\(when) 再 \(later.label)"
+            return localized("intent.later", when, later.label)
         }
-        return "\(when) 再\(later.intent.goal)：\(later.label)"
+        return localized("intent.laterGoal", when, later.intent.goal, later.label)
     }
 
     private static func ahead(_ later: MoveReading) -> String {
-        "往后第 \(later.step) 步 \(later.san)"
+        localized("intent.ahead", later.step, later.san)
     }
 }
 

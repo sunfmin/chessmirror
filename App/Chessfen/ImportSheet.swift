@@ -31,6 +31,7 @@ struct ImportSheet: View {
     }
 
     let session: ImportSession
+    let onOpen: ((GameLibrary.Entry) -> Void)?
 
     @Environment(GameLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
@@ -39,14 +40,17 @@ struct ImportSheet: View {
     @State private var door: Door = .link
     @State private var player = ""
     @State private var count = PGNImport.recentGames
+    @State private var choosingSide: PGNImport.ImportChapter?
 
     init(
         session: ImportSession = ImportSession(),
         initialInput: String = "",
         initialDoor: Door = .link,
-        initialPlayer: String = ""
+        initialPlayer: String = "",
+        onOpen: ((GameLibrary.Entry) -> Void)? = nil
     ) {
         self.session = session
+        self.onOpen = onOpen
         _input = State(initialValue: initialInput)
         _door = State(initialValue: initialDoor)
         _player = State(initialValue: initialPlayer)
@@ -99,6 +103,25 @@ struct ImportSheet: View {
                     Button(localized("cancel")) { dismiss() }
                 }
             }
+        }
+        .confirmationDialog(
+            localized("import.trackSide"),
+            isPresented: Binding(
+                get: { choosingSide != nil },
+                set: { if !$0 { choosingSide = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: choosingSide
+        ) { chapter in
+            ForEach([PieceColour.white, .black], id: \.self) { side in
+                Button("\(side.label) · \(chapter.pgn.tag(side == .white ? "White" : "Black") ?? "?")") {
+                    if let entry = session.open(chapter, into: library, tracking: side) {
+                        onOpen?(entry)
+                        dismiss()
+                    }
+                }
+            }
+            Button(localized("cancel"), role: .cancel) { choosingSide = nil }
         }
     }
 
@@ -165,15 +188,20 @@ struct ImportSheet: View {
                     .foregroundStyle(Palette.ink)
                 // The first few names, so what is about to land can be checked against the
                 // study it came from — all of them would scroll a sheet past its point.
-                ForEach(plan.chapters.prefix(5)) { chapter in
-                    Text(chapter.name)
-                        .font(.footnote)
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                if plan.chapters.count > 5 {
-                    Text(localized("import.more", plural: plan.chapters.count - 5))
-                        .font(.footnote)
-                        .foregroundStyle(Palette.inkSoft)
+                ForEach(plan.chapters) { chapter in
+                    Button {
+                        choosingSide = chapter
+                    } label: {
+                        HStack {
+                            Text(chapter.name)
+                            Spacer()
+                            Text(session.status(of: chapter, in: library).label)
+                                .foregroundStyle(Palette.inkSoft)
+                        }
+                    }
+                    .font(.footnote)
+                    .accessibilityLabel(chapter.name)
+                    .accessibilityValue(session.status(of: chapter, in: library).label)
                 }
                 if plan.unreadable > 0 {
                     Text(localized("import.unreadable", plural: plan.unreadable))
@@ -185,10 +213,6 @@ struct ImportSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
 
-            primaryButton(
-                localized("import.apply", plural: plan.chapters.count),
-                isEnabled: true, action: importNow
-            )
         }
     }
 

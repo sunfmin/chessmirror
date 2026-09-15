@@ -61,6 +61,9 @@ struct BookRow: View {
                 HStack(spacing: 6) {
                     badge(localized("book.cost", Int(mistake.worstCost.rounded())), Palette.alarm)
                     badge(localized("book.times", mistake.recurrence), Palette.analysis)
+                    if mistake.encounters.contains(where: \.notFound) {
+                        badge(localized("till.notFound"), Palette.alarm)
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -95,6 +98,7 @@ struct BookEntryScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 board
+                VStack(alignment: .leading, spacing: 14) {
                 Text(mistake.sentence())
                     .font(.subheadline)
                     .foregroundStyle(Palette.ink)
@@ -147,8 +151,9 @@ struct BookEntryScreen: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 6)
+                }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
         .background(Palette.parchment)
@@ -173,7 +178,6 @@ struct BookEntryScreen: View {
                     isInteractive: false
                 )
             }
-            .frame(maxWidth: 340)
             .frame(maxWidth: .infinity, alignment: .center)
     }
 

@@ -115,6 +115,42 @@ import Foundation
     public let folder: GameFolder
 
     public var directory: URL { folder.url }
+    public private(set) var reviewingURLs: Set<URL> = []
+    private var importReviewChain: Task<Void, Never>?
+    func waitForImportReviews() async { await importReviewChain?.value }
+    @ObservationIgnored private var importCounts: [URL: (entry: Entry, count: Int)] = [:]
+    public func importStatus(_ entry: Entry) -> PGNImport.Status {
+        if reviewingURLs.contains(entry.url) { return .scoring }
+        guard entry.pgn?.game.isReviewed == true else { return .awaitingReview }
+        if let cached = importCounts[entry.url], cached.entry == entry { return .ready(cached.count) }
+        let count = Set(MistakeBook.encounters(in: entry).map { $0.0 }).count
+        importCounts[entry.url] = (entry, count)
+        return .ready(count)
+    }
+
+    public func reviewImported(_ entry: Entry, using engine: any Engine,
+                               completed: @escaping @MainActor (PGN) -> Void = { _ in }) {
+        guard entry.origin == .imported, let original = entry.pgn, !original.game.isReviewed,
+            reviewingURLs.insert(entry.url).inserted else { return }
+        let previous = importReviewChain
+        importReviewChain = Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            defer { reviewingURLs.remove(entry.url) }
+            do {
+                await writeChain?.value
+                let judged = try await ImportReview.judge(original, using: engine)
+                guard let current = entries.first(where: { $0.url == entry.url })?.pgn,
+                    current.game == original.game else { return }
+                var result = current
+                result.game = judged.game
+                result.setTag("ReviewSift", to: judged.tag("ReviewSift"))
+                if write(result, to: entry.url) { completed(result) }
+            } catch {
+                // No partial scores are saved; opening the game again retries the job.
+            }
+        }
+    }
 
     public init(folder: GameFolder = GameFolder()) {
         self.folder = folder

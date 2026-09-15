@@ -47,11 +47,14 @@ public struct Encounter: Hashable, Sendable, Identifiable {
     /// without being used to split the item.
     public let origin: GameOrigin
 
-    public var id: String { "\(game.lastPathComponent)#\(ply)" }
+    /// The ordinal distinguishes repeated attempts at the same move. Nil is the actual move.
+    public let attempt: Int?
+    public let notFound: Bool
+    public var id: String { "\(game.absoluteString)#\(ply)-\(attempt.map(String.init) ?? "played")" }
 
     public init(
         game: URL, ply: Int, when: Date, played: String, wanted: String?, cost: Double,
-        origin: GameOrigin
+        origin: GameOrigin, attempt: Int? = nil, notFound: Bool = false
     ) {
         self.game = game
         self.ply = ply
@@ -60,6 +63,8 @@ public struct Encounter: Hashable, Sendable, Identifiable {
         self.wanted = wanted
         self.cost = cost
         self.origin = origin
+        self.attempt = attempt
+        self.notFound = notFound
     }
 }
 
@@ -158,16 +163,23 @@ public struct MistakeBook: Sendable {
 
     /// Every move in one game that cost more than the 记录线, as Encounters.
     ///
-    /// Only the sides the player actually moved: a game where the engine had Black is a game
-    /// where Black's mistakes belong to Stockfish. Only a reviewed game, because a drop needs two
-    /// Scores from one depth and an unreviewed game has neither (docs/adr/0016) — an unreviewed
-    /// game is not a game with nothing wrong in it, it is a game nobody has looked at.
+    /// Two kinds of move end up here and they are the same kind of fact:
+    ///
+    /// - **A move that was played**, whose cost a Review measured. A game with no Review
+    ///   contributes none of these — a drop needs two Scores from one depth and an unreviewed
+    ///   game has neither (docs/adr/0016). An unreviewed game is not a game with nothing wrong in
+    ///   it, it is a game nobody has looked at.
+    /// - **A move 耕棋 took back**, whose cost was measured when it was refused and written into
+    ///   the file with it (docs/adr/0027). These need no Review, because the measurement already
+    ///   happened; a 耕棋 game therefore fills the book while it is being played.
+    ///
+    /// Only the sides the player actually moved, either way: a game where the engine had Black is
+    /// a game where Black's mistakes belong to Stockfish.
     public static func encounters(
         in entry: GameLibrary.Entry, lines: JudgementLines = .standard
     ) -> [(PositionKey, Encounter)] {
         guard let pgn = entry.pgn else { return [] }
         let game = pgn.game
-        guard game.isReviewed else { return [] }
         let mine = pgn.handColours
         guard !mine.isEmpty else { return [] }
 
@@ -180,23 +192,31 @@ public struct MistakeBook: Sendable {
             let fen = walked.state.fen
             guard walked.apply(uci: game.plies[ply - 1].uci) else { break }
             let mover = game.mover(ofPly: ply)
-            guard mine.contains(mover), let cost = game.drop(atPly: ply), lines.records(cost),
-                let key = PositionKey(fen: fen)
-            else { continue }
-            found.append(
-                (
-                    key,
-                    Encounter(
-                        game: entry.url,
-                        ply: ply,
-                        when: entry.modified,
-                        played: game.plies[ply - 1].san,
-                        wanted: game.reviewLine(atPly: ply - 1).first,
-                        cost: cost,
-                        origin: entry.origin
+            guard mine.contains(mover), let key = PositionKey(fen: fen) else { continue }
+            let wanted = game.reviewLine(atPly: ply - 1).first
+            func note(_ played: String, _ cost: Double, attempt: Int? = nil, notFound: Bool = false) {
+                guard lines.records(cost) else { return }
+                found.append(
+                    (
+                        key,
+                        Encounter(
+                            game: entry.url, ply: ply, when: entry.modified, played: played,
+                            wanted: wanted, cost: cost, origin: entry.origin, attempt: attempt,
+                            notFound: notFound
+                        )
                     )
                 )
-            )
+            }
+            // Refused first, because they happened first: they are what the player reached for
+            // before the move that stands.
+            for (index, attempt) in game.plies[ply - 1].tried.enumerated() {
+                note(attempt.san, attempt.drop, attempt: index, notFound: attempt.notFound)
+            }
+            let move = game.plies[ply - 1]
+            let alreadyRecorded = move.tried.contains { $0.notFound && $0.san == move.san }
+            if game.isReviewed, !alreadyRecorded, let cost = game.drop(atPly: ply) {
+                note(game.plies[ply - 1].san, cost)
+            }
         }
         return found
     }

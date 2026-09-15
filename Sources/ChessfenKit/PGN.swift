@@ -45,6 +45,13 @@ public struct PGN: Hashable, Sendable {
     /// person holding the phone is a question the import knows the answer to and this does not,
     /// and answering it by guessing would fill the book with somebody else's blunders.
     public var handColours: Set<PieceColour> {
+        if let tracked = tag("TrackedSide") {
+            switch tracked {
+            case "white": return [.white]
+            case "black": return [.black]
+            default: return []
+            }
+        }
         var found: Set<PieceColour> = []
         if tag("White") == Controller.hand.playerName { found.insert(.white) }
         if tag("Black") == Controller.hand.playerName { found.insert(.black) }
@@ -147,6 +154,17 @@ public struct PGN: Hashable, Sendable {
             if !ply.line.isEmpty {
                 comment.append("[%line \(ply.line.joined(separator: " "))]")
             }
+            // What 耕棋 took back here, and how many hints were open when the move that stands
+            // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
+            // they were played, because a reader that only knows `[%eval]` skips them the same
+            // way it already skips everything else in a comment.
+            for attempt in ply.tried {
+                let help = attempt.notFound ? " notfound" : ""
+                comment.append("[%tried \(attempt.san) \(Self.percent(attempt.drop))\(help)]")
+            }
+            if ply.hints > 0 {
+                comment.append("[%hint \(ply.hints)]")
+            }
             if !comment.isEmpty {
                 written.append("{" + comment.joined(separator: " ") + "}")
             }
@@ -155,6 +173,9 @@ public struct PGN: Hashable, Sendable {
         }
         return written
     }
+
+    /// A drop, as the file says it: `-23%`, the sign saying it is what the move *cost*.
+    static func percent(_ drop: Double) -> String { "-\(drop)%" }
 
     private static func rosterDefault(_ name: String, _ game: Game) -> String {
         switch name {
@@ -252,6 +273,10 @@ public struct PGN: Hashable, Sendable {
                 // A ply index of -1 is a comment standing before the first move, which is
                 // the starting position's Score.
                 game.setEvaluation(score, atPly: game.plies.count - 1, reviewed: isReviewed)
+            case .tried(let attempt):
+                game.addTried(attempt, atPly: game.plies.count - 1)
+            case .hint(let rungs):
+                game.setHints(rungs, atPly: game.plies.count - 1)
             case .line(let line):
                 // A Line standing before the first move belongs to the starting position and has
                 // nowhere to go: what reads it is a move's own consequences, and there is no move.
@@ -284,6 +309,8 @@ private struct Scanner {
         case move(String)
         case evaluation(Score)
         case line([String])
+        case tried(Game.Ply.Tried)
+        case hint(Int)
         case variationStart
         case variationEnd
     }
@@ -330,6 +357,8 @@ private struct Scanner {
                 // read the same way to a file that must still open.
                 if let score = Self.evaluation(in: comment) { tokens.append(.evaluation(score)) }
                 if let line = Self.line(in: comment) { tokens.append(.line(line)) }
+                tokens.append(contentsOf: Self.tried(in: comment).map { .tried($0) })
+                if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
             case ";":
                 _ = read(while: { !$0.isNewline })
             case "(":
@@ -361,8 +390,42 @@ private struct Scanner {
         Self.body(of: "eval", in: comment).flatMap { Score(pgnText: $0) }
     }
 
+    /// Every `[%tried San -23%]` in one comment, in the order they were written. All of them
+    /// rather than the first, which is the one way this differs from every other token here: a
+    /// position 耕棋 stopped somebody at three times has three of them.
+    private static func tried(in comment: String) -> [Game.Ply.Tried] {
+        bodies(of: "tried", in: comment).compactMap { body in
+            let parts = body.split(separator: " ")
+            guard let san = parts.first,
+                parts.count == 2 || (parts.count == 3 && parts[2] == "notfound"),
+                parts[1].hasPrefix("-"), parts[1].hasSuffix("%"),
+                let drop = Double(parts[1].dropFirst().dropLast()),
+                drop.isFinite, (0...100).contains(drop)
+            else { return nil }
+            return Game.Ply.Tried(san: String(san), drop: drop, notFound: parts.count == 3)
+        }
+    }
+
+    private static func hint(in comment: String) -> Int? {
+        body(of: "hint", in: comment).flatMap { Int($0) }
+    }
+
     private static func line(in comment: String) -> [String]? {
         Self.body(of: "line", in: comment).map { $0.split(separator: " ").map(String.init) }
+    }
+
+    /// Every `[%name …]` in one comment, in order. `body` is this asking for the first one.
+    private static func bodies(of name: String, in comment: String) -> [String] {
+        var found: [String] = []
+        var rest = Substring(comment)
+        while let start = rest.range(of: "[%\(name) ") {
+            let after = rest[start.upperBound...]
+            guard let end = after.firstIndex(of: "]") else { break }
+            let body = String(after[..<end]).trimmingCharacters(in: .whitespaces)
+            if !body.isEmpty { found.append(body) }
+            rest = after[after.index(after: end)...]
+        }
+        return found
     }
 
     /// What is between `[%name ` and the next `]`, trimmed. Nil when the token is not there at

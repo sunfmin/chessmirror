@@ -113,18 +113,18 @@ struct GameScreenScreenshots {
         // How deep it has got, though, which is not the same thing: a search that stops after ten
         // seconds (docs/adr/0020) has to account for itself, or a number that stopped moving is
         // indistinguishable from an engine that died. One figure, in the strip, and no speed.
-        #expect(rendered.says("深 26"))
+        #expect(rendered.says(localized("game.depth", 26)))
         #expect(
             rendered.count(of: "再算 10 秒") == 0,
             "and no offer of more while it is still inside its Stint"
         )
         // The move it would play, named beside the arrow the board draws — one move, because a
         // line of six is a language most people playing this have not learnt.
-        #expect(rendered.says("建议 d4"))
+        #expect(!rendered.says("建议 d4"), "a finding must be opened before naming its move")
         #expect(!rendered.says("d4 exd4 cxd4"), "and not the whole line it is the head of")
         // The deck under the record, dealt from this position: two cards, and nothing about a
         // move that has not been played (docs/adr/0025).
-        #expect(rendered.says("杀招"))
+        #expect(!rendered.says(localized("discovery.mateFound")))
         #expect(rendered.says("战术"))
         // And the three that went with the drills: nothing on this screen names them any more.
         #expect(!rendered.says("要害"))
@@ -175,8 +175,9 @@ struct GameScreenScreenshots {
 
         #expect(session.unconfirmedSquares.count == 3, "the shaky squares stay ringed on the board")
         #expect(rendered.says("从这里开始走"))
-        // Nothing is played yet, so the side to move has its own questions open.
-        #expect(rendered.says("谁走"))
+        // Settings stay folded even on a freshly recognised position.
+        #expect(!rendered.says("谁走"))
+        #expect(rendered.says(localized("game.settings.expand", PieceColour.white.label)))
         #expect(rendered.says("手动"))
         #expect(rendered.says("先走的是白方"))
         #expect(rendered.says("翻转棋盘"))
@@ -258,7 +259,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("再算 10 秒"), "and the strip offers the one thing left to do")
         #expect(rendered.says("+0.38"), "with what it found still standing")
         #expect(rendered.says("优势条"), "and the bar it found it for")
-        #expect(rendered.says("建议 d4"), "the move too — stopping is not forgetting")
+        #expect(!rendered.says("建议 d4"), "finishing a search does not reveal a finding")
     }
 
     /// Both Controllers on the engine: the app playing itself. There is no player's last move to
@@ -278,11 +279,11 @@ struct GameScreenScreenshots {
         #expect(rendered.says("白方"))
         #expect(rendered.says("黑方"))
         #expect(rendered.says("引擎"))
-        // The clock, on chips, with the mirror standing down for want of anybody to mirror.
-        #expect(rendered.says("每步"))
+        // The current clock stays visible; alternative clocks stay in the folded settings.
+        #expect(!rendered.says("每步"))
         #expect(rendered.says("3 秒"))
-        #expect(rendered.says("10 秒"))
-        #expect(rendered.says("跟着我"))
+        #expect(!rendered.says("10 秒"))
+        #expect(!rendered.says("跟着我"))
         #expect(rendered.says("马上走"), "with the way to stop waiting for the move on the clock")
     }
 
@@ -419,29 +420,29 @@ struct GameScreenScreenshots {
             "practice points at the one switch that makes the engine talk"
         )
         #expect(!rendered.says("+0.38"), "no Score anywhere while practising")
-        // And no search ran either. Both remaining cards are questions for the engine, so
-        // **dealing is no longer an arrival**: the deck opens on one of them at rest, with its own
-        // press on it, and a card that happened to be first is not somebody asking (docs/adr/0023).
-        #expect(session.analysis == nil, "nobody asked, so nothing was spent")
-        #expect(!session.isFindingTactics, "and the finder was not turned on by the deck opening")
+        #expect(session.analysis == nil, "finding availability does not enable advisory scores")
+        #expect(session.isFindingTactics, "availability is discovered automatically")
+        #expect(!rendered.says("建议 d4"), "discovery does not reveal the move")
     }
 
-    /// A card spending a Stint has to say so, and how deep it has got. A number that quietly
-    /// stops moving is indistinguishable from an engine that died (docs/adr/0020) — and that is
-    /// as true on the card as it is on the strip.
-    @Test("a card that is spending a Stint says so, and how deep it has got")
+    /// Opening a completed finding preserves the depth it reached without claiming it is running.
+    @Test("an opened finding names the depth reached by its completed probe")
     func aSearchingCardNamesItsDepth() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let engine = ScriptedEngine(Self.searching, isEndless: true)
         let session = GameSession.fresh(game)
         session.attach(engine: engine, library: nil)
-        let rendered = await ScreenImage.write("game-card-searching") {
+        let rendered = await ScreenImage.write("game-card-searching", interact: { window in
+            #expect(ScreenImage.activate(localized("discovery.view"), in: window))
+        }) {
             screen(session, engine: engine, opening: .tactics)
         }
 
         #expect(session.isPractising)
-        #expect(rendered.says("正在算"))
-        #expect(rendered.says("层级 26"), "the Depth is a figure of its own, not swallowed by 正在算")
+        #expect(!session.isProbingTactics)
+        #expect(rendered.says(localized("search.reached")))
+        #expect(!rendered.says(localized("till.judging")))
+        #expect(rendered.says(localized("game.depth", 26)), "the Depth is a figure of its own")
         #expect(!rendered.says("+0.38"), "practice still keeps the Score off the board")
     }
 
@@ -457,7 +458,7 @@ struct GameScreenScreenshots {
                 game.state.fen: Analysis(
                     depth: 10,
                     lines: [
-                        Line(score: .centipawns(500), uciMoves: ["d1d5"], san: ["Qxd5"]),
+                        Line(score: .centipawns(500), uciMoves: ["d1d5", "e8e7", "d5e5"], san: ["Qxd5", "Ke7", "Qe5+"]),
                         Line(score: .centipawns(20), uciMoves: ["e1d2"], san: ["Kd2"]),
                     ]
                 )
@@ -465,8 +466,10 @@ struct GameScreenScreenshots {
         )
         let session = GameSession.fresh(game)
         session.attach(engine: engine, library: nil)
-        // Nobody flips the switch: swiping onto the card is the asking (docs/adr/0025).
-        let rendered = await ScreenImage.write("game-tactics-finder") {
+        let rendered = await ScreenImage.write("game-tactics-finder", interact: { window in
+            #expect(!ScreenImage.words(in: window).contains { $0.contains("没人守的车") })
+            #expect(ScreenImage.activate(localized("discovery.view"), in: window))
+        }) {
             screen(session, engine: engine, opening: .tactics)
         }
         await hop()
@@ -477,6 +480,10 @@ struct GameScreenScreenshots {
         #expect(rendered.says("战术"))
         #expect(rendered.says("有战术"))
         #expect(rendered.says("没人守的车"))
+        #expect(rendered.says("Ke7"))
+        #expect(rendered.says("Qe5+"))
+        #expect(rendered.says(localized("screen.hideArrows")))
+        #expect(session.game.uciMoves.isEmpty, "drawing a continuation must not play it")
         #expect(!rendered.says("+5.00"), "no Score while practising — a card's Stint is for the card")
         #expect(!rendered.says("建议"))
     }
@@ -488,7 +495,7 @@ struct GameScreenScreenshots {
     /// The screenshot the feature is answerable to: nobody asked, the deck is open at the news
     /// rather than at 问一格, the line is on the chips in the order it goes, and there is still not
     /// a Score anywhere (docs/adr/0015, 0024).
-    @Test("a mate on the board opens the deck by itself and says whose it is")
+    @Test("a mate reveals its owner and line only after opening the finding")
     func mateNewsIsOurs() async throws {
         let opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"
         let game = try #require(Game(startFEN: opera))
@@ -512,7 +519,15 @@ struct GameScreenScreenshots {
         session.setFindingTactics(true)
         await hop()
 
-        let rendered = await ScreenImage.write("game-mate-news-ours") {
+        let rendered = await ScreenImage.write("game-mate-news-ours", interact: { window in
+            #expect(!ScreenImage.words(in: window).contains { $0.contains("Qb8+") })
+            #expect(ScreenImage.activate(localized("discovery.view"), in: window))
+            await ScreenImage.settle()
+            #expect(ScreenImage.activate(localized("screen.hideArrows"), in: window))
+            await ScreenImage.settle()
+            #expect(ScreenImage.words(in: window).contains(localized("screen.showArrows")))
+            #expect(ScreenImage.activate(localized("screen.showArrows"), in: window))
+        }) {
             screen(session, engine: engine)
         }
 
@@ -524,14 +539,14 @@ struct GameScreenScreenshots {
         #expect(rendered.says("Nxb8"))
         #expect(rendered.says("Rd8#"))
         #expect(rendered.says("把箭头收起"), "arriving drew them, and one press takes them off")
-        #expect(rendered.says("这几步没有走进棋谱"))
+        #expect(!rendered.says(localized("screen.arrowsExplained")), "instructions belong to the button hint, not another row")
         #expect(session.mateNews?.arrows.count == 3)
         // Practice is untouched on the board: the mate is a fact, and a Score would be an opinion.
         #expect(session.isPractising)
         #expect(!rendered.says("建议"), "no recommendation, because that is an opinion")
         // The deck is not on the card it usually opens: the names are on the rail, so what says
         // which one is showing is the card's own subtitle.
-        #expect(rendered.says("几步之内有人要被将死了"))
+        #expect(!rendered.says("几步之内有人要被将死了"), "the expanded answer needs no repeated subtitle")
         #expect(!rendered.says("我哪些子能走到这一格"))
     }
 
@@ -563,7 +578,10 @@ struct GameScreenScreenshots {
         session.setFindingTactics(true)
         await hop()
 
-        let rendered = await ScreenImage.write("game-mate-news-theirs") {
+        let rendered = await ScreenImage.write("game-mate-news-theirs", interact: { window in
+            #expect(!ScreenImage.words(in: window).contains { $0.contains("Rd8#") })
+            #expect(ScreenImage.activate(localized("discovery.view"), in: window))
+        }) {
             screen(session, engine: engine)
         }
 
