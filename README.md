@@ -4,9 +4,6 @@ Point the camera at a chessboard, get the position, and play on from it against 
 entirely on the phone. No account, no network, no upload: recognition is arithmetic on pixels
 and the engine is linked into the app, so the whole thing works on a plane.
 
-This is the Swift rewrite of the Python recogniser in the repository root, and it is now
-[the only living implementation](../docs/adr/0005-swift-becomes-the-only-living-implementation.md).
-
 ## Layout
 
 ```
@@ -130,7 +127,7 @@ and the reason `#expect(rendered.says("+0.38"))` can be written at all.
 ## How the app hangs together
 
 **拍棋盘 is our own camera**
-([ADR 0013](../docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md)).
+([ADR 0013](docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md)).
 It opens on the ultra-wide so a board twenty centimetres away is in focus rather than being
 hunted for, focus can be aimed by tapping, and the shutter is manual — nothing is ever captured
 automatically. A box is drawn live around the board it can see, found by the same two measures
@@ -139,7 +136,7 @@ VisionKit's document scanner does all of this and none of it can be configured: 
 tried and taken back out, which is what the ADR is about.
 
 **Recognition never becomes a game on its own.** Every reading goes through the Confirm
-Position gate ([ADR 0008](../docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md)):
+Position gate ([ADR 0008](docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md)):
 the squares it was unsure about are ringed in orange, every square can be corrected by hand,
 and the fields no picture could have settled — whose move it is, castling rights, which way up
 the board is — are asked rather than assumed. A wrong piece is not a wrong pixel; it is a
@@ -149,9 +146,9 @@ different game, discovered ten moves later.
 serial queue, and a new search supersedes the one before it. While it is the player's move the
 search deepens and what it recommends keeps changing — that is the honest display of what an
 engine is doing, not a bug
-([ADR 0009](../docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md)) — and
+([ADR 0009](docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md)) — and
 after ten seconds it stops, because a phone left on a table is not a reason to keep eight cores
-busy ([ADR 0020](../docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md)).
+busy ([ADR 0020](docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md)).
 The strip under the board says how deep it got and offers 再算 10 秒 for the positions where
 another ply is worth having. When
 the engine is playing, it takes about as long as the player just took, and 马上走 cuts that
@@ -161,7 +158,7 @@ three seconds a move — there is no player's clock to mirror then, so the clock
 no Elo.
 
 **It speaks eight languages, out of the package rather than the app**
-([ADR 0019](../docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md)).
+([ADR 0019](docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md)).
 Chinese, English, French, Japanese, Korean, German, Spanish and Portuguese, one
 `Sources/ChessfenKit/Resources/<lang>.lproj/Localizable.strings` each — with the words beside
 the domain because most of them *are* the domain: 漏着, 说不清, "王旁边有王" are `MoveQuality`,
@@ -171,22 +168,22 @@ regardless of what the phone is set to, and `LocalizationTests` fails the build 
 missing from a table or carries different `%@`s than the Chinese it translates.
 
 **Games are PGN files.** One per game, in Documents, with the photograph a recognised game came
-from kept beside it ([ADR 0010](../docs/adr/0010-pgn-files-are-the-storage-format.md)). There is
+from kept beside it ([ADR 0010](docs/adr/0010-pgn-files-are-the-storage-format.md)). There is
 no database and no migration story: anything that reads PGN reads everything this app has ever
 saved, and branches, evaluations and where the position came from all ride along in notation
 PGN already had. A game nobody has moved in yet is not written at all.
 
 **Stockfish is driven through its `Engine` class, not through UCI text**
-([ADR 0002](../docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md)), because
+([ADR 0002](docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md)), because
 iOS forbids `fork`/`exec` — there is no subprocess to pipe commands to, so the engine is linked
 in and called. The same C++ answers the rules questions
-([ADR 0003](../docs/adr/0003-borrow-stockfish-for-rules-queries-behind-a-stateless-bridge.md)):
+([ADR 0003](docs/adr/0003-borrow-stockfish-for-rules-queries-behind-a-stateless-bridge.md)):
 a second move generator would be a second opinion about the rules of chess, and Stockfish's is
 the one already being trusted with everything else.
 
 ## Licence
 
 GPLv3, for the whole repository
-([ADR 0001](../docs/adr/0001-relicense-the-repository-under-gplv3.md)). Stockfish is GPLv3 and
+([ADR 0001](docs/adr/0001-relicense-the-repository-under-gplv3.md)). Stockfish is GPLv3 and
 this links against it, so the licence is not a choice — which also means this app is not going
 to the App Store, whose terms and the GPL do not agree.
