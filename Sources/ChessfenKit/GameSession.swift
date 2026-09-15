@@ -1356,6 +1356,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// how well it plays is how long it is left alone — and here that is a thumb on a button. A tap
     /// is a snap answer, two seconds is a considered one, and neither is the app deciding.
     ///
+    /// The search is the shared bounded one every other reader of this position joins
+    /// (`PositionSearches`), so a press after the position has been searched plays at once and a
+    /// hold deepens the answer that was already going to be there. It ends by itself at ten
+    /// seconds or depth twenty, and then the move is played: a thumb still down on a search that
+    /// has stopped is waiting for nothing.
+    ///
     /// Not a Controller and not advice left standing: one move, asked for by hand, for whichever
     /// colour is on the clock.
     public func beginAskedMove() {
@@ -1373,8 +1379,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         searchProgress = nil
         thinking = .asked
         searchTask = Task { [weak self] in
-            // Unbounded: how long it runs is how long the button is held. One line: the
-            // answer is one move, and every extra line halves how deep the hold looks.
+            // The shared bounded search: how deep it gets is how long the button is held, up to
+            // the ten seconds or depth twenty the position is worth. One line is not asked for
+            // here — the shared result carries two, and the one that decides a *move* is the best.
             for await snapshot in engine.analysePosition(position) {
                 if Task.isCancelled { return }
                 guard let self else { return }
@@ -1536,8 +1543,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         continueAfterProbe()
     }
 
-    /// A short two-line search that confirms or drops a rules-named shot, then hands the
-    /// engine back to whatever it was going to do — its own move, or a Stint of advice.
+    /// Reads the rules' shot against the one bounded search of this position, then hands the
+    /// engine back to whatever it was going to do — its own move, or a card's answer.
+    ///
+    /// Two lines is what the shared search is asked for everywhere: the shot needs a second
+    /// candidate to be confirmed against, and a third would only cost Depth. It used to be a
+    /// probe of its own at a shallower Depth, which meant the same position was searched twice
+    /// to answer two questions about it.
     ///
     /// Before, not after: a prompt that lands once the opponent has already moved is a
     /// post-mortem (docs/adr/0023). The table is left warm on purpose.

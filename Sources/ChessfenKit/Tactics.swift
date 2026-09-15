@@ -12,10 +12,6 @@ public struct Tactic: Hashable, Sendable {
     /// proposal that has not been confirmed, and for a one-move shot.
     public let line: [String]
 
-    /// The Depth the confirming search is asked for. Shallow enough to finish before an
-    /// engine reply, deep enough to see a short combination.
-    public static let probeDepth = 10
-
     /// How much better the Best Move has to be than the second before a line the rules did not
     /// name counts as a Tactic, in percentage points of win probability for the side to move.
     /// Literally the band `MoveQuality` calls a 失误 — playing the second here would be one —

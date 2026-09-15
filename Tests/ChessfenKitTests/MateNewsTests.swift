@@ -187,7 +187,7 @@ import Testing
     private func mateInTwo(_ fen: String) -> [String: Analysis] {
         [
             fen: Analysis(
-                depth: Tactic.probeDepth,
+                depth: PositionSearches.depth,
                 lines: [
                     Line(
                         score: .mate(in: 2),
@@ -260,11 +260,11 @@ import Testing
             [],
             byPosition: [
                 played.state.fen: Analysis(
-                    depth: Tactic.probeDepth,
+                    depth: PositionSearches.depth,
                     lines: [Line(score: .mate(in: 3), uciMoves: ["f1c4"], san: ["Bc4"])]
                 ),
                 earlier.state.fen: Analysis(
-                    depth: Tactic.probeDepth,
+                    depth: PositionSearches.depth,
                     lines: [Line(score: .mate(in: 4), uciMoves: ["g1f3"], san: ["Nf3"])]
                 ),
             ]

@@ -36,6 +36,25 @@ struct AskedMove {
         return session
     }
 
+    /// A position search that stays open until this test says otherwise.
+    ///
+    /// Every reader of a live position shares one bounded search, and it ends by itself at ten
+    /// seconds or depth twenty (see `PositionSearches`) — so the button a thumb holds is watching
+    /// a search that will finish without it. A test that wants to watch one mid-flight has to be
+    /// the one that ends it, which is what this hands back.
+    private func heldSearch(
+        at fen: String
+    ) -> (
+        stream: AsyncStream<Analysis>, continuation: AsyncStream<Analysis>.Continuation,
+        control: @Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?
+    ) {
+        let made = AsyncStream<Analysis>.makeStream()
+        let control: @Sendable (Game, SearchBudget) -> AsyncStream<Analysis>? = { game, _ in
+            game.state.fen == fen ? made.stream : nil
+        }
+        return (made.stream, made.continuation, control)
+    }
+
     /// The search runs in a task of its own, so what it has reported is known a hop later — which is
     /// exactly as true of the screen as it is of this test.
     private func hop() async {
@@ -46,11 +65,17 @@ struct AskedMove {
     }
 
     /// Held time is thinking time: the search runs while the button is down and reports as it goes.
+    /// It is the same bounded search everything else reads, so it also has an end of its own.
     @Test("holding the engine button starts a search that reports how far it has got")
     func holdingReports() async throws {
-        let session = try session(ScriptedEngine(Self.searching, isEndless: true))
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let held = heldSearch(at: game.state.fen)
+        let session = try session(ScriptedEngine(Self.searching, controlled: held.control))
 
         session.beginAskedMove()
+        await hop()
+        held.continuation.yield(Self.searching[0])
+        held.continuation.yield(Self.searching[1])
         await hop()
 
         #expect(session.isThinking)
@@ -58,14 +83,26 @@ struct AskedMove {
         #expect(session.searchProgress?.selectiveDepth == 34)
         #expect(session.searchProgress?.seconds == 2.4)
         #expect(session.game.plies.count == 8, "nothing is played while it is being held")
+
+        // Ten seconds or depth twenty ends it, thumb or no thumb, and the move it was asked for
+        // is played: a press that has stopped waiting for anything is a press that has finished.
+        held.continuation.finish()
+        await hop()
+        #expect(!session.isThinking)
+        #expect(session.game.plies.count == 9)
+        #expect(session.game.plies.last?.san == "d4")
     }
 
     /// Letting go plays what it found, for whichever colour was on the clock.
     @Test("letting go plays the move the search settled on")
     func lettingGoPlays() async throws {
-        let session = try session(ScriptedEngine(Self.searching, isEndless: true))
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let held = heldSearch(at: game.state.fen)
+        let session = try session(ScriptedEngine(Self.searching, controlled: held.control))
 
         session.beginAskedMove()
+        await hop()
+        held.continuation.yield(Self.searching[1])
         await hop()
         session.endAskedMove()
 
@@ -77,7 +114,9 @@ struct AskedMove {
     /// A press is a drag that keeps reporting, and the button hears it before it hears itself.
     @Test("a press that reports twice still only starts one search")
     func pressingTwiceAsksOnce() async throws {
-        let engine = ScriptedEngine(Self.searching, isEndless: true)
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let held = heldSearch(at: game.state.fen)
+        let engine = ScriptedEngine(Self.searching, controlled: held.control)
         let session = try session(engine)
 
         session.beginAskedMove()
@@ -114,9 +153,13 @@ struct AskedMove {
     /// let go of, so the press ran on with nobody holding it and played nothing.
     @Test("a search a thumb asked for is not the engine walking a move of its own")
     func askedIsNotTheEnginesOwn() async throws {
-        let session = try session(ScriptedEngine(Self.searching, isEndless: true))
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let held = heldSearch(at: game.state.fen)
+        let session = try session(ScriptedEngine(Self.searching, controlled: held.control))
 
         session.beginAskedMove()
+        await hop()
+        held.continuation.yield(Self.searching[1])
         await hop()
 
         #expect(session.thinking == .asked)
@@ -140,9 +183,12 @@ struct AskedMove {
     @Test("the engine's own move is the other kind of thinking, and 马上走 is what ends it")
     func theEnginesOwnMoveIsCutShort() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let held = heldSearch(at: game.state.fen)
         let session = GameSession.fresh(game, controllers: [.white: .engine, .black: .hand])
-        session.attach(engine: ScriptedEngine(Self.searching, isEndless: true), library: nil)
+        session.attach(engine: ScriptedEngine(Self.searching, controlled: held.control), library: nil)
         session.retune()
+        await hop()
+        held.continuation.yield(Self.searching[1])
         await hop()
 
         #expect(session.thinking == .own, "it is walking a move it took on itself")

@@ -14,7 +14,7 @@ import Testing
 
     private func analysis(_ lines: [(Score, String, String, [String])]) -> Analysis {
         Analysis(
-            depth: Tactic.probeDepth,
+            depth: PositionSearches.depth,
             lines: lines.map {
                 Line(score: $0.0, uciMoves: [$0.1], san: [$0.2] + $0.3)
             }
@@ -139,7 +139,7 @@ import Testing
         #expect(session.tactic == nil)
     }
 
-    @Test("turning the finder on probes the latest position at depth 10, two lines")
+    @Test("turning the finder on searches the position on screen once, sharing the bounded result")
     func finderOnProbesTheLatest() async throws {
         let game = try opening()
         let engine = ScriptedEngine(
@@ -159,8 +159,8 @@ import Testing
         session.setFindingTactics(true)
         await hop()
 
-        #expect(engine.budgets == [.depth(Tactic.probeDepth)])
-        #expect(engine.lines == [2])
+        #expect(engine.budgets == [PositionSearches.budget])
+        #expect(engine.lines == [2], "two lines: the shot, and the move it has to beat")
         #expect(session.tactic == nil, "a twelve-centipawn gap is not a Tactic")
         #expect(session.tacticPrompt == "这一步没有战术")
     }
@@ -201,15 +201,15 @@ import Testing
         session.jump(toPly: 2)
         await hop()
         #expect(engine.searchCount == probed + 1, "one bounded probe, on the position on screen")
-        #expect(engine.budgets.last == .depth(Tactic.probeDepth))
+        #expect(engine.budgets.last == PositionSearches.budget)
         #expect(session.tacticPrompt == "这一步没有战术", "and it answers about that position")
         // Nothing was played: the engine only moves from the latest position.
         #expect(session.game.plies.count == 4)
     }
 
-    /// Jumping the record and opening 杀招 is the asking. The probe is bounded; when it
-    /// ends, 正在算 must end with it. A leftover task would keep the card spinning, and a
-    /// later swipe onto 要害 would think the engine was still busy and never spend its Stint.
+    /// Jumping the record and opening 杀招 is the asking. The search is the shared bounded one,
+    /// so when it ends 正在算 must end with it: a leftover task would keep the card spinning, and
+    /// a later swipe onto 要害 would think the engine was still busy.
     @Test("a finished probe at a past ply is not still searching")
     func aFinishedProbeAtAPastPlyIsNotStillSearching() async throws {
         let game = try opening()
@@ -220,7 +220,7 @@ import Testing
             [],
             byPosition: [
                 past.state.fen: Analysis(
-                    depth: 10,
+                    depth: PositionSearches.depth,
                     lines: [
                         Line(score: .centipawns(28), uciMoves: ["g1f3"], san: ["Nf3"]),
                         Line(score: .centipawns(20), uciMoves: ["f1c4"], san: ["Bc4"]),
@@ -231,20 +231,21 @@ import Testing
         let session = GameSession.fresh(game)
         session.attach(engine: engine, library: nil)
         session.jump(toPly: 2)
-        // What the screen does on arriving at 杀招: the finder, then the card's own Stint.
+        // What the screen does on arriving at 杀招: the finder, then the card's own look.
         session.setFindingTactics(true)
-        session.adviseForCard()
         await hop()
 
         #expect(session.isPractising)
-        #expect(!session.isSearching, "the probe has finished; 正在算 must not stay on")
+        #expect(!session.isSearching, "the shared search has finished; 正在算 must not stay on")
         #expect(!session.isProbingTactics)
 
+        // 要害 then reads the same result. One search per position is the whole point of the
+        // table, so asking for the card's answer must not buy a second one.
+        let searches = engine.searchCount
         session.adviseForCard()
         await hop()
-        #expect(
-            engine.budgets.last == .untilStopped,
-            "要害 can still spend a Stint once the probe has put the engine down"
-        )
+        #expect(engine.searchCount == searches, "要害 reads the result the probe paid for")
+        #expect(session.analysis != nil, "and it reads it: the card has its Line")
+        #expect(session.isAdviceSpent, "with nothing left to wait for")
     }
 }

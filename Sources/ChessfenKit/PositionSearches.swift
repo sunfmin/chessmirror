@@ -4,7 +4,12 @@ import Foundation
 /// A view leaving detaches its listener, not the shared work. Finished results survive
 /// navigation and, on device, relaunch, including results below depth twenty.
 public actor PositionSearches {
-    public static let budget: SearchBudget = .timeOrDepth(.seconds(10), 20)
+    /// The Depth a position search stops at, whichever end of the budget arrives first. Named
+    /// because it is the depth every live answer is worth — judgement, the finder, the engine's
+    /// own move and a move a thumb asked for are all this one search — and a caller standing in
+    /// for a finished one has no business restating it.
+    public static let depth = 20
+    public static let budget: SearchBudget = .timeOrDepth(.seconds(10), depth)
     private struct Entry {
         var latest: Analysis?
         var finished = false
