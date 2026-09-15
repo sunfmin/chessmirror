@@ -19,7 +19,7 @@ enum Step: Hashable {
     case mistake(Mistake)
     /// The same 错题, being practised. Separate from looking at it, because a drill is a question
     /// and the history is the answer to a different one (docs/adr/0029).
-    case drill(Mistake)
+    case drill(Mistake, Drill.Source)
 }
 
 /// A typed name, or nil for one that was only spaces — which is how a name is taken back off.
@@ -54,6 +54,7 @@ struct LibraryScreen: View {
                         note(reason, symbol: "exclamationmark.triangle.fill")
                     }
                     entries
+                    dailyDoor
                     bookDoor
                     games
                 }
@@ -95,12 +96,13 @@ struct LibraryScreen: View {
                     BookScreen(path: $path)
                 case .mistake(let mistake):
                     BookEntryScreen(mistake: mistake, path: $path)
-                case .drill(let mistake):
+                case .drill(let mistake, let source):
                     DrillHost(
                         mistake: mistake,
                         engine: engine.service,
                         lines: judgement.lines,
                         log: index.log,
+                        source: source,
                         path: $path
                     )
                 }
@@ -282,6 +284,45 @@ struct LibraryScreen: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    /// 日课, and how much of it is left (docs/adr/0030).
+    ///
+    /// It opens the next question rather than a list of them, and that is the design rather than
+    /// a shortcut: a screen listing today's queue is a screen somebody picks from, and picking is
+    /// exactly what a spaced schedule exists to take off them (docs/adr/0032). There is one verb
+    /// here and it is 下一道.
+    @ViewBuilder private var dailyDoor: some View {
+        let left = index.daily.remaining
+        Button {
+            guard let next = index.daily.next else { return }
+            path.append(.drill(next.mistake, .daily))
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "sun.max")
+                Text(localized("daily")).font(.subheadline.weight(.medium))
+                Spacer(minLength: 0)
+                Text(
+                    left > 0
+                        ? localized("daily.left", plural: left)
+                        : localized(index.book.isEmpty ? "daily.none" : "daily.done")
+                )
+                .font(.caption.weight(.medium))
+                .foregroundStyle(left > 0 ? Palette.parchment : Palette.inkSoft)
+                if left > 0 {
+                    Image(systemName: "chevron.right").font(.caption2)
+                }
+            }
+            .foregroundStyle(left > 0 ? Palette.parchment : Palette.ink)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 13)
+            .background(
+                left > 0 ? Palette.analysis : Palette.chipRest,
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(left == 0)
     }
 
     /// The way into the 错题本, carrying how many are in it (docs/adr/0028).

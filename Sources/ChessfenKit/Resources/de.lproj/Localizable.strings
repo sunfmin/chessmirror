@@ -342,3 +342,9 @@
 "drill.seconds" = "%d Sekunden gebraucht";
 "drill.seconds.one" = "%d Sekunde gebraucht";
 "drill.noEngine" = "Die Engine läuft noch nicht, der Zug lässt sich nicht bewerten.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Heute";
+"daily.left" = "noch %d";
+"daily.done" = "Für heute erledigt";
+"daily.none" = "Heute nichts zu üben";

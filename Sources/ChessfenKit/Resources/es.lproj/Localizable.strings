@@ -342,3 +342,10 @@
 "drill.seconds" = "tardaste %d segundos";
 "drill.seconds.one" = "tardaste %d segundo";
 "drill.noEngine" = "El motor aún no está listo, así que no se puede juzgar la jugada.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Hoy";
+"daily.left" = "quedan %d";
+"daily.done" = "Listo por hoy";
+"daily.none" = "Nada que practicar hoy";
+"daily.left.one" = "queda %d";

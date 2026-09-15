@@ -388,3 +388,9 @@
 "drill.seconds" = "took %d seconds";
 "drill.seconds.one" = "took %d second";
 "drill.noEngine" = "The engine is not up yet, so that move cannot be judged.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Today";
+"daily.left" = "%d to go";
+"daily.done" = "Done for today";
+"daily.none" = "Nothing to practise today";

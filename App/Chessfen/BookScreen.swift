@@ -102,7 +102,7 @@ struct BookEntryScreen: View {
                 // Straight from here, without waiting for the day's queue to offer it: a person
                 // looking at a position they keep getting wrong wants to try it now.
                 Button {
-                    path.append(.drill(mistake))
+                    path.append(.drill(mistake, .picked))
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "figure.mind.and.body")

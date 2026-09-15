@@ -342,3 +342,10 @@
 "drill.seconds" = "levou %d segundos";
 "drill.seconds.one" = "levou %d segundo";
 "drill.noEngine" = "O motor ainda não está pronto, então o lance não pode ser julgado.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Hoje";
+"daily.left" = "faltam %d";
+"daily.left.one" = "falta %d";
+"daily.done" = "Terminado por hoje";
+"daily.none" = "Nada para praticar hoje";

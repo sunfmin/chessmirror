@@ -208,3 +208,37 @@ func anEmptyLogIsQuiet() {
     #expect(temporaryLog().entries().isEmpty)
     #expect(temporaryLog().dismissed().isEmpty)
 }
+
+// -------------------------------------------------------------------- the day
+
+@MainActor
+@Test("throwing the index away and building it again schedules the very same day")
+func aRebuiltIndexKeepsTheDueDates() throws {
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let entries = try (1...6).map { try game(seed: $0, at: now) }
+
+    let first = MistakeIndex(log: log)
+    first.update(from: entries)
+    let card = try #require(first.daily.all.first)
+    log.append(
+        .drilled(
+            PracticeLog.Attempt(
+                position: card.position, seconds: 8, passed: true, played: "Nc6", cost: 2,
+                hints: 0, source: .daily
+            )
+        ),
+        at: Date(timeIntervalSince1970: 1_789_000_000)
+    )
+    first.refresh(now: now)
+    let scheduled = first.daily.all.first { $0.position == card.position }?.dueAt
+
+    // A different object over the same two inputs — which is what deleting the cache is.
+    let rebuilt = MistakeIndex(log: log)
+    rebuilt.update(from: entries)
+    rebuilt.refresh(now: now)
+    let again = rebuilt.daily.all.first { $0.position == card.position }?.dueAt
+
+    #expect(scheduled != nil)
+    #expect(scheduled == again, "the date is computed, so there is nothing to lose")
+}

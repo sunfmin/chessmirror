@@ -342,3 +342,10 @@
 "drill.seconds" = "%d secondes";
 "drill.seconds.one" = "%d seconde";
 "drill.noEngine" = "Le moteur n'est pas encore prêt, ce coup ne peut pas être jugé.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Aujourd'hui";
+"daily.left" = "%d restantes";
+"daily.left.one" = "%d restante";
+"daily.done" = "Terminé pour aujourd'hui";
+"daily.none" = "Rien à travailler aujourd'hui";

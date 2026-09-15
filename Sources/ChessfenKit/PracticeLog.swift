@@ -122,9 +122,13 @@ public struct PracticeLog: Sendable {
     ///
     /// Computed from the log rather than stored, like everything else here: the last word about a
     /// position wins, so restoring one is an append and never an edit.
-    public func dismissed() -> Set<PositionKey> {
+    public func dismissed() -> Set<PositionKey> { Self.dismissed(in: entries()) }
+
+    /// The same, over entries already read. The index reads the file once and asks both
+    /// questions of what came back, rather than parsing it twice on every rebuild.
+    public static func dismissed(in entries: [Entry]) -> Set<PositionKey> {
         var standing: [PositionKey: Bool] = [:]
-        for entry in entries() {
+        for entry in entries {
             switch entry.fact {
             case .dismissed(let key): standing[key] = true
             case .restored(let key): standing[key] = false
@@ -139,8 +143,10 @@ public struct PracticeLog: Sendable {
     /// Read out of the log each time rather than counted up and stored, which is the rule the
     /// whole file is built on: a total is a conclusion, and conclusions are what this refuses to
     /// keep (docs/adr/0029).
-    public func attempts() -> [(at: Date, attempt: Attempt)] {
-        entries().compactMap { entry in
+    public func attempts() -> [(at: Date, attempt: Attempt)] { Self.attempts(in: entries()) }
+
+    public static func attempts(in entries: [Entry]) -> [(at: Date, attempt: Attempt)] {
+        entries.compactMap { entry in
             guard case .drilled(let attempt) = entry.fact else { return nil }
             return (entry.at, attempt)
         }

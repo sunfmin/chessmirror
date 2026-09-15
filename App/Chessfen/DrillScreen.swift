@@ -15,6 +15,9 @@ struct DrillScreen: View {
     let drill: Drill
     /// The 错题 this came off, for the two exits that need to know where it sits in the book.
     let mistake: Mistake
+    /// Whether this came out of the day's queue or off the book. 下一题 means a different
+    /// thing either way — the queue's next, or the next one down the book.
+    var source: Drill.Source = .picked
     @Binding var path: [Step]
 
     @Environment(EngineHost.self) private var engine
@@ -52,6 +55,11 @@ struct DrillScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Palette.parchment, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        // The attempt is a new line in the log, and the day is a function of the log: the count
+        // on the first screen has to have heard about it before anybody goes back there.
+        .onChange(of: drill.isSettled) { _, settled in
+            if settled { index.refresh() }
+        }
         .confirmationDialog(
             localized("game.promotion"), isPresented: .constant(promotion != nil),
             titleVisibility: .visible
@@ -193,15 +201,26 @@ struct DrillScreen: View {
     /// back button still goes back to the list rather than through every drill of the session.
     private func goToNext() {
         guard let next, !path.isEmpty else { return }
-        path[path.count - 1] = .drill(next)
+        path[path.count - 1] = .drill(next, source)
     }
 
+    /// 下一题: for a 日课 drill, whatever the schedule puts next — never a choice, and never a
+    /// list to choose from (docs/adr/0032). For one picked off the book, the next one down it.
+    ///
+    /// This position is excluded either way: a card just failed is due again in hours rather than
+    /// days, and asking it again immediately would only be asking somebody to repeat the move
+    /// they were just shown.
     private var next: Mistake? {
-        let book = index.book.mistakes
-        guard let here = book.firstIndex(where: { $0.position == mistake.position }),
-            book.count > 1
-        else { return nil }
-        return book[(here + 1) % book.count]
+        switch source {
+        case .daily:
+            return index.daily.cards.first { $0.position != mistake.position }?.mistake
+        case .picked:
+            let book = index.book.mistakes
+            guard let here = book.firstIndex(where: { $0.position == mistake.position }),
+                book.count > 1
+            else { return nil }
+            return book[(here + 1) % book.count]
+        }
     }
 }
 
@@ -212,6 +231,7 @@ struct DrillScreen: View {
 /// fresh drill each time would reset the question the moment it was answered.
 struct DrillHost: View {
     let mistake: Mistake
+    let source: Drill.Source
     @Binding var path: [Step]
     @State private var drill: Drill?
 
@@ -224,6 +244,7 @@ struct DrillHost: View {
         path: Binding<[Step]>
     ) {
         self.mistake = mistake
+        self.source = source
         _path = path
         _drill = State(
             initialValue: Drill(
@@ -234,7 +255,7 @@ struct DrillHost: View {
 
     var body: some View {
         if let drill {
-            DrillScreen(drill: drill, mistake: mistake, path: $path)
+            DrillScreen(drill: drill, mistake: mistake, source: source, path: $path)
         } else {
             // A 错题 whose position will not parse. Nothing to practise and nothing to say about
             // it that is not a lie about the board.

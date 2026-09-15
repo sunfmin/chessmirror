@@ -18,6 +18,10 @@ import Foundation
     /// nothing, which is the whole point of the cache and the thing a test can hold it to.
     public private(set) var walkedLastTime = 0
 
+    /// Today's queue (docs/adr/0030). Derived like everything else here — from the book and the
+    /// practice log — and recomputed whenever either could have changed.
+    public private(set) var daily = Daily(cards: [])
+
     /// The practice log the book is read against, and the one a drill writes its attempts to:
     /// one log, because a dismissal and an attempt are the same kind of thing (docs/adr/0029).
     public let log: PracticeLog
@@ -69,10 +73,21 @@ import Foundation
         rebuild()
     }
 
-    /// The book from what is cached plus what the player has struck off. Cheap: no files are
-    /// read except the log, and no game is walked.
-    private func rebuild() {
-        let dismissed = log.dismissed()
+    /// Works today's queue out again, for after a drill has been practised — the attempt is a new
+    /// line in the log and the schedule is a function of the log (docs/adr/0029).
+    public func refresh(now: Date = Date()) {
+        daily = Daily.forToday(
+            book: book, attempts: log.attempts(), lines: lines, now: now
+        )
+    }
+
+    /// The book from what is cached plus what the player has struck off, and the day that falls
+    /// out of it. Cheap: no files are read except the log, and no game is walked.
+    private func rebuild(now: Date = Date()) {
+        // One read of the log for both questions: what has been struck off, and what has been
+        // practised.
+        let entries = log.entries()
+        let dismissed = PracticeLog.dismissed(in: entries)
         var byPosition: [PositionKey: [Encounter]] = [:]
         for (_, entry) in cached {
             for (key, encounter) in entry.found where !dismissed.contains(key) {
@@ -81,6 +96,9 @@ import Foundation
         }
         book = MistakeBook(
             mistakes: byPosition.map { Mistake(position: $0.key, encounters: $0.value) }
+        )
+        daily = Daily.forToday(
+            book: book, attempts: PracticeLog.attempts(in: entries), lines: lines, now: now
         )
     }
 }
