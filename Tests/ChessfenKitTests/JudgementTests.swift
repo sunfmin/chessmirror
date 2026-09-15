@@ -70,13 +70,13 @@ func theLinesAreSeparate() {
     #expect(lines.enqueues(25))
 }
 
-@Test("the intercept dial offers off and the three names, and nothing in between")
-func theInterceptDialIsCoarse() {
-    #expect(JudgementLines.interceptChoices.count == 4)
-    #expect(JudgementLines.interceptChoices[0] == nil)
-    #expect(JudgementLines.interceptChoices[1] == 10)
-    #expect(JudgementLines.interceptChoices[2] == 20)
-    #expect(JudgementLines.interceptChoices[3] == 30)
+@Test("the intercept slider defaults to five and supports the full percentage range")
+func theInterceptDialIsContinuous() {
+    #expect(JudgementLines.defaultIntercept == 5)
+    #expect(JudgementLines.interceptRange == 0...100)
+    #expect(!JudgementLines(intercept: 0).intercepts(0))
+    #expect(JudgementLines(intercept: 0).intercepts(0.1))
+    #expect(JudgementLines(intercept: 5).intercepts(5))
 }
 
 // -------------------------------------------------------------- the settlement

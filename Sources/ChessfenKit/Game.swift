@@ -45,6 +45,19 @@ public struct Game: Hashable, Sendable {
         /// How many rungs of the hint ladder were open when the move that stands was played
         /// (docs/adr/0031). Zero is "unaided", which is the ordinary case.
         public var hints: Int = 0
+        /// The completed interception judgement, kept separate from a full-game Review.
+        public var judgement: Judgement?
+
+        public struct Judgement: Hashable, Sendable {
+            public let drop: Double
+            public let score: Score
+            public let depth: Int
+            public init(drop: Double, score: Score, depth: Int) {
+                self.drop = max(0, drop)
+                self.score = score
+                self.depth = depth
+            }
+        }
 
         /// One move 耕棋 took back, and what it cost.
         public struct Tried: Hashable, Sendable {
@@ -68,6 +81,7 @@ public struct Game: Hashable, Sendable {
             line: [String] = [],
             tried: [Tried] = [],
             hints: Int = 0,
+            judgement: Judgement? = nil,
         ) {
             self.uci = uci
             self.san = san
@@ -76,6 +90,7 @@ public struct Game: Hashable, Sendable {
             self.line = line
             self.tried = tried
             self.hints = hints
+            self.judgement = judgement
         }
 
         /// How many Ply of a Review's Line are kept.
@@ -97,6 +112,7 @@ public struct Game: Hashable, Sendable {
             line = other.line
             tried = other.tried
             hints = other.hints
+            judgement = other.judgement
         }
     }
 
@@ -381,6 +397,11 @@ public struct Game: Hashable, Sendable {
     }
 
     /// Records what 耕棋 refused before the move at `ply` was allowed to stand.
+    public mutating func setJudgement(_ judgement: Ply.Judgement, atPly ply: Int) {
+        guard plies.indices.contains(ply) else { return }
+        plies[ply].judgement = judgement
+    }
+
     public mutating func setTried(_ attempts: [Ply.Tried], hints: Int = 0, atPly ply: Int) {
         guard plies.indices.contains(ply) else { return }
         plies[ply].tried = attempts

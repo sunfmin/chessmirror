@@ -41,6 +41,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 /// and it follows from the Game, the cursor and the two Controllers.
 @Observable @MainActor public final class GameSession: Identifiable, Hashable {
     public nonisolated let id = UUID()
+    /// A practice attempt is the first move of this game, not a separate, frozen board.
+    public private(set) var practice: Drill?
 
     public private(set) var game: Game {
         didSet { storedViewed = nil }
@@ -150,27 +152,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var picture: RGBImage?
     public var shaky: Set<Square>
 
-    /// Whether the engine keeps its opinion to itself: no advisory search runs, no Score is
-    /// drawn, and nothing the engine thinks is written into the plies — so a game played this way
-    /// carries no marks, and a Review is where it finally meets the engine at one uniform Depth
-    /// (docs/adr/0009).
-    ///
-    /// **True is where every Game starts** (docs/adr/0015). An answer on screen is an answer the
-    /// eye cannot decline to read, so no amount of self-discipline makes a visible evaluation
-    /// compatible with learning to evaluate; showing what the engine thinks is therefore
-    /// something a person does, once, on purpose. Playing a whole game with the engine looking
-    /// over your shoulder and playing one out yourself are different exercises, and only the
-    /// second one tells you what you would have done.
-    ///
-    /// It does not silence the engine as an *opponent*: a bounded search for the engine's own
-    /// move is not advice, and playing a side without being told what it thinks of your last
-    /// move is exactly the exercise.
-    ///
-    /// Not stored, and not carried from one Game to the next either. PGN has nowhere to put it,
-    /// and — unlike who is playing which colour — it is not a way of working that should be set
-    /// up once for a session of fifty positions: it is the one thing standing between a player
-    /// and the answer, so it has to be found off every time rather than wherever it was left.
+    /// Legacy answer-visibility preference. Position feedback is independent of this flag;
+    /// the game screen no longer presents it as a separate practice/analysis mode.
     public private(set) var isPractising = true
+    private var adviceBeforeTilling: Bool?
+    public private(set) var preferredIntercept: Double?
+    private var showsPositionFeedback = false
+    /// Keep assessment/history visible when interception is temporarily switched off.
+    public var hasTillingFeedback: Bool { showsPositionFeedback || preferredIntercept != nil }
+    public func showPositionFeedback() { showsPositionFeedback = true }
 
     /// Whether a Tactic may be named on the latest position (docs/adr/0023).
     ///
@@ -247,8 +237,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         self.tags = tags
         self.cursor = min(max(0, viewing ?? game.plies.count), game.plies.count)
         if let value = tags.first(where: { $0.name == "Intercept" }).flatMap({ Double($0.value) }),
-            JudgementLines.interceptChoices.contains(value) {
+            value.isFinite, JudgementLines.interceptRange.contains(value) {
             lines.intercept = value
+        }
+        preferredIntercept = lines.intercept
+        if preferredIntercept == nil,
+           let value = tags.first(where: { $0.name == "InterceptPreference" }).flatMap({ Double($0.value) }),
+           value.isFinite, JudgementLines.interceptRange.contains(value) {
+            preferredIntercept = value
         }
     }
 
@@ -300,6 +296,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let session = fresh(game, engine: engine, library: library)
         session.seatEngineOpponent()
         return session
+    }
+
+    public static func practising(
+        _ drill: Drill, engine: (any Engine)? = nil, library: GameLibrary? = nil
+    ) -> GameSession {
+        let session = fresh(drill.game, controllers: [
+            drill.mover: .hand, drill.mover.opposite: .engine
+        ], engine: engine, library: library)
+        session.practice = drill
+        session.setThinkingTime(.openedRecord)
+        session.orientation = drill.mover == .white ? .whiteAtBottom : .blackAtBottom
+        session.showPositionFeedback()
+        return session
+    }
+
+    public func notePracticeHelp() {
+        guard let practice, !practice.isSettled, !practice.isJudging else { return }
+        practice.hintsOpened += 1
     }
 
     private var pendingImportURL: URL?
@@ -640,15 +654,25 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Moves the 拦截线, or switches 耕棋 off with nil. **The only difficulty dial there is** —
     /// how strong the opponent is and how much slack the coach cuts are two different questions,
     /// and answering both with one knob makes it impossible to say who improved (docs/adr/0009).
+    public func setTilling(_ enabled: Bool) {
+        setIntercept(enabled ? (preferredIntercept ?? JudgementLines.defaultIntercept) : nil)
+    }
+
     public func setIntercept(_ line: Double?) {
         guard !isWeighing, activePunishment == nil else { return }
+        if let line, !line.isFinite || !JudgementLines.interceptRange.contains(line) { return }
         guard lines.intercept != line else { return }
+        if line != nil, !isTilling { adviceBeforeTilling = isPractising }
         lines.intercept = line
-        if line != nil {
+        if let line {
+            preferredIntercept = line
             isPractising = true
             analysis = nil
             stopReview()
             setFindingTactics(false)
+        } else {
+            isPractising = adviceBeforeTilling ?? true
+            adviceBeforeTilling = nil
         }
         // Whatever was refused was refused under the old line. A move that would stand under the
         // new one is not a move somebody should still be being told about.
@@ -690,7 +714,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     func waitForJudgement() async { await weighing?.value }
     func waitForPreparedInterception() async { await searchTask?.value }
     private var positionBeforeWeighing: Game?
-    public static let interceptDepth = 16
+    public static let interceptDepth = 20
     public private(set) var hintLayer = 0
     public private(set) var relaxedIntercept: Double?
     private struct PendingHelp {
@@ -722,6 +746,122 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard hintLayer >= 1, interceptTable?.fen == viewed.state.fen else { return nil }
         return interceptTable?.analysis.best?.score
     }
+    /// Always-visible position assessment; no recommended move is exposed here.
+    public var tillingScore: Score? {
+        if let table = interceptTable, table.fen == viewed.state.fen {
+            return table.analysis.best?.score
+        }
+        if cursor > 0, let judgement = game.plies[cursor - 1].judgement,
+           judgement.depth >= Self.interceptDepth {
+            return judgement.score
+        }
+        return (game.reviewDepth ?? 0) >= Self.interceptDepth ? game.reviewScore(atPly: cursor) : nil
+    }
+    public var pendingAttempts: [Game.Ply.Tried] { triedHere }
+
+    public struct MoveChange: Equatable, Sendable {
+        public let before: Score
+        public let after: Score
+
+        public func percent(for colour: PieceColour) -> Double {
+            (after.winPercent - before.winPercent) * (colour == .white ? 1 : -1)
+        }
+    }
+    private var measuredMove: (moves: [String], fen: String, change: MoveChange)?
+
+    /// Only a newly played move gets a change badge; navigating the record is not a move.
+    public var moveChange: MoveChange? {
+        guard isAtLatest, !isWeighing, measuredMove?.moves == game.uciMoves,
+              measuredMove?.fen == game.state.fen else { return nil }
+        return measuredMove?.change
+    }
+
+    public var feedbackScore: Score? {
+        moveChange?.after ?? tillingScore ?? analysis?.best?.score
+            ?? (isAtLatest ? measuredMove?.change.after : nil)
+    }
+
+    /// Curve data includes the latest completed position even while reading an older move.
+    public func historyScore(atPly ply: Int) -> Score? {
+        guard (0...game.plies.count).contains(ply) else { return nil }
+        if let measuredMove, measuredMove.moves == game.uciMoves, measuredMove.fen == game.state.fen {
+            if ply == game.plies.count { return measuredMove.change.after }
+            if ply == game.plies.count - 1 { return measuredMove.change.before }
+        }
+        if ply > 0, let judgement = game.plies[ply - 1].judgement {
+            return judgement.score
+        }
+        return game.reviewScore(atPly: ply)
+    }
+
+    /// The personal side stays personal when the board is flipped. With two manual sides,
+    /// the bottom side supplies the perspective, just as it does for the bar.
+    public var feedbackColour: PieceColour {
+        let hands = [PieceColour.white, .black].filter { controller(for: $0) == .hand }
+        return hands.count == 1 ? hands[0] : (orientation == .whiteAtBottom ? .white : .black)
+    }
+
+    /// Complete both positions at depth 20, publishing the bar's endpoint and its change
+    /// together. Missing or cancelled analysis never becomes a fictitious zero-percent move.
+    public func measureLatestMoveChange() async {
+        guard hasTillingFeedback, !isWeighing, !game.plies.isEmpty,
+              !(measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen), let engine,
+              let before = game.rewound(to: game.plies.count - 1) else { return }
+        let after = game
+        let baseline = await engine.analyseInBackground(before, depth: Self.interceptDepth)
+        guard !Task.isCancelled, let baseline, baseline.depth >= Self.interceptDepth,
+              !baseline.isPartial, let beforeScore = baseline.best?.score else { return }
+        let afterScore: Score?
+        if after.state.outcome == .checkmate {
+            afterScore = .mate(in: after.state.sideToMove == .white ? -1 : 1)
+        } else if after.state.outcome.isDraw {
+            afterScore = .centipawns(0)
+        } else {
+            let result = await engine.analyseInBackground(after, depth: Self.interceptDepth)
+            afterScore = result.flatMap {
+                $0.depth >= Self.interceptDepth && !$0.isPartial ? $0.best?.score : nil
+            }
+        }
+        guard !Task.isCancelled, !isWeighing,
+              game.uciMoves == after.uciMoves, game.startFEN == after.startFEN,
+              let afterScore else { return }
+        measuredMove = (after.uciMoves, after.state.fen, MoveChange(before: beforeScore, after: afterScore))
+    }
+
+    /// Backfill older records without competing with the live interception search.
+    public func fillMissingTillingJudgements() async {
+        guard hasTillingFeedback, !isWeighing, activePunishment == nil, let engine else { return }
+        let original = game
+        for index in original.plies.indices {
+            guard !Task.isCancelled else { return }
+            guard (original.plies[index].judgement?.depth ?? 0) < Self.interceptDepth,
+                  controller(for: original.mover(ofPly: index + 1)) == .hand,
+                  let before = original.rewound(to: index),
+                  let after = original.rewound(to: index + 1) else { continue }
+            let baseline = await engine.analyseInBackground(before, depth: Self.interceptDepth)
+            guard !Task.isCancelled else { return }
+            let result: Score?
+            if after.state.outcome == .checkmate {
+                result = .mate(in: after.state.sideToMove == .white ? -1 : 1)
+            } else if after.state.outcome.isDraw {
+                result = .centipawns(0)
+            } else {
+                let evaluated = await engine.analyseInBackground(after, depth: Self.interceptDepth)
+                result = evaluated.flatMap { $0.depth >= Self.interceptDepth && !$0.isPartial ? $0.best?.score : nil }
+            }
+            guard !Task.isCancelled else { return }
+            guard let baseline, baseline.depth >= Self.interceptDepth, !baseline.isPartial,
+                  let result,
+                  let drop = MoveQuality.drop(move: before.state.sideToMove, before: baseline.best?.score, after: result)
+            else { continue }
+            guard hasTillingFeedback, !isWeighing, activePunishment == nil else { return }
+            guard game.uciMoves.prefix(index + 1).elementsEqual(original.uciMoves.prefix(index + 1)) else { return }
+            if (game.plies[index].judgement?.depth ?? 0) < Self.interceptDepth {
+                game.setJudgement(.init(drop: drop, score: result, depth: Self.interceptDepth), atPly: index)
+                save()
+            }
+        }
+    }
     public var hintHasTactic: Bool {
         guard hintLayer >= 2, let table = interceptTable, table.fen == viewed.state.fen else { return false }
         return Tactic.confirmed(in: viewed, analysis: table.analysis) != nil
@@ -740,10 +880,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     private func interceptsHere(_ drop: Double) -> Bool {
-        drop >= (relaxedIntercept ?? lines.intercept ?? .infinity)
+        drop > 0 && drop >= (relaxedIntercept ?? lines.intercept ?? .infinity)
     }
 
-    private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil) {
+    private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil, score: Score? = nil) {
+        if isTilling, let drop, let score {
+            game.setJudgement(.init(drop: drop, score: score, depth: Self.interceptDepth), atPly: ply)
+        }
         if relaxedIntercept != nil, let drop, lines.records(drop) {
             triedHere.append(.init(san: san, drop: drop, notFound: true))
         }
@@ -789,6 +932,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                     interceptTable = (position.state.fen, snapshot)
                 }
             }
+            guard !Task.isCancelled, let self else { return }
+            searchTask = nil
         }
     }
 
@@ -883,6 +1028,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         guard isHandTurn, !isWeighing else { return }
+        if let practice, !practice.isSettled {
+            commit(move, by: .hand)
+            return
+        }
         // 耕棋 measures a move before it is allowed to stand, and only a move being played *now*:
         // a move played back down the game is somebody taking one back, which is a different act
         // and is what 耕棋 is for rather than something to stop them doing.
@@ -943,6 +1092,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         guard !Task.isCancelled else { return }
         var drop = preparedDrop(for: move, in: position)
+        var judgedScore = interceptTable?.analysis.lines.first { $0.bestMove == move.uci }?.score
         let outsideTable = drop == nil
         if drop == nil, let table = interceptTable, table.fen == position.state.fen {
             var after: Score?
@@ -961,14 +1111,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             }
             drop = MoveQuality.drop(move: position.state.sideToMove,
                                     before: table.analysis.best?.score, after: after)
+            judgedScore = after
         }
         // Only a prospective refusal of an unlisted move pays for confirmation. A passing
-        // candidate never enters this search. Keep a complete depth-16 sample so both sides
-        // of the comparison have the same depth, even if the timed search deepens further.
-        var confirmationUnavailable = false
+        // candidate never enters this search. Every judgement must complete the same depth;
+        // a busy device may take longer, but cannot silently let an unjudged move stand.
         if outsideTable, let initial = drop, interceptsHere(initial), !played.isOver {
             var confirmed: Score?
-            for await snapshot in engine.analyse(played, budget: .time(.milliseconds(400)), lines: 1) {
+            for await snapshot in engine.analyse(played, budget: .depth(Self.interceptDepth), lines: 1) {
                 guard !Task.isCancelled else { return }
                 noteProgress(snapshot)
                 if snapshot.depth == Self.interceptDepth, !snapshot.isPartial {
@@ -976,13 +1126,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 }
             }
             if let confirmed {
+                judgedScore = confirmed
                 drop = MoveQuality.drop(move: position.state.sideToMove,
                                         before: interceptTable?.analysis.best?.score, after: confirmed)
             } else {
-                // The minimum-depth judgement exists, but refusal did not earn confirmation.
-                // A timed search can finish early on a busy device. Prefer a missed mistake
-                // over taking back a move without the promised evidence (#33).
-                confirmationUnavailable = true
+                // An interrupted/incomplete search is not evidence that this move passes.
+                drop = nil
             }
         }
         guard !Task.isCancelled else { return }
@@ -995,10 +1144,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             retune()
             return
         }
-        guard interceptsHere(drop), !confirmationUnavailable else {
+        guard interceptsHere(drop) else {
             // It stands. Whatever was refused on the way here rides along with it, as a comment
             // on the move that was actually played (docs/adr/0028).
-            recordHelp(atPly: cursor - 1, san: san, drop: drop)
+            recordHelp(atPly: cursor - 1, san: san, drop: drop, score: judgedScore)
             save()
             retune()
             return
@@ -1018,7 +1167,32 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// hand-roll this is how one of them eventually forgets a line of it.
     private func commit(_ move: Move, by mover: Mover) {
         guard !isWeighing else { return }
+        if let practice, !practice.isSettled {
+            guard isAtLatest, game.state.fen == practice.game.state.fen else { return }
+            stopSearching()
+            stopReview()
+            if mover != .hand { notePracticeHelp() }
+            practice.play(move)
+            guard practice.isJudging else { return }
+            game = practice.game
+            cursor = game.plies.count
+            analysis = nil
+            thinking = nil
+            isWeighing = true
+            Sounds.current.play(move, outcome: game.state.outcome)
+            weighing = Task { [weak self] in
+                await practice.settled()
+                guard let self, !Task.isCancelled else { return }
+                game = practice.game
+                cursor = game.plies.count
+                isWeighing = false
+                save()
+                retune()
+            }
+            return
+        }
         let measuredDrop = preparedDrop(for: move, in: viewed)
+        let measuredScore = interceptTable?.analysis.lines.first { $0.bestMove == move.uci }?.score
         // The clock. Only a hand move at the latest position stops it: Mirrored Time is the
         // length of a *player's* last turn, and neither an engine move nor a move asked of it
         // was the player thinking (docs/adr/0009).
@@ -1048,7 +1222,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // the game is written to its file, and the engine is asked what it makes of the new
         // position — whoever moved.
         analysis = nil
-        recordHelp(atPly: cursor - 1, san: game.plies[cursor - 1].san, drop: measuredDrop)
+        recordHelp(atPly: cursor - 1, san: game.plies[cursor - 1].san, drop: measuredDrop, score: measuredScore)
         refused = nil
         save()
         retune()
@@ -1411,7 +1585,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // Before the practice gate: the clock the engine mirrors is a record of how long the
             // player took, and that is true whether or not anyone was being advised.
             turnBegan = ContinuousClock.now
-            if isTilling {
+            if isTilling || (hasTillingFeedback && isPractising) {
                 prepareInterception(on: position, using: engine)
                 return
             }
@@ -1528,6 +1702,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Cancelling is the whole of it: the stream's termination stops the engine, on its own
     /// queue and with the generation check that a bare stop call never had.
     public func suspend() {
+        if let practice, practice.isJudging {
+            practice.cancel()
+            game = practice.game
+            cursor = game.plies.count
+        }
         punishment?.skip()
         weighing?.cancel()
         weighing = nil
@@ -1607,6 +1786,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         written.setTag("Result", to: game.resultToken)
         written.setTag("Intercept", to: lines.intercept.map(String.init(describing:)))
+        written.setTag("InterceptPreference", to: isTilling ? nil : preferredIntercept.map(String.init(describing:)))
         written.setTag(GameOrigin.tagName, to: origin.tagValue)
         if written.tag("Date") == nil {
             written.tags.append(PGN.dateTag())

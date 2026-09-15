@@ -43,6 +43,7 @@ struct LibraryScreen: View {
     @State private var isRecognising = false
     @State private var failure: (title: String, message: String)?
     @State private var isImporting = false
+    @State private var recording: MistakeIndex.Recording?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -110,6 +111,27 @@ struct LibraryScreen: View {
             .overlay {
                 if isRecognising { recognising }
             }
+        }
+        .overlay(alignment: .bottom) {
+            if let recording {
+                Label(localized("book.recorded", recording.count), systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Palette.analysis)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Palette.raised, in: RoundedRectangle(cornerRadius: 8))
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+                    .allowsHitTesting(false)
+                    .accessibilityAddTraits(.updatesFrequently)
+            }
+        }
+        .onChange(of: index.recording) { _, receipt in recording = receipt }
+        .task(id: recording?.id) {
+            guard recording != nil else { return }
+            do { try await Task.sleep(for: .seconds(4)) } catch { return }
+            recording = nil
         }
         .fullScreenCover(isPresented: $isCameraOpen) {
             BoardCameraScreen { picked in
@@ -481,7 +503,7 @@ struct LibraryScreen: View {
         guard let game else { return }
         let session = GameSession.playing(game, engine: engine.service, library: library)
         session.lines = judgement.lines
-        if tilling { session.setIntercept(10) }
+        if tilling { session.setIntercept(JudgementLines.defaultIntercept) }
         path.append(.game(session))
     }
 

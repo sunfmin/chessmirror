@@ -7,7 +7,7 @@ import Foundation
     public private(set) var isFinished = false
     public private(set) var wasIncorrect = false
     public private(set) var revealedMove: String?
-    /// Two percentage points at depth 16 allow equivalent replies without requiring PV identity.
+    /// Two percentage points at the interception depth allow equivalent replies without requiring PV identity.
     public static let tolerance = 2.0
     private let engine: any Engine
     private var task: Task<Void, Never>?
@@ -45,9 +45,9 @@ import Foundation
         }
         if game.state.outcome.isDraw { return .centipawns(0) }
         var result: Score?
-        for await snapshot in engine.analyse(game, budget: .depth(16), lines: 1) {
+        for await snapshot in engine.analyse(game, budget: .depth(GameSession.interceptDepth), lines: 1) {
             guard !Task.isCancelled else { return nil }
-            if snapshot.depth == 16, !snapshot.isPartial { result = snapshot.best?.score }
+            if snapshot.depth == GameSession.interceptDepth, !snapshot.isPartial { result = snapshot.best?.score }
         }
         return result
     }
@@ -66,9 +66,9 @@ import Foundation
         task = Task { [weak self] in
             guard let self else { return }
             var answer: String?
-            for await snapshot in engine.analyse(position, budget: .depth(16), lines: 1) {
+            for await snapshot in engine.analyse(position, budget: .depth(GameSession.interceptDepth), lines: 1) {
                 guard !Task.isCancelled else { return }
-                if snapshot.depth >= 16, !snapshot.isPartial { answer = snapshot.best?.san.first }
+                if snapshot.depth >= GameSession.interceptDepth, !snapshot.isPartial { answer = snapshot.best?.san.first }
             }
             guard !Task.isCancelled else { return }
             revealedMove = answer

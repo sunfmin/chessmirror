@@ -12,17 +12,15 @@ import SwiftUI
 /// because they belong to the pieces and not to the screen. It also answers the question a fixed
 /// deck could not: the button that plays a move is beside the half of the board it plays into.
 ///
-/// No scrolling above the record: the board is the hero and it has to sit still under a navigation
-/// bar, not slide beneath it. Everything above and below it is a strip of fixed height, and the
-/// board takes whatever is left over — which on a small phone means a slightly smaller board
-/// rather than a screen that has to be dragged. What scrolls is the card under the record, and only
-/// when its body is longer than the room it is given.
+/// The board always fills the screen's width. Settings expand inside their player's strip;
+/// the page scrolls to accommodate them instead of shrinking the board or presenting a sheet.
 struct GameScreen: View {
     let session: GameSession
     @Binding var path: [Step]
     /// Which card of the deck to open on. Nil means the position decides, which is what the app
     /// does; a screenshot test passes one in to photograph a card that is not the one on top.
     var opening: Card?
+    var practiceNext: (() -> Void)?
 
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
@@ -122,12 +120,13 @@ struct GameScreen: View {
                 board.frame(width: side, height: side)
                 standing.padding(.horizontal, 12).frame(width: side).padding(.vertical, 6).chromeType()
                 playerBar(bottomColour).chromeType()
+                if let practice = session.practice { practiceStatus(practice).chromeType() }
                 VStack(spacing: 0) {
                     record
                     settlement
                 }
                 .chromeType()
-                if session.isTilling { tillingHints }
+                if session.hasTillingFeedback { tillingHistory }
                 if !session.isTilling, !findings.isEmpty { deck }
               }
               .frame(width: proxy.size.width)
@@ -136,6 +135,12 @@ struct GameScreen: View {
             .frame(maxWidth: .infinity)
         }
         .background(Palette.parchment)
+        .task(id: "\(session.hasTillingFeedback)-\(session.isTilling)-\(engine.isReady)-\(session.game.uciMoves.joined(separator: " "))") {
+            await session.fillMissingTillingJudgements()
+        }
+        .task(id: "\(session.isWeighing)-\(session.hasTillingFeedback)-\(engine.isReady)-\(session.game.uciMoves.joined(separator: " "))") {
+            await session.measureLatestMoveChange()
+        }
         .onChange(of: viewed.state.fen) { _, _ in
             revealed.removeAll()
             showsMateLine = false
@@ -144,24 +149,6 @@ struct GameScreen: View {
         .onChange(of: session.thinking) { _, now in
             guard now == nil, !session.isTilling else { return }
             session.adviseForCard()
-        }
-        .sheet(isPresented: Binding(
-            get: { unfolded != nil },
-            set: { if !$0 { unfolded = nil } }
-        )) {
-            if let colour = unfolded {
-                NavigationStack {
-                    ScrollView { chips(for: colour).padding(20) }
-                        .background(Palette.parchment)
-                        .navigationTitle(colour.label)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button(localized("done")) { unfolded = nil }
-                            }
-                        }
-                }
-                .presentationDetents([.medium, .large])
-            }
         }
         // The card stands on the glass. The home indicator is a mark on top of it, not a
         // margin that holds the deck off the bottom of the phone.
@@ -272,6 +259,7 @@ struct GameScreen: View {
             // wants is not the one that just ran. Retuned before the deal rather than after it, or
             // the Stint the deal just started would be cancelled a line later.
             session.attach(engine: engine.service, library: library)
+            session.showPositionFeedback()
             session.retune()
             deal()
         }
@@ -315,82 +303,98 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ the standing
 
+    private func practiceStatus(_ practice: Drill) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                Text(localized(practice.isJudging ? "drill.judging" : practice.isSettled ? "drill" : "drill.prompt"))
+                    .foregroundStyle(Palette.inkSoft)
+                Spacer(minLength: 8)
+                Button(localized("drill.leave")) { path.removeAll() }
+                if practice.isSettled, let practiceNext {
+                    Button(localized("drill.next"), action: practiceNext)
+                }
+            }
+            if let verdict = practice.verdict {
+                Text(verdict.sentence)
+                    .foregroundStyle(verdict.passed ? Palette.analysis : Palette.alarm)
+            } else if practice.couldNotJudge {
+                Text(localized("drill.noEngine")).foregroundStyle(Palette.alarm)
+            }
+        }
+        .font(.caption)
+        .buttonStyle(.plain)
+        .tint(Palette.analysis)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
     /// Who is ahead, said once, along the foot of the board.
     ///
-    /// It used to be said twice: a number in a line above the board and a bar below it, with the
-    /// engine's speed and depth between them. Two pictures of one fact cost a row each on a phone,
-    /// and the row they cost came out of the report — which is the part of this screen anybody
-    /// learns anything from. So the number moved down to the end of its own bar, and the speed and
-    /// depth went altogether: they said what the phone was doing, never what the position was.
-    ///
-    /// Always here, whatever the switch is doing, so the board does not walk up the screen when
-    /// the engine is asked to be quiet. What changes is what stands in it: a bar and a number when
-    /// there is an opinion, the word 练习 when there is deliberately none.
-    ///
-    /// A finished game keeps its bar, and that is not a leak: what it carries then is the result,
-    /// and who won is a fact about the game rather than the engine's opinion of it. Practice hides
-    /// what the engine thinks, never what happened.
-    ///
-    /// **Everything the engine has to say is now in this one strip**, including the switch that
-    /// decides whether it says anything — which used to live in the navigation bar, a screen away
-    /// from the bar it governs. Four things that are one thought: whether it is talking, who is
-    /// ahead, by how much, and how far it has got working it out. The last of those is new, and it
-    /// is here because a search that stops after ten seconds (docs/adr/0020) has to be able to say
-    /// so — a number that quietly stopped moving is indistinguishable from an engine that died.
+    /// Controls and depth share a single-line header; the balance gets the full width below.
+    /// Temporary explanations get their own space instead of squeezing either label into two
+    /// lines. Interception can be switched off without hiding the position's assessment.
     private var standing: some View {
-        HStack(spacing: 8) {
-            opinionSwitch
-            if session.isWeighing {
-                ProgressView().controlSize(.small)
-                Text(localized("till.judging")).font(.caption)
-            } else if let refusal = session.refused {
-                Text(refusal.sentence).font(.caption).foregroundStyle(Palette.alarm)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 12) {
+                tillingSwitch
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                if viewed.isOver {
+                    Text("\(viewed.turn) \(finish?.scoreline ?? "")")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Palette.ink)
+                } else if engine.unavailableReason != nil {
+                    Text(localized("game.noEngine")).font(.caption).foregroundStyle(Palette.alarm)
+                } else if session.isWeighing {
+                    Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
+                } else if let change = session.moveChange {
+                    let value = change.percent(for: session.feedbackColour)
+                    let rounded = (value * 10).rounded() / 10
+                    let label = String(format: "%+.1f%%", rounded == 0 ? 0 : rounded)
+                    Text(label)
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(rounded > 0 ? Palette.analysis : rounded < 0 ? Palette.alarm : Palette.inkSoft)
+                        .contentTransition(.numericText())
+                        .accessibilityLabel(localized("standing.change", label))
+                } else if !session.isPractising {
+                    Text(session.analysis?.best?.score.displayText ?? "—")
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(Palette.analysis)
+                }
+                if !session.isPractising, session.isAdviceSpent, finish == nil {
+                    effort
+                } else if session.hasTillingFeedback, session.activePunishment == nil, !viewed.isOver {
+                    Text(localized("game.depth", session.searchProgress?.depth ?? 0))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(Palette.inkSoft)
+                } else if !session.isPractising, finish == nil {
+                    effort
+                }
             }
-            if session.isTilling, session.activePunishment == nil {
-                Text(localized("game.depth", session.searchProgress?.depth ?? 0))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(Palette.inkSoft)
-            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
 
-            if viewed.isOver {
-                // Who won is not a fact about one side, so it is said here rather than in a bar.
-                Text(viewed.turn)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Palette.ink)
-            } else if engine.unavailableReason != nil {
-                Text(localized("game.noEngine")).font(.caption).foregroundStyle(Palette.alarm)
-            }
-
-            if session.isTilling, session.hintLayer >= 1 {
-                EvalBar(score: session.hintScore, orientation: session.orientation, finish: finish)
+            if session.hasTillingFeedback {
+                EvalBar(score: session.feedbackScore,
+                        orientation: session.orientation, finish: finish)
             } else if !session.isPractising || finish != nil {
                 evalTrack
-            } else {
-                Spacer(minLength: 0)
             }
 
-            if let finish {
-                // The number people have been watching, resolved: a finished game has no Score to
-                // show, and what belongs in its place is the one it ended on.
-                Text(finish.scoreline)
-                    .clockFont(22)
-                    .foregroundStyle(Palette.ink)
-            } else if !session.isPractising {
-                Text(session.analysis?.best?.score.displayText ?? "—")
-                    .clockFont(22)
-                    .foregroundStyle(session.analysis == nil ? Palette.inkSoft : Palette.analysis)
-                    .contentTransition(.numericText())
-                effort
+            if let refusal = session.refused, !session.isTilling {
+                Text(refusal.sentence).font(.caption).foregroundStyle(Palette.alarm)
             }
+
         }
         // A minimum rather than a height: the row used to be cut in half by its own frame the
         // moment the reader's text was bigger than the default, and the strip is the one place the
         // engine has to account for itself (docs/adr/0020).
         .frame(minHeight: 26)
+        .animation(.easeInOut(duration: 0.35), value: session.moveChange)
     }
 
-    private var tillingHints: some View {
-        VStack(spacing: 12) {
+    private var tillingHistory: some View {
+        VStack(alignment: .leading, spacing: 8) {
             if let exercise = session.activePunishment {
                 Text(localized(exercise.wasIncorrect ? "punish.again" : "punish.prompt"))
                 if exercise.isJudging { ProgressView() }
@@ -398,68 +402,74 @@ struct GameScreen: View {
                     Button(localized("till.reveal")) { exercise.reveal() }
                     Button(localized("punish.skip")) { exercise.skip() }
                 }
-            } else {
+            }
             if let answer = session.punishment?.revealedMove {
                 Text(localized("punish.answer", answer))
             }
-            if session.hintLayer >= 2 {
-                Text(localized(session.hintHasTactic ? "till.shot" : "till.quiet"))
-                    .font(.subheadline)
-            }
-            if session.hintLayer < 3 {
-                Button(localized("till.hint", session.hintLayer + 1)) { session.requestHint() }
-            } else {
-                Button(localized("till.reveal")) { session.revealTillingMove() }
-                HStack {
-                    ForEach([20, 30], id: \.self) { value in
-                        Button(localized("till.relax", value)) {
-                            session.relaxIntercept(to: Double(value))
+            ForEach(session.game.plies.indices, id: \.self) { index in
+                let ply = session.game.plies[index]
+                if ply.judgement != nil || session.controller(for: session.game.mover(ofPly: index + 1)) == .hand {
+                    VStack(spacing: 5) {
+                        ForEach(Array(ply.tried.enumerated()), id: \.offset) { _, tried in
+                            moveCostRow(san: tried.san, number: session.game.moveNumber(ofPly: index + 1),
+                                        drop: tried.drop, refused: true)
                         }
-                        .disabled(Double(value) <= (session.lines.intercept ?? 0))
+                        moveCostRow(san: ply.san, number: session.game.moveNumber(ofPly: index + 1),
+                                    drop: (ply.judgement?.depth ?? 0) >= GameSession.interceptDepth
+                                        ? ply.judgement?.drop
+                                        : ((session.game.reviewDepth ?? 0) >= GameSession.interceptDepth
+                                            ? session.game.drop(atPly: index + 1) : nil))
                     }
+                    .padding(.vertical, 6)
+                    .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
                 }
             }
+            ForEach(Array(session.pendingAttempts.enumerated()), id: \.offset) { _, tried in
+                moveCostRow(san: tried.san, number: session.viewed.state.fullmoveNumber,
+                            drop: tried.drop, refused: true)
             }
-            Spacer(minLength: 0)
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .disabled(session.isWeighing || (session.activePunishment == nil && !session.isHandTurn))
+        .font(.footnote)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The switch that used to sit in the navigation bar, brought down beside the bar it governs.
-    ///
-    /// Two shapes, because the two states are read for different reasons. Silent, it wears the
-    /// word: 练习 is a thing to be *in*, and a strip with no number in it has the room to name it.
-    /// Talking, the bar and the number have already said the engine is talking, so the control
-    /// shrinks back to the eye that turns it off.
-    ///
-    /// One deliberate press either way, which is all ADR-0015 ever asked for: the engine's opinion
-    /// is never found already on, and never lost by brushing past it.
-    private var opinionSwitch: some View {
-        Button {
-            withAnimation(.snappy(duration: 0.2)) { session.setPractising(!session.isPractising) }
-        } label: {
+    private func moveCostRow(san: String, number: Int, drop: Double?, refused: Bool = false) -> some View {
+        HStack(spacing: 10) {
+            Text("\(number). \(san)")
+                .font(.footnote.weight(.medium))
+                .monospacedDigit()
+                .frame(width: 78, alignment: .leading)
+            ProgressView(value: min(100, max(0, drop ?? 0)), total: 100)
+                .tint(refused ? Palette.alarm : Palette.analysis)
+                .opacity(drop == nil ? 0.35 : 1)
+                .accessibilityHidden(true)
+            Text(drop.map { String(format: "−%.1f%%", max(0, $0)) } ?? "—")
+                .monospacedDigit()
+                .frame(width: 62, alignment: .trailing)
+        }
+        .foregroundStyle(refused ? Palette.alarm : Palette.ink)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Interception is the page's only mode switch. Assessment and explicit answers are separate.
+    private var tillingSwitch: some View {
+        Button { session.setTilling(!session.isTilling) } label: {
             HStack(spacing: 4) {
-                Image(systemName: session.isPractising ? "eye.slash" : "eye").font(.caption2)
-                if session.isPractising {
-                    Text(localized(session.isTilling ? "till.name" : "till.practice"))
-                        .font(.footnote.weight(.semibold))
-                }
+                Image(systemName: session.isTilling ? "checkmark.shield" : "shield")
+                Text(localized("till.name"))
+                Text(localized(session.isTilling ? "screen.on" : "till.off"))
             }
-            .foregroundStyle(session.isPractising ? Palette.inkSoft : Palette.analysis)
-            .padding(.horizontal, session.isPractising ? 9 : 6)
-            .padding(.vertical, 4)
-            .background(Palette.chipRest, in: Capsule())
-            .contentShape(Capsule())
+            .font(.caption)
+            .foregroundStyle(session.isTilling ? Palette.analysis : Palette.inkSoft)
+            .frame(minHeight: 30)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(session.isTilling || session.isWeighing || (!engine.isReady && session.isPractising))
-        .accessibilityLabel(localized("screen.opinion"))
-        // The word the control is actually wearing, not a bare 关. A screen that draws 练习 and
-        // reports "off" says two different things to two different readers, and the tree is the
-        // one VoiceOver hears.
-        .accessibilityValue(localized(session.isTilling ? "till.name" : (session.isPractising ? "till.practice" : "screen.on")))
+        .accessibilityLabel(localized("till.name"))
+        .accessibilityValue(localized(session.isTilling ? "screen.on" : "till.off"))
+        .disabled(session.isWeighing || session.activePunishment != nil || (!engine.isReady && !session.isTilling))
     }
 
     /// Who is ahead, with how hard the engine is still working on that answer drawn underneath it.
@@ -544,7 +554,7 @@ struct GameScreen: View {
             HStack(spacing: 8) {
                 Swatch(colour: colour)
                 Text(colour.label)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(Palette.ink)
                 Text(session.controller(for: colour).label)
                     .font(.caption)
@@ -578,6 +588,10 @@ struct GameScreen: View {
             // bar grew a row taller — which is a row taken off the board for a button's label.
             .lineLimit(1)
 
+            if unfolded == colour {
+                chips(for: colour)
+                    .padding(.top, 2)
+            }
         }
         .padding(.leading, 13)
         .padding(.trailing, 8)
@@ -657,20 +671,6 @@ struct GameScreen: View {
             // Nothing. The header already wears 练习 with an eye struck through it, and a bar that
             // says "no opinion" every move is an opinion about how much you are missing.
             EmptyView()
-        } else if revealed.contains(card), let best = session.analysis?.best?.san.first {
-            Text(
-                localized(
-                    session.controller(for: colour) == .engine
-                        ? "game.willPlay" : "game.suggests",
-                    best
-                )
-            )
-                .font(.caption)
-                .foregroundStyle(Palette.analysis)
-                .lineLimit(1)
-                // The recommendation changes several times a second as the search deepens, and
-                // that is the point (docs/adr/0009) — so it must not animate while it does.
-                .animation(.none, value: session.analysis?.depth)
         } else if let reason = engine.unavailableReason {
             Text(reason).font(.caption).foregroundStyle(Palette.alarm).lineLimit(1)
         } else {
@@ -711,49 +711,115 @@ struct GameScreen: View {
 
     /// Who plays this colour, and how long they get if it is the engine.
     private func chips(for colour: PieceColour) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Text(localized("game.who")).foregroundStyle(Palette.inkSoft)
+                Spacer(minLength: 12)
+                ForEach(Controller.allCases, id: \.self) { controller in
+                    Button { session.setController(controller, for: colour) } label: {
+                        Text(controller.label)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(session.controller(for: colour) == controller ? Palette.analysis : Palette.inkSoft)
+                            .padding(.horizontal, 12)
+                            .frame(height: 28)
+                            .background(session.controller(for: colour) == controller
+                                        ? Palette.analysis.opacity(0.12) : .clear,
+                                        in: RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(controller == .engine && !engine.isReady)
+                }
+            }
+            .frame(minHeight: 36)
+
+            if session.controller(for: colour) == .engine {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(localized("game.perMove")).foregroundStyle(Palette.inkSoft)
+                    HStack(spacing: 4) {
+                        ForEach(ThinkingTime.offered, id: \.self) { time in
+                            Button { session.setThinkingTime(time) } label: {
+                                Text(time.label)
+                                    .font(.caption)
+                                    .foregroundStyle(session.thinkingTime == time ? Palette.analysis : Palette.inkSoft)
+                                    .frame(maxWidth: .infinity, minHeight: 30)
+                                    .background(session.thinkingTime == time ? Palette.analysis.opacity(0.12) : .clear,
+                                                in: RoundedRectangle(cornerRadius: 6))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(time == .mirrored && session.isSelfPlaying)
+                        }
+                    }
+                }
+                .padding(.vertical, 5)
+            }
+
+            Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.vertical, 5)
+            Toggle(localized("till.name"), isOn: Binding(
+                get: { session.isTilling },
+                set: { session.setTilling($0) }
+            ))
+            .toggleStyle(SettingToggleStyle(label: localized("till.name")))
+            .disabled(session.isWeighing || session.activePunishment != nil || (!engine.isReady && !session.isTilling))
+            if let intercept = session.lines.intercept {
+                HStack(spacing: 12) {
+                    Text(localized("till.intercept"))
+                        .foregroundStyle(Palette.inkSoft)
+                    Slider(value: Binding(
+                        get: { session.lines.intercept ?? JudgementLines.defaultIntercept },
+                        set: { session.setIntercept($0) }
+                    ), in: JudgementLines.interceptRange, step: 1)
+                    .accessibilityLabel(localized("till.intercept"))
+                    .accessibilityValue("\(Int(intercept))%")
+                    .disabled(session.isWeighing || session.activePunishment != nil)
+                    Text("\(Int(intercept))%")
+                        .font(.footnote.weight(.medium))
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.analysis)
+                        .frame(width: 38, alignment: .trailing)
+                }
+                .frame(minHeight: 36)
+            }
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))
-                .disabled(session.activePunishment != nil)
-            ChipCluster(
-                title: localized("till.intercept"),
-                options: JudgementLines.interceptChoices.map {
-                    .init(value: $0, label: $0.map { "\(Int($0))%" } ?? localized("till.off"),
-                          isEnabled: !session.isWeighing && ($0 == nil || engine.isReady))
-                },
-                selection: session.lines.intercept
-            ) { line in
-                session.setIntercept(line)
-            }
-            ChipCluster(
-                title: localized("game.who"),
-                options: Controller.allCases.map {
-                    .init(value: $0, label: $0.label, isEnabled: $0 == .hand || engine.isReady)
-                },
-                selection: session.controller(for: colour)
-            ) { controller in
-                session.setController(controller, for: colour)
-            }
-
-            // 跟着我 is Mirrored Time, and it stands down when the engine is playing itself: there
-            // is no player's last move to mirror, so the game names a clock instead.
-            if session.controller(for: colour) == .engine {
-                ChipCluster(
-                    title: localized("game.perMove"),
-                    options: ThinkingTime.offered.map {
-                        .init(
-                            value: $0, label: $0.label,
-                            isEnabled: $0 != .mirrored || !session.isSelfPlaying
-                        )
-                    },
-                    selection: session.thinkingTime
-                ) { time in
-                    session.setThinkingTime(time)
-                }
-            }
+            .toggleStyle(SettingToggleStyle(label: localized("punish.toggle")))
+            .disabled(session.activePunishment != nil)
         }
-        .padding(.top, 1)
+        .font(.caption)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Palette.hairline, lineWidth: 0.5))
+        .padding(.bottom, 3)
+    }
+
+    private struct SettingToggleStyle: ToggleStyle {
+        let label: String
+        func makeBody(configuration: Configuration) -> some View {
+            Button { configuration.isOn.toggle() } label: {
+                HStack(spacing: 10) {
+                    configuration.label
+                        .font(.caption)
+                        .foregroundStyle(Palette.ink)
+                    Spacer(minLength: 4)
+                    HStack(spacing: 4) {
+                        Circle().fill(configuration.isOn ? Palette.analysis : Palette.inkSoft.opacity(0.45))
+                            .frame(width: 5, height: 5)
+                        Text(localized(configuration.isOn ? "screen.on" : "till.off"))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(configuration.isOn ? Palette.analysis : Palette.inkSoft)
+                    .frame(width: 42, height: 24)
+                    .background(configuration.isOn ? Palette.analysis.opacity(0.10) : Palette.chipRest,
+                                in: RoundedRectangle(cornerRadius: 6))
+                }
+                .frame(minHeight: 40)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(label)
+            .accessibilityValue(localized(configuration.isOn ? "screen.on" : "till.off"))
+        }
     }
 
     private func arrow(
@@ -822,11 +888,10 @@ struct GameScreen: View {
         .padding(.top, 8)
     }
 
-    /// Whether there is a curve to draw at all: one is made of Scores, and Scores are the engine's
-    /// opinion — which practice is the state of not being given (docs/adr/0015). So a practising
-    /// board has a plain strip, and so does a game nobody has scored.
+    /// History feedback is available in practice too. Unknown positions remain unknown;
+    /// complete live judgements and reviews supply the same curve.
     private var canShowCurve: Bool {
-        !session.isPractising && session.game.isReviewed
+        (0...session.game.plies.count).filter { session.historyScore(atPly: $0) != nil }.count > 1
     }
 
     /// The curve as a ground. It marks no cursor of its own — the card on the cursor is already
@@ -834,10 +899,12 @@ struct GameScreen: View {
     private var curveGround: some View {
         EvalCurve(
             plies: session.game.plies.count,
-            score: { session.game.reviewScore(atPly: $0) }
+            score: { session.historyScore(atPly: $0) }
         )
         .accessibilityLabel(localized("record.curve"))
-        .accessibilityValue(localized("record.ply", session.cursor))
+        .accessibilityValue(localized("record.ply", (0...session.game.plies.count).last {
+            session.historyScore(atPly: $0) != nil
+        } ?? 0))
     }
 
     private var moveStrip: some View {
@@ -896,7 +963,7 @@ struct GameScreen: View {
         let on = cell.cursor == session.cursor
         return Button { walk(to: cell.cursor) } label: {
             Text(cell.san)
-                .font(on ? .notation.weight(.bold) : .notation)
+                .font(.footnote.weight(on ? .medium : .regular))
                 .foregroundStyle(on ? Palette.parchment : Palette.ink)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
@@ -1103,7 +1170,10 @@ struct GameScreen: View {
                 let wasExpanded = kind == card && revealed.contains(kind)
                 card = kind
                 revealed.removeAll()
-                if !wasExpanded { revealed.insert(kind) }
+                if !wasExpanded {
+                    session.notePracticeHelp()
+                    revealed.insert(kind)
+                }
                 showsMateLine = kind == .mate && revealed.contains(kind)
                 showsTacticLine = kind == .tactics && revealed.contains(kind)
             }
@@ -1114,7 +1184,7 @@ struct GameScreen: View {
                     .foregroundStyle(Palette.analysis)
                     .frame(width: 14)
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(Palette.ink)
                 Spacer(minLength: 4)
                 if found {
@@ -1303,7 +1373,7 @@ struct GameScreen: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(news.head)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.footnote.weight(.medium))
                         .foregroundStyle(mateInk)
                     Spacer(minLength: 4)
                     Button {
@@ -1494,7 +1564,7 @@ struct GameScreen: View {
             selected: selected,
             destinations: Set(candidateMoves.map(\.to)),
             captures: Set(candidateMoves.filter(\.isCapture).map(\.to)),
-            recommendation: recommendation,
+            recommendation: nil,
             // Whichever card is in front of you, and only that one: arrows left over from a card
             // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
             plan: card == .tactics && revealed.contains(.tactics) && showsTacticLine && !session.isTilling
@@ -1562,20 +1632,6 @@ struct GameScreen: View {
     private var candidateMoves: [Move] {
         guard let selected, session.isHandTurn else { return [] }
         return session.board.state.moves(from: selected)
-    }
-
-    /// The position a tap is read against — the plan's tip while one is being written, and the
-    /// position being studied otherwise. Only moves go through this; everything the app *says*
-    /// still comes from `viewed`.
-    private var recommendation: MoveSquares? {
-        guard revealed.contains(card), !session.isTilling else { return nil }
-        // The shot is 战术's own drawing and is drawn while that card is up. The engine's
-        // recommendation underneath it is the strip's — 引擎意见 is a switch on the board, not a
-        // card — so it is not gated by the deck. Practice still hides it: a card's Stint may
-        // have left an Analysis in hand, and that is for the card, not for the board.
-        if card == .tactics { return nil }
-        guard !session.isPractising else { return nil }
-        return session.analysis?.bestMove.flatMap { MoveSquares(uci: $0) }
     }
 
     /// Whether the position on screen is one being studied rather than one about to be played

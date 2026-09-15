@@ -72,9 +72,8 @@ public struct DrillVerdict: Hashable, Sendable {
         case picked
     }
 
-    /// The same depth a Review runs at, so that a drill's drop and the drop that put the position
-    /// in the book are the same measurement (docs/adr/0016).
-    public static let depth = GameSession.reviewDepth
+    /// Practice uses the same complete depth-20 judgement as live interception.
+    public static let depth = GameSession.interceptDepth
 
     public let position: PositionKey
     /// The board: the position, and the attempt once it has been played.
@@ -82,6 +81,7 @@ public struct DrillVerdict: Hashable, Sendable {
     public private(set) var verdict: DrillVerdict?
     /// Whether the engine is still working out what the move cost.
     public private(set) var isJudging = false
+    public private(set) var couldNotJudge = false
     /// How long the player took over the move, in seconds. Nil until they have moved.
     public private(set) var seconds: Double?
 
@@ -129,6 +129,7 @@ public struct DrillVerdict: Hashable, Sendable {
     /// The one move this drill is about. Everything after it is a settlement.
     public func play(_ move: Move) {
         guard verdict == nil, !isJudging else { return }
+        couldNotJudge = false
         let before = game
         var after = game
         guard after.apply(move), let played = after.plies.last else { return }
@@ -143,6 +144,13 @@ public struct DrillVerdict: Hashable, Sendable {
     /// has answered and not a moment sooner.
     public func settled() async { await judging?.value }
 
+    public func cancel() {
+        judging?.cancel()
+        judging = nil
+        if !isSettled, let start = game.rewound(to: 0) { game = start }
+        isJudging = false
+    }
+
     /// Asks the engine twice at one depth — the position, and the position after the move — and
     /// settles the difference.
     ///
@@ -150,18 +158,39 @@ public struct DrillVerdict: Hashable, Sendable {
     /// first three lines at all, and a move it never considered is exactly the move worth
     /// measuring (docs/adr/0016 is why both searches are the same depth).
     private func judge(_ move: Move, san: String, before: Game, after: Game) async {
-        defer { isJudging = false }
+        defer {
+            if !Task.isCancelled {
+                isJudging = false
+                if verdict == nil {
+                    game = before
+                    couldNotJudge = true
+                }
+            }
+        }
         guard let engine else { return }
         var best: Line?
         for await analysis in engine.analyse(before, budget: .depth(Self.depth), lines: 1) {
-            best = analysis.best ?? best
+            guard !Task.isCancelled else { return }
+            if analysis.depth >= Self.depth, !analysis.isPartial { best = analysis.best ?? best }
         }
-        let afterScore = await engine.evaluate(after, budget: .depth(Self.depth))
+        var afterScore: Score?
+        if after.isOver {
+            afterScore = await engine.evaluate(after, budget: .depth(Self.depth))
+        } else {
+            for await analysis in engine.analyse(after, budget: .depth(Self.depth), lines: 1) {
+                guard !Task.isCancelled else { return }
+                if analysis.depth >= Self.depth, !analysis.isPartial { afterScore = analysis.best?.score }
+            }
+        }
+        guard !Task.isCancelled else { return }
         guard let drop = MoveQuality.drop(
             move: before.state.sideToMove, before: best?.score, after: afterScore
         ) else { return }
 
         let wanted = best.flatMap { before.reading(of: $0.san) }?.opening
+        if let afterScore {
+            game.setJudgement(.init(drop: drop, score: afterScore, depth: Self.depth), atPly: 0)
+        }
         settle(
             DrillVerdict(
                 played: san,

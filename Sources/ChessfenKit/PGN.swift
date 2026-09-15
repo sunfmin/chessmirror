@@ -145,6 +145,9 @@ public struct PGN: Hashable, Sendable {
             // once by whether it carried a Review Depth, so writing either back out under
             // the same tag is what makes the round trip exact.
             var comment: [String] = []
+            if let judgement = ply.judgement {
+                comment.append("[%judged \(judgement.depth) \(judgement.drop) \(judgement.score.pgnText)]")
+            }
             if let evaluation = ply.evaluation ?? ply.importedEvaluation {
                 comment.append("[%eval \(evaluation.pgnText)]")
             }
@@ -277,6 +280,8 @@ public struct PGN: Hashable, Sendable {
                 game.addTried(attempt, atPly: game.plies.count - 1)
             case .hint(let rungs):
                 game.setHints(rungs, atPly: game.plies.count - 1)
+            case .judgement(let judgement):
+                game.setJudgement(judgement, atPly: game.plies.count - 1)
             case .line(let line):
                 // A Line standing before the first move belongs to the starting position and has
                 // nowhere to go: what reads it is a move's own consequences, and there is no move.
@@ -311,6 +316,7 @@ private struct Scanner {
         case line([String])
         case tried(Game.Ply.Tried)
         case hint(Int)
+        case judgement(Game.Ply.Judgement)
         case variationStart
         case variationEnd
     }
@@ -359,6 +365,7 @@ private struct Scanner {
                 if let line = Self.line(in: comment) { tokens.append(.line(line)) }
                 tokens.append(contentsOf: Self.tried(in: comment).map { .tried($0) })
                 if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
+                if let judgement = Self.judgement(in: comment) { tokens.append(.judgement(judgement)) }
             case ";":
                 _ = read(while: { !$0.isNewline })
             case "(":
@@ -408,6 +415,15 @@ private struct Scanner {
 
     private static func hint(in comment: String) -> Int? {
         body(of: "hint", in: comment).flatMap { Int($0) }
+    }
+
+    private static func judgement(in comment: String) -> Game.Ply.Judgement? {
+        guard let body = body(of: "judged", in: comment) else { return nil }
+        let parts = body.split(separator: " ")
+        guard parts.count == 3, let depth = Int(parts[0]), depth > 0,
+              let drop = Double(parts[1]), drop.isFinite, drop >= 0,
+              let score = Score(pgnText: String(parts[2])) else { return nil }
+        return .init(drop: drop, score: score, depth: depth)
     }
 
     private static func line(in comment: String) -> [String]? {

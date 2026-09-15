@@ -378,7 +378,7 @@
 "till.shot" = "这里有一记战术。";
 "till.quiet" = "没有确认的战术，试着改善局面。";
 "till.notFound" = "没找到";
-"punish.toggle" = "找出对手的惩罚";
+"punish.toggle" = "走错后，练习对手的反击";
 "punish.prompt" = "替对手走一步，找出最强应招。";
 "punish.again" = "还有更强的应招，再试一次。";
 "punish.skip" = "跳过";
@@ -451,3 +451,5 @@
 "discovery.view" = "查看";
 "discovery.mateFound" = "发现杀招";
 "discovery.tacticFound" = "发现战术机会";
+"book.recorded" = "已记入错题本 · %d 条记录";
+"standing.change" = "本步胜率变化 %@";
