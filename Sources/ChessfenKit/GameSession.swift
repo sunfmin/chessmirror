@@ -695,6 +695,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// earlier Ply is judged from there, and a refusal has to put the reader back where they were
     /// rather than at the end of a game they were not looking at.
     private var cursorBeforeWeighing: Int?
+    /// When the move now being weighed landed on the board.
+    private var weighBegan: ContinuousClock.Instant?
+
+    /// How long a move that is about to be taken back is left on the board.
+    ///
+    /// The refusal is the roll-back, and a roll-back nobody saw is a move that never happened.
+    /// A search out of the cache answers inside one frame, so without this the piece went to its
+    /// square and came off it between two draws of the board, and the whole gesture was invisible.
+    /// Long enough to read as "there" before "and back", short enough not to be a wait.
+    private static let takeBackHold = Duration.milliseconds(450)
+
+    /// Gives the board its beat to show the move before the move is taken off it.
+    private func holdTheMoveOnTheBoard() async {
+        guard let weighedAt = weighBegan else { return }
+        let shown = ContinuousClock.now - weighedAt
+        guard shown < Self.takeBackHold else { return }
+        try? await Task.sleep(for: Self.takeBackHold - shown)
+    }
     public static let interceptDepth = 20
     public private(set) var hintLayer = 0
     public private(set) var relaxedIntercept: Double?
@@ -1095,6 +1113,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         stopReview()
         positionBeforeWeighing = game
         cursorBeforeWeighing = cursor
+        weighBegan = ContinuousClock.now
         game = played
         cursor = game.plies.count
         analysis = nil
@@ -1152,6 +1171,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             judgedScore = after
         }
         guard !Task.isCancelled else { return }
+        // The move comes off the board, and it is given its beat to be seen there first — while
+        // the session still counts as weighing, so a second tap cannot land on a board that is
+        // halfway through taking one back.
+        let takesItBack = drop.map(interceptsHere) ?? true
+        if takesItBack { await holdTheMoveOnTheBoard() }
+        guard !Task.isCancelled else { return }
         isWeighing = false
         // What to put back when the move does not stand: the game as it was being read, whole,
         // and the eye where it was. `position` is only the position it was played from, which is
@@ -1160,6 +1185,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let cursorBefore = cursorBeforeWeighing
         positionBeforeWeighing = nil
         cursorBeforeWeighing = nil
+        weighBegan = nil
         weighing = nil
         guard let drop else {
             game = gameBefore
@@ -1735,6 +1761,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         positionBeforeWeighing = nil
         cursorBeforeWeighing = nil
+        weighBegan = nil
         isWeighing = false
         stopSearching()
         thinking = nil

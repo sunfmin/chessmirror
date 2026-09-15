@@ -348,6 +348,16 @@ struct GameScreen: View {
                     Text(localized("game.noEngine")).font(.caption).foregroundStyle(Palette.alarm)
                 } else if session.isWeighing {
                     Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
+                } else if let refusal = session.refused {
+                    // What the take-back has to say, in the one place the eye is already reading:
+                    // what the move cost and that it is not standing. The sentence was written
+                    // for this and never read out — a piece came back and the app said nothing
+                    // about why, which is indistinguishable from a board that dropped a tap.
+                    Text(refusal.sentence)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Palette.alarm)
+                        .contentTransition(.opacity)
+                        .accessibilityLabel(refusal.sentence)
                 } else if let change = session.moveChange {
                     let value = change.percent(for: session.feedbackColour)
                     let rounded = (value * 10).rounded() / 10

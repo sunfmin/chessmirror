@@ -161,7 +161,7 @@ import UIKit
             case .capture: 0.18
             case .check: 0.24
             case .gameOver: 0.60
-            case .refused: 0.13
+            case .refused: 0.17
             }
         let frames = AVAudioFrameCount(seconds * sampleRate)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
@@ -202,7 +202,17 @@ import UIKit
                 let local = t - Double(index) * step
                 value = sin(2 * .pi * pitch * local) * exp(-local * 9) * 0.28
             case .refused:
-                value = sin(2 * .pi * 110 * t) * exp(-t * 24) * 0.35
+                // Two notes, the second lower, each with a harmonic under it: a "no" rather than a
+                // thud. It used to be one 110 Hz sine, which is under the bottom of what a phone
+                // speaker can say — the sound was there and nobody could hear it. This one arrives
+                // where the ear lives, and the second note falling is what makes it a refusal
+                // rather than another piece landing.
+                let note = 0.07
+                let index = min(1, Int(t / note))
+                let pitch = [220.0, 164.0][index]
+                let local = t - Double(index) * note
+                let body = sin(2 * .pi * pitch * local) + 0.3 * sin(2 * .pi * pitch * 2 * local)
+                value = body * exp(-local * 26) * 0.34
             }
             // Every sound is written at full scale above, because that is how the shape of it is
             // easiest to reason about; the headroom is taken once, here. Four of these can sum in
