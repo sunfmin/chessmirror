@@ -440,3 +440,7 @@
 "tried.reply" = "A resposta que ele provoca";
 "tried.reply.hint" = "Ver a resposta que este lance provoca";
 "tried.reply.none" = "Este lance não deixa resposta para mostrar.";
+"slips.owed" = "%d a treinar";
+"slips.next" = "Erro seguinte";
+"slips.next.hint" = "Ir para o próximo lance errado";
+"slips.hint" = "Ir até lá e jogar de novo";

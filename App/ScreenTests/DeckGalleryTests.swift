@@ -394,6 +394,39 @@ struct DeckGallery {
         }
     }
 
+    /// Contract: a game says where the player went wrong in it, and walks the board back to each
+    /// one — 「这一局我哪儿走错了」 asked as a question, rather than scrolled for (docs/adr/0036).
+    @Test func aGameListsItsOwnWrongMovesAndWalksToThem() async throws {
+        let game = try #require(
+            Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3"])
+        )
+        var played = game
+        // One 试招 and one move that stood, so both sources of a cost are on the list.
+        played.setTried([.init(san: "f3", drop: 24)], atPly: 0)
+        played.setJudgement(.init(drop: 14, score: .centipawns(-40), depth: 20), atPly: 2)
+        let engine = ScriptedEngine([])
+        let session = GameSession.fresh(played, engine: engine)
+        defer { session.suspend() }
+        session.jump(toPly: 0)
+
+        let rendered = await ScreenImage.write("game-slips", interact: { window in
+            let words = ScreenImage.words(in: window)
+            // One is owed by the 入列线 (24%), one is only written down (14%).
+            #expect(words.contains { $0.contains(localized("slips.owed", 1)) })
+            #expect(words.contains { $0.contains(localized("book.cost", 24)) }, "the mark speaks")
+            #expect(ScreenImage.activate(localized("slips.next"), in: window))
+            await ScreenImage.settle()
+            #expect(session.cursor == 2, "下一处 walked the record to the position before the slip")
+        }) {
+            screen(session, engine: engine, opening: .tactics)
+        }
+        #expect(rendered.says(localized("slips.owed", 1)))
+        #expect(rendered.says("f3"), "the chip names the move the way the 已退回 strip does")
+        #expect(rendered.says("Nf3"))
+        #expect(!rendered.says("1. f3"), "compact: a 试招 is a move that never happened")
+        #expect(session.game.plies.count == 3, "and none of this touched the game")
+    }
+
     private func hop() async {
         for _ in 0..<20 {
             await Task.yield()

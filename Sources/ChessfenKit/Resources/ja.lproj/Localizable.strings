@@ -414,3 +414,7 @@
 "tried.reply" = "相手の応手";
 "tried.reply.hint" = "この手が招く応手を見る";
 "tried.reply.none" = "この手には見せる応手がありません。";
+"slips.owed" = "復習 %d 件";
+"slips.next" = "次のミス";
+"slips.next.hint" = "次の間違えた手へ進む";
+"slips.hint" = "その局面へ行って指し直す";

@@ -132,6 +132,7 @@ struct GameScreen: View {
                 if let practice = session.practice { practiceStatus(practice).chromeType() }
                 VStack(spacing: 0) {
                     record
+                    slips
                     settlement
                 }
                 .chromeType()
@@ -982,6 +983,100 @@ struct GameScreen: View {
         .padding(.top, 8)
     }
 
+    /// The game's own 错招, in one row under the record (docs/adr/0036).
+    ///
+    /// The record strip marks them, which is enough to find one while reading a game. This is for
+    /// the other errand — 「这一局我哪儿走错了」 asked as a question — where what is wanted is the
+    /// stops in order and a way to be taken to each. A chip walks the board to its position; 下一处
+    /// is the whole of the reading.
+    ///
+    /// Absent when there is nothing to say. A game nobody got anything wrong in has no row, and
+    /// neither has a game that has not been measured at all.
+    @ViewBuilder private var slips: some View {
+        let slips = session.slips
+        if !slips.isEmpty {
+            HStack(spacing: 10) {
+                Label(
+                    localized("slips.owed", slips.count { $0.isWorthDrilling(session.lines) }),
+                    systemImage: "exclamationmark.triangle"
+                )
+                .font(.caption)
+                .foregroundStyle(Palette.inkSoft)
+                .fixedSize()
+                ScrollView(.horizontal) {
+                    HStack(spacing: 6) {
+                        ForEach(slips) { slip in slipChip(slip) }
+                    }
+                }
+                .scrollIndicators(.hidden)
+                if let next = session.nextSlip {
+                    Button {
+                        selected = nil
+                        walkTo(slip: next)
+                    } label: {
+                        Image(systemName: "arrow.right.to.line")
+                            .font(.caption2)
+                            .foregroundStyle(Palette.analysis)
+                            .frame(width: 32, height: 30)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(localized("slips.next"))
+                    .accessibilityHint(localized("slips.next.hint"))
+                }
+            }
+            .padding(.leading, 13)
+            .padding(.trailing, 8)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+            .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+        }
+    }
+
+    /// One 错招: where in the game, what was played, what it cost.
+    private func slipChip(_ slip: Slip) -> some View {
+        let owed = slip.isWorthDrilling(session.lines)
+        let on = session.cursor == slip.ply - 1
+        return Button {
+            selected = nil
+            walkTo(slip: slip)
+        } label: {
+            HStack(spacing: 6) {
+                Text(slip.played)
+                    .font(.system(.caption, design: .serif).weight(.semibold))
+                    .foregroundStyle(on ? Palette.parchment : Palette.ink)
+                Text(String(format: "−%.0f%%", slip.drop))
+                    .font(.caption.monospacedDigit().weight(.medium))
+                    .foregroundStyle(on ? Palette.parchment : Palette.alarm)
+            }
+            .padding(.horizontal, 9).padding(.vertical, 6)
+            .background(on ? Palette.analysis : Palette.raised, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(alignment: .bottom) {
+                if !on {
+                    UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
+                        .fill(Palette.alarm.opacity(owed ? 0.55 : 0.2)).frame(height: 2)
+                }
+            }
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
+        }
+        .buttonStyle(.plain)
+        // Where it is, out loud: the chip is a move and a number, and which Ply of which game it
+        // belongs to is not something a small capsule can say.
+        .accessibilityLabel(
+            "\(localized("record.ply", slip.ply))\(localized("clause.separator"))\(slip.played)\(localized("clause.separator"))\(localized("book.cost", Int(slip.drop.rounded())))"
+        )
+        .accessibilityHint(localized("slips.hint"))
+    }
+
+    /// Takes the board to a 错招 by walking the record there, and leaves the eye on the position
+    /// the move was played from — the one to try again from.
+    private func walkTo(slip: Slip) {
+        let ply = slip.ply - 1
+        Task { await session.walk(toPly: ply) }
+    }
+
     /// History feedback is available in practice too. Unknown positions remain unknown;
     /// complete live judgements and reviews supply the same curve.
     private var canShowCurve: Bool {
@@ -1002,7 +1097,10 @@ struct GameScreen: View {
     }
 
     private var moveStrip: some View {
-        ScrollViewReader { scroller in
+        // Walked once for the whole strip: the marks are a lookup per half, and the walk behind
+        // them is a rules probe per Ply.
+        let slips = slipByPly
+        return ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     openingCell
@@ -1012,8 +1110,8 @@ struct GameScreen: View {
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(Palette.inkSoft)
                                 .frame(minWidth: 13, alignment: .trailing)
-                            if let white = card.white { half(white) }
-                            if let black = card.black { half(black) }
+                            if let white = card.white { half(white, slips[white.cursor]) }
+                            if let black = card.black { half(black, slips[black.cursor]) }
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1053,7 +1151,16 @@ struct GameScreen: View {
         .id(0)
     }
 
-    private func half(_ cell: PlyCell) -> some View {
+    /// One half of a move, and — when the player got it wrong — a mark at its foot.
+    ///
+    /// The mark is an overlay rather than a row, so a card with a mistake in it is exactly as tall
+    /// as one without: the curve behind the strip is drawn against these cards being even.
+    ///
+    /// Two weights on the one scale the app already has (docs/adr/0027). Pale is what the 记录线
+    /// put in the file; the alarm colour is what the 入列线 says the player still owes. Both are
+    /// the colour the cost wears everywhere else, because both are the player's own mistakes and
+    /// this board has one colour for the engine and one for them.
+    private func half(_ cell: PlyCell, _ slip: Slip?) -> some View {
         let on = cell.cursor == session.cursor
         return Button { walk(to: cell.cursor) } label: {
             Text(cell.san)
@@ -1064,14 +1171,35 @@ struct GameScreen: View {
                 .background {
                     if on { RoundedRectangle(cornerRadius: 5).fill(Palette.analysis) }
                 }
+                .overlay(alignment: .bottom) {
+                    if let slip {
+                        Circle()
+                            .fill(
+                                slip.isWorthDrilling(session.lines)
+                                    ? Palette.alarm : Palette.alarm.opacity(0.35)
+                            )
+                            .frame(width: 3.5, height: 3.5)
+                            .offset(y: 1)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .id(cell.cursor)
         .accessibilityElement(children: .combine)
         // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver is a
-        // move with no place in the game, and place is the whole of what this strip is for.
-        .accessibilityLabel(cell.spoken)
+        // move with no place in the game, and place is the whole of what this strip is for — and
+        // a mistake in it is worth saying out loud, because that is what the mark means.
+        .accessibilityLabel(
+            slip.map {
+                "\(cell.spoken)\(localized("clause.separator"))\(localized("book.cost", Int($0.drop.rounded())))"
+            } ?? cell.spoken
+        )
         .accessibilityHint(localized("record.jump"))
+    }
+
+    /// The 错招 by the Ply they were played at, for the record strip's marks.
+    private var slipByPly: [Int: Slip] {
+        Dictionary(session.slips.map { ($0.ply, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
     /// What a ranked move cost its mover, in pawns. A move that *gained* is ranked too and reads

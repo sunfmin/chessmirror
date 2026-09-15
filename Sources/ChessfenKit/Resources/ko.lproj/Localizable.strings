@@ -414,3 +414,7 @@
 "tried.reply" = "상대의 응수";
 "tried.reply.hint" = "이 수가 부르는 응수를 봅니다";
 "tried.reply.none" = "이 수에는 보여 줄 응수가 없습니다.";
+"slips.owed" = "%d개 복습";
+"slips.next" = "다음 실수";
+"slips.next.hint" = "다음 잘못 둔 수로 이동";
+"slips.hint" = "그 자리로 가서 다시 둡니다";

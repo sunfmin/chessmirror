@@ -65,6 +65,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// moves — the whole point of `viewed` being a stored value instead of a derivation
     /// (see `viewed` itself).
     @ObservationIgnored private var storedViewed: Game?
+    /// The 错招 walked out of the Game once, with the key they were walked under. Reading them is
+    /// a rules probe per Ply, and the record strip asks on every draw.
+    @ObservationIgnored private var storedSlips: (key: String, slips: [Slip])?
     /// The uniform-depth pass over the whole Game, while there is one running or just finished.
     public private(set) var reviewPass: ReviewPass?
 
@@ -1060,23 +1063,63 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// Walks the record to the Ply this session was opened at, one move at a time.
+    public func walkToArrival(step: Duration = .milliseconds(120)) async {
+        guard let target = arrivalWalk else { return }
+        arrivalWalk = nil
+        await walk(toPly: target, step: step)
+    }
+
+    /// Walks the record to a Ply. Forward, one move at a time; backwards, straight there — a
+    /// board that plays a game in reverse is a board doing something nobody asked it to.
     ///
     /// Deliberately not `step(by:)` per Ply: that retunes, which asks the engine about every
     /// position on the way — twenty searches to watch twenty moves go by. The walk moves the eye
     /// and the board and nothing else, and retunes once, where the eye stops.
-    public func walkToArrival(step: Duration = .milliseconds(120)) async {
-        guard let target = arrivalWalk else { return }
-        arrivalWalk = nil
-        guard target > cursor else { return }
+    public func walk(toPly ply: Int, step: Duration = .milliseconds(120)) async {
+        guard !isWalkingRecord, !isWeighing, activePunishment == nil else { return }
+        let wanted = min(max(0, ply), game.plies.count)
+        guard wanted != cursor else { return }
+        guard wanted > cursor else {
+            jump(toPly: wanted)
+            return
+        }
         isWalkingRecord = true
         defer { isWalkingRecord = false }
-        while cursor < target, !Task.isCancelled {
+        while cursor < wanted, !Task.isCancelled {
             cursor += 1
             adoptViewedAnalysis()
             try? await Task.sleep(for: step)
         }
         guard !Task.isCancelled else { return }
         retune()
+    }
+
+    // ------------------------------------------------------------- finding the 错招
+
+    /// Every 错招 in this Game, oldest first (docs/adr/0036).
+    ///
+    /// The player's own moves that cost at or over the 记录线, each carrying the position it was
+    /// played from. This is the list the record strip marks and the strip under it walks: the
+    /// answer to 「这一局我哪儿走错了」，which is a question about one game and not about the
+    /// schedule.
+    public var slips: [Slip] {
+        // Keyed on what the answer depends on: the game, and the two lines that decide what
+        // counts. A refusal changes the game; moving the record line changes the answer.
+        let key = "\(game.uciMoves.joined(separator: " "))|\(lines.record)|\(lines.enqueue)"
+        if let storedSlips, storedSlips.key == key { return storedSlips.slips }
+        let slips = game.slips(by: handColours, lines: lines)
+        storedSlips = (key, slips)
+        return slips
+    }
+
+    /// The next 错招 from where the eye is: the one after it when it is standing on one, the
+    /// first at or after it otherwise. Nil at the end of the game.
+    public var nextSlip: Slip? {
+        let all = slips
+        if let here = all.firstIndex(where: { $0.ply - 1 == cursor }) {
+            return all.dropFirst(here + 1).first
+        }
+        return all.first { $0.ply - 1 >= cursor }
     }
 
     // ------------------------------------------------------------------ moves

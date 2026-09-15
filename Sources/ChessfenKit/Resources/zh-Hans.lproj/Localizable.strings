@@ -459,3 +459,7 @@
 "tried.reply" = "对手的应招";
 "tried.reply.hint" = "看这一步招来的应招";
 "tried.reply.none" = "这一步没有应招可看。";
+"slips.owed" = "%d 处要重练";
+"slips.next" = "下一处";
+"slips.next.hint" = "走到下一处错招";
+"slips.hint" = "走过去，重新下这一步";

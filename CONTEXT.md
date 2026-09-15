@@ -35,6 +35,12 @@ A position the player got wrong. **The position is the identity**: the same posi
 in four different games is one 错题, not four.
 _Avoid_: 错误, 题目, 谜题, puzzle
 
+**错招 (Slip)**:
+One move in one game that the player got wrong: the position it was played from, what was played,
+what it cost. The answer to 「这一局我哪儿走错了」, and what a game's own record strip marks and
+walks to. Not a 错题: a 错题 is the position, and this is one game's account of reaching it.
+_Avoid_: 错误, 失误, 招法
+
 **遭遇 (Occurrence)**:
 One time the player fell for a 错题 — when, in which game, which move they played, what it
 cost, where it came from. A 错题 owns a list of them.

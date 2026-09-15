@@ -27,6 +27,9 @@ through your own iCloud Drive.
   Judgement, advantage, tactics and opponent replies share the result; device caches survive relaunch.
   Turning interception off disables rollback, not this assessment gate. Search uses at most two
   threads by default, and opening the game never launches an automatic historical scoring pass.
+- A game lists its own 错招 — one entry per Ply, marked on the record strip in two weights (written
+  down, and still owed) and walked to by a chip or by 下一处. It lands on the position the move was
+  played *from*, ready to be tried again.
 - The advantage bar remains visible. Refused attempts appear as a compact horizontal strip
   for the current move, with SAN and percentage cost, instead of a whole-game cost list.
   Pressing one shows the 应招 it earned — the opponent's answer and the few moves after it, as
@@ -134,6 +137,7 @@ without replacing the PGN's `White` and `Black` player names.
 - [Practice facts](docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md)
 - [Daily practice](docs/adr/0032-the-daily-is-one-queue-and-cannot-be-sharded.md)
 - [A refused move's reply](docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md)
+- [A game's own wrong moves](docs/adr/0036-a-game-lists-its-own-wrong-moves.md)
 
 ## Licence
 

@@ -1,0 +1,55 @@
+# A game says where the player went wrong in it, and takes them there
+
+A 耕棋 game played last week has a dozen wrong moves in it, and every one of them is already in the
+file: the 试招 耕棋 took back are `[%tried]`, and the moves that stood with a measured cost are
+`[%judged]`. What the game could not do was **say where they are**. The record strip draws the moves
+one per half-move in one line, and a move that cost twenty points looks exactly like a move that
+cost nothing until the eye is on it. Finding the ones worth re-practising meant scrolling and
+remembering.
+
+So a game now lists its own **错招**: one entry per Ply, oldest first, and each one carries the
+position that move was played **from**.
+
+- **The record strip marks them.** A dot at the foot of the move: pale for what the 记录线 put in
+  the file, the alarm colour for what the 入列线 says is still owed. It is an overlay, not a row, so
+  a card with a mistake in it is exactly as tall as one without — the curve behind the strip is
+  drawn against those cards being even.
+- **A row under the strip lists them** — 「3 处要重练」 and a chip per 错招 — and pressing one walks
+  the board to its position. 下一处 is the whole of the reading: it takes the eye to the next one
+  whether or not the player knows which one they are looking for.
+- **The position is the one before the move.** Reading a game wants what was played — which is why
+  an encounter row in the 错题本 opens on the position *after* it, with the blunder on the board. A
+  错招 is there to be tried again, so it lands on the position where the move has to be found, which
+  is where the drill starts too.
+
+**One entry per Ply, and the worst thing that happened at it.** A position where three 试招 were
+refused and a fourth move was finally played is one place in the game and one stop on the way
+through it; the strip of 已退回 attempts belongs to the *position* and stays where it is. The entry
+names the move that earned the cost — which for a 试招 is a move that never happened, exactly as the
+已退回 strip already names it.
+
+**Two weights, because the app has two lines** (ADR 0027) and they mean different things: written
+down is the 记录线, owed is the 入列线, and the second is what the 日课 would hand back
+(ADR 0030). One list with two weights rather than two lists, because it is one game and one way
+through it.
+
+**No Review required, which is where this deliberately parts company with the 错题本.** The book
+compares a move's cost with the cost of moves in other games, so every score in it has to come from
+one uniform pass (ADR 0016), and a move that stood enters it only from a Review. A game's own list
+compares nothing across games: every judgement in it came from the same bounded search of the same
+position, which is the app's own engine at the depth it reached (`[%judged]`). Reading a game's own
+history is a question about that game.
+
+## Consequences
+
+- 错招 is a word now, and it is not 错题. A 错题 is a position, shared by every game that reached it;
+  a 错招 is one move in one game. The two meet at `PositionKey`, so a 错招 can be recognised as an
+  encounter of a 错题 — which is what the book is made of — without either being derived from the
+  other.
+- `MistakeBook` is untouched. The book keeps its own gate, and the game's list has a different one.
+  That is two readings of the same Plies, and the reason is stated above; if a third reader ever
+  appears, the walk is the thing to share and the gate is the thing to keep.
+- The list is walked lazily and cached against the game and the two lines, because the record strip
+  asks for it on every draw and walking it is a rules probe per Ply.
+- A game nobody got anything wrong in shows no row at all. A screen that has to say 「没有错招」 is a
+  screen with a row it does not need.

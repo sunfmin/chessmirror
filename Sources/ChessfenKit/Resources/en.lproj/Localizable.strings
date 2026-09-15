@@ -485,3 +485,7 @@
 "tried.reply" = "The reply it earns";
 "tried.reply.hint" = "Show the reply this move earns";
 "tried.reply.none" = "This move leaves no reply to show.";
+"slips.owed" = "%d to practise";
+"slips.next" = "Next slip";
+"slips.next.hint" = "Walk to the next wrong move";
+"slips.hint" = "Go there and play it again";

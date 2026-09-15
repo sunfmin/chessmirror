@@ -440,3 +440,7 @@
 "tried.reply" = "La respuesta que provoca";
 "tried.reply.hint" = "Ver la respuesta que provoca esta jugada";
 "tried.reply.none" = "Esta jugada no deja respuesta que mostrar.";
+"slips.owed" = "%d por practicar";
+"slips.next" = "Siguiente error";
+"slips.next.hint" = "Ir a la siguiente jugada equivocada";
+"slips.hint" = "Ir allí y volver a jugarla";
