@@ -83,19 +83,6 @@
 "library.entry.unfinished" = "미완";
 "library.entry.branches" = "분기 %d";
 
-"habit.giveaway" = "기물 내주기";
-"habit.missedReply" = "상대 응수를 안 봄";
-
-"habit.giveaway.explained" = "이 수 뒤에 내 기물이 지켜지지 않았다. 이번에는 상대가 잡지 않았다.";
-"habit.missedReply.explained" = "이 수 뒤에 내 기물이 지켜지지 않았고, 상대가 다음 수에 잡았다.";
-
-"habit.excluded.unreviewed" = "아직 채점하지 않음";
-"habit.excluded.unreadable" = "읽을 수 없음";
-"habit.excluded.waiting" = "아직 iCloud에서 받는 중";
-
-"habit.note.taken" = "%@의 기물을 아무도 지키지 않았고, 상대가 다음 수에 잡았다";
-"habit.note.exposed" = "이 수 뒤에 %@의 기물을 아무도 지키지 않았다";
-
 "check.take.notHere" = "이 수는 %@에서 아무것도 잡지 않는다";
 "check.take.won" = "%@에서 잡아 기물을 벌었다";
 "check.take.notWorth" = "%@의 교환은 남지 않는다. 되잡혀도 상대는 손해가 없다";
@@ -155,7 +142,6 @@
 "rename" = "이름 바꾸기";
 "delete" = "삭제";
 "board" = "체스판";
-"move.number" = "%d수째";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -201,16 +187,6 @@
 "game.name.explained" = "모음집은 이름순으로 늘어서므로 「002번 문제」 같은 이름은 생각한 자리에 들어간다. 비워 두면 저장한 시각을 쓴다.";
 "game.file.into" = "「%@」에 넣기";
 "game.file.explained" = "이름이 모음집 안의 순서를 정하고, 이전 대국·다음 대국의 차례도 정한다.";
-
-"habits" = "버릇";
-"habits.card" = "되풀이하는 실수를 대국에서 세어 본다";
-"habits.subtitle" = "저장한 대국에서 센 것. 점수도 순위도 매기지 않는다.";
-"habits.counting" = "세는 중…";
-"habits.nothing" = "아직 셀 대국이 없다. 한 판 채점하면 여기에 할 말이 생긴다.";
-"habits.clean" = "%d판을 셌지만 버릇은 찾지 못했다.";
-"habits.counted" = "%d판을 셌다.";
-"habits.excluded" = "다른 %1$d판은 %2$@ 세지 않았다.";
-"habits.times" = "%d회";
 
 "edit.title" = "기물 고치기";
 "edit.seePhoto" = "사진 보기";
@@ -294,8 +270,6 @@
 "record.branch" = "위아래로 쓸어 분기를 바꾼다";
 "record.startHere" = "여기서부터 두기";
 "record.opening" = "시작";
-
-"study.commit" = "이 수로 간다";
 
 "about" = "정보";
 "about.what" = "판을 찍고, 국면을 읽고, 이어서 둔다. 인식도 엔진도 이 기기 안에서 돌아가고, 대국은 자신의 iCloud에 들어간다. 밖으로 나가는 것은 링크에서 기보를 가져올 때뿐이다.";

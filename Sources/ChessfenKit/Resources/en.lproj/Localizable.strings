@@ -102,19 +102,6 @@
 
 /* ---------------------------------------------------------------- the habits */
 
-"habit.giveaway" = "Giving pieces away";
-"habit.missedReply" = "Missing their reply";
-
-"habit.giveaway.explained" = "After this move something of yours had nobody guarding it — this time they did not take it.";
-"habit.missedReply.explained" = "After this move something of yours had nobody guarding it, and they took it next move.";
-
-"habit.excluded.unreviewed" = "not scored yet";
-"habit.excluded.unreadable" = "could not be read";
-"habit.excluded.waiting" = "still downloading from iCloud";
-
-"habit.note.taken" = "nothing was guarding %@, and they took it next move";
-"habit.note.exposed" = "after this move, nothing was guarding %@";
-
 /* ---------------------------------------------------------------- what you said, against the board */
 
 "check.take.notHere" = "this move takes nothing on %@";
@@ -183,7 +170,6 @@
 "rename" = "Rename";
 "delete" = "Delete";
 "board" = "Board";
-"move.number" = "Move %d";
 
 /* ---------------------------------------------------------------- the app itself */
 
@@ -245,18 +231,9 @@
 
 /* ---------------------------------------------------------------- the habits screen */
 
-"habits" = "Old habits";
-"habits.card" = "The mistakes you keep making, counted from your games";
-"habits.subtitle" = "Counted from the games you have saved. No score, no ranking.";
-"habits.counting" = "Counting…";
-"habits.nothing" = "No games to count yet. Score one, and there will be something to say here.";
-"habits.clean" = "Counted %d games, and found no old habits.";
 "habits.clean.one" = "Counted %d game, and found no old habits.";
-"habits.counted" = "Counted %d games.";
 "habits.counted.one" = "Counted %d game.";
-"habits.excluded" = "%1$d more games %2$@, left out.";
 "habits.excluded.one" = "%1$d more game %2$@, left out.";
-"habits.times" = "%d times";
 "habits.times.one" = "%d time";
 
 /* ---------------------------------------------------------------- editing the pieces */
@@ -355,8 +332,6 @@
 "record.opening" = "Opening";
 
 /* ---------------------------------------------------------------- asking yourself */
-
-"study.commit" = "This is my move";
 
 /* ---------------------------------------------------------------- the report */
 

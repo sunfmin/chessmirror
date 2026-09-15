@@ -83,19 +83,6 @@
 "library.entry.unfinished" = "未了";
 "library.entry.branches" = "分岐 %d";
 
-"habit.giveaway" = "駒を渡す";
-"habit.missedReply" = "相手の応手を読まない";
-
-"habit.giveaway.explained" = "この手のあと、自分の駒に守りがなかった。今回は取られなかった。";
-"habit.missedReply.explained" = "この手のあと自分の駒に守りがなく、相手に次の手で取られた。";
-
-"habit.excluded.unreviewed" = "まだ採点していない";
-"habit.excluded.unreadable" = "読み取れない";
-"habit.excluded.waiting" = "iCloud からダウンロード中";
-
-"habit.note.taken" = "%@ の駒に守りがなく、相手に次の手で取られた";
-"habit.note.exposed" = "この手のあと、%@ の駒に守りがない";
-
 "check.take.notHere" = "この手は %@ で何も取っていない";
 "check.take.won" = "%@ で取って駒得になった";
 "check.take.notWorth" = "%@ の交換は得しない。取り返されても相手は損しない";
@@ -155,7 +142,6 @@
 "rename" = "名前を変更";
 "delete" = "削除";
 "board" = "盤";
-"move.number" = "%d 手目";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -201,16 +187,6 @@
 "game.name.explained" = "作品集は名前順に並ぶので、「第 002 問」のような名前は思ったところに入る。空にすれば保存した時刻を使う。";
 "game.file.into" = "「%@」に入れる";
 "game.file.explained" = "名前が作品集の中の順番を決め、前の一局・次の一局の順番も決める。";
-
-"habits" = "くせ";
-"habits.card" = "繰り返している間違いを、対局から数える";
-"habits.subtitle" = "保存した対局から数えたもの。採点もランキングもしない。";
-"habits.counting" = "数えている…";
-"habits.nothing" = "まだ数えられる対局がない。まず一局採点すれば、ここに書くことができる。";
-"habits.clean" = "%d 局を数えたが、くせは見つからなかった。";
-"habits.counted" = "%d 局を数えた。";
-"habits.excluded" = "ほかに %1$d 局は%2$@ため、数に入れていない。";
-"habits.times" = "%d 回";
 
 "edit.title" = "駒を直す";
 "edit.seePhoto" = "写真を見る";
@@ -294,8 +270,6 @@
 "record.branch" = "上下にスワイプして分岐を切り替える";
 "record.startHere" = "ここから指す";
 "record.opening" = "開始";
-
-"study.commit" = "これでいく";
 
 "about" = "このアプリについて";
 "about.what" = "盤を撮って、局面を読んで、そのまま指し継ぐ。認識もエンジンもこの端末の中で動き、対局は自分の iCloud に入る。ネットに出るのは、リンクから棋譜を取り込むときだけ。";

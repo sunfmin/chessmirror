@@ -87,19 +87,6 @@
 "library.entry.branches" = "%d variantes";
 "library.entry.branches.one" = "%d variante";
 
-"habit.giveaway" = "Dar peças";
-"habit.missedReply" = "Não calcular a resposta";
-
-"habit.giveaway.explained" = "Depois deste lance ficaste com uma peça sem defesa — desta vez o adversário não a levou.";
-"habit.missedReply.explained" = "Depois deste lance ficaste com uma peça sem defesa, e o adversário levou-a no lance seguinte.";
-
-"habit.excluded.unreviewed" = "ainda sem pontuação";
-"habit.excluded.unreadable" = "ilegíveis";
-"habit.excluded.waiting" = "ainda a descarregar do iCloud";
-
-"habit.note.taken" = "nada defendia %@, e o adversário levou-a no lance seguinte";
-"habit.note.exposed" = "depois deste lance, nada defendia %@";
-
 "check.take.notHere" = "este lance não captura nada em %@";
 "check.take.won" = "capturar em %@ ganhou material";
 "check.take.notWorth" = "a troca em %@ não compensa: ao recapturar o adversário não perde nada";
@@ -162,7 +149,6 @@
 "rename" = "Mudar o nome";
 "delete" = "Apagar";
 "board" = "Tabuleiro";
-"move.number" = "Lance %d";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -211,18 +197,9 @@
 "game.file.into" = "Guardar em “%@”";
 "game.file.explained" = "O nome decide o lugar dela na coleção, e a ordem em que vêm a anterior e a seguinte.";
 
-"habits" = "Vícios antigos";
-"habits.card" = "Os erros que repetes, contados nas tuas partidas";
-"habits.subtitle" = "Contados nas partidas que guardaste. Sem nota e sem classificação.";
-"habits.counting" = "A contar…";
-"habits.nothing" = "Ainda não há partidas para contar. Pontua uma e haverá aqui algo a dizer.";
-"habits.clean" = "%d partidas contadas, sem nenhum vício.";
 "habits.clean.one" = "%d partida contada, sem nenhum vício.";
-"habits.counted" = "%d partidas contadas.";
 "habits.counted.one" = "%d partida contada.";
-"habits.excluded" = "Outras %1$d partidas %2$@, fora da conta.";
 "habits.excluded.one" = "Outra %1$d partida %2$@, fora da conta.";
-"habits.times" = "%d vezes";
 "habits.times.one" = "%d vez";
 
 "edit.title" = "Corrigir peças";
@@ -311,8 +288,6 @@
 "record.branch" = "Deslize para cima ou para baixo para mudar de variante";
 "record.startHere" = "Jogar a partir daqui";
 "record.opening" = "Início";
-
-"study.commit" = "É este o meu lance";
 
 "about" = "Acerca de";
 "about.what" = "Fotografa um tabuleiro, lê a posição e continua a jogar. O reconhecimento e o motor correm neste dispositivo; as partidas ficam no teu próprio iCloud. A única coisa que se descarrega é a partida que importares a partir de um link.";

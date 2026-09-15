@@ -87,19 +87,6 @@
 "library.entry.branches" = "%d variantes";
 "library.entry.branches.one" = "%d variante";
 
-"habit.giveaway" = "Pièces données";
-"habit.missedReply" = "Réponse non calculée";
-
-"habit.giveaway.explained" = "Après ce coup, une de vos pièces n'était plus gardée — cette fois, l'adversaire ne l'a pas prise.";
-"habit.missedReply.explained" = "Après ce coup, une de vos pièces n'était plus gardée, et l'adversaire l'a prise au coup suivant.";
-
-"habit.excluded.unreviewed" = "pas encore notées";
-"habit.excluded.unreadable" = "illisibles";
-"habit.excluded.waiting" = "encore en téléchargement depuis iCloud";
-
-"habit.note.taken" = "rien ne gardait %@, et l'adversaire l'a pris au coup suivant";
-"habit.note.exposed" = "après ce coup, rien ne gardait %@";
-
 "check.take.notHere" = "ce coup ne prend rien en %@";
 "check.take.won" = "prendre en %@ a gagné du matériel";
 "check.take.notWorth" = "l'échange en %@ ne paie pas : la reprise ne coûte rien à l'adversaire";
@@ -162,7 +149,6 @@
 "rename" = "Renommer";
 "delete" = "Supprimer";
 "board" = "Échiquier";
-"move.number" = "Coup %d";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -211,18 +197,9 @@
 "game.file.into" = "Classer dans « %@ »";
 "game.file.explained" = "Le nom décide de sa place dans le recueil, et de l'ordre dans lequel on passe d'une partie à l'autre.";
 
-"habits" = "Vieux réflexes";
-"habits.card" = "Les erreurs que vous répétez, comptées dans vos parties";
-"habits.subtitle" = "Comptées dans les parties que vous avez enregistrées. Aucune note, aucun classement.";
-"habits.counting" = "Comptage…";
-"habits.nothing" = "Aucune partie à compter pour l'instant. Notez-en une, et il y aura quelque chose à dire ici.";
-"habits.clean" = "%d parties comptées, aucun vieux réflexe trouvé.";
 "habits.clean.one" = "%d partie comptée, aucun vieux réflexe trouvé.";
-"habits.counted" = "%d parties comptées.";
 "habits.counted.one" = "%d partie comptée.";
-"habits.excluded" = "%1$d autres parties %2$@, non comptées.";
 "habits.excluded.one" = "%1$d autre partie %2$@, non comptée.";
-"habits.times" = "%d fois";
 "habits.times.one" = "%d fois";
 
 "edit.title" = "Corriger les pièces";
@@ -311,8 +288,6 @@
 "record.branch" = "Glissez vers le haut ou le bas pour changer de variante";
 "record.startHere" = "Jouer d'ici";
 "record.opening" = "Départ";
-
-"study.commit" = "C'est mon coup";
 
 "about" = "À propos";
 "about.what" = "Photographiez un échiquier, lisez la position, continuez la partie. La reconnaissance et le moteur tournent sur cet appareil ; les parties sont enregistrées dans votre propre iCloud. Rien n'est téléchargé, sauf quand vous importez une partie depuis un lien.";

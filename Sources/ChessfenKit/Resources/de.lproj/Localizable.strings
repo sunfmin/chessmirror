@@ -87,19 +87,6 @@
 "library.entry.branches" = "%d Varianten";
 "library.entry.branches.one" = "%d Variante";
 
-"habit.giveaway" = "Figuren verschenkt";
-"habit.missedReply" = "Antwort nicht gesehen";
-
-"habit.giveaway.explained" = "Nach diesem Zug stand eine deiner Figuren ungedeckt — diesmal hat der Gegner nicht zugegriffen.";
-"habit.missedReply.explained" = "Nach diesem Zug stand eine deiner Figuren ungedeckt, und der Gegner hat sie im nächsten Zug geschlagen.";
-
-"habit.excluded.unreviewed" = "noch nicht bewertet";
-"habit.excluded.unreadable" = "nicht lesbar";
-"habit.excluded.waiting" = "noch im Download aus iCloud";
-
-"habit.note.taken" = "%@ war ungedeckt, und der Gegner hat im nächsten Zug zugegriffen";
-"habit.note.exposed" = "nach diesem Zug war %@ ungedeckt";
-
 "check.take.notHere" = "dieser Zug schlägt nichts auf %@";
 "check.take.won" = "auf %@ zu schlagen hat Material gewonnen";
 "check.take.notWorth" = "der Abtausch auf %@ lohnt nicht: das Zurückschlagen kostet den Gegner nichts";
@@ -162,7 +149,6 @@
 "rename" = "Umbenennen";
 "delete" = "Löschen";
 "board" = "Brett";
-"move.number" = "%d. Zug";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -211,18 +197,9 @@
 "game.file.into" = "In „%@“ legen";
 "game.file.explained" = "Der Name entscheidet, an welcher Stelle sie in der Sammlung steht — und in welcher Reihenfolge vorige und nächste Partie kommen.";
 
-"habits" = "Alte Gewohnheiten";
-"habits.card" = "Die Fehler, die du wiederholst — aus deinen Partien gezählt";
-"habits.subtitle" = "Aus den Partien gezählt, die du gespeichert hast. Keine Note, keine Rangliste.";
-"habits.counting" = "Wird gezählt…";
-"habits.nothing" = "Noch keine Partie zum Zählen. Bewerte eine, dann steht hier etwas.";
-"habits.clean" = "%d Partien gezählt, keine alte Gewohnheit gefunden.";
 "habits.clean.one" = "%d Partie gezählt, keine alte Gewohnheit gefunden.";
-"habits.counted" = "%d Partien gezählt.";
 "habits.counted.one" = "%d Partie gezählt.";
-"habits.excluded" = "%1$d weitere Partien %2$@, nicht mitgezählt.";
 "habits.excluded.one" = "%1$d weitere Partie %2$@, nicht mitgezählt.";
-"habits.times" = "%d ×";
 "habits.times.one" = "%d ×";
 
 "edit.title" = "Figuren korrigieren";
@@ -311,8 +288,6 @@
 "record.branch" = "Zum Wechseln der Variante nach oben oder unten wischen";
 "record.startHere" = "Von hier spielen";
 "record.opening" = "Anfang";
-
-"study.commit" = "Das ist mein Zug";
 
 "about" = "Über";
 "about.what" = "Brett fotografieren, Stellung lesen, weiterspielen. Erkennung und Engine laufen auf diesem Gerät; die Partien liegen in deinem eigenen iCloud. Geladen wird nur dann etwas, wenn du eine Partie über einen Link importierst.";

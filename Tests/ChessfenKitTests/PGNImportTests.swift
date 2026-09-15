@@ -565,7 +565,7 @@ func importedEvalsAreNotOurs() throws {
         "lichess's number, in lichess's shape: braces with spaces in them"
     )
     #expect(pgn.game.plies[5].importedEvaluation == .centipawns(20), "and a bare 0.2 is 20")
-    #expect(pgn.game.criticality() == nil, "so no move in it can be ranked")
+    #expect(pgn.game.quality(atPly: 1) == nil, "so no move in it can be called a mistake")
 }
 
 @Test("a username and a count make one URL, and a slip is clamped rather than refused")

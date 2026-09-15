@@ -15,7 +15,6 @@ enum Step: Hashable {
     case game(GameSession)
     /// The tally over the library. It carries nothing, because it is counted when it is opened
     /// and stored nowhere (docs/adr/0018).
-    case habits
 }
 
 /// A typed name, or nil for one that was only spaces — which is how a name is taken back off.
@@ -57,7 +56,6 @@ struct LibraryScreen: View {
                         note(reason, symbol: "exclamationmark.triangle.fill")
                     }
                     entries
-                    if !library.entries.isEmpty { habitsCard }
                     games
                 }
                 .padding(.horizontal, 16)
@@ -98,8 +96,6 @@ struct LibraryScreen: View {
                     ConfirmPositionScreen(proposal: proposal, path: $path)
                 case .game(let session):
                     GameScreen(session: session, path: $path)
-                case .habits:
-                    HabitsScreen(path: $path)
                 }
             }
             .overlay {
@@ -311,38 +307,6 @@ struct LibraryScreen: View {
                 GameList(entries: unfiled.entries) { open($0) }
             }
         }
-    }
-
-    /// The way to 老毛病. Not a score and not a badge: the card says nothing about how the player
-    /// is doing, because whether there is anything to say is only known once the games have been
-    /// read, and reading them is what the screen behind this does.
-    private var habitsCard: some View {
-        Button {
-            path.append(.habits)
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "repeat")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.parchment)
-                    .frame(width: 30, height: 30)
-                    .background(Palette.alarm, in: RoundedRectangle(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(localized("habits"))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.ink)
-                    Text(localized("habits.card"))
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            .padding(12)
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
     }
 
     /// A collection, shut: its name, how many games are in it, and the way in.

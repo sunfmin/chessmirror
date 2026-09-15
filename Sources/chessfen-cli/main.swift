@@ -72,38 +72,6 @@ case "control":
             .joined(separator: " "))
     }
 
-case "worst":
-    guard arguments.count >= 2 else {
-        fail("usage: chessfen-cli worst <game.pgn> [count] [--white|--black]")
-    }
-    guard let text = try? String(contentsOf: URL(filePath: arguments[1]), encoding: .utf8) else {
-        fail("could not read \(arguments[1])")
-    }
-    let pgn: PGN
-    do {
-        pgn = try PGN(parsing: text)
-    } catch {
-        fail("\(error)")
-    }
-    let count = arguments.count >= 3 ? Int(arguments[2]) ?? 3 : 3
-    let colour: PieceColour? =
-        arguments.contains("--white") ? .white : arguments.contains("--black") ? .black : nil
-    // A refusal, not an empty list: ranking Scores of unrecorded Depth invents mistakes.
-    guard let worst = pgn.game.worstMoves(count, by: colour) else {
-        fail(
-            "this game has not been reviewed, so its Scores cannot be compared with each "
-                + "other — no [ReviewDepth] tag"
-        )
-    }
-    print("reviewed at depth \(pgn.game.reviewDepth ?? 0)")
-    for ranked in worst {
-        let number = pgn.game.moveNumber(ofPly: ranked.ply)
-        let side = ranked.mover == .white ? "white" : "black"
-        let label = ranked.quality.map { $0 == .fine ? "" : " \($0.mark)" } ?? ""
-        let lost = String(format: "%+.2f", Double(-ranked.lost) / 100)
-        print("  \(number). \(side) \(ranked.san)\(label)   \(lost)")
-    }
-
 case "exchange":
     guard arguments.count >= 3 else {
         fail("usage: chessfen-cli exchange <fen> <uci>")
@@ -208,5 +176,5 @@ case "icon":
     print("wrote \(arguments[1]) at \(side)×\(side)")
 
 default:
-    fail("usage: chessfen-cli <validate|perft|control|exchange|worst|analyse|recognise|icon> ...")
+    fail("usage: chessfen-cli <validate|perft|control|exchange|analyse|recognise|icon> ...")
 }

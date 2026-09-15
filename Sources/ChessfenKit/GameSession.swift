@@ -793,18 +793,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     // ----------------------------------------------------------------- point at a square
 
-    // ----------------------------------------------------------------- 五步计划
-
-    // ----------------------------------------------------------------- 走马灯
-
-    // ----------------------------------------------------------------- and why
-
-    /// A Game's worst moves as a list of questions, worst first — nil for a Game no Review has
-    /// been over, which is a refusal and not an empty list (docs/adr/0017).
-    public func worstMoves(_ count: Int = 3) -> [Criticality]? {
-        game.worstMoves(count)
-    }
-
     private func applied(_ move: Move, to game: Game) throws -> Game {
         var next = game
         guard next.apply(move) else { throw StudyRefusal.illegalMove }

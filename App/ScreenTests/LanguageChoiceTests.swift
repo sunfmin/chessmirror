@@ -49,8 +49,8 @@ struct LanguageChoiceTests {
         #expect(setting.current == .german)
         #expect(Speech.language == .german)
         // Out of the package's own bundle, which is the half of this that a wrong build breaks.
-        #expect(localized("habits") == "Alte Gewohnheiten")
-        #expect(localized("study.commit") == "Das ist mein Zug")
+        #expect(localized("record.opening") == "Anfang")
+        #expect(localized("game.toPlay") == "Am Zug")
 
         setting.chosen = nil
         #expect(setting.current == Speech.followingSystem)

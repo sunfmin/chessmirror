@@ -87,19 +87,6 @@
 "library.entry.branches" = "%d variantes";
 "library.entry.branches.one" = "%d variante";
 
-"habit.giveaway" = "Regalar piezas";
-"habit.missedReply" = "No calcular su respuesta";
-
-"habit.giveaway.explained" = "Tras esta jugada te quedó una pieza sin defensa; esta vez el rival no la tomó.";
-"habit.missedReply.explained" = "Tras esta jugada te quedó una pieza sin defensa, y el rival la tomó en la jugada siguiente.";
-
-"habit.excluded.unreviewed" = "sin puntuar todavía";
-"habit.excluded.unreadable" = "ilegibles";
-"habit.excluded.waiting" = "aún descargándose de iCloud";
-
-"habit.note.taken" = "nada defendía %@, y el rival lo tomó en la jugada siguiente";
-"habit.note.exposed" = "tras esta jugada, nada defendía %@";
-
 "check.take.notHere" = "esta jugada no captura nada en %@";
 "check.take.won" = "capturar en %@ ganó material";
 "check.take.notWorth" = "el cambio en %@ no compensa: al recapturar el rival no pierde nada";
@@ -162,7 +149,6 @@
 "rename" = "Renombrar";
 "delete" = "Eliminar";
 "board" = "Tablero";
-"move.number" = "Jugada %d";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -211,18 +197,9 @@
 "game.file.into" = "Guardar en «%@»";
 "game.file.explained" = "El nombre decide su lugar en la colección y el orden en que van la anterior y la siguiente.";
 
-"habits" = "Manías";
-"habits.card" = "Los errores que repites, contados en tus partidas";
-"habits.subtitle" = "Contados en las partidas que has guardado. Sin nota y sin clasificación.";
-"habits.counting" = "Contando…";
-"habits.nothing" = "Todavía no hay partidas que contar. Puntúa una y aquí habrá algo que decir.";
-"habits.clean" = "%d partidas contadas, sin ninguna manía.";
 "habits.clean.one" = "%d partida contada, sin ninguna manía.";
-"habits.counted" = "%d partidas contadas.";
 "habits.counted.one" = "%d partida contada.";
-"habits.excluded" = "Otras %1$d partidas %2$@, fuera de la cuenta.";
 "habits.excluded.one" = "Otra %1$d partida %2$@, fuera de la cuenta.";
-"habits.times" = "%d veces";
 "habits.times.one" = "%d vez";
 
 "edit.title" = "Corregir piezas";
@@ -311,8 +288,6 @@
 "record.branch" = "Desliza arriba o abajo para cambiar de variante";
 "record.startHere" = "Jugar desde aquí";
 "record.opening" = "Inicio";
-
-"study.commit" = "Esta es mi jugada";
 
 "about" = "Acerca de";
 "about.what" = "Fotografía un tablero, lee la posición y sigue jugando. El reconocimiento y el motor funcionan en este dispositivo; las partidas se guardan en tu propio iCloud. Lo único que se descarga es la partida que tú importes desde un enlace.";
