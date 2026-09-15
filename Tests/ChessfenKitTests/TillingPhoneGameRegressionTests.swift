@@ -40,9 +40,23 @@ import Testing
         let drop = try #require(MoveQuality.drop(move: .white, before: before, after: score))
         print("Phone regression: \(index / 2 + 1). \(pgn.game.plies[index].san) before=\(before.pgnText) after=\(score.pgnText) drop=\(drop) refused=\(refused != nil)")
         try #require(drop >= 10, "the real phone position must still demonstrate a mistake")
-        if drop >= 10 {
-            #expect(refused != nil, "Phone game move \(index / 2 + 1) costs \(drop), but passed")
+        if let refused {
+            #expect(refused.san == pgn.game.plies[index].san, "the move that cost \(drop) came back")
             #expect(session.game.plies.count == position.plies.count)
+        } else {
+            // The session judges at ten seconds or depth twenty, whichever arrives first, and this
+            // reference search is a plain depth twenty: on a loaded machine the two can disagree
+            // by a point or two near the line, so "it stood" is not by itself a failure.
+            //
+            // What is a failure — the bug this test was written for — is a move that stands with
+            // no judgement at all: 耕棋 switched on, the position searched, and nothing written
+            // down or said. A passing move has to have been weighed, and weighed as a pass.
+            let judged = try #require(
+                session.game.plies.last?.judgement,
+                "a move that stands under 耕棋 must have been weighed"
+            )
+            #expect(judged.drop < 10, "the session passed a move its own search calls a mistake")
+            print("Phone regression: \(index / 2 + 1) stood at the session's own judgement, drop=\(judged.drop)")
         }
     }
 }

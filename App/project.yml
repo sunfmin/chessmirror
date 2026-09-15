@@ -104,7 +104,7 @@ targets:
         # the board, so the icon can be rebuilt rather than only replaced.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         DEVELOPMENT_TEAM: HL27PWAKDF
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -152,7 +152,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen.share
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         DEVELOPMENT_TEAM: HL27PWAKDF
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
