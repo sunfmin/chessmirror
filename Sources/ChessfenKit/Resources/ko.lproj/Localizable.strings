@@ -270,3 +270,9 @@
 "about.licence" = "라이선스";
 "about.source" = "소스 코드";
 "about.licence.explained" = "이 앱에는 Stockfish가 들어 있다. Stockfish는 GNU GPL v3로 공개되어 있으므로 이 앱 전체도 GPL v3다. 자유롭게 쓰고, 살펴보고, 고치고, 다시 배포할 수 있다. 다만 배포할 때는 소스 코드와 같은 라이선스를 함께 넘겨야 한다. 전문은 소스 저장소의 LICENSE 파일에 있다.\n\n기물 그림은 python-chess의 Cburnett 세트(CC BY-SA 3.0)다.";
+
+/* ------------------------------------------------------------ 공유로 들어오기 */
+"share.reading" = "그림을 받는 중";
+"share.kept.title" = "받았다";
+"share.kept.message" = "棋镜 을 열면 이 국면이 있다.";
+"share.open" = "棋镜 열기";

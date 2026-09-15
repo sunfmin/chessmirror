@@ -315,3 +315,9 @@
 "about.licence" = "许可";
 "about.source" = "源代码";
 "about.licence.explained" = "本应用内置 Stockfish，按 GNU GPL v3 发布，因此本应用整体也按 GPL v3 发布：你可以自由使用、研究、修改和再分发它，条件是分发时一并给出源代码和同样的许可。完整许可文本见源代码仓库里的 LICENSE 文件。\n\n棋子图形来自 python-chess 的 Cburnett 棋子集（CC BY-SA 3.0）。";
+
+/* ---------------------------------------------------------------- 分享进来 */
+"share.reading" = "在收这张图";
+"share.kept.title" = "收到了";
+"share.kept.message" = "打开棋镜就能看这个局面。";
+"share.open" = "打开棋镜";

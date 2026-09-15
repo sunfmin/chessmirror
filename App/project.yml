@@ -33,6 +33,8 @@ targets:
     dependencies:
       - package: ChessfenKit
         product: ChessfenKit
+      # Embedded, which is how an app gets into other apps' share sheets.
+      - target: ShareExtension
     # A shared scheme, so `xcodebuild test` finds the screenshots from a terminal rather than
     # only from Xcode's UI.
     scheme:
@@ -62,6 +64,13 @@ targets:
         NSCameraUsageDescription: 拍下棋盘，识别出局面。识别在这台设备上完成；存下来的对局和照片会同步到你自己的 iCloud，不会发给任何别人。
         NSPhotoLibraryUsageDescription: 从相册里挑一张棋盘照片或截图来识别。识别在这台设备上完成；存下来的对局和照片会同步到你自己的 iCloud。
         ITSAppUsesNonExemptEncryption: false
+        # What the share extension opens to bring the app forward with a picture waiting.
+        # A shortcut, not the handoff: the picture is in the app group either way
+        # (docs/adr/0033).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.sunfmin.chessfen
+            CFBundleURLSchemes:
+              - chessfen
         # What makes the container a folder in the Files app rather than a hidden one. iOS reads
         # this once, when it first sets the container up, so changing the name here only takes
         # on a device that has never run the app — or after CFBundleVersion goes up.
@@ -84,6 +93,10 @@ targets:
           - iCloud.com.sunfmin.chessfen
         # The settings that travel — one small key-value store, keyed to this app.
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
+        # The one folder the share extension and the app can both see. Named here and in
+        # `SharedInbox.groupIdentifier`, which is the only other place it is spelled.
+        com.apple.security.application-groups:
+          - group.com.sunfmin.chessfen
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen
@@ -103,6 +116,49 @@ targets:
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
         ENABLE_USER_SCRIPT_SANDBOXING: YES
         DEAD_CODE_STRIPPING: YES
+
+  # 棋镜 in every other app's share sheet. A separate process with a separate sandbox, so it
+  # shares exactly two things with the app: the kit, and the app group folder it drops the
+  # shared picture into. It does no recognition — see the doc on ShareViewController.
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+      # The app's colours, so the sheet is recognisably this app rather than a system grey
+      # panel. The one file it borrows; everything else it needs is in the kit.
+      - path: Chessfen/Palette.swift
+    dependencies:
+      - package: ChessfenKit
+        product: ChessfenKit
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: 棋镜
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            # One picture. A board is a board — there is nothing this app could do with
+            # eleven of them at once, and nothing but images at all.
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsImageWithMaxCount: 1
+    entitlements:
+      path: ShareExtension/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.sunfmin.chessfen
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen.share
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        DEVELOPMENT_TEAM: HL27PWAKDF
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
 
   # The screens, drawn into PNGs by the real app code and checked for what they must show.
   # Hosted by the app rather than standing alone, because what it renders is the app's own

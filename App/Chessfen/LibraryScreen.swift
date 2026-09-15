@@ -34,6 +34,7 @@ struct LibraryScreen: View {
     @State private var isRecognising = false
     @State private var failure: (title: String, message: String)?
     @State private var isImporting = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -131,6 +132,16 @@ struct LibraryScreen: View {
         } message: {
             Text(failure?.message ?? "")
         }
+        // A picture somebody shared into the app from somewhere else. The extension wrote it
+        // and stopped there; this is the half that reads it (docs/adr/0033). Coming forward is
+        // the cue rather than the URL, because the URL is only a shortcut — a share the system
+        // declined to open the app for is still waiting here, and is found the next time the
+        // app is looked at. `initial` covers a launch that starts active.
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            guard phase == .active else { return }
+            takeWhatWasShared()
+        }
+        .onOpenURL { _ in takeWhatWasShared() }
     }
 
     // ------------------------------------------------------------------ parts
@@ -288,6 +299,19 @@ struct LibraryScreen: View {
     }
 
     // ------------------------------------------------------------------ doing
+
+    /// Reads the newest shared picture, if there is one and nothing else is being read.
+    ///
+    /// Newest and only one: somebody who shares three boards in a row is going to look at the
+    /// last of them, and the other two are still wherever they came from. The rest are dropped
+    /// rather than queued, because a queue here would mean the app opening a board nobody
+    /// asked about on some later launch.
+    private func takeWhatWasShared() {
+        guard !isRecognising, path.isEmpty, let inbox = SharedInbox.shared else { return }
+        guard let data = inbox.takeNewest() else { return }
+        inbox.empty()
+        recognise(.data(data))
+    }
 
     private func paste() {
         guard let image = BoardImageLoader.fromClipboard() else {

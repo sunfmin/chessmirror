@@ -289,3 +289,9 @@
 "about.licence" = "Licencia";
 "about.source" = "Código fuente";
 "about.licence.explained" = "Esta app lleva Stockfish dentro, publicado bajo la GNU GPL v3, así que la app entera también es GPL v3: puedes usarla, estudiarla, modificarla y redistribuirla libremente, siempre que entregues con ella el código fuente y la misma licencia. El texto completo está en el archivo LICENSE del repositorio.\n\nLos gráficos de las piezas son el juego Cburnett de python-chess (CC BY-SA 3.0).";
+
+/* ------------------------------------------------------------ compartido */
+"share.reading" = "Recibiendo la imagen";
+"share.kept.title" = "Recibida";
+"share.kept.message" = "Abre 棋镜 y ahí está la posición.";
+"share.open" = "Abrir 棋镜";

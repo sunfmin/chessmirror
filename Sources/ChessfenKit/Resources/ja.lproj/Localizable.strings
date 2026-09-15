@@ -270,3 +270,9 @@
 "about.licence" = "ライセンス";
 "about.source" = "ソースコード";
 "about.licence.explained" = "このアプリは Stockfish を内蔵している。Stockfish は GNU GPL v3 で公開されているため、このアプリ全体も GPL v3 となる。自由に使い、調べ、改変し、再配布できる。ただし配るときはソースコードと同じライセンスを一緒に渡すこと。全文はソースリポジトリの LICENSE ファイルにある。\n\n駒の図は python-chess の Cburnett セット（CC BY-SA 3.0）。";
+
+/* ------------------------------------------------------------ 共有で入る */
+"share.reading" = "画像を受け取っている";
+"share.kept.title" = "受け取った";
+"share.kept.message" = "棋镜 を開けばこの局面がある。";
+"share.open" = "棋镜 を開く";
