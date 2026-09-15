@@ -1,4 +1,4 @@
-import ChessfenKit
+@testable import ChessfenKit
 import Foundation
 import Synchronization
 import Testing
@@ -8,8 +8,8 @@ import Testing
 /// The position after 1. e4 e5 2. Nf3 — Black to move, and the one this suite drills.
 private let afterNf3 = PositionKey("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -")
 
-private func opinion(_ score: Score, line: [String] = []) -> Analysis {
-    Analysis(depth: 14, lines: [Line(score: score, uciMoves: [], san: line)])
+@MainActor private func opinion(_ score: Score, line: [String] = []) -> Analysis {
+    Analysis(depth: Drill.depth, lines: [Line(score: score, uciMoves: [], san: line)])
 }
 
 private func temporaryLog() -> PracticeLog {
@@ -44,6 +44,64 @@ private func engine(
 }
 
 // ------------------------------------------------------------------ the verdict
+
+@MainActor
+@Test func incompletePracticeJudgementDoesNotRecordAPass() async throws {
+    let engine = ScriptedEngine([Analysis(depth: 19, lines: [
+        Line(score: .centipawns(0), uciMoves: ["b8c6"], san: ["Nc6"])
+    ])])
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let drill = try #require(Drill(position: afterNf3, engine: engine, log: log))
+    let before = drill.game
+    drill.play(try #require(before.state.move(matching: "b8c6")))
+    #expect(drill.game != before)
+    await drill.settled()
+    #expect(drill.game == before)
+    #expect(drill.couldNotJudge)
+    #expect(drill.verdict == nil)
+    #expect(log.attempts().isEmpty)
+}
+
+/// Contract: real depth-20 judgement → one practice-log entry → opponent reply → next human
+/// move in the same session → persisted PGN, without a second practice attempt.
+@MainActor
+@Test func practiceFlowsIntoTheSameGame() async throws {
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let log = PracticeLog(url: directory.appending(path: "practice.jsonl"))
+    let engine = try EngineService(bigNetURL: Nets.big, smallNetURL: Nets.small,
+        configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1))
+    let drill = try #require(Drill(position: afterNf3, engine: engine, log: log))
+    let library = GameLibrary(folder: GameFolder(url: directory))
+    let session = GameSession.practising(drill, engine: engine, library: library)
+    defer { session.suspend() }
+    #expect(session.controller(for: .black) == .hand)
+    #expect(session.controller(for: .white) == .engine)
+    #expect(session.orientation == .blackAtBottom)
+    #expect(log.attempts().isEmpty)
+    session.notePracticeHelp()
+    session.play(try #require(session.game.state.move(matching: "b8c6")))
+    await session.waitForJudgement()
+    let verdict = try #require(drill.verdict)
+    #expect(verdict.played == "Nc6")
+    #expect(session.game.plies.first?.judgement?.depth == 20)
+    #expect(log.attempts().count == 1)
+    #expect(log.attempts().first?.attempt.hints == 1)
+    await session.waitForPreparedInterception()
+    #expect(session.game.plies.count == 2, "the engine answers for White, not the student's Black")
+    #expect(session.isHandTurn)
+    let before = session.game.uciMoves
+    let move = try #require(session.game.state.legalMoves.first)
+    session.play(move)
+    #expect(session.game.uciMoves == before + [move.uci])
+    #expect(log.attempts().count == 1, "continuing is not another attempt at the original question")
+    let url = try #require(session.url)
+    let saved = try PGN(parsing: String(contentsOf: url, encoding: .utf8))
+    #expect(saved.game.uciMoves == session.game.uciMoves)
+    #expect(saved.game.plies.first?.judgement?.depth == 20)
+}
 
 @MainActor
 @Test("a move that is not the engine's first choice passes, so long as it costs little")

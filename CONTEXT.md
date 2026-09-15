@@ -64,6 +64,10 @@ The 掉幅 at which a 错题 starts taking up the player's future practice time.
 
 ### 日课 — the day's practice
 
+**练习 (Practice)**:
+Working through 日课 or revisiting a 错题. Not a synonym for hiding the engine's answer,
+and not the opposite of 耕棋: 耕棋 names whether wrong moves may stand during a game.
+
 **日课 (Daily)**:
 The 错题 due today, as one queue, in one order. **It cannot be filtered, sorted or split** —
 a queue the player carves up is a queue that has stopped working.

@@ -14,12 +14,18 @@ through your own iCloud Drive.
 - **错题本:** one position across many games, with encounter history and manual dismissal.
 - **日课:** FSRS due dates derived from practice facts, ARTS daily ordering, and ten new positions
   per day by default. Unscheduled practice does not change due dates.
-- **耕棋 / No Slips:** per-game interception at 10%, 20%, or 30% loss of win probability, or off.
+- Practice uses the game screen's full-width board, side settings, advantage bar, history and
+  explicit multi-move findings. The first move is judged at depth 20 and logged once; play on in
+  the same game, exit, or take the next question, without a separate Continue button.
+- **耕棋 / No Slips:** a 0–100% interception slider, defaulting to 5%, with a separate on/off switch.
+  The board's No Slips label toggles interception directly and remembers the selected threshold.
+  Feedback remains visible while off; answers are explicit multi-move reveals, never a single
+  recommendation arrow or a separate practice/analysis eye switch.
   Refused moves return to their original position and become PGN comments on the eventual move.
-- Three explicit hint layers, answer reveal, and one-move threshold relaxation. Assisted
-  attempts carry a “not found” marker in the mistake book.
+- Always-visible advantage and per-move cost bars in No Slips, including refused attempts.
+  Completed depth-20 judgements are preserved in PGN; older records are backfilled locally.
 - An optional opponent-reply exercise on a temporary board. Replies within two percentage
-  points of the best depth-16 evaluation pass; retry, Reveal, and Skip leave the real game intact.
+  points of the best depth-20 evaluation pass; retry, Reveal, and Skip leave the real game intact.
 - Import a selected game and score every move locally at depth 16, asynchronously. Imported
   evaluations prioritize suspected mistakes but never exclude moves from the local pass.
   Choose which side to track when opening an imported game; original player names are preserved.

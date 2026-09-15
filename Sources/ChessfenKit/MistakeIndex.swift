@@ -13,6 +13,13 @@ import Foundation
 @Observable @MainActor public final class MistakeIndex {
     /// The book as it stands. Rebuilt in place when the games change or a position is struck off.
     public private(set) var book = MistakeBook(mistakes: [])
+    /// A transient receipt for newly recorded occasions, never replayed on initial loading.
+    public struct Recording: Equatable, Sendable {
+        public let id: UUID
+        public let count: Int
+    }
+    public private(set) var recording: Recording?
+    private var hasLoaded = false
 
     /// How many games the last update actually had to walk. Zero on a reload that changed
     /// nothing, which is the whole point of the cache and the thing a test can hold it to.
@@ -37,6 +44,8 @@ import Foundation
 
     /// Brings the book into line with a set of games, walking only what has changed.
     public func update(from entries: [GameLibrary.Entry], lines: JudgementLines? = nil) {
+        let changedLines = lines.map { $0 != self.lines } ?? false
+        let previous = Set(book.mistakes.flatMap { $0.encounters.map(\.id) })
         if let lines, lines != self.lines {
             // A moved line changes which moves count, so nothing cached under the old one is
             // usable. Cheaper to say so than to remember which findings were near the edge.
@@ -58,6 +67,12 @@ import Foundation
         cached = fresh
         walkedLastTime = walked
         rebuild()
+        let current = Set(book.mistakes.flatMap { $0.encounters.map(\.id) })
+        let added = current.subtracting(previous).count
+        if hasLoaded, !changedLines, added > 0 {
+            recording = Recording(id: UUID(), count: added)
+        }
+        hasLoaded = true
     }
 
     /// Strikes a position off. An append to the log, so it is a fact about what the player

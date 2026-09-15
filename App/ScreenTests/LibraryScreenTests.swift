@@ -12,6 +12,33 @@ import Testing
 @MainActor
 @Suite(.serialized, .speaking(.chinese))
 struct LibraryScreenScreenshots {
+    @Test func savedMistakeShowsFeedback() async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let index = MistakeIndex(log: PracticeLog(url: directory.appending(path: "p.jsonl")))
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+        game.applyReview([.centipawns(-400)], startEvaluation: .centipawns(0), depth: 20)
+        let pgn = PGN(game: game, tags: [PGN.Tag("White", Controller.hand.playerName)])
+        let message = localized("book.recorded", 1)
+        let rendered = await ScreenImage.write("mistake-recorded", interact: { window in
+            #expect(ScreenImage.activate(localized("library.fromStart"), in: window))
+            await ScreenImage.settle()
+            #expect(ScreenImage.words(in: window).contains { $0.contains(localized("till.name")) })
+            #expect(!ScreenImage.words(in: window).contains(message))
+            #expect(library.write(pgn, to: directory.appending(path: "game.pgn")))
+            await ScreenImage.settle()
+            #expect(index.book.mistakes.count == 1)
+            #expect(ScreenImage.words(in: window).contains { $0.contains(message) })
+        }) {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+        }
+        #expect(rendered.says(message))
+    }
     /// A library in a fresh temporary folder, so nothing here touches the real Games folder.
     private func library(in tempDir: URL) -> GameLibrary {
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)

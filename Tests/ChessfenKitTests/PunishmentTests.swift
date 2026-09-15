@@ -68,9 +68,9 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     let applied = after.apply(uci: "d2d4")
     #expect(applied)
     for (cp, accepted) in [(21, true), (23, false)] {
-        let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+        let engine = ScriptedEngine([Analysis(depth: 20, lines: [
             Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
-        ])], byPosition: [after.state.fen: Analysis(depth: 16, lines: [
+        ])], byPosition: [after.state.fen: Analysis(depth: 20, lines: [
             Line(score: .centipawns(-cp), uciMoves: ["e7e5"], san: ["e5"])
         ])])
         let exercise = Punishment(position: game, engine: engine)
@@ -79,7 +79,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
         await exercise.waitForJudgement()
         #expect(!exercise.isJudging)
         #expect(exercise.isFinished == accepted)
-        #expect(engine.budgets == [.depth(16), .depth(16)])
+        #expect(engine.budgets == [.depth(20), .depth(20)])
     }
 }
 
@@ -95,7 +95,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
 @MainActor
 @Test func sessionPunishmentRestoresGameAndRecordsOnlyTheOriginalAttempt() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
         Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"])
     ])])
@@ -137,7 +137,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
 @MainActor
 @Test func punishmentAcceptsEquivalentRepliesAndNeverAdvancesItsPosition() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
     ])])
     for uci in ["e2e4", "d2d4"] {
@@ -169,9 +169,9 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     var bad = game
     let applied = bad.apply(uci: "f2f3")
     #expect(applied)
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
-    ])], byPosition: [bad.state.fen: Analysis(depth: 16, lines: [
+    ])], byPosition: [bad.state.fen: Analysis(depth: 20, lines: [
         Line(score: .centipawns(-100), uciMoves: ["e7e5"], san: ["e5"])
     ])])
     let exercise = Punishment(position: game, engine: engine)

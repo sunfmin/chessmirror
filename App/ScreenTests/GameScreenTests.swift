@@ -391,8 +391,8 @@ struct GameScreenScreenshots {
         #expect(rendered.says("白方胜"), "the bar reads the result rather than sitting half and half")
         #expect(rendered.says("1-0"), "and the number the screen has been showing resolves into it")
         #expect(
-            rendered.says("引擎意见"),
-            "with the one thing left to do said where the lines were — a switch, not a place"
+            rendered.says("耕棋"),
+            "interception remains the page's single mode switch"
         )
         #expect(!rendered.says("和棋"))
         #expect(!rendered.says("未知"), "a finished game is not an unknown one")
@@ -414,12 +414,12 @@ struct GameScreenScreenshots {
         }
 
         #expect(session.isPractising, "which is where a Game starts (docs/adr/0015)")
-        #expect(rendered.says("练习"))
+        #expect(!rendered.says("练习"))
         #expect(
-            rendered.says("引擎意见"),
-            "practice points at the one switch that makes the engine talk"
+            rendered.says("耕棋"),
+            "the page exposes interception, not a separate practice/advice mode"
         )
-        #expect(!rendered.says("+0.38"), "no Score anywhere while practising")
+        #expect(rendered.says(localized("standing.bar")), "assessment is visible independently of answers")
         #expect(session.analysis == nil, "finding availability does not enable advisory scores")
         #expect(session.isFindingTactics, "availability is discovered automatically")
         #expect(!rendered.says("建议 d4"), "discovery does not reveal the move")
@@ -443,7 +443,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says(localized("search.reached")))
         #expect(!rendered.says(localized("till.judging")))
         #expect(rendered.says(localized("game.depth", 26)), "the Depth is a figure of its own")
-        #expect(!rendered.says("+0.38"), "practice still keeps the Score off the board")
+        #expect(rendered.says(localized("standing.bar")))
     }
 
     /// Practice still on, the finder on: one shot named, no Score. This is the combination
@@ -484,7 +484,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("Qe5+"))
         #expect(rendered.says(localized("screen.hideArrows")))
         #expect(session.game.uciMoves.isEmpty, "drawing a continuation must not play it")
-        #expect(!rendered.says("+5.00"), "no Score while practising — a card's Stint is for the card")
+        #expect(rendered.says(localized("standing.bar")))
         #expect(!rendered.says("建议"))
     }
 
@@ -648,9 +648,7 @@ struct GameScreenScreenshots {
         }
 
         // Not one number, not one line, not one of the engine's candidates.
-        #expect(!rendered.says("+0.38"))
-        #expect(!rendered.says("+0.24"))
-        #expect(!rendered.says("+0."), "and no Score in any of the places one goes")
+        #expect(rendered.says(localized("standing.bar")), "feedback does not disclose a move")
         #expect(!rendered.says("d4 exd4 cxd4 Bb6"))
         #expect(!rendered.says("O-O d6 d4 Bb6"))
         #expect(!rendered.says("d3 d6 O-O a6"))
@@ -660,8 +658,9 @@ struct GameScreenScreenshots {
         )
 
         // And the screen accounts for the silence rather than wearing the face of a broken engine.
-        #expect(rendered.says("练习"))
-        #expect(rendered.says("引擎意见"), "with the one switch that ends it, named")
+        #expect(!rendered.says("练习"))
+        #expect(!rendered.says("引擎意见"))
+        #expect(rendered.says("耕棋"))
         // The game itself is entirely unaffected: the moves, the clock, the engine as an opponent.
         #expect(rendered.says("第 8 步 Nf6"))
         #expect(rendered.says("该走了"))

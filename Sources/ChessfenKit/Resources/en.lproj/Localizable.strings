@@ -404,7 +404,7 @@
 "till.shot" = "There is a tactical opportunity.";
 "till.quiet" = "No confirmed tactic. Try improving your position.";
 "till.notFound" = "Not found";
-"punish.toggle" = "Find the opponent’s punishment";
+"punish.toggle" = "Practise the opponent’s reply after a mistake";
 "punish.prompt" = "Play for your opponent and find their strongest reply.";
 "punish.again" = "There is a stronger reply. Try again.";
 "punish.skip" = "Skip";
@@ -477,3 +477,5 @@
 "discovery.view" = "View";
 "discovery.mateFound" = "Mate found";
 "discovery.tacticFound" = "Tactical opportunity found";
+"book.recorded" = "Saved to mistake book · %d recorded";
+"standing.change" = "Win chance change this move %@";

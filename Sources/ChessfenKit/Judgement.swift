@@ -31,17 +31,14 @@ public struct JudgementLines: Hashable, Sendable, Codable {
     /// 10 / 10 / 20, with 耕棋 off. The numbers a person who has never touched this gets.
     public static let standard = JudgementLines()
 
-    /// The settings the 拦截线 dial offers: off, and the three names a move can have. A slider
-    /// would suggest the difference between 11% and 12% is a thing anybody can feel.
-    public static let interceptChoices: [Double?] = [
-        nil, MoveQuality.inaccuracyFrom, MoveQuality.mistakeFrom, MoveQuality.blunderFrom,
-    ]
+    public static let defaultIntercept = 5.0
+    public static let interceptRange = 0.0...100.0
 
     /// Whether a drop of this many points is one 耕棋 stops for. False when 耕棋 is off, which is
     /// the only reason this is a method rather than a comparison at the call site.
     public func intercepts(_ drop: Double?) -> Bool {
         guard let intercept, let drop else { return false }
-        return drop >= intercept
+        return drop > 0 && drop >= intercept
     }
 
     public func records(_ drop: Double?) -> Bool {

@@ -66,6 +66,53 @@ private func game(seed: Int, at when: Date, plies: Int = 40) throws -> GameLibra
 
 // --------------------------------------------------------------------- the cache
 
+/// Contract: real PGN write → library entry → book → transient receipt. Initial loading,
+/// identical saves, dismissed positions, and threshold changes must not announce new work.
+@MainActor
+@Test func savedMistakesProduceReceiptsOnlyForNewOccasions() throws {
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let library = GameLibrary(folder: GameFolder(url: directory))
+    let index = MistakeIndex(log: PracticeLog(url: directory.appending(path: "practice.jsonl")))
+    index.update(from: library.entries)
+    #expect(index.recording == nil)
+    let fixture = try game(seed: 1, at: now, plies: 4)
+    let pgn = try #require(fixture.pgn)
+    let url = directory.appending(path: "game.pgn")
+    #expect(library.write(pgn, to: url))
+    index.update(from: library.entries)
+    #expect(!index.book.isEmpty)
+    var receipt = try #require(index.recording)
+    #expect(receipt.count == 1)
+    #expect(library.write(pgn, to: url))
+    index.update(from: library.entries)
+    #expect(index.recording == receipt)
+    let reloaded = MistakeIndex(log: index.log)
+    reloaded.update(from: library.entries)
+    #expect(!reloaded.book.isEmpty)
+    #expect(reloaded.recording == nil)
+    #expect(library.write(pgn, to: directory.appending(path: "recurrence.pgn")))
+    index.update(from: library.entries)
+    #expect(index.book.mistakes.count == 1)
+    #expect(index.book.mistakes.first?.recurrence == 2)
+    #expect(index.recording?.id != receipt.id)
+    receipt = try #require(index.recording)
+    #expect(receipt.count == 1)
+    #expect(!library.write(pgn, to: directory))
+    index.update(from: library.entries)
+    #expect(index.recording == receipt, "a failed save cannot announce success")
+    let position = try #require(index.book.mistakes.first?.position)
+    index.dismiss(position)
+    #expect(library.write(pgn, to: directory.appending(path: "again.pgn")))
+    index.update(from: library.entries)
+    #expect(index.book.isEmpty)
+    #expect(index.recording == receipt)
+    index.update(from: library.entries, lines: JudgementLines(record: 40, enqueue: 50))
+    index.update(from: library.entries, lines: JudgementLines(record: 5, enqueue: 20))
+    #expect(index.recording == receipt)
+}
+
 @MainActor
 @Test("a reload that changed nothing walks no games at all")
 func anUnchangedLibraryIsNotWalkedAgain() throws {

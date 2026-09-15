@@ -2,6 +2,85 @@
 import Foundation
 import Testing
 
+@MainActor
+@Test(arguments: [-133, 133])
+func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    var after = start
+    let applied = after.apply(uci: "e2e4")
+    #expect(applied)
+    let reply = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])]),
+        after.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(score), uciMoves: [], san: [])]),
+        reply.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(2 * score), uciMoves: [], san: [])])
+    ])
+    let session = GameSession.fresh(start, engine: engine)
+    session.showPositionFeedback()
+    defer { session.suspend() }
+    #expect(session.moveChange == nil)
+    session.play(try #require(start.state.move(matching: "e2e4")))
+    await session.measureLatestMoveChange()
+    let change = try #require(session.moveChange)
+    #expect(change.before == .centipawns(0))
+    #expect(change.after == .centipawns(score))
+    #expect(session.feedbackScore == change.after)
+    #expect(abs(change.percent(for: .white) - (Score.centipawns(score).winPercent - 50)) < 0.001)
+    #expect(change.percent(for: .black) == -change.percent(for: .white))
+    session.jump(toPly: 0)
+    #expect(session.moveChange == nil, "reading an old position is not a newly played move")
+    #expect(session.historyScore(atPly: 1) == change.after, "the curve still reaches the last move")
+    #expect(session.historyScore(atPly: 0) == change.before)
+    session.jump(toPly: 1)
+    #expect(session.moveChange == change)
+    session.play(try #require(session.game.state.move(matching: "e7e5")))
+    #expect(session.moveChange == nil, "the old badge must not describe a new move")
+    await session.measureLatestMoveChange()
+    #expect(session.game.plies.count == 2)
+    #expect(session.historyScore(atPly: 2) == .centipawns(2 * score))
+    #expect(session.historyScore(atPly: 1) == .centipawns(score))
+    #expect(session.moveChange?.before == change.after)
+    session.jump(toPly: 0)
+    #expect(session.historyScore(atPly: 2) == .centipawns(2 * score))
+}
+
+/// Contract: toggling interception preserves the previous advice preference and threshold,
+/// survives a real PGN file round trip while OFF, and never changes the game or opponent clock.
+@MainActor
+@Test(arguments: [true, false])
+func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let session = GameSession.fresh(game)
+    session.setPractising(hidden)
+    session.setThinkingTime(.fixed(seconds: 3))
+    session.setTilling(true)
+    #expect(session.isTilling)
+    #expect(session.isPractising)
+    #expect(session.lines.intercept == 5)
+    session.setIntercept(37)
+    session.setTilling(false)
+    #expect(!session.isTilling)
+    #expect(session.isPractising == hidden)
+    #expect(session.hasTillingFeedback)
+    #expect(session.preferredIntercept == 37)
+    #expect(session.game == game)
+    #expect(session.thinkingTime == .fixed(seconds: 3))
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let file = directory.appending(path: "off.pgn")
+    try session.pgn.text.write(to: file, atomically: true, encoding: .utf8)
+    let saved = try PGN(parsing: String(contentsOf: file, encoding: .utf8))
+    #expect(saved.tag("Intercept") == nil)
+    let reopened = try #require(GameSession.opened(.init(url: file, pgn: saved, modified: Date())))
+    #expect(!reopened.isTilling)
+    reopened.setTilling(true)
+    #expect(reopened.isTilling)
+    #expect(reopened.lines.intercept == 37)
+    #expect(reopened.pgn.tag("InterceptPreference") == nil, "active threshold has only one authoritative tag")
+    #expect(reopened.game == game)
+}
+
 /// Real cached MultiPV acceptance, followed by an actual opponent reply on its own clock.
 @MainActor
 @Test func realPreparedMoveHasNoJudgementWaitBeforeTheOpponentSearch() async throws {
@@ -15,7 +94,7 @@ import Testing
     session.setThinkingTime(.fixed(seconds: 1))
     session.setIntercept(10)
     await session.waitForPreparedInterception()
-    try #require(session.searchProgress?.depth == 16)
+    try #require(session.searchProgress?.depth == 20)
     let started = ContinuousClock.now
     session.play(try #require(game.state.move(matching: "e2e4")))
     let gateTime = started.duration(to: .now)
@@ -23,38 +102,65 @@ import Testing
     #expect(session.game.uciMoves == ["e2e4"])
     await session.waitForPreparedInterception()
     #expect(session.game.plies.count == 2)
+    let judgement = try #require(session.game.plies[0].judgement)
+    #expect(judgement.depth == 20)
+    #expect(judgement.drop < 10)
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let file = directory.appending(path: "judged.pgn")
+    try session.pgn.text.write(to: file, atomically: true, encoding: .utf8)
+    let reopened = try PGN(parsing: String(contentsOf: file, encoding: .utf8))
+    #expect(reopened.game.plies[0].judgement == judgement)
+    #expect(reopened.game.reviewDepth == nil, "live judgements must not pretend to be a full Review")
+    #expect(reopened.game.rewound(to: 1)?.plies[0].judgement == judgement)
     print("REAL INTERCEPT: cached e4 committed in \(gateTime); opponent replied in \(started.duration(to: .now)) on a 1-second clock")
+    session.suspend()
+    let oldGame = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: session.game.uciMoves))
+    let legacy = GameSession.fresh(oldGame, controllers: [.white: .hand, .black: .engine])
+    legacy.setIntercept(JudgementLines.defaultIntercept)
+    legacy.attach(engine: engine, library: nil)
+    defer { legacy.suspend() }
+    #expect(legacy.game.plies[0].judgement == nil)
+    await legacy.fillMissingTillingJudgements()
+    #expect(legacy.game != oldGame)
+    #expect(legacy.game.uciMoves == oldGame.uciMoves)
+    #expect(legacy.game.plies[0].judgement?.depth == 20)
+    #expect(legacy.game.plies[1].judgement == nil, "only the person's moves are backfilled")
+    let filled = legacy.game
+    await legacy.fillMissingTillingJudgements()
+    #expect(legacy.game == filled)
 }
 
 @MainActor
-@Test func incompleteConfirmationDoesNotTakeBackAMove() async throws {
+@Test func incompleteJudgementDoesNotLetAMoveStand() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     var played = game
     let applied = played.apply(uci: "f2f3")
     try #require(applied)
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
-    ])], byPosition: [played.state.fen: Analysis(depth: 16, lines: [
+    ])], byPosition: [played.state.fen: Analysis(depth: 19, lines: [
         Line(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
-    ])], byBudget: [.time(.milliseconds(400)): []])
+    ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
     session.setIntercept(10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
     await session.waitForJudgement()
-    #expect(session.game != game)
-    #expect(session.game.uciMoves == played.uciMoves)
+    #expect(session.game == game)
+    #expect(session.game.uciMoves.isEmpty)
     #expect(session.refused == nil)
-    #expect(session.game.plies.last?.tried.isEmpty == true)
-    #expect(engine.budgets.contains(.time(.milliseconds(400))))
+    #expect(!session.pgn.text.contains("%tried"))
+    #expect(engine.budgets.allSatisfy { $0 == .depth(20) })
 }
 
 @MainActor
 @Test func unlistedCheckmateCommitsWithoutSearchingTerminalBoard() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN,
                                 uciMoves: ["f2f3", "e7e5", "g2g4"]))
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(-300), uciMoves: ["b8c6"], san: ["Nc6"])
     ])])
     let session = GameSession.fresh(game, engine: engine)
@@ -77,22 +183,23 @@ import Testing
     var after = game
     let applied = after.apply(uci: "f2f3")
     #expect(applied)
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
-    ])], byPosition: [after.state.fen: Analysis(depth: 16, lines: [
+    ])], byPosition: [after.state.fen: Analysis(depth: 20, lines: [
         Line(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
     session.setIntercept(10)
+    await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
 
     await session.waitForJudgement()
     #expect(!session.isWeighing)
     #expect(session.refused?.san == "f3")
     #expect(session.game == game)
-    #expect(engine.budgets.last == .time(.milliseconds(400)))
-    #expect(engine.budgets.filter { $0 == .time(.milliseconds(400)) }.count == 1)
+    #expect(engine.budgets.last == .depth(20))
+    #expect(engine.budgets.count == 3)
 }
 
 @MainActor
@@ -116,7 +223,7 @@ import Testing
 @MainActor
 @Test func revealingAfterARefusalKeepsExactlyOneEncounter() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
         Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"]),
     ])])
@@ -150,7 +257,7 @@ import Testing
 @MainActor
 @Test func hintLadderAndRelaxationBelongToOneMove() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
         Line(score: .centipawns(-180), uciMoves: ["d2d4"], san: ["d4"]),
     ])])
@@ -159,7 +266,7 @@ import Testing
     session.setIntercept(10)
 
     await session.waitForPreparedInterception()
-    #expect(session.searchProgress?.depth == 16)
+    #expect(session.searchProgress?.depth == 20)
     #expect(session.hintLayer == 0)
     #expect(session.hintScore == nil)
     session.relaxIntercept(to: 20)
@@ -191,7 +298,7 @@ import Testing
 @MainActor
 @Test func preparedPassingMoveCommitsSynchronously() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
-    let engine = ScriptedEngine([Analysis(depth: 16, lines: [
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(20), uciMoves: ["e2e4"], san: ["e4"]),
         Line(score: .centipawns(10), uciMoves: ["d2d4"], san: ["d4"]),
     ])])
@@ -200,30 +307,35 @@ import Testing
     session.setIntercept(10)
 
     await session.waitForPreparedInterception()
-    #expect(session.searchProgress?.depth == 16)
+    #expect(session.searchProgress?.depth == 20)
     let started = ContinuousClock.now
     session.play(try #require(game.state.move(matching: "d2d4")))
     let elapsed = started.duration(to: .now)
     #expect(session.game.uciMoves == ["d2d4"])
     #expect(!session.isWeighing)
-    #expect(engine.budgets.allSatisfy { $0 == .depth(16) })
+    #expect(engine.budgets.allSatisfy { $0 == .depth(20) })
     #expect(engine.lines.allSatisfy { $0 == 8 })
     print("Prepared passing move committed in \(elapsed)")
 }
 
 @MainActor
-@Test func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock() throws {
+@Test(arguments: [0.0, 5.0, 7.0, 37.0, 100.0])
+func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
     let session = GameSession.fresh(game)
     session.setThinkingTime(.fixed(seconds: 3))
-    session.setIntercept(20)
+    session.setIntercept(line)
     #expect(session.isTilling)
     #expect(session.thinkingTime == .fixed(seconds: 3))
     let pgn = try PGN(parsing: session.pgn.text)
     let opened = try #require(GameSession.opened(GameLibrary.Entry(
         url: URL(filePath: "/games/tilling.pgn"), pgn: pgn, modified: Date()
     )))
-    #expect(opened.lines.intercept == 20)
+    #expect(opened.lines.intercept == line)
+    opened.setIntercept(.nan)
+    #expect(opened.lines.intercept == line)
+    opened.setIntercept(101)
+    #expect(opened.lines.intercept == line)
     opened.setIntercept(nil)
     #expect(!opened.isTilling)
     #expect(opened.pgn.tag("Intercept") == nil)
