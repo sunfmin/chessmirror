@@ -100,15 +100,9 @@
 
 "habit.giveaway" = "送子";
 "habit.missedReply" = "没算对手那一步";
-"habit.untrueReason" = "理由不成立";
-"habit.noReason" = "说不清";
-"habit.attackWhileHanging" = "只顾进攻";
 
 "habit.giveaway.explained" = "走完这步，你有子没人守 —— 这次对手没吃。";
 "habit.missedReply.explained" = "走完这步你有子没人守，对手下一步就吃了。";
-"habit.untrueReason.explained" = "你说了这步是干什么的，棋盘上没发生。";
-"habit.noReason.explained" = "走了，但说不清为什么。";
-"habit.attackWhileHanging.explained" = "你在攻、在吃，自己却有子挂着。";
 
 "habit.excluded.unreviewed" = "还没打过分";
 "habit.excluded.unreadable" = "读不出来";
@@ -116,7 +110,6 @@
 
 "habit.note.taken" = "%@ 上的子没人守，对手下一步吃了它";
 "habit.note.exposed" = "走完这步，%@ 上的子没人守";
-"habit.note.hanging" = "你自己的 %@ 当时就没人守";
 
 /* ---------------------------------------------------------------- 说了干什么，棋盘认不认 */
 
@@ -315,7 +308,6 @@
 "game.blackFirst" = "黑先走";
 "game.more" = "更多，先走的是%@";
 "game.promotion" = "升变成什么？";
-"game.practice" = "练习";
 "game.noEngine" = "没有引擎";
 "game.toPlay" = "该走了";
 "game.inCheck" = "被将";
@@ -331,17 +323,6 @@
 "game.settings.collapse" = "收起%@的设置";
 "game.who" = "谁走";
 "game.perMove" = "每步";
-"game.worst" = "这局最贵的三步";
-"game.worst.quiet" = "最该看的三步";
-"game.changed" = "这步改了什么";
-"game.loose" = "红圈：被吃的子比守的多";
-"game.wrongPiece" = "照片认错了棋子？";
-"game.alternatives" = "其它选择";
-"game.over" = "这局走完了。曲线和每一步的得失都在下面。";
-"game.over.quiet" = "这局走完了。打开「引擎意见」，它会把每一步重新打一遍分。";
-"game.quiet" = "练习中，引擎不给意见。想看它怎么说，打开上面的「引擎意见」。";
-"game.selfPlaying" = "双方都是引擎，程序自己走下去；翻回上一步就停";
-"game.opinion" = "引擎意见";
 "game.flip" = "翻转棋盘";
 
 /* ---------------------------------------------------------------- 记录条 */
@@ -358,54 +339,11 @@
 
 /* ---------------------------------------------------------------- 一步一步问自己 */
 
-"study.computing" = "正在算这一步…";
-"study.why" = "你走 %@。为什么？";
-"study.withdraw" = "收回";
 "study.commit" = "就是这步";
-"study.notReady" = "引擎还没准备好，没法给这步打分。";
-"study.ask" = "轮到%@走。你会走哪一步？";
-"study.ask.explained" = "直接在棋盘上走一步。走完才会告诉你结果。";
-"study.place" = "这局得失第 %1$d 大的一步：实战走的 %2$@，%3$@ 分。";
-"study.place.practising" = "这是这局得失最大的第 %d 步。实战在这儿走的那步，引擎重算下来不值。";
-"study.reason.unclear" = "说不清 —— 记下来了。";
-"study.reason.because" = "因为 %@。";
-"study.reason.where" = "%@ 哪里？点棋盘上的格子。";
-"study.reason.prompt" = "先说说这步是干什么的。";
-"study.headline.both" = "走对了，理由也站得住。";
-"study.headline.reasonOnly" = "理由是对的，这步棋没做到。";
-"study.headline.moveOnly" = "这步棋没问题，但理由不成立。";
-"study.headline.neither" = "棋和理由都没站住。";
-"study.headline.fine" = "这步棋没问题。";
-"study.headline.poor" = "这步棋没站住。";
-"verdict.held" = "说对了";
-"verdict.failed" = "没做到";
-"verdict.noClaim" = "没说";
-"study.verdict.noOpinion" = "引擎没给出意见，只能跟实战比。";
-"study.verdict.best" = "就是引擎的第一选择。";
-"study.verdict.better" = "比引擎的还好 %@。";
-"study.verdict.pass" = "过关：跟引擎差 %@。";
-"study.verdict.worse" = "%1$@：比引擎差 %2$@。";
-"study.yours" = "你走";
-"study.engine" = "引擎";
-"study.played" = "实战";
-"study.keep" = "改走这步";
-"study.again" = "再来一次";
-"study.next" = "下一题";
-"study.depth.explained" = "三步都按深度 %d 算，所以彼此可以比。";
 
 /* ---------------------------------------------------------------- 复盘 */
 
-"report.running" = "正在用深度 %1$d 重算：%2$d/%3$d";
-"report.unscored" = "这局还没打过分。";
-"report.score" = "打分";
-"report.ply" = "第 %1$d 回合 %2$@ %3$@";
-"report.start" = "起始局面";
-
 /* ---------------------------------------------------------------- 一局接一局 */
-
-"series.previous" = "上一局";
-"series.next" = "下一局";
-"series.place" = "第 %1$d/%2$d 局";
 
 /* ---------------------------------------------------------------- 关于 */
 

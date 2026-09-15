@@ -1,3 +1,101 @@
+/// What a move is **for**: one verb and one target Square, read out of the move by the rules
+/// code (docs/adr/0031).
+///
+/// Nobody declares one any more — the player is never asked, and this is never written to a
+/// file. What survives is the vocabulary, because the app still has to say what a move does:
+/// the tactics card's sentence, 耕棋's hint layers and a drill's feedback are all written in
+/// these words.
+///
+/// The shape is still the point. A verb with a target can be drawn on the board — an arrow and
+/// a ring — and can be told false by the rules code; freeform words can be neither, which is
+/// why there is no free text here and never will be. The rule that produced the list is worth
+/// keeping if it is ever edited: **a verb that cannot be wrong does not get a slot.**
+public enum Intent: Hashable, Sendable {
+    /// A claim about a Square, which the rules code can agree or disagree with.
+    case claim(Verb, Square)
+    /// 说不清 — no reason at all.
+    ///
+    /// Recorded rather than skipped. A Game with twenty-five of these is itself the whole
+    /// diagnosis, and it is a diagnosis no engine could have produced: an engine can say a move
+    /// was bad, and only the player can say they had no idea why they played it.
+    case unclear
+
+    /// The seven things a move can be *for*. Each one claims something that can turn out false.
+    ///
+    /// 将 is not here, and its absence is the rule: the app already knows whether a move gives
+    /// check, so declaring it could never be wrong and so teaches nothing. 吃 is here because its
+    /// claim is not "this is a capture" — that is also unfalsifiable — but "I win material here",
+    /// which the exchange value can call false.
+    public enum Verb: String, Hashable, Sendable, CaseIterable {
+        /// 吃 — I win material on that square.
+        case take
+        /// 换 — this is a trade that does not lose.
+        case trade
+        /// 攻 — I now threaten that piece and it cannot hold: outnumbered, or taking it
+        /// would win material — a pawn looking at a queen.
+        case attack
+        /// 护 — that piece or square now has one more defender.
+        case defend = "def"
+        /// 躲 — this piece was hanging, and on that square it is not.
+        case flee
+        /// 挡 — I interposed on a line by stepping onto that square.
+        case block
+        /// 占 — I hold that square more than the opponent does.
+        case hold
+
+        /// What it is called on screen. One character each, because a row of eight has to fit on
+        /// a phone beside the board rather than under it.
+        public var label: String {
+            switch self {
+            case .take: localized("verb.take")
+            case .trade: localized("verb.trade")
+            case .attack: localized("verb.attack")
+            case .defend: localized("verb.defend")
+            case .flee: localized("verb.flee")
+            case .block: localized("verb.block")
+            case .hold: localized("verb.hold")
+            }
+        }
+    }
+
+    /// 说不清's own name on screen, so the eighth button is written from the same place as the
+    /// other seven.
+    public static var unclearLabel: String { localized("intent.unclear") }
+
+    public var verb: Verb? {
+        switch self {
+        case .claim(let verb, _): verb
+        case .unclear: nil
+        }
+    }
+
+    public var target: Square? {
+        switch self {
+        case .claim(_, let square): square
+        case .unclear: nil
+        }
+    }
+
+    public var label: String {
+        switch self {
+        case .claim(let verb, let square): "\(verb.label) \(square)"
+        case .unclear: Self.unclearLabel
+        }
+    }
+
+    /// The coarse reason a move is played, for 这步的要害: 进攻 or 防御, and 交换 / 占位 when
+    /// neither fits. The seven verbs stay the checkable claim; this is how they are said as a goal.
+    public var goal: String {
+        switch self {
+        case .claim(.take, _), .claim(.attack, _): "进攻"
+        case .claim(.defend, _), .claim(.flee, _), .claim(.block, _): "防御"
+        case .claim(.trade, _): "交换"
+        case .claim(.hold, _): "占位"
+        case .unclear: Self.unclearLabel
+        }
+    }
+}
+
 /// What one move of a Line is for, read out of the move rather than declared by anybody.
 public struct MoveReading: Hashable, Sendable {
     /// Where in the Line this move is, counting from one.
@@ -370,5 +468,180 @@ extension Rules {
             }
             return found
         }
+    }
+}
+
+/// Whether an Intent is actually true of the position a move made, and what the board says when
+/// it is not.
+///
+/// Nobody declares an Intent any more (docs/adr/0031), so this is no longer a verdict on anybody.
+/// It is the predicate the *reading* is built out of: `Intent.read` proposes candidate claims in
+/// the order they would be worth saying and keeps the first one this agrees with, which is what
+/// makes 「占 d5」 a fact about the board rather than a label somebody chose. The note is the other
+/// half of why it survived the drills: 「f7 的守子没有增加」 is a sentence a player can go and look
+/// at, and it is the sentence 耕棋 and a practice answer both need.
+public struct IntentCheck: Hashable, Sendable {
+    public enum Verdict: Hashable, Sendable {
+        /// The claim is true of the position the move made.
+        case held
+        /// The claim is not true. `note` says what the board says instead.
+        case failed
+    }
+
+    public let verdict: Verdict
+    /// One short sentence about the board, in the same terms the claim was made in. The teaching
+    /// is here: "f7 的守子没有增加" is a fact a player can go and look at, where "错" is not.
+    public let note: String?
+
+    public var held: Bool { verdict == .held }
+}
+
+extension Intent {
+    /// Checks this Intent against the position `move` makes.
+    ///
+    /// Nil when there is nothing to check or it could not be checked at all — 说不清, an unreadable
+    /// position, an illegal move. Not `.failed`: an app that cannot tell has no business saying
+    /// anything was wrong.
+    public func check(_ move: Move, in before: Game) -> IntentCheck? {
+        // 说不清 claims nothing, so there is nothing here to be true or false — and nil rather
+        // than a third verdict, because a caller that has to handle "no answer" already has to
+        // handle the unreadable position below.
+        guard case .claim(let verb, let target) = self else { return nil }
+
+        let mover = before.state.sideToMove
+        let opponent = mover.opposite
+        var after = before
+        guard after.apply(move),
+            let beforeControl = Rules.control(startFEN: before.startFEN, moves: before.uciMoves),
+            let afterControl = Rules.control(startFEN: after.startFEN, moves: after.uciMoves),
+            let beforePieces = BoardRenderer.placement(before.state.fen),
+            let afterPieces = BoardRenderer.placement(after.state.fen)
+        else { return nil }
+
+        func held(_ note: String) -> IntentCheck { IntentCheck(verdict: .held, note: note) }
+        func failed(_ note: String) -> IntentCheck { IntentCheck(verdict: .failed, note: note) }
+
+        /// Where the piece was actually taken from — not the destination, for en passant.
+        let captured =
+            move.isEnPassant ? Square(file: move.to.file, rank: move.from.rank) : move.to
+        let exchange = Rules.exchangeValue(
+            startFEN: before.startFEN, moves: before.uciMoves, uci: move.uci
+        )
+
+        switch verb {
+        // 吃 — "I win material here". Not "this is a capture", which no player could get wrong
+        // and which would therefore teach nothing.
+        case .take:
+            guard move.isCapture, captured == target else {
+                return failed(localized("check.take.notHere", "\(target)"))
+            }
+            guard let exchange else { return nil }
+            return exchange == .winning
+                ? held(localized("check.take.won", "\(target)"))
+                : failed(localized("check.take.notWorth", "\(target)"))
+
+        // 换 — "a trade that does not lose". The pair 吃/换 is the one players confuse most, and
+        // the exchange value is exactly what tells them apart.
+        case .trade:
+            guard move.isCapture, captured == target else {
+                return failed(localized("check.trade.notHere", "\(target)"))
+            }
+            guard let exchange else { return nil }
+            return exchange == .losing
+                ? failed(localized("check.trade.losing", "\(target)"))
+                : held(localized("check.trade.affordable", "\(target)"))
+
+        // 攻 — "I now threaten that piece, and it cannot hold". Two halves, both falsifiable:
+        // the threat has to be new, and the piece cannot hold — outnumbered, or taking it
+        // would win material. A pawn looking at a queen is one of each and still a threat.
+        case .attack:
+            guard let piece = afterPieces[target], piece.colour == opponent else {
+                return failed(localized("check.attack.noPiece", "\(target)"))
+            }
+            let now = afterControl.attackers(of: target, by: mover)
+            let was = beforeControl.attackers(of: target, by: mover)
+            guard now > was else {
+                return failed(localized("check.attack.noNewThreat", "\(target)"))
+            }
+            guard after.cannotHold(target, against: mover, control: afterControl) else {
+                return failed(
+                    localized(
+                        "check.attack.defended", "\(target)", now,
+                        afterControl.attackers(of: target, by: opponent)
+                    )
+                )
+            }
+            return held(localized("check.attack.held", "\(target)"))
+
+        // 护 — "it now has one more defender". Purely a statement about the control map, which is
+        // why it is the easiest of the eight to check and the easiest to be wrong about.
+        case .defend:
+            let now = afterControl.attackers(of: target, by: mover)
+            let was = beforeControl.attackers(of: target, by: mover)
+            return now > was
+                ? held(localized("check.defend.held", "\(target)", was, now))
+                : failed(localized("check.defend.unchanged", "\(target)", was))
+
+        // 躲 — "this piece was hanging, and where it went it is not". The target is the attacker
+        // it ran from, so the claim names both ends of it.
+        case .flee:
+            guard let attacker = beforePieces[target], attacker.colour == opponent else {
+                return failed(localized("check.flee.noAttacker", "\(target)"))
+            }
+            let attacked = beforeControl.attackers(of: move.from, by: opponent)
+            let defended = beforeControl.attackers(of: move.from, by: mover)
+            guard attacked > defended else {
+                return failed(
+                    localized("check.flee.notHanging", "\(move.from)", attacked, defended)
+                )
+            }
+            guard let exchange else { return nil }
+            return exchange == .losing
+                ? failed(localized("check.flee.stillTaken", "\(move.to)"))
+                : held(localized("check.flee.held", "\(move.from)", "\(target)"))
+
+        // 挡 — "I interposed on a line". Geometry and nothing else: something of the mover's,
+        // in line with the square stepped onto, is attacked less than it was.
+        case .block:
+            guard move.to == target else {
+                return failed(localized("check.block.notThere", "\(target)"))
+            }
+            let relieved = (0..<64).compactMap(Square.init(index:)).first { square in
+                square != target
+                    && afterPieces[square]?.colour == mover
+                    && Self.inLine(target, square)
+                    && afterControl.attackers(of: square, by: opponent)
+                        < beforeControl.attackers(of: square, by: opponent)
+            }
+            guard let relieved else {
+                return failed(localized("check.block.nothing", "\(target)"))
+            }
+            return held(localized("check.block.held", "\(target)", "\(relieved)"))
+
+        // 占 — "I hold this square more than the opponent does". Before against after, so holding
+        // a square you already held is not a claim.
+        case .hold:
+            guard afterControl.holder(of: target) == mover else {
+                let mine = afterControl.attackers(of: target, by: mover)
+                let theirs = afterControl.attackers(of: target, by: opponent)
+                return failed(localized("check.hold.notYours", "\(target)", mine, theirs))
+            }
+            let now =
+                afterControl.attackers(of: target, by: mover)
+                - afterControl.attackers(of: target, by: opponent)
+            let was =
+                beforeControl.attackers(of: target, by: mover)
+                - beforeControl.attackers(of: target, by: opponent)
+            return now > was
+                ? held(localized("check.hold.held", "\(target)", was, now))
+                : failed(localized("check.hold.unchanged", "\(target)"))
+        }
+    }
+
+    /// Whether two squares share a rank, a file or a diagonal — the three ways a piece can stand
+    /// between two others.
+    private static func inLine(_ one: Square, _ other: Square) -> Bool {
+        one.file == other.file || one.rank == other.rank
+            || abs(one.file - other.file) == abs(one.rank - other.rank)
     }
 }

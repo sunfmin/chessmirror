@@ -2,30 +2,22 @@ import Foundation
 
 /// 老毛病 — one thing the player keeps doing, and every time they did it.
 ///
-/// Five modes, and the list is closed on purpose. A mode earns its place by being a **board
-/// fact or a recorded claim** — something a player can be shown rather than told — so there is
-/// no "positional understanding" mode and no "opening knowledge" mode, because neither could be
-/// pointed at on a board (docs/adr/0018).
+/// Two modes, and the list is closed on purpose. A mode earns its place by being a **board
+/// fact** — something a player can be shown rather than told — so there is no "positional
+/// understanding" mode and no "opening knowledge" mode, because neither could be pointed at on a
+/// board. The three that were made of what the player *said* went with the declaration itself
+/// (docs/adr/0031).
 public struct Habit: Identifiable, Hashable, Sendable {
     public enum Mode: String, Hashable, Sendable, CaseIterable {
         /// You left one of your own pieces unguarded, and got away with it.
         case giveaway
         /// You left one unguarded and the opponent's very next move took it.
         case missedReply
-        /// You said what the move was for, and the board says otherwise.
-        case untrueReason
-        /// 说不清 — the move was made and no reason came.
-        case noReason
-        /// You were attacking or taking while something of yours was already hanging.
-        case attackWhileHanging
 
         public var label: String {
             switch self {
             case .giveaway: localized("habit.giveaway")
             case .missedReply: localized("habit.missedReply")
-            case .untrueReason: localized("habit.untrueReason")
-            case .noReason: localized("habit.noReason")
-            case .attackWhileHanging: localized("habit.attackWhileHanging")
             }
         }
 
@@ -35,9 +27,6 @@ public struct Habit: Identifiable, Hashable, Sendable {
             switch self {
             case .giveaway: localized("habit.giveaway.explained")
             case .missedReply: localized("habit.missedReply.explained")
-            case .untrueReason: localized("habit.untrueReason.explained")
-            case .noReason: localized("habit.noReason.explained")
-            case .attackWhileHanging: localized("habit.attackWhileHanging.explained")
             }
         }
 
@@ -47,9 +36,6 @@ public struct Habit: Identifiable, Hashable, Sendable {
             switch self {
             case .missedReply: 0
             case .giveaway: 1
-            case .untrueReason: 2
-            case .attackWhileHanging: 3
-            case .noReason: 4
             }
         }
     }
@@ -198,7 +184,7 @@ public struct Habits: Hashable, Sendable {
     static func occurrences(
         in pgn: PGN, at url: URL, titled title: String
     ) -> [(Habit.Mode, Habit.Occurrence)] {
-        board(in: pgn, at: url, titled: title) + declared(in: pgn, at: url, titled: title)
+        board(in: pgn, at: url, titled: title)
     }
 
     /// The modes the board can prove, over the game's ranked-worst moves.
@@ -256,54 +242,6 @@ public struct Habits: Hashable, Sendable {
         return out
     }
 
-    /// The modes made of what the player said. Every ply that carries an Intent, whatever colour
-    /// moved it: an Intent is in the file only because the person put it there, so there is no
-    /// question of whose move it was.
-    private static func declared(
-        in pgn: PGN, at url: URL, titled title: String
-    ) -> [(Habit.Mode, Habit.Occurrence)] {
-        let game = pgn.game
-        var out: [(Habit.Mode, Habit.Occurrence)] = []
-        for ply in 1...max(game.plies.count, 1) where game.plies.indices.contains(ply - 1) {
-            guard let intent = game.intent(atPly: ply) else { continue }
-            let mover = game.mover(ofPly: ply)
-
-            func occurrence(_ note: String?) -> Habit.Occurrence {
-                Habit.Occurrence(
-                    game: url,
-                    title: title,
-                    ply: ply,
-                    moveNumber: game.moveNumber(ofPly: ply),
-                    mover: mover,
-                    san: game.plies[ply - 1].san,
-                    note: note
-                )
-            }
-
-            guard case .claim(let verb, _) = intent else {
-                out.append((.noReason, occurrence(nil)))
-                continue
-            }
-            guard let before = game.rewound(to: ply - 1),
-                let move = before.state.move(matching: game.plies[ply - 1].uci)
-            else { continue }
-
-            if let check = intent.check(move, in: before), check.verdict == .failed {
-                out.append((.untrueReason, occurrence(check.note)))
-            }
-            // Attacking with something of your own already hanging — read off the position the
-            // move was made in, so it is the state the player was in and not one they caused.
-            if verb == .attack || verb == .take,
-                let hanging = before.loosePieces(of: mover), !hanging.isEmpty
-            {
-                let where_ = hanging.sorted { $0.index < $1.index }.listed
-                out.append(
-                    (.attackWhileHanging, occurrence(localized("habit.note.hanging", where_)))
-                )
-            }
-        }
-        return out
-    }
 }
 
 extension PGN {

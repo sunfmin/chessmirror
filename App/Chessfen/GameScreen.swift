@@ -856,26 +856,6 @@ struct GameScreen: View {
         .accessibilityHint(localized(forked ? "record.branch" : "record.jump"))
     }
 
-    // ------------------------------------------------------------------ the reading
-
-    // ------------------------------------------------------------------ the study
-
-    private static func intentVerdictLabel(_ verdict: IntentCheck.Verdict) -> String {
-        switch verdict {
-        case .held: localized("verdict.held")
-        case .failed: localized("verdict.failed")
-        case .noClaim: localized("verdict.noClaim")
-        }
-    }
-
-    private static func intentVerdictColour(_ verdict: IntentCheck.Verdict) -> Color {
-        switch verdict {
-        case .held: Palette.analysis
-        case .failed: Palette.alarm
-        case .noClaim: Palette.inkSoft
-        }
-    }
-
     /// What a ranked move cost its mover, in pawns. A move that *gained* is ranked too and reads
     /// as a gain rather than a negative loss — "−0.30 丢分" is a sentence nobody parses.
     private static func cost(_ lost: Int) -> String {

@@ -41,19 +41,6 @@ public struct Game: Hashable, Sendable {
         /// move in here rather than into the bin; PGN has written them in brackets since 1994
         /// and this is the same thing.
         public var variations: [[Ply]] = []
-        /// What the player said this move was *for*, if they were asked (docs/adr/0018).
-        ///
-        /// Written by the player and by nobody else — no engine can produce one, which is the
-        /// reason it is worth storing. Nil means nobody was asked; `.unclear` means somebody was
-        /// asked and had no reason, and the difference between those two is the whole diagnosis.
-        public var intent: Intent?
-        /// How many Ply that Intent is a claim about, when it is a claim about more than this one.
-        ///
-        /// Nil is the ordinary case: the reason for this move. A number means the Intent belongs to
-        /// the whole line this Ply starts — a 五步计划 — and reading it as the reason for the first
-        /// move would be reading a sentence nobody said (docs/adr/0017, 0021). Capped at
-        /// `planLimit`, because a claim about a longer line cannot be told false.
-        public var intentSpan: Int?
         /// Whether this ply belongs to the Game's trunk — the line that was played, not a line
         /// that was tried from an earlier Ply and left hanging. The record colours the two
         /// differently, so a branch cannot be mistaken for the game.
@@ -66,8 +53,6 @@ public struct Game: Hashable, Sendable {
             importedEvaluation: Score? = nil,
             line: [String] = [],
             variations: [[Ply]] = [],
-            intent: Intent? = nil,
-            intentSpan: Int? = nil,
             isTrunk: Bool = true
         ) {
             self.uci = uci
@@ -76,18 +61,8 @@ public struct Game: Hashable, Sendable {
             self.importedEvaluation = importedEvaluation
             self.line = line
             self.variations = variations
-            self.intent = intent
-            self.intentSpan = intentSpan
             self.isTrunk = isTrunk
         }
-
-        /// The longest line one Intent is allowed to be a claim about.
-        ///
-        /// Five, and the number is about what can be checked rather than about how far people see:
-        /// past about five Ply the opponent has had enough replies that no claim about the position
-        /// is honestly falsifiable any more, and an Intent that cannot be told false is not one
-        /// (docs/adr/0017, 0018).
-        public static let planLimit = 5
 
         /// How many Ply of a Review's Line are kept.
         ///
@@ -107,7 +82,6 @@ public struct Game: Hashable, Sendable {
             importedEvaluation = other.importedEvaluation
             line = other.line
             variations = other.variations
-            intent = other.intent
             isTrunk = other.isTrunk
         }
     }
@@ -240,29 +214,6 @@ public struct Game: Hashable, Sendable {
             copy.isTrunk = false
             return copy
         })
-    }
-
-    /// Records a Guess, and what the player said it was for, as an alternative to the move at
-    /// `ply` — counting from zero, like `addVariation`.
-    ///
-    /// This is where a Drill's answer goes when it is not the move that was played. It belongs in
-    /// a Variation and not on the played Ply: writing "the reason for Nf3" against a game where
-    /// the player proposed d4 would put a sentence in the file that nobody ever said.
-    ///
-    /// Answering the same question twice with the same move updates that alternative rather than
-    /// leaving two of them, because a file full of duplicate one-move brackets is how the record
-    /// stops being readable.
-    @discardableResult
-    public mutating func recordGuess(
-        uci: String, san: String, intent: Intent?, atPly ply: Int
-    ) -> Bool {
-        guard plies.indices.contains(ply) else { return false }
-        if let existing = plies[ply].variations.firstIndex(where: { $0.first?.uci == uci }) {
-            plies[ply].variations[existing][0].intent = intent
-            return true
-        }
-        plies[ply].variations.append([Ply(uci: uci, san: san, intent: intent, isTrunk: false)])
-        return true
     }
 
     /// The lines that were played from the same position as the move at `ply`.
@@ -462,74 +413,6 @@ public struct Game: Hashable, Sendable {
         plies[ply].line = Array(line.prefix(Ply.lineLimit))
     }
 
-    /// Declares what the move at `ply` was for, counting from one — or takes the declaration
-    /// back, with nil.
-    ///
-    /// Counting from one rather than from zero, unlike the two setters above, because an Intent
-    /// belongs to a move somebody played: there is no Intent for the position a Game started
-    /// from, so there is no ply 0 to address.
-    @discardableResult
-    public mutating func setIntent(_ intent: Intent?, atPly ply: Int) -> Bool {
-        guard plies.indices.contains(ply - 1) else { return false }
-        plies[ply - 1].intent = intent
-        return true
-    }
-
-    /// What the player said the move at `ply` was for, counting from one.
-    public func intent(atPly ply: Int) -> Intent? {
-        plies.indices.contains(ply - 1) ? plies[ply - 1].intent : nil
-    }
-
-    /// Records how far the Intent at `ply` reaches, counting from one. Used when reading a PGN.
-    @discardableResult
-    public mutating func setIntentSpan(_ span: Int?, atPly ply: Int) -> Bool {
-        guard plies.indices.contains(ply - 1) else { return false }
-        plies[ply - 1].intentSpan = span.map { min(max(1, $0), Ply.planLimit) }
-        return true
-    }
-
-    /// Records a line of the player's own, with one Intent over the whole of it.
-    ///
-    /// It goes in as a Variation, because that is what it is — a line played from this position
-    /// instead of the move that was played — and the Game and the PGN already know how to hold one.
-    /// What is new is only that the Intent on its first Ply carries a span, so the claim reads as
-    /// being about the plan and not about its first move (docs/adr/0017).
-    ///
-    /// Refused rather than truncated when the line is longer than `Ply.planLimit`: a plan that
-    /// cannot be checked is a wish, and silently keeping the first five moves of somebody's
-    /// seven-move idea would be judging a claim they did not make.
-    @discardableResult
-    public mutating func recordPlan(
-        _ line: [(uci: String, san: String)], intent: Intent, atPly ply: Int
-    ) -> Bool {
-        guard plies.indices.contains(ply), !line.isEmpty, line.count <= Ply.planLimit
-        else { return false }
-        var written = line.map { Ply(uci: $0.uci, san: $0.san, isTrunk: false) }
-        written[0].intent = intent
-        written[0].intentSpan = line.count
-        // The same rule `recordGuess` follows: answering the same question twice with the same
-        // first move replaces that alternative rather than leaving two of them.
-        if let existing = plies[ply].variations.firstIndex(where: {
-            $0.first?.uci == written[0].uci && $0.first?.intentSpan != nil
-        }) {
-            plies[ply].variations[existing] = written
-        } else {
-            plies[ply].variations.append(written)
-        }
-        return true
-    }
-
-    /// The plans recorded against the move at `ply` — the Variations whose first Ply carries an
-    /// Intent about the whole line rather than about itself.
-    public func plans(atPly ply: Int) -> [Plan] {
-        variations(atPly: ply).compactMap { variation in
-            guard let first = variation.first, let intent = first.intent,
-                let span = first.intentSpan
-            else { return nil }
-            return Plan(line: Array(variation.prefix(span)), intent: intent)
-        }
-    }
-
     /// Set from the file's `[ReviewDepth]` tag as it is read, so the tag has exactly one home.
     mutating func setReviewDepth(_ depth: Int?) {
         reviewDepth = depth
@@ -546,20 +429,3 @@ public struct Game: Hashable, Sendable {
     }
 }
 
-/// A line of the player's own with one Intent over the whole of it.
-///
-/// The unbuilt consequence of docs/adr/0017, finally built. An Intent used to attach to a single
-/// Ply, which meant a plan could only ever be declared one move at a time — and 「我要占住 d5」 is
-/// not a claim about one move. It is a claim about five, and it is checkable exactly because it is
-/// capped at five: past that the opponent has had enough replies that no claim about the position
-/// can be told false, and a verb that cannot be wrong does not get one of the eight slots
-/// (docs/adr/0018).
-public struct Plan: Hashable, Sendable {
-    /// The moves of the plan, in order. At most `Game.Ply.planLimit` of them.
-    public let line: [Game.Ply]
-    /// The one claim, about the whole line.
-    public let intent: Intent
-
-    public var sans: [String] { line.map(\.san) }
-    public var steps: Int { line.count }
-}

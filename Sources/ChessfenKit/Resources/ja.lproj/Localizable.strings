@@ -85,15 +85,9 @@
 
 "habit.giveaway" = "駒を渡す";
 "habit.missedReply" = "相手の応手を読まない";
-"habit.untrueReason" = "理由が成り立たない";
-"habit.noReason" = "理由なし";
-"habit.attackWhileHanging" = "攻めるだけ";
 
 "habit.giveaway.explained" = "この手のあと、自分の駒に守りがなかった。今回は取られなかった。";
 "habit.missedReply.explained" = "この手のあと自分の駒に守りがなく、相手に次の手で取られた。";
-"habit.untrueReason.explained" = "何のための手か言ったが、盤の上では起きていない。";
-"habit.noReason.explained" = "指したが、理由を言えなかった。";
-"habit.attackWhileHanging.explained" = "自分の駒が浮いたまま、攻めたり取ったりしている。";
 
 "habit.excluded.unreviewed" = "まだ採点していない";
 "habit.excluded.unreadable" = "読み取れない";
@@ -101,7 +95,6 @@
 
 "habit.note.taken" = "%@ の駒に守りがなく、相手に次の手で取られた";
 "habit.note.exposed" = "この手のあと、%@ の駒に守りがない";
-"habit.note.hanging" = "自分の %@ がそのとき浮いていた";
 
 "check.take.notHere" = "この手は %@ で何も取っていない";
 "check.take.won" = "%@ で取って駒得になった";
@@ -275,7 +268,6 @@
 "game.blackFirst" = "黒から指す";
 "game.more" = "その他。先手は %@";
 "game.promotion" = "何に成る？";
-"game.practice" = "練習";
 "game.noEngine" = "エンジンなし";
 "game.toPlay" = "手番";
 "game.inCheck" = "チェック";
@@ -291,17 +283,6 @@
 "game.settings.collapse" = "%@ の設定を閉じる";
 "game.who" = "誰が指す";
 "game.perMove" = "一手あたり";
-"game.worst" = "この対局で最も高くついた3手";
-"game.worst.quiet" = "見直すべき3手";
-"game.changed" = "この手が変えたもの";
-"game.loose" = "赤い丸：当たりが守りより多い";
-"game.wrongPiece" = "写真が駒を読み違えた？";
-"game.alternatives" = "ほかの手";
-"game.over" = "この対局は終わり。曲線と各手の損得は下にある。";
-"game.over.quiet" = "この対局は終わり。「エンジンの意見」を入れれば、全手を採点し直す。";
-"game.quiet" = "練習中。エンジンは意見を出さない。上の「エンジンの意見」を入れれば聞ける。";
-"game.selfPlaying" = "両方エンジン。そのまま指し続ける。一手戻せば止まる";
-"game.opinion" = "エンジンの意見";
 "game.flip" = "盤を反転";
 
 "record.previous" = "前の手";
@@ -314,50 +295,7 @@
 "record.startHere" = "ここから指す";
 "record.opening" = "開始";
 
-"study.computing" = "この手を計算中…";
-"study.why" = "%@ と指す。なぜ？";
-"study.withdraw" = "取り消す";
 "study.commit" = "これでいく";
-"study.notReady" = "エンジンの準備ができておらず、この手を採点できない。";
-"study.ask" = "%@ の手番。あなたならどう指す？";
-"study.ask.explained" = "そのまま盤の上で指して。指したあとに結果が出る。";
-"study.place" = "この対局で高くついた手の第 %1$d 位：実戦は %2$@、%3$@ ポーン。";
-"study.place.practising" = "この対局で最も高くついた第 %d 手。ここで実戦に指された手は、エンジンが読み直すと割に合わない。";
-"study.reason.unclear" = "わからない — 記録した。";
-"study.reason.because" = "理由：%@。";
-"study.reason.where" = "%@ どこ？盤のマスをタップ。";
-"study.reason.prompt" = "まず、この手が何のためか言って。";
-"study.headline.both" = "手も正しく、理由も通っている。";
-"study.headline.reasonOnly" = "理由は正しいが、この手では実現していない。";
-"study.headline.moveOnly" = "手は悪くないが、理由が成り立たない。";
-"study.headline.neither" = "手も理由も通らなかった。";
-"study.headline.fine" = "この手は悪くない。";
-"study.headline.poor" = "この手は通らない。";
-"verdict.held" = "その通り";
-"verdict.failed" = "できていない";
-"verdict.noClaim" = "言っていない";
-"study.verdict.noOpinion" = "エンジンの意見がないので、実戦の手とだけ比べられる。";
-"study.verdict.best" = "エンジンの第一候補そのもの。";
-"study.verdict.better" = "エンジンより %@ 良い。";
-"study.verdict.pass" = "合格：エンジンとの差は %@。";
-"study.verdict.worse" = "%1$@：エンジンより %2$@ 悪い。";
-"study.yours" = "あなた";
-"study.engine" = "エンジン";
-"study.played" = "実戦";
-"study.keep" = "この手に差し替える";
-"study.again" = "もう一度";
-"study.next" = "次の問題";
-"study.depth.explained" = "3手とも深さ %d で計算しているので、そのまま比べられる。";
-
-"report.running" = "深さ %1$d で計算し直している：%2$d/%3$d";
-"report.unscored" = "この対局はまだ採点していない。";
-"report.score" = "採点する";
-"report.ply" = "%1$d 手目 %2$@ %3$@";
-"report.start" = "開始局面";
-
-"series.previous" = "前の一局";
-"series.next" = "次の一局";
-"series.place" = "%2$d 局中 %1$d 局目";
 
 "about" = "このアプリについて";
 "about.what" = "盤を撮って、局面を読んで、そのまま指し継ぐ。認識もエンジンもこの端末の中で動き、対局は自分の iCloud に入る。ネットに出るのは、リンクから棋譜を取り込むときだけ。";

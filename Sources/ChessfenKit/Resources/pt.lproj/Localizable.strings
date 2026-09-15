@@ -89,15 +89,9 @@
 
 "habit.giveaway" = "Dar peças";
 "habit.missedReply" = "Não calcular a resposta";
-"habit.untrueReason" = "Motivo que não se sustenta";
-"habit.noReason" = "Sem motivo";
-"habit.attackWhileHanging" = "Atacar com peça pendurada";
 
 "habit.giveaway.explained" = "Depois deste lance ficaste com uma peça sem defesa — desta vez o adversário não a levou.";
 "habit.missedReply.explained" = "Depois deste lance ficaste com uma peça sem defesa, e o adversário levou-a no lance seguinte.";
-"habit.untrueReason.explained" = "Disseste para que servia o lance, e no tabuleiro aconteceu outra coisa.";
-"habit.noReason.explained" = "Jogaste, sem conseguir dizer porquê.";
-"habit.attackWhileHanging.explained" = "Estavas a atacar e a capturar com uma peça tua já pendurada.";
 
 "habit.excluded.unreviewed" = "ainda sem pontuação";
 "habit.excluded.unreadable" = "ilegíveis";
@@ -105,7 +99,6 @@
 
 "habit.note.taken" = "nada defendia %@, e o adversário levou-a no lance seguinte";
 "habit.note.exposed" = "depois deste lance, nada defendia %@";
-"habit.note.hanging" = "a tua própria peça em %@ estava então sem defesa";
 
 "check.take.notHere" = "este lance não captura nada em %@";
 "check.take.won" = "capturar em %@ ganhou material";
@@ -292,7 +285,6 @@
 "game.blackFirst" = "Começam as pretas";
 "game.more" = "Mais; começam as %@";
 "game.promotion" = "Promover a quê?";
-"game.practice" = "Prática";
 "game.noEngine" = "Sem motor";
 "game.toPlay" = "É a vez";
 "game.inCheck" = "Em xeque";
@@ -308,17 +300,6 @@
 "game.settings.collapse" = "Fechar as definições das %@";
 "game.who" = "Quem joga";
 "game.perMove" = "Por lance";
-"game.worst" = "Os três lances mais caros";
-"game.worst.quiet" = "Os três a rever";
-"game.changed" = "O que este lance mudou";
-"game.loose" = "Círculo vermelho: mais atacada do que defendida";
-"game.wrongPiece" = "A foto enganou-se numa peça?";
-"game.alternatives" = "Outros lances";
-"game.over" = "A partida acabou. A curva e o custo de cada lance estão em baixo.";
-"game.over.quiet" = "A partida acabou. Liga “Opinião do motor” e ele pontua todos os lances.";
-"game.quiet" = "Prática: o motor guarda a opinião para ele. Liga “Opinião do motor” em cima para a ouvir.";
-"game.selfPlaying" = "Os dois lados são o motor; ele joga sozinho. Recua um lance para o parar";
-"game.opinion" = "Opinião do motor";
 "game.flip" = "Virar o tabuleiro";
 
 "record.previous" = "Lance anterior";
@@ -331,50 +312,7 @@
 "record.startHere" = "Jogar a partir daqui";
 "record.opening" = "Início";
 
-"study.computing" = "A calcular este lance…";
-"study.why" = "Jogas %@. Porquê?";
-"study.withdraw" = "Retirar";
 "study.commit" = "É este o meu lance";
-"study.notReady" = "O motor não está pronto, por isso este lance não pode ser pontuado.";
-"study.ask" = "Jogam as %@. O que jogarias?";
-"study.ask.explained" = "Joga directamente no tabuleiro. O resultado aparece depois de jogares.";
-"study.place" = "Número %1$d entre os lances mais caros da partida: jogou-se %2$@, %3$@ peões.";
-"study.place.practising" = "Número %d entre os lances mais caros da partida. O que se jogou aqui não se sustenta quando o motor recalcula.";
-"study.reason.unclear" = "Não sei dizer — ficou registado.";
-"study.reason.because" = "Porque: %@.";
-"study.reason.where" = "%@ onde? Toca numa casa do tabuleiro.";
-"study.reason.prompt" = "Diz primeiro para que serve este lance.";
-"study.headline.both" = "Bom lance, e o motivo sustenta-se.";
-"study.headline.reasonOnly" = "O motivo está certo; este lance não o cumpre.";
-"study.headline.moveOnly" = "O lance serve, mas o motivo não se sustenta.";
-"study.headline.neither" = "Nem o lance nem o motivo se sustentaram.";
-"study.headline.fine" = "O lance serve.";
-"study.headline.poor" = "O lance não se sustenta.";
-"verdict.held" = "Certo";
-"verdict.failed" = "Não cumpriu";
-"verdict.noClaim" = "Não disse";
-"study.verdict.noOpinion" = "O motor não dá opinião, por isso só resta comparar com o que foi jogado.";
-"study.verdict.best" = "É a primeira escolha do motor.";
-"study.verdict.better" = "Melhor do que a do motor por %@.";
-"study.verdict.pass" = "Passa: %@ atrás do motor.";
-"study.verdict.worse" = "%1$@: %2$@ atrás do motor.";
-"study.yours" = "Tu";
-"study.engine" = "Motor";
-"study.played" = "Jogado";
-"study.keep" = "Jogar este";
-"study.again" = "Outra vez";
-"study.next" = "Próxima";
-"study.depth.explained" = "Os três são calculados à profundidade %d, por isso comparam-se.";
-
-"report.running" = "A recalcular à profundidade %1$d: %2$d/%3$d";
-"report.unscored" = "Esta partida ainda não foi pontuada.";
-"report.score" = "Pontuar";
-"report.ply" = "Lance %1$d, %2$@ %3$@";
-"report.start" = "Posição inicial";
-
-"series.previous" = "Partida anterior";
-"series.next" = "Partida seguinte";
-"series.place" = "Partida %1$d de %2$d";
 
 "about" = "Acerca de";
 "about.what" = "Fotografa um tabuleiro, lê a posição e continua a jogar. O reconhecimento e o motor correm neste dispositivo; as partidas ficam no teu próprio iCloud. A única coisa que se descarrega é a partida que importares a partir de um link.";

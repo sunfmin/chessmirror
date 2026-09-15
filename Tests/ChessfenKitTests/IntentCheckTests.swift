@@ -1,17 +1,20 @@
 import ChessfenKit
 import Testing
 
-/// One case per verb where the claim holds, and one where it does not (docs/adr/0018).
+/// One case per verb where the claim holds, and one where it does not (docs/adr/0031).
 ///
-/// Sparse positions on purpose: the whole value of a verb is that the rules code can call it
-/// false, and a five-piece position is one a reader can check by eye against the assertion.
+/// Nobody declares one any more, and these are more load-bearing for it: every verb the reading
+/// prints is a claim this checker agreed with, so a checker that says yes too easily is a card
+/// that says 「占 d5」 about a square nobody holds. Sparse positions on purpose — the whole value
+/// of a verb is that the rules code can call it false, and a five-piece position is one a reader
+/// can check by eye against the assertion.
 @Suite(.speaking(.chinese)) struct IntentCheckTests {
     private func check(
         _ fen: String, _ uci: String, _ intent: Intent
     ) throws -> IntentCheck {
         let game = try #require(Game(startFEN: fen), "\(fen) did not validate")
         let move = try #require(game.state.move(matching: uci), "\(uci) is not legal in \(fen)")
-        return try #require(intent.check(move, in: game), "\(intent.pgnText) could not be checked")
+        return try #require(intent.check(move, in: game), "\(intent.label) could not be checked")
     }
 
     private func square(_ name: String) throws -> Square {
@@ -178,15 +181,14 @@ import Testing
     }
 
     // 说不清 — no claim.
-    @Test("说不清 is neither right nor wrong, and says so")
-    func unclear() throws {
-        let shrug = try check("4k3/8/8/8/8/8/8/R3K3 w - - 0 1", "a1a5", .unclear)
-        #expect(shrug.verdict == .noClaim)
-        #expect(shrug.note == nil)
-        #expect(!shrug.held)
-    }
+    @Test("说不清 claims nothing, so there is nothing to check")
+func unclearIsNotChecked() throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let move = try #require(game.state.move(matching: "e2e4"))
+    #expect(Intent.unclear.check(move, in: game) == nil)
+}
 
-    @Test("every verb has a case that holds and a case that fails")
+@Test("every verb has a case that holds and a case that fails")
     func theTableIsCovered() throws {
         // The rule this table was made by is that a verb which cannot be wrong does not get a
         // slot, so a verb with no failing case in this file would be a verb that should not

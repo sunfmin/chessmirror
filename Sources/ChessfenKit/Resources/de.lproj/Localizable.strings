@@ -89,15 +89,9 @@
 
 "habit.giveaway" = "Figuren verschenkt";
 "habit.missedReply" = "Antwort nicht gesehen";
-"habit.untrueReason" = "Begründung hält nicht";
-"habit.noReason" = "Ohne Begründung";
-"habit.attackWhileHanging" = "Angriff mit hängender Figur";
 
 "habit.giveaway.explained" = "Nach diesem Zug stand eine deiner Figuren ungedeckt — diesmal hat der Gegner nicht zugegriffen.";
 "habit.missedReply.explained" = "Nach diesem Zug stand eine deiner Figuren ungedeckt, und der Gegner hat sie im nächsten Zug geschlagen.";
-"habit.untrueReason.explained" = "Du hast gesagt, wozu der Zug dient; auf dem Brett steht etwas anderes.";
-"habit.noReason.explained" = "Gezogen, ohne sagen zu können, warum.";
-"habit.attackWhileHanging.explained" = "Du hast angegriffen und geschlagen, während eine eigene Figur schon hing.";
 
 "habit.excluded.unreviewed" = "noch nicht bewertet";
 "habit.excluded.unreadable" = "nicht lesbar";
@@ -105,7 +99,6 @@
 
 "habit.note.taken" = "%@ war ungedeckt, und der Gegner hat im nächsten Zug zugegriffen";
 "habit.note.exposed" = "nach diesem Zug war %@ ungedeckt";
-"habit.note.hanging" = "dein eigenes %@ war zu diesem Zeitpunkt ungedeckt";
 
 "check.take.notHere" = "dieser Zug schlägt nichts auf %@";
 "check.take.won" = "auf %@ zu schlagen hat Material gewonnen";
@@ -292,7 +285,6 @@
 "game.blackFirst" = "Schwarz beginnt";
 "game.more" = "Mehr; %@ beginnt";
 "game.promotion" = "Wozu umwandeln?";
-"game.practice" = "Übung";
 "game.noEngine" = "Keine Engine";
 "game.toPlay" = "Am Zug";
 "game.inCheck" = "Im Schach";
@@ -308,17 +300,6 @@
 "game.settings.collapse" = "Einstellungen für %@ schließen";
 "game.who" = "Gespielt von";
 "game.perMove" = "Pro Zug";
-"game.worst" = "Die drei teuersten Züge";
-"game.worst.quiet" = "Die drei zum Nachsehen";
-"game.changed" = "Was dieser Zug geändert hat";
-"game.loose" = "Roter Ring: mehr angegriffen als gedeckt";
-"game.wrongPiece" = "Hat das Foto eine Figur falsch gelesen?";
-"game.alternatives" = "Andere Züge";
-"game.over" = "Die Partie ist zu Ende. Kurve und Kosten jedes Zugs stehen unten.";
-"game.over.quiet" = "Die Partie ist zu Ende. Schalte „Engine-Meinung“ ein, dann bewertet sie jeden Zug.";
-"game.quiet" = "Übung: die Engine behält ihre Meinung für sich. Schalte oben „Engine-Meinung“ ein, um sie zu hören.";
-"game.selfPlaying" = "Beide Seiten sind die Engine; sie spielt allein weiter. Einen Zug zurückgehen hält sie an";
-"game.opinion" = "Engine-Meinung";
 "game.flip" = "Brett umdrehen";
 
 "record.previous" = "Zug zurück";
@@ -331,50 +312,7 @@
 "record.startHere" = "Von hier spielen";
 "record.opening" = "Anfang";
 
-"study.computing" = "Dieser Zug wird gerechnet…";
-"study.why" = "Du ziehst %@. Warum?";
-"study.withdraw" = "Zurücknehmen";
 "study.commit" = "Das ist mein Zug";
-"study.notReady" = "Die Engine ist nicht bereit; dieser Zug lässt sich nicht bewerten.";
-"study.ask" = "%@ ist am Zug. Was würdest du spielen?";
-"study.ask.explained" = "Zieh direkt auf dem Brett. Das Ergebnis kommt, wenn der Zug gemacht ist.";
-"study.place" = "Nummer %1$d der teuersten Züge dieser Partie: gespielt wurde %2$@, %3$@ Bauern.";
-"study.place.practising" = "Nummer %d der teuersten Züge dieser Partie. Was hier gespielt wurde, hält der zweiten Rechnung der Engine nicht stand.";
-"study.reason.unclear" = "Weiß nicht — notiert.";
-"study.reason.because" = "Weil: %@.";
-"study.reason.where" = "%@ wo? Tippe ein Feld auf dem Brett an.";
-"study.reason.prompt" = "Sag zuerst, wozu dieser Zug dient.";
-"study.headline.both" = "Richtiger Zug, und die Begründung hält.";
-"study.headline.reasonOnly" = "Die Begründung stimmt; dieser Zug leistet sie nicht.";
-"study.headline.moveOnly" = "Der Zug geht in Ordnung, die Begründung hält aber nicht.";
-"study.headline.neither" = "Weder Zug noch Begründung haben gehalten.";
-"study.headline.fine" = "Der Zug geht in Ordnung.";
-"study.headline.poor" = "Der Zug hält nicht.";
-"verdict.held" = "Hält";
-"verdict.failed" = "Hält nicht";
-"verdict.noClaim" = "Nichts gesagt";
-"study.verdict.noOpinion" = "Die Engine hat keine Meinung; es bleibt nur der Vergleich mit dem, was gespielt wurde.";
-"study.verdict.best" = "Genau die erste Wahl der Engine.";
-"study.verdict.better" = "Um %@ besser als die Engine.";
-"study.verdict.pass" = "Bestanden: %@ hinter der Engine.";
-"study.verdict.worse" = "%1$@: %2$@ hinter der Engine.";
-"study.yours" = "Du";
-"study.engine" = "Engine";
-"study.played" = "Gespielt";
-"study.keep" = "Diesen stattdessen";
-"study.again" = "Noch einmal";
-"study.next" = "Nächste Frage";
-"study.depth.explained" = "Alle drei mit Tiefe %d gerechnet, also vergleichbar.";
-
-"report.running" = "Neuberechnung mit Tiefe %1$d: %2$d/%3$d";
-"report.unscored" = "Diese Partie wurde noch nicht bewertet.";
-"report.score" = "Bewerten";
-"report.ply" = "%1$d. Zug, %2$@ %3$@";
-"report.start" = "Ausgangsstellung";
-
-"series.previous" = "Vorige Partie";
-"series.next" = "Nächste Partie";
-"series.place" = "Partie %1$d von %2$d";
 
 "about" = "Über";
 "about.what" = "Brett fotografieren, Stellung lesen, weiterspielen. Erkennung und Engine laufen auf diesem Gerät; die Partien liegen in deinem eigenen iCloud. Geladen wird nur dann etwas, wenn du eine Partie über einen Link importierst.";

@@ -283,3 +283,31 @@ func rewindingKeepsTheLines() throws {
     let back = try #require(game.rewound(to: 2))
     #expect(back.plies.map(\.line) == [["e5"], ["Nf3"]])
 }
+
+/// A file this app wrote before the player stopped being asked why (docs/adr/0031). The verbs are
+/// gone from the code and the files are still on the disk, so `[%int]` and `[%plan]` are now two
+/// more tokens this reader does not know — and a token it does not know has always been dropped
+/// on the floor rather than refused, which is the whole reason they were written as `[%…]`.
+@Test("a file carrying the old declarations opens, and nothing of the game is lost to them")
+func theOldDeclarationsAreJustUnknownTokens() throws {
+    let pgn = try PGN(parsing: """
+        [Event "?"]
+        [White "我"]
+        [ReviewDepth "18"]
+
+        1. e4 {[%eval +0.31] [%int def e4] [%plan 3]} e5 {[%int ?]}
+        2. Nf3 {[%line Nc6 Bc4] [%int hold d5]} 1/2-1/2
+        """)
+    let game = pgn.game
+
+    #expect(game.plies.map(\.san) == ["e4", "e5", "Nf3"])
+    #expect(game.plies[0].evaluation == .centipawns(31))
+    #expect(game.plies[2].line == ["Nc6", "Bc4"])
+    #expect(pgn.tag("White") == "我")
+
+    // And writing it back out drops them for good: nothing in the app can produce one any more.
+    let written = PGN(game: game, tags: pgn.tags).text
+    #expect(!written.contains("%int"))
+    #expect(!written.contains("%plan"))
+    #expect(written.contains("[%eval 0.31]"), "and the tokens it does know come back out")
+}

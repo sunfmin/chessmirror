@@ -22,7 +22,7 @@ import Testing
 
     @Test func everyLanguageSaysEverything() throws {
         let source = try Self.table(.chinese)
-        #expect(source.count > 300, "the source table should hold the whole app's voice")
+        #expect(source.count > 250, "the source table should hold the whole app's voice")
         for language in Language.allCases where language != .chinese {
             let words = try Self.table(language)
             let missing = Set(source.keys).subtracting(words.keys).sorted()

@@ -55,27 +55,11 @@ struct HabitsScreenshots {
         return game
     }
 
-    /// A library with one game per mode, so one picture shows all five.
-    private static func fiveModes() throws -> [GameLibrary.Entry] {
-        var untrue = drifting(try played(["e2e4", "e7e5", "g1f3", "b8c6", "f1c4"]), plies: 5)
-        untrue.setIntent(.claim(.defend, try square("e4")), atPly: 5)
-
-        var unclear = drifting(
-            try played(["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"]), plies: 6
-        )
-        unclear.setIntent(.unclear, atPly: 5)
-
-        var attacking = drifting(
-            try played(["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "f3g5"]), plies: 7
-        )
-        attacking.setIntent(.claim(.attack, try square("f7")), atPly: 7)
-
-        return [
+    /// A library with one game per mode, so one picture shows both.
+    private static func bothModes() throws -> [GameLibrary.Entry] {
+        [
             entry(try thrownAway(answeredWith: "c6e5"), named: "周二那局"),
             entry(try thrownAway(answeredWith: "d7d6"), named: "周三那局"),
-            entry(untrue, named: "俱乐部第一轮"),
-            entry(unclear, named: "俱乐部第二轮"),
-            entry(attacking, named: "线上快棋"),
         ]
     }
 
@@ -87,7 +71,7 @@ struct HabitsScreenshots {
 
     @Test("every mode the library produced is named, counted, and pointed back at a move")
     func theTally() async throws {
-        let habits = Habits.over(try Self.fiveModes())
+        let habits = Habits.over(try Self.bothModes())
 
         let rendered = await ScreenImage.write("habits") { screen(habits) }
 
@@ -95,16 +79,16 @@ struct HabitsScreenshots {
         for mode in Habit.Mode.allCases {
             #expect(rendered.says(mode.label), "\(mode.label) is on the screen")
         }
-        #expect(rendered.count(of: "1 次") == 5, "each of the five happened once, and says so")
+        #expect(rendered.count(of: "1 次") == 2, "each of the two happened once, and says so")
         #expect(rendered.says("第 3 回合"), "and the move it happened on")
         #expect(rendered.says("Nxe5"))
         #expect(rendered.says("周二那局"), "named so the row is a way back to the game")
-        #expect(rendered.says("数了 5 局"))
+        #expect(rendered.says("数了 2 局"))
     }
 
     @Test("the same tally in the dark")
     func theTallyInTheDark() async throws {
-        let habits = Habits.over(try Self.fiveModes())
+        let habits = Habits.over(try Self.bothModes())
 
         let rendered = await ScreenImage.write("habits-dark", style: .dark) { screen(habits) }
 
@@ -114,7 +98,7 @@ struct HabitsScreenshots {
 
     @Test("no rating and no percentage appears anywhere on it")
     func noFakeNumbers() async throws {
-        let habits = Habits.over(try Self.fiveModes())
+        let habits = Habits.over(try Self.bothModes())
 
         let rendered = await ScreenImage.write("habits") { screen(habits) }
 
@@ -132,7 +116,7 @@ struct HabitsScreenshots {
         }
     }
 
-    @Test("a library with nothing to count says so instead of showing five zeros")
+    @Test("a library with nothing to count says so instead of showing zeros")
     func nothingToCount() async throws {
         let unreviewed = Self.entry(
             try Self.played(["e2e4", "e7e5", "g1f3", "b8c6", "f3e5", "c6e5"]), named: "没打分那局"

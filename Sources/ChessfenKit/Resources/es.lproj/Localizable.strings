@@ -89,15 +89,9 @@
 
 "habit.giveaway" = "Regalar piezas";
 "habit.missedReply" = "No calcular su respuesta";
-"habit.untrueReason" = "Motivo que no se sostiene";
-"habit.noReason" = "Sin motivo";
-"habit.attackWhileHanging" = "Atacar con una pieza colgada";
 
 "habit.giveaway.explained" = "Tras esta jugada te quedó una pieza sin defensa; esta vez el rival no la tomó.";
 "habit.missedReply.explained" = "Tras esta jugada te quedó una pieza sin defensa, y el rival la tomó en la jugada siguiente.";
-"habit.untrueReason.explained" = "Dijiste para qué era la jugada, y en el tablero pasó otra cosa.";
-"habit.noReason.explained" = "Jugada hecha, sin poder decir por qué.";
-"habit.attackWhileHanging.explained" = "Atacabas y capturabas mientras una pieza tuya ya estaba colgada.";
 
 "habit.excluded.unreviewed" = "sin puntuar todavía";
 "habit.excluded.unreadable" = "ilegibles";
@@ -105,7 +99,6 @@
 
 "habit.note.taken" = "nada defendía %@, y el rival lo tomó en la jugada siguiente";
 "habit.note.exposed" = "tras esta jugada, nada defendía %@";
-"habit.note.hanging" = "tu propia pieza en %@ estaba entonces sin defensa";
 
 "check.take.notHere" = "esta jugada no captura nada en %@";
 "check.take.won" = "capturar en %@ ganó material";
@@ -292,7 +285,6 @@
 "game.blackFirst" = "Empiezan las negras";
 "game.more" = "Más; empiezan las %@";
 "game.promotion" = "¿Coronar a qué?";
-"game.practice" = "Práctica";
 "game.noEngine" = "Sin motor";
 "game.toPlay" = "Le toca";
 "game.inCheck" = "En jaque";
@@ -308,17 +300,6 @@
 "game.settings.collapse" = "Cerrar los ajustes de las %@";
 "game.who" = "Quién juega";
 "game.perMove" = "Por jugada";
-"game.worst" = "Las tres jugadas más caras";
-"game.worst.quiet" = "Las tres que hay que mirar";
-"game.changed" = "Qué cambió esta jugada";
-"game.loose" = "Círculo rojo: más atacada que defendida";
-"game.wrongPiece" = "¿La foto se equivocó de pieza?";
-"game.alternatives" = "Otras jugadas";
-"game.over" = "La partida ha terminado. Abajo están la curva y lo que costó cada jugada.";
-"game.over.quiet" = "La partida ha terminado. Activa «Opinión del motor» y puntuará todas las jugadas.";
-"game.quiet" = "Práctica: el motor se guarda su opinión. Activa arriba «Opinión del motor» para oírla.";
-"game.selfPlaying" = "Los dos bandos son el motor; sigue solo. Retrocede una jugada para pararlo";
-"game.opinion" = "Opinión del motor";
 "game.flip" = "Dar la vuelta al tablero";
 
 "record.previous" = "Jugada anterior";
@@ -331,50 +312,7 @@
 "record.startHere" = "Jugar desde aquí";
 "record.opening" = "Inicio";
 
-"study.computing" = "Calculando esta jugada…";
-"study.why" = "Juegas %@. ¿Por qué?";
-"study.withdraw" = "Retirar";
 "study.commit" = "Esta es mi jugada";
-"study.notReady" = "El motor no está listo, así que esta jugada no se puede puntuar.";
-"study.ask" = "Juegan las %@. ¿Qué jugarías?";
-"study.ask.explained" = "Juega directamente en el tablero. El resultado llega cuando hayas movido.";
-"study.place" = "Número %1$d entre las jugadas más caras de la partida: se jugó %2$@, %3$@ peones.";
-"study.place.practising" = "Número %d entre las jugadas más caras de la partida. Lo que se jugó aquí no se sostiene cuando el motor vuelve a calcular.";
-"study.reason.unclear" = "No sabría decir — anotado.";
-"study.reason.because" = "Porque: %@.";
-"study.reason.where" = "%@ ¿dónde? Toca una casilla del tablero.";
-"study.reason.prompt" = "Di primero para qué es esta jugada.";
-"study.headline.both" = "Buena jugada, y el motivo se sostiene.";
-"study.headline.reasonOnly" = "El motivo es bueno; esta jugada no lo cumple.";
-"study.headline.moveOnly" = "La jugada vale, pero el motivo no se sostiene.";
-"study.headline.neither" = "Ni la jugada ni el motivo se han sostenido.";
-"study.headline.fine" = "La jugada vale.";
-"study.headline.poor" = "La jugada no se sostiene.";
-"verdict.held" = "Acertado";
-"verdict.failed" = "No cumplió";
-"verdict.noClaim" = "Sin decir";
-"study.verdict.noOpinion" = "El motor no da su opinión, así que solo cabe compararla con lo jugado.";
-"study.verdict.best" = "Es la primera opción del motor.";
-"study.verdict.better" = "Mejor que la del motor por %@.";
-"study.verdict.pass" = "Aprobada: %@ por detrás del motor.";
-"study.verdict.worse" = "%1$@: %2$@ por detrás del motor.";
-"study.yours" = "Tú";
-"study.engine" = "Motor";
-"study.played" = "Jugada";
-"study.keep" = "Jugar esta";
-"study.again" = "Otra vez";
-"study.next" = "Siguiente";
-"study.depth.explained" = "Las tres se calculan a profundidad %d, así que son comparables.";
-
-"report.running" = "Recalculando a profundidad %1$d: %2$d/%3$d";
-"report.unscored" = "Esta partida no se ha puntuado.";
-"report.score" = "Puntuar";
-"report.ply" = "Jugada %1$d, %2$@ %3$@";
-"report.start" = "Posición inicial";
-
-"series.previous" = "Partida anterior";
-"series.next" = "Partida siguiente";
-"series.place" = "Partida %1$d de %2$d";
 
 "about" = "Acerca de";
 "about.what" = "Fotografía un tablero, lee la posición y sigue jugando. El reconocimiento y el motor funcionan en este dispositivo; las partidas se guardan en tu propio iCloud. Lo único que se descarga es la partida que tú importes desde un enlace.";

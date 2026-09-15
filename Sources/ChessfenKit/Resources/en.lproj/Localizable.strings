@@ -104,15 +104,9 @@
 
 "habit.giveaway" = "Giving pieces away";
 "habit.missedReply" = "Missing their reply";
-"habit.untrueReason" = "Reasons that do not hold";
-"habit.noReason" = "No reason given";
-"habit.attackWhileHanging" = "Attacking with something hanging";
 
 "habit.giveaway.explained" = "After this move something of yours had nobody guarding it — this time they did not take it.";
 "habit.missedReply.explained" = "After this move something of yours had nobody guarding it, and they took it next move.";
-"habit.untrueReason.explained" = "You said what the move was for, and the board says otherwise.";
-"habit.noReason.explained" = "You played it, but could not say why.";
-"habit.attackWhileHanging.explained" = "You were attacking and taking while something of yours was already hanging.";
 
 "habit.excluded.unreviewed" = "not scored yet";
 "habit.excluded.unreadable" = "could not be read";
@@ -120,7 +114,6 @@
 
 "habit.note.taken" = "nothing was guarding %@, and they took it next move";
 "habit.note.exposed" = "after this move, nothing was guarding %@";
-"habit.note.hanging" = "your own %@ had nobody guarding it at the time";
 
 /* ---------------------------------------------------------------- what you said, against the board */
 
@@ -332,7 +325,6 @@
 "game.blackFirst" = "Black moves first";
 "game.more" = "More; %@ moves first";
 "game.promotion" = "Promote to what?";
-"game.practice" = "Practice";
 "game.noEngine" = "No engine";
 "game.toPlay" = "To play";
 "game.inCheck" = "In check";
@@ -348,17 +340,6 @@
 "game.settings.collapse" = "Close %@’s settings";
 "game.who" = "Played by";
 "game.perMove" = "Per move";
-"game.worst" = "The three costliest moves";
-"game.worst.quiet" = "The three worth a look";
-"game.changed" = "What this move changed";
-"game.loose" = "Red ring: attacked more than it is defended";
-"game.wrongPiece" = "Did the photo get a piece wrong?";
-"game.alternatives" = "Other moves";
-"game.over" = "The game is over. The curve and what each move cost are below.";
-"game.over.quiet" = "The game is over. Turn on “Engine opinion” and it will score every move.";
-"game.quiet" = "Practice: the engine keeps its opinion to itself. Turn on “Engine opinion” above to hear it.";
-"game.selfPlaying" = "Both sides are the engine; it plays on by itself. Step back a move to stop it";
-"game.opinion" = "Engine opinion";
 "game.flip" = "Turn the board round";
 
 /* ---------------------------------------------------------------- the record strip */
@@ -375,54 +356,11 @@
 
 /* ---------------------------------------------------------------- asking yourself */
 
-"study.computing" = "Working this move out…";
-"study.why" = "You play %@. Why?";
-"study.withdraw" = "Take it back";
 "study.commit" = "This is my move";
-"study.notReady" = "The engine is not ready, so this move cannot be scored.";
-"study.ask" = "%@ to move. What would you play?";
-"study.ask.explained" = "Play a move on the board. You will hear how it went once you have.";
-"study.place" = "Number %1$d on this game's costliest list: %2$@ was played, %3$@ pawns.";
-"study.place.practising" = "Number %d on this game's costliest list. What was played here does not hold up once the engine looks again.";
-"study.reason.unclear" = "Not sure — noted.";
-"study.reason.because" = "Because: %@.";
-"study.reason.where" = "%@ where? Tap a square on the board.";
-"study.reason.prompt" = "Say what this move is for first.";
-"study.headline.both" = "Right move, and the reason holds.";
-"study.headline.reasonOnly" = "The reason is right; this move does not do it.";
-"study.headline.moveOnly" = "The move is fine, but the reason does not hold.";
-"study.headline.neither" = "Neither the move nor the reason held.";
-"study.headline.fine" = "The move is fine.";
-"study.headline.poor" = "The move does not hold.";
-"verdict.held" = "Held";
-"verdict.failed" = "Did not";
-"verdict.noClaim" = "Not said";
-"study.verdict.noOpinion" = "The engine has no opinion, so this can only be compared with what was played.";
-"study.verdict.best" = "The engine's own first choice.";
-"study.verdict.better" = "Better than the engine's by %@.";
-"study.verdict.pass" = "Passes: %@ behind the engine.";
-"study.verdict.worse" = "%1$@: %2$@ behind the engine.";
-"study.yours" = "You";
-"study.engine" = "Engine";
-"study.played" = "Played";
-"study.keep" = "Play this instead";
-"study.again" = "Try again";
-"study.next" = "Next question";
-"study.depth.explained" = "All three are searched to depth %d, so they compare.";
 
 /* ---------------------------------------------------------------- the report */
 
-"report.running" = "Rescoring at depth %1$d: %2$d/%3$d";
-"report.unscored" = "This game has not been scored.";
-"report.score" = "Score it";
-"report.ply" = "Move %1$d, %2$@ %3$@";
-"report.start" = "Starting position";
-
 /* ---------------------------------------------------------------- one game after another */
-
-"series.previous" = "Previous game";
-"series.next" = "Next game";
-"series.place" = "Game %1$d of %2$d";
 
 /* ---------------------------------------------------------------- about */
 

@@ -69,41 +69,21 @@ private func thrownAway(answeredWith reply: String) throws -> Game {
     return game
 }
 
-/// The five games, one per mode, each shaped so that only its own mode can come out of it.
-private func fiveModes() throws -> [GameLibrary.Entry] {
+/// The two games, one per mode, each shaped so that only its own mode can come out of it.
+private func bothModes() throws -> [GameLibrary.Entry] {
     // 没算对手那一步 — hung on e5 and taken off e5 on the very next move.
     let missed = try thrownAway(answeredWith: "c6e5")
     // 送子 — hung on e5 and got away with it: Black answers with d6 instead.
     let given = try thrownAway(answeredWith: "d7d6")
 
-    // 理由不成立 — 3.Bc4 declared as 护 e4, which the bishop does not defend.
-    var untrue = drifting(try played(["e2e4", "e7e5", "g1f3", "b8c6", "f1c4"]), plies: 5)
-    untrue.setIntent(.claim(.defend, try square("e4")), atPly: 5)
-
-    // 说不清 — a move with the question mark recorded rather than skipped.
-    var unclear = drifting(try played(quiet), plies: 6)
-    unclear.setIntent(.unclear, atPly: 5)
-
-    // 只顾进攻 — 4.Ng5 really does attack f7, and White's e4 pawn has been hanging since Nf6.
-    var attacking = drifting(
-        try played(["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "f3g5"]), plies: 7
-    )
-    attacking.setIntent(.claim(.attack, try square("f7")), atPly: 7)
-
-    return [
-        entry(missed, named: "没算"),
-        entry(given, named: "送子"),
-        entry(untrue, named: "理由"),
-        entry(unclear, named: "说不清"),
-        entry(attacking, named: "只顾进攻"),
-    ]
+    return [entry(missed, named: "没算"), entry(given, named: "送子")]
 }
 
 @Test("a library shaped to produce each failure mode produces each failure mode")
 func everyModeIsFound() throws {
-    let habits = Habits.over(try fiveModes())
+    let habits = Habits.over(try bothModes())
 
-    #expect(habits.gamesCounted == 5)
+    #expect(habits.gamesCounted == 2)
     #expect(habits.excludedCount == 0)
     for mode in Habit.Mode.allCases {
         let habit = try #require(habits.habit(mode), "\(mode.label) should have been found")
@@ -113,7 +93,7 @@ func everyModeIsFound() throws {
 
 @Test("each mode says how many times it happened and where")
 func eachOccurrenceIsTheWayBackToTheMove() throws {
-    let habits = Habits.over(try fiveModes())
+    let habits = Habits.over(try bothModes())
     let missed = try #require(habits.habit(.missedReply))
     let where_ = try #require(missed.occurrences.first)
 
@@ -231,7 +211,7 @@ func mostTimesFirst() throws {
 
 @Test("counting changes nothing, so asking twice gives the same answer")
 func nothingIsStored() throws {
-    let entries = try fiveModes()
+    let entries = try bothModes()
     let texts = entries.map(\.pgn!.text)
 
     let first = Habits.over(entries)
@@ -243,26 +223,18 @@ func nothingIsStored() throws {
 
 @Test("a game corrected or deleted outside the app changes the answer, with nothing to reconcile")
 func theFilesAreTheTruth() throws {
-    var entries = try fiveModes()
+    var entries = try bothModes()
     #expect(Habits.over(entries).habit(.missedReply)?.count == 1)
 
     // Deleted in the Files app: the entry is simply gone the next time the folder is listed.
     entries.removeAll { $0.pgn?.tag(GameLibrary.nameTag) == "没算" }
     #expect(Habits.over(entries).habit(.missedReply) == nil)
-    #expect(Habits.over(entries).gamesCounted == 4)
-
-    // Corrected in the Files app: the reason taken back out of the file takes the mode with it.
-    var fixed = try #require(entries.first { $0.pgn?.tag(GameLibrary.nameTag) == "说不清" })
-    var pgn = try #require(fixed.pgn)
-    pgn.game.setIntent(nil, atPly: 5)
-    fixed.pgn = pgn
-    entries = entries.map { $0.url == fixed.url ? fixed : $0 }
-    #expect(Habits.over(entries).habit(.noReason) == nil)
+    #expect(Habits.over(entries).gamesCounted == 1)
 }
 
 @Test("nothing in the tally is a rating or a percentage", .speaking(.chinese))
 func noFakeNumbers() throws {
-    let habits = Habits.over(try fiveModes())
+    let habits = Habits.over(try bothModes())
     let words =
         habits.habits.flatMap { habit in
             [habit.mode.label, habit.mode.explanation]
@@ -278,7 +250,7 @@ func noFakeNumbers() throws {
 
 @Test("an occurrence points at the position the move was made in, not the one after it")
 func theWayBackIsThePositionBeforeTheMove() throws {
-    let entries = try fiveModes()
+    let entries = try bothModes()
     let habits = Habits.over(entries)
     let where_ = try #require(habits.habit(.missedReply)?.occurrences.first)
     let game = try #require(entries.first { $0.url == where_.game }?.pgn?.game)

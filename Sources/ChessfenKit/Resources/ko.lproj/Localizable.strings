@@ -85,15 +85,9 @@
 
 "habit.giveaway" = "기물 내주기";
 "habit.missedReply" = "상대 응수를 안 봄";
-"habit.untrueReason" = "이유가 성립하지 않음";
-"habit.noReason" = "이유 없음";
-"habit.attackWhileHanging" = "공격만 함";
 
 "habit.giveaway.explained" = "이 수 뒤에 내 기물이 지켜지지 않았다. 이번에는 상대가 잡지 않았다.";
 "habit.missedReply.explained" = "이 수 뒤에 내 기물이 지켜지지 않았고, 상대가 다음 수에 잡았다.";
-"habit.untrueReason.explained" = "이 수가 무엇을 위한 것인지 말했지만, 판에서는 일어나지 않았다.";
-"habit.noReason.explained" = "두긴 했지만 왜인지 말하지 못했다.";
-"habit.attackWhileHanging.explained" = "내 기물이 이미 떠 있는데 공격하고 잡고 있었다.";
 
 "habit.excluded.unreviewed" = "아직 채점하지 않음";
 "habit.excluded.unreadable" = "읽을 수 없음";
@@ -101,7 +95,6 @@
 
 "habit.note.taken" = "%@의 기물을 아무도 지키지 않았고, 상대가 다음 수에 잡았다";
 "habit.note.exposed" = "이 수 뒤에 %@의 기물을 아무도 지키지 않았다";
-"habit.note.hanging" = "그때 내 %@이(가) 지켜지지 않고 있었다";
 
 "check.take.notHere" = "이 수는 %@에서 아무것도 잡지 않는다";
 "check.take.won" = "%@에서 잡아 기물을 벌었다";
@@ -275,7 +268,6 @@
 "game.blackFirst" = "흑부터";
 "game.more" = "더 보기. 선수는 %@";
 "game.promotion" = "무엇으로 승격할까?";
-"game.practice" = "연습";
 "game.noEngine" = "엔진 없음";
 "game.toPlay" = "둘 차례";
 "game.inCheck" = "체크";
@@ -291,17 +283,6 @@
 "game.settings.collapse" = "%@ 설정 닫기";
 "game.who" = "누가 두나";
 "game.perMove" = "한 수당";
-"game.worst" = "이 판에서 가장 비쌌던 세 수";
-"game.worst.quiet" = "다시 볼 세 수";
-"game.changed" = "이 수가 바꾼 것";
-"game.loose" = "빨간 동그라미: 지키는 쪽보다 잡는 쪽이 많다";
-"game.wrongPiece" = "사진이 기물을 잘못 봤나?";
-"game.alternatives" = "다른 수";
-"game.over" = "이 판은 끝났다. 곡선과 수마다의 손익은 아래에 있다.";
-"game.over.quiet" = "이 판은 끝났다. 「엔진 의견」을 켜면 모든 수를 다시 채점한다.";
-"game.quiet" = "연습 중이라 엔진이 의견을 내지 않는다. 위의 「엔진 의견」을 켜면 들을 수 있다.";
-"game.selfPlaying" = "양쪽 다 엔진이라 알아서 계속 둔다. 한 수 되돌리면 멈춘다";
-"game.opinion" = "엔진 의견";
 "game.flip" = "판 뒤집기";
 
 "record.previous" = "이전 수";
@@ -314,50 +295,7 @@
 "record.startHere" = "여기서부터 두기";
 "record.opening" = "시작";
 
-"study.computing" = "이 수를 계산하는 중…";
-"study.why" = "%@을(를) 둔다. 왜?";
-"study.withdraw" = "물리기";
 "study.commit" = "이 수로 간다";
-"study.notReady" = "엔진이 준비되지 않아 이 수를 채점할 수 없다.";
-"study.ask" = "%@ 차례다. 어떤 수를 두겠나?";
-"study.ask.explained" = "판 위에서 그대로 한 수 두라. 두고 나면 결과를 알려 준다.";
-"study.place" = "이 판에서 비쌌던 수 %1$d 위: 실전은 %2$@, %3$@ 폰.";
-"study.place.practising" = "이 판에서 가장 비쌌던 %d 번째 수. 여기서 실전에 둔 수는 엔진이 다시 계산하면 값어치가 없다.";
-"study.reason.unclear" = "모르겠음 — 적어 두었다.";
-"study.reason.because" = "이유: %@.";
-"study.reason.where" = "%@ 어디에? 판의 칸을 누르라.";
-"study.reason.prompt" = "먼저 이 수가 무엇을 위한 것인지 말하라.";
-"study.headline.both" = "수도 맞고 이유도 선다.";
-"study.headline.reasonOnly" = "이유는 맞지만 이 수가 해내지 못했다.";
-"study.headline.moveOnly" = "수는 괜찮지만 이유가 성립하지 않는다.";
-"study.headline.neither" = "수도 이유도 서지 못했다.";
-"study.headline.fine" = "이 수는 괜찮다.";
-"study.headline.poor" = "이 수는 서지 못한다.";
-"verdict.held" = "맞음";
-"verdict.failed" = "못 해냄";
-"verdict.noClaim" = "말 안 함";
-"study.verdict.noOpinion" = "엔진이 의견을 내지 않아 실전 수와만 견줄 수 있다.";
-"study.verdict.best" = "엔진의 첫 선택 그대로다.";
-"study.verdict.better" = "엔진보다 %@ 낫다.";
-"study.verdict.pass" = "통과: 엔진과 %@ 차이.";
-"study.verdict.worse" = "%1$@: 엔진보다 %2$@ 못하다.";
-"study.yours" = "내 수";
-"study.engine" = "엔진";
-"study.played" = "실전";
-"study.keep" = "이 수로 바꾸기";
-"study.again" = "다시";
-"study.next" = "다음 문제";
-"study.depth.explained" = "세 수 모두 깊이 %d로 계산해 서로 견줄 수 있다.";
-
-"report.running" = "깊이 %1$d로 다시 계산 중: %2$d/%3$d";
-"report.unscored" = "이 대국은 아직 채점하지 않았다.";
-"report.score" = "채점";
-"report.ply" = "%1$d수째 %2$@ %3$@";
-"report.start" = "시작 국면";
-
-"series.previous" = "이전 대국";
-"series.next" = "다음 대국";
-"series.place" = "%2$d판 중 %1$d판째";
 
 "about" = "정보";
 "about.what" = "판을 찍고, 국면을 읽고, 이어서 둔다. 인식도 엔진도 이 기기 안에서 돌아가고, 대국은 자신의 iCloud에 들어간다. 밖으로 나가는 것은 링크에서 기보를 가져올 때뿐이다.";

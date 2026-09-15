@@ -89,15 +89,9 @@
 
 "habit.giveaway" = "Pièces données";
 "habit.missedReply" = "Réponse non calculée";
-"habit.untrueReason" = "Raison qui ne tient pas";
-"habit.noReason" = "Sans raison";
-"habit.attackWhileHanging" = "Attaquer en laissant pendre";
 
 "habit.giveaway.explained" = "Après ce coup, une de vos pièces n'était plus gardée — cette fois, l'adversaire ne l'a pas prise.";
 "habit.missedReply.explained" = "Après ce coup, une de vos pièces n'était plus gardée, et l'adversaire l'a prise au coup suivant.";
-"habit.untrueReason.explained" = "Vous avez dit à quoi servait ce coup ; l'échiquier dit autre chose.";
-"habit.noReason.explained" = "Joué, sans pouvoir dire pourquoi.";
-"habit.attackWhileHanging.explained" = "Vous attaquiez et preniez alors qu'une de vos pièces pendait déjà.";
 
 "habit.excluded.unreviewed" = "pas encore notées";
 "habit.excluded.unreadable" = "illisibles";
@@ -105,7 +99,6 @@
 
 "habit.note.taken" = "rien ne gardait %@, et l'adversaire l'a pris au coup suivant";
 "habit.note.exposed" = "après ce coup, rien ne gardait %@";
-"habit.note.hanging" = "votre propre %@ n'était gardé par personne à ce moment-là";
 
 "check.take.notHere" = "ce coup ne prend rien en %@";
 "check.take.won" = "prendre en %@ a gagné du matériel";
@@ -292,7 +285,6 @@
 "game.blackFirst" = "Les Noirs commencent";
 "game.more" = "Plus ; les %@ commencent";
 "game.promotion" = "Promouvoir en quoi ?";
-"game.practice" = "Exercice";
 "game.noEngine" = "Sans moteur";
 "game.toPlay" = "Au trait";
 "game.inCheck" = "En échec";
@@ -308,17 +300,6 @@
 "game.settings.collapse" = "Fermer les réglages des %@";
 "game.who" = "Joué par";
 "game.perMove" = "Par coup";
-"game.worst" = "Les trois coups les plus coûteux";
-"game.worst.quiet" = "Les trois coups à revoir";
-"game.changed" = "Ce que ce coup a changé";
-"game.loose" = "Cercle rouge : plus attaquée que défendue";
-"game.wrongPiece" = "La photo s'est trompée de pièce ?";
-"game.alternatives" = "Autres coups";
-"game.over" = "La partie est finie. La courbe et le coût de chaque coup sont ci-dessous.";
-"game.over.quiet" = "La partie est finie. Activez « Avis du moteur » et il notera chaque coup.";
-"game.quiet" = "Exercice : le moteur garde son avis pour lui. Activez « Avis du moteur » au-dessus pour l'entendre.";
-"game.selfPlaying" = "Les deux camps sont le moteur ; il joue tout seul. Reculez d'un coup pour l'arrêter";
-"game.opinion" = "Avis du moteur";
 "game.flip" = "Retourner l'échiquier";
 
 "record.previous" = "Coup précédent";
@@ -331,50 +312,7 @@
 "record.startHere" = "Jouer d'ici";
 "record.opening" = "Départ";
 
-"study.computing" = "Calcul de ce coup…";
-"study.why" = "Vous jouez %@. Pourquoi ?";
-"study.withdraw" = "Reprendre";
 "study.commit" = "C'est mon coup";
-"study.notReady" = "Le moteur n'est pas prêt : ce coup ne peut pas être noté.";
-"study.ask" = "Aux %@ de jouer. Que joueriez-vous ?";
-"study.ask.explained" = "Jouez un coup sur l'échiquier. Le résultat vient une fois le coup joué.";
-"study.place" = "Numéro %1$d des coups les plus coûteux de la partie : %2$@ a été joué, %3$@ pions.";
-"study.place.practising" = "Numéro %d des coups les plus coûteux de la partie. Ce qui a été joué ici ne tient pas au second examen du moteur.";
-"study.reason.unclear" = "Je ne sais pas — c'est noté.";
-"study.reason.because" = "Parce que : %@.";
-"study.reason.where" = "%@ où ? Touchez une case de l'échiquier.";
-"study.reason.prompt" = "Dites d'abord à quoi sert ce coup.";
-"study.headline.both" = "Bon coup, et la raison tient.";
-"study.headline.reasonOnly" = "La raison est bonne ; ce coup ne la réalise pas.";
-"study.headline.moveOnly" = "Le coup va, mais la raison ne tient pas.";
-"study.headline.neither" = "Ni le coup ni la raison n'ont tenu.";
-"study.headline.fine" = "Le coup va.";
-"study.headline.poor" = "Le coup ne tient pas.";
-"verdict.held" = "Tenu";
-"verdict.failed" = "Raté";
-"verdict.noClaim" = "Rien dit";
-"study.verdict.noOpinion" = "Le moteur n'a pas d'avis : seule la comparaison avec le coup joué reste possible.";
-"study.verdict.best" = "C'est le premier choix du moteur.";
-"study.verdict.better" = "Meilleur que le moteur de %@.";
-"study.verdict.pass" = "Ça passe : %@ derrière le moteur.";
-"study.verdict.worse" = "%1$@ : %2$@ derrière le moteur.";
-"study.yours" = "Vous";
-"study.engine" = "Moteur";
-"study.played" = "Joué";
-"study.keep" = "Jouer celui-ci";
-"study.again" = "Recommencer";
-"study.next" = "Question suivante";
-"study.depth.explained" = "Les trois sont calculés à la profondeur %d : ils se comparent.";
-
-"report.running" = "Recalcul à la profondeur %1$d : %2$d/%3$d";
-"report.unscored" = "Cette partie n'a pas été notée.";
-"report.score" = "Noter";
-"report.ply" = "Coup %1$d, %2$@ %3$@";
-"report.start" = "Position de départ";
-
-"series.previous" = "Partie précédente";
-"series.next" = "Partie suivante";
-"series.place" = "Partie %1$d sur %2$d";
 
 "about" = "À propos";
 "about.what" = "Photographiez un échiquier, lisez la position, continuez la partie. La reconnaissance et le moteur tournent sur cet appareil ; les parties sont enregistrées dans votre propre iCloud. Rien n'est téléchargé, sauf quand vous importez une partie depuis un lien.";
