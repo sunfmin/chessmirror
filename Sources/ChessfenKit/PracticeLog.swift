@@ -24,6 +24,43 @@ public struct PracticeLog: Sendable {
         case dismissed(PositionKey)
         /// The player put one back.
         case restored(PositionKey)
+        /// The player practised a position and the app judged the move.
+        case drilled(Attempt)
+    }
+
+    /// One go at one position (docs/adr/0029).
+    ///
+    /// **Everything here happened.** Which position, how long it took, whether the move held,
+    /// what was played, what it cost, how many hints were open, and where the drill came from.
+    /// What is deliberately absent is every field a scheduler would want to cache — no due date,
+    /// no interval, no ease, no mastered flag — because the moment one of those is written down,
+    /// changing the scheduler means migrating every row a person has ever written.
+    public struct Attempt: Hashable, Sendable, Codable {
+        public let position: PositionKey
+        /// How long the player took over the move. Thinking time, not judging time: the engine's
+        /// wait is the app's, not theirs.
+        public let seconds: Double
+        public let passed: Bool
+        /// What was played, in SAN — so a run of attempts reads as what somebody keeps trying.
+        public let played: String
+        /// What it cost, in percentage points of win probability (docs/adr/0027).
+        public let cost: Double
+        /// How many rungs of the hint ladder were open when they moved (docs/adr/0031).
+        public let hints: Int
+        public let source: Drill.Source
+
+        public init(
+            position: PositionKey, seconds: Double, passed: Bool, played: String, cost: Double,
+            hints: Int, source: Drill.Source
+        ) {
+            self.position = position
+            self.seconds = seconds
+            self.passed = passed
+            self.played = played
+            self.cost = cost
+            self.hints = hints
+            self.source = source
+        }
     }
 
     public struct Entry: Hashable, Sendable, Codable, Identifiable {
@@ -91,9 +128,22 @@ public struct PracticeLog: Sendable {
             switch entry.fact {
             case .dismissed(let key): standing[key] = true
             case .restored(let key): standing[key] = false
+            case .drilled: continue
             }
         }
         return Set(standing.filter(\.value).keys)
+    }
+
+    /// Every go at every position, oldest first.
+    ///
+    /// Read out of the log each time rather than counted up and stored, which is the rule the
+    /// whole file is built on: a total is a conclusion, and conclusions are what this refuses to
+    /// keep (docs/adr/0029).
+    public func attempts() -> [(at: Date, attempt: Attempt)] {
+        entries().compactMap { entry in
+            guard case .drilled(let attempt) = entry.fact else { return nil }
+            return (entry.at, attempt)
+        }
     }
 
     private static let encoder: JSONEncoder = {

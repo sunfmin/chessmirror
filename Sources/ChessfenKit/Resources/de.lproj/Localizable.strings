@@ -328,3 +328,17 @@
 "book.times.one" = "%d Mal";
 "ago.days.one" = "vor %d Tag";
 "ago.hours.one" = "vor %d Stunde";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "Üben";
+"drill.prompt" = "Du bist am Zug";
+"drill.judging" = "Wird berechnet, was das gekostet hat";
+"drill.passed" = "%1$@ — %2$@. Das hält.";
+"drill.failed" = "%1$@ — %2$@. Das gibt %3$d%% her.";
+"drill.failed.wanted" = "%1$@ — %2$@. Das gibt %3$d%% her. Besser war %4$@ — %5$@.";
+"drill.keepPlaying" = "Weiterspielen";
+"drill.leave" = "Verlassen";
+"drill.next" = "Nächste";
+"drill.seconds" = "%d Sekunden gebraucht";
+"drill.seconds.one" = "%d Sekunde gebraucht";
+"drill.noEngine" = "Die Engine läuft noch nicht, der Zug lässt sich nicht bewerten.";

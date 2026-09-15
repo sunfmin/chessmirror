@@ -328,3 +328,17 @@
 "book.times.one" = "%d vez";
 "ago.days.one" = "há %d dia";
 "ago.hours.one" = "há %d hora";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "Praticar";
+"drill.prompt" = "É a sua vez";
+"drill.judging" = "Calculando o que isso custou";
+"drill.passed" = "%1$@ — %2$@. Isso se sustenta.";
+"drill.failed" = "%1$@ — %2$@. Isso entrega %3$d%%.";
+"drill.failed.wanted" = "%1$@ — %2$@. Isso entrega %3$d%%. Melhor era %4$@ — %5$@.";
+"drill.keepPlaying" = "Continuar jogando";
+"drill.leave" = "Sair";
+"drill.next" = "Próxima";
+"drill.seconds" = "levou %d segundos";
+"drill.seconds.one" = "levou %d segundo";
+"drill.noEngine" = "O motor ainda não está pronto, então o lance não pode ser julgado.";

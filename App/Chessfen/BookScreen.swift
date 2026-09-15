@@ -99,6 +99,23 @@ struct BookEntryScreen: View {
                     .font(.subheadline)
                     .foregroundStyle(Palette.ink)
 
+                // Straight from here, without waiting for the day's queue to offer it: a person
+                // looking at a position they keep getting wrong wants to try it now.
+                Button {
+                    path.append(.drill(mistake))
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "figure.mind.and.body")
+                        Text(localized("drill")).font(.subheadline.weight(.medium))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(Palette.parchment)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
+                    .background(Palette.ink, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+
                 Text(localized("book.encounters")).eyebrow().padding(.top, 4)
                 ForEach(mistake.encounters) { encounter in
                     Button {

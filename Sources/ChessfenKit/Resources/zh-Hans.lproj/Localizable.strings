@@ -349,3 +349,16 @@
 "book.items" = "%d 条";
 "book.yourMove" = "你走了";
 "book.better" = "该走";
+
+/* ---------------------------------------------------------------- 练一道题 */
+"drill" = "练";
+"drill.prompt" = "该你走";
+"drill.judging" = "在算这一手值多少";
+"drill.passed" = "%1$@ %2$@。这一手站得住，过了。";
+"drill.failed" = "%1$@ %2$@。这一手掉了 %3$d%% 胜率。";
+"drill.failed.wanted" = "%1$@ %2$@。这一手掉了 %3$d%% 胜率。该走 %4$@ %5$@。";
+"drill.keepPlaying" = "继续下";
+"drill.leave" = "退出";
+"drill.next" = "下一题";
+"drill.seconds" = "用了 %d 秒";
+"drill.noEngine" = "引擎还没起来，这一手判不了。";

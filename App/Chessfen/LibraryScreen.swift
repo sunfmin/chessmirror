@@ -17,6 +17,9 @@ enum Step: Hashable {
     /// One 错题, carried by value: it is a position and the occasions hanging off it, and both
     /// were computed before this screen was pushed.
     case mistake(Mistake)
+    /// The same 错题, being practised. Separate from looking at it, because a drill is a question
+    /// and the history is the answer to a different one (docs/adr/0029).
+    case drill(Mistake)
 }
 
 /// A typed name, or nil for one that was only spaces — which is how a name is taken back off.
@@ -92,6 +95,14 @@ struct LibraryScreen: View {
                     BookScreen(path: $path)
                 case .mistake(let mistake):
                     BookEntryScreen(mistake: mistake, path: $path)
+                case .drill(let mistake):
+                    DrillHost(
+                        mistake: mistake,
+                        engine: engine.service,
+                        lines: judgement.lines,
+                        log: index.log,
+                        path: $path
+                    )
                 }
             }
             .overlay {

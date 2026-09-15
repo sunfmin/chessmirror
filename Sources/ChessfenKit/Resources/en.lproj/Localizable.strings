@@ -374,3 +374,17 @@
 "book.times.one" = "%d time";
 "ago.days.one" = "%d day ago";
 "ago.hours.one" = "%d hour ago";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "Practise";
+"drill.prompt" = "Your move";
+"drill.judging" = "Working out what that cost";
+"drill.passed" = "%1$@ — %2$@. That holds.";
+"drill.failed" = "%1$@ — %2$@. That gives away %3$d%%.";
+"drill.failed.wanted" = "%1$@ — %2$@. That gives away %3$d%%. Better was %4$@ — %5$@.";
+"drill.keepPlaying" = "Play it out";
+"drill.leave" = "Leave";
+"drill.next" = "Next one";
+"drill.seconds" = "took %d seconds";
+"drill.seconds.one" = "took %d second";
+"drill.noEngine" = "The engine is not up yet, so that move cannot be judged.";

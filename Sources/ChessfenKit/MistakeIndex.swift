@@ -18,7 +18,9 @@ import Foundation
     /// nothing, which is the whole point of the cache and the thing a test can hold it to.
     public private(set) var walkedLastTime = 0
 
-    private let log: PracticeLog
+    /// The practice log the book is read against, and the one a drill writes its attempts to:
+    /// one log, because a dismissal and an attempt are the same kind of thing (docs/adr/0029).
+    public let log: PracticeLog
     private var lines: JudgementLines
     /// One game's findings, under the file it came from and the date it carried when they were
     /// taken. A file that has been written since is a different game and is walked again.

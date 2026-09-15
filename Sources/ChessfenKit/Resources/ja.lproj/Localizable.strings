@@ -304,3 +304,16 @@
 "book.items" = "%d 件";
 "book.yourMove" = "指したのは";
 "book.better" = "正しくは";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "練習";
+"drill.prompt" = "あなたの手番";
+"drill.judging" = "この手の代償を計算中";
+"drill.passed" = "%1$@ %2$@。この手は持ちこたえた。";
+"drill.failed" = "%1$@ %2$@。勝率が %3$d%% 落ちた。";
+"drill.failed.wanted" = "%1$@ %2$@。勝率が %3$d%% 落ちた。正しくは %4$@ %5$@。";
+"drill.keepPlaying" = "そのまま指す";
+"drill.leave" = "やめる";
+"drill.next" = "次の問題";
+"drill.seconds" = "%d 秒かかった";
+"drill.noEngine" = "エンジンがまだ起動していないため、この手は判定できません。";

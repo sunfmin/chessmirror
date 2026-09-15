@@ -304,3 +304,16 @@
 "book.items" = "%d 개";
 "book.yourMove" = "둔 수";
 "book.better" = "바른 수";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "연습";
+"drill.prompt" = "당신 차례";
+"drill.judging" = "이 수의 대가를 계산하는 중";
+"drill.passed" = "%1$@ %2$@. 이 수는 버팁니다.";
+"drill.failed" = "%1$@ %2$@. 승률을 %3$d%% 잃었습니다.";
+"drill.failed.wanted" = "%1$@ %2$@. 승률을 %3$d%% 잃었습니다. 바른 수는 %4$@ %5$@.";
+"drill.keepPlaying" = "계속 두기";
+"drill.leave" = "나가기";
+"drill.next" = "다음 문제";
+"drill.seconds" = "%d 초 걸림";
+"drill.noEngine" = "엔진이 아직 준비되지 않아 이 수를 판정할 수 없습니다.";
