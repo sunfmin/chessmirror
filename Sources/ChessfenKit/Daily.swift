@@ -23,19 +23,37 @@ public struct Daily: Hashable, Sendable {
         public let lapses: Int
         /// How many times it has been practised under the schedule.
         public let goes: Int
+        /// The last go, which is what ARTS sequences the day by (docs/adr/0030). Nil for a
+        /// position nobody has practised.
+        public let last: Go?
+
+        /// One go, as the order needs it: whether it held, and how long it took.
+        public struct Go: Hashable, Sendable {
+            public let at: Date
+            public let passed: Bool
+            public let seconds: Double
+
+            public init(at: Date, passed: Bool, seconds: Double) {
+                self.at = at
+                self.passed = passed
+                self.seconds = seconds
+            }
+        }
 
         public var id: String { mistake.id }
         public var position: PositionKey { mistake.position }
         public var isNew: Bool { memory == nil }
 
         public init(
-            mistake: Mistake, memory: FSRS.Memory?, dueAt: Date?, lapses: Int, goes: Int
+            mistake: Mistake, memory: FSRS.Memory?, dueAt: Date?, lapses: Int, goes: Int,
+            last: Go? = nil
         ) {
             self.mistake = mistake
             self.memory = memory
             self.dueAt = dueAt
             self.lapses = lapses
             self.goes = goes
+            self.last = last
         }
     }
 
@@ -89,9 +107,13 @@ public struct Daily: Hashable, Sendable {
     ) -> Daily {
         // 计划外 goes are recorded and then ignored here: practising something because you felt
         // like it is not evidence about when the schedule should have asked (docs/adr/0032).
-        var history: [PositionKey: [(at: Date, passed: Bool)]] = [:]
+        var history: [PositionKey: [Card.Go]] = [:]
+        var scheduled: [(at: Date, attempt: PracticeLog.Attempt)] = []
         for row in attempts where row.attempt.source == .daily {
-            history[row.attempt.position, default: []].append((row.at, row.attempt.passed))
+            history[row.attempt.position, default: []].append(
+                Card.Go(at: row.at, passed: row.attempt.passed, seconds: row.attempt.seconds)
+            )
+            scheduled.append(row)
         }
         for key in history.keys {
             history[key]?.sort { $0.at < $1.at }
@@ -118,7 +140,8 @@ public struct Daily: Hashable, Sendable {
                 memory: memory,
                 dueAt: memory.flatMap { standing in last.map { fsrs.due(standing, after: $0) } },
                 lapses: lapses,
-                goes: gone.count
+                goes: gone.count,
+                last: gone.last
             )
         }
 
@@ -126,9 +149,26 @@ public struct Daily: Hashable, Sendable {
         // repetition app does it: a schedule that dribbled cards out by the hour would mean
         // opening the app five times to finish a day.
         let endOfDay = calendar.startOfDay(for: now).addingTimeInterval(86_400)
+        // ARTS orders what FSRS has already decided is due: missed before held, and among the
+        // held, the ones that came slowly for *this* position before the ones that came quickly
+        // (docs/adr/0030). How overdue a card is only breaks a tie — the day was FSRS's decision
+        // and this does not relitigate it.
+        let references = ARTS.references(scheduled)
+        func priority(_ card: Card) -> Double {
+            ARTS.priority(
+                lastPassed: card.last?.passed,
+                seconds: card.last?.seconds ?? 0,
+                reference: references.seconds(for: card.position)
+            ) ?? 0
+        }
         let due = all
             .filter { card in card.dueAt.map { $0 < endOfDay } ?? false }
-            .sorted { ($0.dueAt ?? .distantPast) < ($1.dueAt ?? .distantPast) }
+            .sorted { one, other in
+                let mine = priority(one)
+                let theirs = priority(other)
+                if mine != theirs { return mine > theirs }
+                return (one.dueAt ?? .distantPast) < (other.dueAt ?? .distantPast)
+            }
 
         // How many have already been let in today, so that a day's intake is a day's intake
         // however many times the app is opened.
