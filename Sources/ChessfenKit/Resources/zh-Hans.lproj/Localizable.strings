@@ -94,29 +94,7 @@
 "library.entry.unreadable" = "无法读取";
 "library.entry.moves" = "%d 回合";
 "library.entry.unfinished" = "未结束";
-"library.entry.branches" = "%d 条分叉";
 
-/* ---------------------------------------------------------------- 老毛病 */
-
-"habit.giveaway" = "送子";
-"habit.missedReply" = "没算对手那一步";
-"habit.untrueReason" = "理由不成立";
-"habit.noReason" = "说不清";
-"habit.attackWhileHanging" = "只顾进攻";
-
-"habit.giveaway.explained" = "走完这步，你有子没人守 —— 这次对手没吃。";
-"habit.missedReply.explained" = "走完这步你有子没人守，对手下一步就吃了。";
-"habit.untrueReason.explained" = "你说了这步是干什么的，棋盘上没发生。";
-"habit.noReason.explained" = "走了，但说不清为什么。";
-"habit.attackWhileHanging.explained" = "你在攻、在吃，自己却有子挂着。";
-
-"habit.excluded.unreviewed" = "还没打过分";
-"habit.excluded.unreadable" = "读不出来";
-"habit.excluded.waiting" = "还在从 iCloud 下载";
-
-"habit.note.taken" = "%@ 上的子没人守，对手下一步吃了它";
-"habit.note.exposed" = "走完这步，%@ 上的子没人守";
-"habit.note.hanging" = "你自己的 %@ 当时就没人守";
 
 /* ---------------------------------------------------------------- 说了干什么，棋盘认不认 */
 
@@ -167,12 +145,11 @@
 "import.network.message" = "下载的时候网络出错了：%@";
 "import.network.notHTTP" = "不是 HTTP 响应";
 
-"import.done" = "导入 %1$d 局到「%2$@」";
+"import.done" = "导入了 %d 局";
 "import.done.skipped" = "跳过 %d 局已有的";
 "import.done.unreadable" = "另有 %d 局没能读出来";
 "import.name.players" = "%1$@ 对 %2$@";
 "import.name.chapter" = "第 %d 章";
-"import.collection.player" = "%@ 的对局";
 
 /* ---------------------------------------------------------------- 到处都用的几个词 */
 
@@ -183,7 +160,6 @@
 "rename" = "重命名";
 "delete" = "删除";
 "board" = "棋盘";
-"move.number" = "第 %d 回合";
 
 /* ---------------------------------------------------------------- 应用本身 */
 
@@ -216,7 +192,6 @@
 "library.fromStart" = "从开局摆起";
 "library.games" = "对局记录";
 "library.empty" = "走出第一步，这局就会记在这里。";
-"library.unfiled" = "未归类";
 "library.recognising" = "在认棋盘";
 "library.noPicture" = "没能拿到图片";
 "library.noClipboard.title" = "剪贴板里没有图片";
@@ -224,34 +199,10 @@
 
 /* ---------------------------------------------------------------- 作品集 */
 
-"collection.name" = "作品集名字";
-"collection.rename" = "重命名作品集";
-"collection.new" = "新建作品集";
-"collection.new.ellipsis" = "新建作品集…";
-"collection.file" = "归到作品集";
-"collection.remove" = "移出作品集";
-"collection.games" = "%d 局";
-"collection.sorted" = "%d 局 · 按名字排";
-"collection.empty" = "这个作品集空了。把棋局归进来，它就回到列表里。";
-
 "game.name.title" = "给这一局起个名字";
 "game.name.field" = "名字";
-"game.name.field.long" = "这一局叫什么";
 "game.name.explained" = "作品集里按名字排，所以「第 002 题」这样的名字会排在你想的地方。留空就用存下来的时间。";
-"game.file.into" = "归到「%@」";
-"game.file.explained" = "名字决定它在作品集里排第几，也决定练习时上一局下一局的顺序。";
 
-/* ---------------------------------------------------------------- 老毛病（屏幕） */
-
-"habits" = "老毛病";
-"habits.card" = "你反复犯的那几个错，从对局里数出来";
-"habits.subtitle" = "从你存下的对局里数出来的。不打分，不排名。";
-"habits.counting" = "在数…";
-"habits.nothing" = "还没有能数的对局。先给一局打分，这里才有话说。";
-"habits.clean" = "数了 %d 局，没找到老毛病。";
-"habits.counted" = "数了 %d 局。";
-"habits.excluded" = "另外 %1$d 局%2$@，没算进去。";
-"habits.times" = "%d 次";
 
 /* ---------------------------------------------------------------- 改棋子 */
 
@@ -286,7 +237,7 @@
 "import.title" = "导入棋局";
 "import.door.link" = "链接";
 "import.door.player" = "最近对局";
-"import.door.link.explained" = "贴一个链接——一个 lichess 研究，或者一局棋——里面的每一局会变成作品集里的一局。";
+"import.door.link.explained" = "贴一个链接——一个 lichess 研究，或者一局棋——里面的每一局会变成棋局列表里的一局。";
 "import.door.player.explained" = "填一个 lichess 用户名，把最近几局拉下来。上飞机前干这一步。";
 "import.field.link" = "PGN 链接";
 "import.field.player" = "lichess 用户名";
@@ -294,13 +245,8 @@
 "import.fetch" = "获取棋谱";
 "import.fetching" = "在下载棋谱…";
 "import.writing" = "在写入…";
-"import.into" = "导入到「%@」";
-"import.intoCollection" = "导入到作品集";
 "import.plan.games" = "%d 局";
-"import.plan.named" = "「%1$@」· %2$@";
-"import.more" = "还有 %d 局…";
 "import.unreadable" = "有 %d 局没能读出来，会跳过。";
-"import.apply" = "导入 %d 局";
 "import.again" = "再导入一个";
 
 /* ---------------------------------------------------------------- 棋局屏幕 */
@@ -315,7 +261,6 @@
 "game.blackFirst" = "黑先走";
 "game.more" = "更多，先走的是%@";
 "game.promotion" = "升变成什么？";
-"game.practice" = "练习";
 "game.noEngine" = "没有引擎";
 "game.toPlay" = "该走了";
 "game.inCheck" = "被将";
@@ -331,17 +276,6 @@
 "game.settings.collapse" = "收起%@的设置";
 "game.who" = "谁走";
 "game.perMove" = "每步";
-"game.worst" = "这局最贵的三步";
-"game.worst.quiet" = "最该看的三步";
-"game.changed" = "这步改了什么";
-"game.loose" = "红圈：被吃的子比守的多";
-"game.wrongPiece" = "照片认错了棋子？";
-"game.alternatives" = "其它选择";
-"game.over" = "这局走完了。曲线和每一步的得失都在下面。";
-"game.over.quiet" = "这局走完了。打开「引擎意见」，它会把每一步重新打一遍分。";
-"game.quiet" = "练习中，引擎不给意见。想看它怎么说，打开上面的「引擎意见」。";
-"game.selfPlaying" = "双方都是引擎，程序自己走下去；翻回上一步就停";
-"game.opinion" = "引擎意见";
 "game.flip" = "翻转棋盘";
 
 /* ---------------------------------------------------------------- 记录条 */
@@ -352,60 +286,11 @@
 "record.curve" = "分数曲线";
 "record.ply" = "第 %d 步";
 "record.jump" = "回到这一步";
-"record.branch" = "上下滑动切换分支";
 "record.startHere" = "从这里开始走";
 "record.opening" = "开局";
 
-/* ---------------------------------------------------------------- 一步一步问自己 */
 
-"study.computing" = "正在算这一步…";
-"study.why" = "你走 %@。为什么？";
-"study.withdraw" = "收回";
-"study.commit" = "就是这步";
-"study.notReady" = "引擎还没准备好，没法给这步打分。";
-"study.ask" = "轮到%@走。你会走哪一步？";
-"study.ask.explained" = "直接在棋盘上走一步。走完才会告诉你结果。";
-"study.place" = "这局得失第 %1$d 大的一步：实战走的 %2$@，%3$@ 分。";
-"study.place.practising" = "这是这局得失最大的第 %d 步。实战在这儿走的那步，引擎重算下来不值。";
-"study.reason.unclear" = "说不清 —— 记下来了。";
-"study.reason.because" = "因为 %@。";
-"study.reason.where" = "%@ 哪里？点棋盘上的格子。";
-"study.reason.prompt" = "先说说这步是干什么的。";
-"study.headline.both" = "走对了，理由也站得住。";
-"study.headline.reasonOnly" = "理由是对的，这步棋没做到。";
-"study.headline.moveOnly" = "这步棋没问题，但理由不成立。";
-"study.headline.neither" = "棋和理由都没站住。";
-"study.headline.fine" = "这步棋没问题。";
-"study.headline.poor" = "这步棋没站住。";
-"verdict.held" = "说对了";
-"verdict.failed" = "没做到";
-"verdict.noClaim" = "没说";
-"study.verdict.noOpinion" = "引擎没给出意见，只能跟实战比。";
-"study.verdict.best" = "就是引擎的第一选择。";
-"study.verdict.better" = "比引擎的还好 %@。";
-"study.verdict.pass" = "过关：跟引擎差 %@。";
-"study.verdict.worse" = "%1$@：比引擎差 %2$@。";
-"study.yours" = "你走";
-"study.engine" = "引擎";
-"study.played" = "实战";
-"study.keep" = "改走这步";
-"study.again" = "再来一次";
-"study.next" = "下一题";
-"study.depth.explained" = "三步都按深度 %d 算，所以彼此可以比。";
 
-/* ---------------------------------------------------------------- 复盘 */
-
-"report.running" = "正在用深度 %1$d 重算：%2$d/%3$d";
-"report.unscored" = "这局还没打过分。";
-"report.score" = "打分";
-"report.ply" = "第 %1$d 回合 %2$@ %3$@";
-"report.start" = "起始局面";
-
-/* ---------------------------------------------------------------- 一局接一局 */
-
-"series.previous" = "上一局";
-"series.next" = "下一局";
-"series.place" = "第 %1$d/%2$d 局";
 
 /* ---------------------------------------------------------------- 关于 */
 
@@ -428,3 +313,141 @@
 "about.licence" = "许可";
 "about.source" = "源代码";
 "about.licence.explained" = "本应用内置 Stockfish，按 GNU GPL v3 发布，因此本应用整体也按 GPL v3 发布：你可以自由使用、研究、修改和再分发它，条件是分发时一并给出源代码和同样的许可。完整许可文本见源代码仓库里的 LICENSE 文件。\n\n棋子图形来自 python-chess 的 Cburnett 棋子集（CC BY-SA 3.0）。";
+
+/* ---------------------------------------------------------------- 分享进来 */
+"share.reading" = "在收这张图";
+"share.kept.title" = "收到了";
+"share.kept.message" = "打开棋镜就能看这个局面。";
+"share.open" = "打开棋镜";
+
+/* ---------------------------------------------------------------- 结算 */
+"settle.took" = "对手送了你 %d%%，你收下了。";
+"settle.missed" = "对手送了你 %1$d%%，你收下 %2$d%%，漏了 %3$d%%。";
+
+/* ---------------------------------------------------------------- 三条线 */
+"lines" = "判决线";
+"lines.record" = "记下来";
+"lines.enqueue" = "进练习";
+"lines.explained" = "一招掉多少胜率才算失误。掉过「记下来」就写进棋谱，掉过「进练习」还要占以后的练习时间——所以后者应该更高。均势局面里，一个兵大约就是 10%。";
+
+/* ---------------------------------------------------------------- 错题本 */
+"book" = "错题本";
+"book.empty" = "还没有错题。下一局，走错的局面会自己进来。";
+"book.fell" = "这个局面你栽过 %d 次";
+"book.played" = "%1$d 次走 %2$@";
+"book.lastTime" = "最近一次是%@";
+"book.cost" = "掉 %d%%";
+"book.times" = "%d 次";
+"book.remove" = "从本子里删掉";
+"book.encounters" = "遭遇";
+"ago.days" = "%d 天前";
+"ago.hours" = "%d 小时前";
+"ago.justNow" = "刚刚";
+"book.items" = "%d 条";
+"book.yourMove" = "你走了";
+"book.better" = "该走";
+
+/* ---------------------------------------------------------------- 练一道题 */
+"drill" = "练";
+"drill.prompt" = "该你走";
+"drill.judging" = "在算这一手值多少";
+"drill.passed" = "%1$@ %2$@。这一手站得住，过了。";
+"drill.failed" = "%1$@ %2$@。这一手掉了 %3$d%% 胜率。";
+"drill.failed.wanted" = "%1$@ %2$@。这一手掉了 %3$d%% 胜率。该走 %4$@ %5$@。";
+"drill.keepPlaying" = "继续下";
+"drill.leave" = "退出";
+"drill.next" = "下一题";
+"drill.seconds" = "用了 %d 秒";
+"drill.noEngine" = "引擎还没起来，这一手判不了。";
+
+/* ------------------------------------------------------------------ 日课 */
+"daily" = "日课";
+"daily.left" = "还剩 %d 道";
+"daily.done" = "今天的练完了";
+"daily.none" = "今天没有要练的";
+"till.start" = "开始耕棋";
+"till.name" = "耕棋";
+"till.practice" = "练习";
+"till.intercept" = "拦截线";
+"till.off" = "关";
+"till.judging" = "正在计算";
+"till.refused" = "%@ 掉 %d%%，退回重走。";
+"till.hint" = "提示 %d";
+"till.reveal" = "揭示答案";
+"till.relax" = "放宽到 %d%%";
+"till.shot" = "这里有一记战术。";
+"till.quiet" = "没有确认的战术，试着改善局面。";
+"till.notFound" = "没找到";
+"punish.toggle" = "找出对手的惩罚";
+"punish.prompt" = "替对手走一步，找出最强应招。";
+"punish.again" = "还有更强的应招，再试一次。";
+"punish.skip" = "跳过";
+"punish.answer" = "对手可以走 %@。";
+"import.status.new" = "没导入";
+"import.status.pending" = "待打分，打开重试";
+"import.status.scoring" = "正在打分";
+"import.status.ready" = "已入库 %d 道题";
+"mate.ours" = "你有 %d 步杀";
+"mate.theirs" = "对方 %d 步杀";
+"mate.colour" = "%@ %d 步杀";
+"mate.noLine" = "引擎报了 %d 步杀，但没给着法。";
+"mate.you" = "你";
+"mate.opponent" = "对方";
+"mate.opens" = "%@起手 %@";
+"mate.unavoidable" = "%@怎么走都躲不掉";
+"mate.bestTry" = "引擎给的最好一手是 %@";
+"mate.onlyReply" = "%@只有一个应手";
+"mate.allForced" = "%@每一步都只有一个应手";
+"mate.someForced" = "中间%@有 %d 步只有一个应手";
+"mate.ends" = "%@ 将死";
+"mate.shortLine" = "引擎只给到第 %d 步，没给到将死那一步";
+"mate.white" = "白方";
+"mate.black" = "黑方";
+"search.reached" = "算到";
+"search.depth" = "层级";
+"search.starting" = "开始";
+"search.again" = "再算 10 秒";
+"intent.goal.attack" = "进攻";
+"intent.goal.defend" = "防御";
+"intent.goal.trade" = "交换";
+"intent.goal.hold" = "占位";
+"intent.sequence" = "%@，%@ 再 %@";
+"intent.later" = "%@ 再 %@";
+"intent.laterGoal" = "%@ 再%@：%@";
+"intent.ahead" = "往后第 %d 步 %@";
+"tactic.mate" = "%@ 杀";
+"tactic.piece" = "子";
+"tactic.hanging" = "%@ 吃 %@ 上没人守的%@";
+"tactic.capture" = "%@ 吃 %@ 的%@，这笔赚";
+"tactic.target" = "%@ 的%@";
+"tactic.and" = "和";
+"tactic.fork" = "%@ 同时打了%@";
+"screen.opinion" = "引擎意见";
+"screen.on" = "开";
+"screen.stopFinder" = "不找了";
+"screen.find" = "找一记";
+"screen.finder" = "战术发现器";
+"screen.finderStopped" = "发现器已关闭。按「找一记」重新检查战术和杀招。";
+"screen.finderIdle" = "还没算。按「找一记」检查战术和杀招。";
+"screen.hideArrows" = "把箭头收起";
+"screen.showArrows" = "画在棋盘上";
+"screen.arrowLimit" = "为保持清楚，棋盘只画前 %d 步。";
+"screen.arrowsExplained" = "箭头使用已算出的手顺，不会落子或重新计算。";
+"screen.finished" = "这局已经走完了，没有下一步可算。";
+"screen.noMate" = "未发现双方有近期强制将死。";
+"screen.mateIdle" = "打开这张卡会算 10 秒，并报告发现的杀招。";
+"screen.spokenMove" = "第 %d 步 %@";
+"screen.mate" = "杀招";
+"screen.tactics" = "战术";
+"screen.mateSubtitle" = "几步之内有人要被将死了";
+"screen.tacticsSubtitle" = "这一步有没有一记赢子的";
+"finder.checking" = "在看有没有战术";
+"finder.ours" = "有战术";
+"finder.theirs" = "对方有战术";
+"finder.none" = "这一步没有战术";
+"import.trackSide" = "记录哪一方的错题？";
+"discovery.checking" = "正在检查…";
+"discovery.none" = "未发现";
+"discovery.view" = "查看";
+"discovery.mateFound" = "发现杀招";
+"discovery.tacticFound" = "发现战术机会";

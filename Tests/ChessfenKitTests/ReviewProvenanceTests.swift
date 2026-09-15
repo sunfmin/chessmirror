@@ -73,10 +73,11 @@ func reviewDepthIsOneTagPerGame() throws {
 @Test("the first move's quality survives a save, because the baseline is written")
 func firstMoveIsJudgeableFromTheFileAlone() throws {
     var game = try played(["e2e4", "e7e5"])
-    // The first move throws away most of two pawns: a mistake, but only if the position
-    // it started from was written down too.
+    // The first move throws away most of three pawns from level, which is 24 points of win
+    // probability and a mistake (docs/adr/0027) — but only if the position it started from was
+    // written down too.
     game.applyReview(
-        [.centipawns(-150), .centipawns(-145)], startEvaluation: .centipawns(30), depth: 14
+        [.centipawns(-250), .centipawns(-245)], startEvaluation: .centipawns(30), depth: 14
     )
     #expect(game.quality(atPly: 1) == .mistake)
 
@@ -90,7 +91,7 @@ func firstMoveIsJudgeableFromTheFileAlone() throws {
 func missingBaselineOnlyCostsTheFirstMove() throws {
     var game = try played(["e2e4", "e7e5", "g1f3"])
     game.applyReview(
-        [.centipawns(30), .centipawns(25), .centipawns(-300)], startEvaluation: nil, depth: 14
+        [.centipawns(30), .centipawns(25), .centipawns(-400)], startEvaluation: nil, depth: 14
     )
     #expect(game.quality(atPly: 1) == nil)
     #expect(game.quality(atPly: 3) == .blunder)

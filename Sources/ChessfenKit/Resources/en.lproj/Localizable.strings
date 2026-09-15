@@ -97,30 +97,8 @@
 "library.entry.moves" = "%d moves";
 "library.entry.moves.one" = "%d move";
 "library.entry.unfinished" = "Unfinished";
-"library.entry.branches" = "%d branches";
 "library.entry.branches.one" = "%d branch";
 
-/* ---------------------------------------------------------------- the habits */
-
-"habit.giveaway" = "Giving pieces away";
-"habit.missedReply" = "Missing their reply";
-"habit.untrueReason" = "Reasons that do not hold";
-"habit.noReason" = "No reason given";
-"habit.attackWhileHanging" = "Attacking with something hanging";
-
-"habit.giveaway.explained" = "After this move something of yours had nobody guarding it — this time they did not take it.";
-"habit.missedReply.explained" = "After this move something of yours had nobody guarding it, and they took it next move.";
-"habit.untrueReason.explained" = "You said what the move was for, and the board says otherwise.";
-"habit.noReason.explained" = "You played it, but could not say why.";
-"habit.attackWhileHanging.explained" = "You were attacking and taking while something of yours was already hanging.";
-
-"habit.excluded.unreviewed" = "not scored yet";
-"habit.excluded.unreadable" = "could not be read";
-"habit.excluded.waiting" = "still downloading from iCloud";
-
-"habit.note.taken" = "nothing was guarding %@, and they took it next move";
-"habit.note.exposed" = "after this move, nothing was guarding %@";
-"habit.note.hanging" = "your own %@ had nobody guarding it at the time";
 
 /* ---------------------------------------------------------------- what you said, against the board */
 
@@ -171,15 +149,14 @@
 "import.network.message" = "The network failed during the download: %@";
 "import.network.notHTTP" = "not an HTTP response";
 
-"import.done" = "Imported %1$d games into “%2$@”";
-"import.done.one" = "Imported %1$d game into “%2$@”";
+"import.done" = "Imported %d games";
+"import.done.one" = "Imported %d game";
 "import.done.skipped" = "skipped %d already there";
 "import.done.skipped.one" = "skipped %d already there";
 "import.done.unreadable" = "%d more could not be read";
 "import.done.unreadable.one" = "%d more could not be read";
 "import.name.players" = "%1$@ vs %2$@";
 "import.name.chapter" = "Chapter %d";
-"import.collection.player" = "%@’s games";
 
 /* ---------------------------------------------------------------- words used everywhere */
 
@@ -190,7 +167,6 @@
 "rename" = "Rename";
 "delete" = "Delete";
 "board" = "Board";
-"move.number" = "Move %d";
 
 /* ---------------------------------------------------------------- the app itself */
 
@@ -223,7 +199,6 @@
 "library.fromStart" = "Start from the opening";
 "library.games" = "Games";
 "library.empty" = "Play a move and the game will be filed here.";
-"library.unfiled" = "Unfiled";
 "library.recognising" = "Reading the board";
 "library.noPicture" = "Could not get the picture";
 "library.noClipboard.title" = "No picture on the clipboard";
@@ -231,39 +206,18 @@
 
 /* ---------------------------------------------------------------- collections */
 
-"collection.name" = "Collection name";
-"collection.rename" = "Rename collection";
-"collection.new" = "New collection";
-"collection.new.ellipsis" = "New collection…";
-"collection.file" = "File in a collection";
-"collection.remove" = "Take out of the collection";
-"collection.games" = "%d games";
 "collection.games.one" = "%d game";
-"collection.sorted" = "%d games · by name";
 "collection.sorted.one" = "%d game · by name";
-"collection.empty" = "This collection is empty. File a game into it and it comes back to the list.";
 
 "game.name.title" = "Name this game";
 "game.name.field" = "Name";
-"game.name.field.long" = "What is this game called";
 "game.name.explained" = "A collection is ordered by name, so a name like “Puzzle 002” lands where you expect it. Leave it blank to use the time it was saved.";
-"game.file.into" = "File into “%@”";
-"game.file.explained" = "The name decides where it sits in the collection, and the order the previous and next game follow.";
 
 /* ---------------------------------------------------------------- the habits screen */
 
-"habits" = "Old habits";
-"habits.card" = "The mistakes you keep making, counted from your games";
-"habits.subtitle" = "Counted from the games you have saved. No score, no ranking.";
-"habits.counting" = "Counting…";
-"habits.nothing" = "No games to count yet. Score one, and there will be something to say here.";
-"habits.clean" = "Counted %d games, and found no old habits.";
 "habits.clean.one" = "Counted %d game, and found no old habits.";
-"habits.counted" = "Counted %d games.";
 "habits.counted.one" = "Counted %d game.";
-"habits.excluded" = "%1$d more games %2$@, left out.";
 "habits.excluded.one" = "%1$d more game %2$@, left out.";
-"habits.times" = "%d times";
 "habits.times.one" = "%d time";
 
 /* ---------------------------------------------------------------- editing the pieces */
@@ -299,7 +253,7 @@
 "import.title" = "Import games";
 "import.door.link" = "Link";
 "import.door.player" = "Recent games";
-"import.door.link.explained" = "Paste a link — a lichess study, or a single game — and every game in it becomes one game in a collection.";
+"import.door.link.explained" = "Paste a link — a lichess study, or a single game — and every game in it becomes one game in the list.";
 "import.door.player.explained" = "Type a lichess username to pull down their last few games. Do this before you get on the plane.";
 "import.field.link" = "PGN link";
 "import.field.player" = "lichess username";
@@ -307,16 +261,11 @@
 "import.fetch" = "Fetch the games";
 "import.fetching" = "Downloading…";
 "import.writing" = "Writing…";
-"import.into" = "Into “%@”";
-"import.intoCollection" = "Into collection";
 "import.plan.games" = "%d games";
 "import.plan.games.one" = "%d game";
-"import.plan.named" = "“%1$@” · %2$@";
-"import.more" = "%d more…";
 "import.more.one" = "%d more…";
 "import.unreadable" = "%d could not be read and will be skipped.";
 "import.unreadable.one" = "%d could not be read and will be skipped.";
-"import.apply" = "Import %d games";
 "import.apply.one" = "Import %d game";
 "import.again" = "Import another";
 
@@ -332,7 +281,6 @@
 "game.blackFirst" = "Black moves first";
 "game.more" = "More; %@ moves first";
 "game.promotion" = "Promote to what?";
-"game.practice" = "Practice";
 "game.noEngine" = "No engine";
 "game.toPlay" = "To play";
 "game.inCheck" = "In check";
@@ -348,17 +296,6 @@
 "game.settings.collapse" = "Close %@’s settings";
 "game.who" = "Played by";
 "game.perMove" = "Per move";
-"game.worst" = "The three costliest moves";
-"game.worst.quiet" = "The three worth a look";
-"game.changed" = "What this move changed";
-"game.loose" = "Red ring: attacked more than it is defended";
-"game.wrongPiece" = "Did the photo get a piece wrong?";
-"game.alternatives" = "Other moves";
-"game.over" = "The game is over. The curve and what each move cost are below.";
-"game.over.quiet" = "The game is over. Turn on “Engine opinion” and it will score every move.";
-"game.quiet" = "Practice: the engine keeps its opinion to itself. Turn on “Engine opinion” above to hear it.";
-"game.selfPlaying" = "Both sides are the engine; it plays on by itself. Step back a move to stop it";
-"game.opinion" = "Engine opinion";
 "game.flip" = "Turn the board round";
 
 /* ---------------------------------------------------------------- the record strip */
@@ -369,60 +306,11 @@
 "record.curve" = "Evaluation curve";
 "record.ply" = "Ply %d";
 "record.jump" = "Go back to this move";
-"record.branch" = "Swipe up or down to change branch";
 "record.startHere" = "Play from here";
 "record.opening" = "Opening";
 
-/* ---------------------------------------------------------------- asking yourself */
 
-"study.computing" = "Working this move out…";
-"study.why" = "You play %@. Why?";
-"study.withdraw" = "Take it back";
-"study.commit" = "This is my move";
-"study.notReady" = "The engine is not ready, so this move cannot be scored.";
-"study.ask" = "%@ to move. What would you play?";
-"study.ask.explained" = "Play a move on the board. You will hear how it went once you have.";
-"study.place" = "Number %1$d on this game's costliest list: %2$@ was played, %3$@ pawns.";
-"study.place.practising" = "Number %d on this game's costliest list. What was played here does not hold up once the engine looks again.";
-"study.reason.unclear" = "Not sure — noted.";
-"study.reason.because" = "Because: %@.";
-"study.reason.where" = "%@ where? Tap a square on the board.";
-"study.reason.prompt" = "Say what this move is for first.";
-"study.headline.both" = "Right move, and the reason holds.";
-"study.headline.reasonOnly" = "The reason is right; this move does not do it.";
-"study.headline.moveOnly" = "The move is fine, but the reason does not hold.";
-"study.headline.neither" = "Neither the move nor the reason held.";
-"study.headline.fine" = "The move is fine.";
-"study.headline.poor" = "The move does not hold.";
-"verdict.held" = "Held";
-"verdict.failed" = "Did not";
-"verdict.noClaim" = "Not said";
-"study.verdict.noOpinion" = "The engine has no opinion, so this can only be compared with what was played.";
-"study.verdict.best" = "The engine's own first choice.";
-"study.verdict.better" = "Better than the engine's by %@.";
-"study.verdict.pass" = "Passes: %@ behind the engine.";
-"study.verdict.worse" = "%1$@: %2$@ behind the engine.";
-"study.yours" = "You";
-"study.engine" = "Engine";
-"study.played" = "Played";
-"study.keep" = "Play this instead";
-"study.again" = "Try again";
-"study.next" = "Next question";
-"study.depth.explained" = "All three are searched to depth %d, so they compare.";
 
-/* ---------------------------------------------------------------- the report */
-
-"report.running" = "Rescoring at depth %1$d: %2$d/%3$d";
-"report.unscored" = "This game has not been scored.";
-"report.score" = "Score it";
-"report.ply" = "Move %1$d, %2$@ %3$@";
-"report.start" = "Starting position";
-
-/* ---------------------------------------------------------------- one game after another */
-
-"series.previous" = "Previous game";
-"series.next" = "Next game";
-"series.place" = "Game %1$d of %2$d";
 
 /* ---------------------------------------------------------------- about */
 
@@ -445,3 +333,147 @@
 "about.licence" = "Licence";
 "about.source" = "Source code";
 "about.licence.explained" = "This app has Stockfish inside it, released under the GNU GPL v3, so the app as a whole is GPL v3 too: you may use, study, modify and redistribute it freely, provided you pass on the source and the same licence with it. The full licence text is in the LICENSE file in the source repository.\n\nThe piece graphics are the Cburnett set from python-chess (CC BY-SA 3.0).";
+
+/* ------------------------------------------------------------ shared in */
+"share.reading" = "Taking the picture";
+"share.kept.title" = "Got it";
+"share.kept.message" = "Open 棋镜 and the position is there.";
+"share.open" = "Open 棋镜";
+
+/* ------------------------------------------------------------ settling up */
+"settle.took" = "They handed you %d%% and you took it.";
+"settle.missed" = "They handed you %1$d%%, you kept %2$d%%, you left %3$d%%.";
+
+/* ------------------------------------------------------------ the lines */
+"lines" = "Lines";
+"lines.record" = "Write it down";
+"lines.enqueue" = "Drill it";
+"lines.explained" = "How much of the game a move has to give away to count. Past the first it is written into the game; past the second it also takes practice time, so that one should be higher. Near equality, a pawn is about 10%.";
+
+/* ------------------------------------------------------------ the book */
+"book" = "Mistakes";
+"book.empty" = "Nothing here yet. Positions you get wrong turn up on their own.";
+"book.fell" = "You have fallen for this position %d times";
+"book.played" = "%1$d of them %2$@";
+"book.lastTime" = "last time was %@";
+"book.cost" = "cost %d%%";
+"book.times" = "%d times";
+"book.remove" = "Take it out of the book";
+"book.encounters" = "Times";
+"ago.days" = "%d days ago";
+"ago.hours" = "%d hours ago";
+"ago.justNow" = "just now";
+"book.items" = "%d positions";
+"book.yourMove" = "you played";
+"book.better" = "better was";
+"book.items.one" = "%d position";
+"book.fell.one" = "You have fallen for this position %d time";
+"book.times.one" = "%d time";
+"ago.days.one" = "%d day ago";
+"ago.hours.one" = "%d hour ago";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "Practise";
+"drill.prompt" = "Your move";
+"drill.judging" = "Working out what that cost";
+"drill.passed" = "%1$@ — %2$@. That holds.";
+"drill.failed" = "%1$@ — %2$@. That gives away %3$d%%.";
+"drill.failed.wanted" = "%1$@ — %2$@. That gives away %3$d%%. Better was %4$@ — %5$@.";
+"drill.keepPlaying" = "Play it out";
+"drill.leave" = "Leave";
+"drill.next" = "Next one";
+"drill.seconds" = "took %d seconds";
+"drill.seconds.one" = "took %d second";
+"drill.noEngine" = "The engine is not up yet, so that move cannot be judged.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Today";
+"daily.left" = "%d to go";
+"daily.done" = "Done for today";
+"daily.none" = "Nothing to practise today";
+"till.start" = "Start No Slips";
+"till.name" = "No Slips";
+"till.practice" = "Practice";
+"till.intercept" = "Intercept line";
+"till.off" = "Off";
+"till.judging" = "Calculating";
+"till.refused" = "%@ costs %d%%. Try again.";
+"till.hint" = "Hint %d";
+"till.reveal" = "Reveal answer";
+"till.relax" = "Relax to %d%%";
+"till.shot" = "There is a tactical opportunity.";
+"till.quiet" = "No confirmed tactic. Try improving your position.";
+"till.notFound" = "Not found";
+"punish.toggle" = "Find the opponent’s punishment";
+"punish.prompt" = "Play for your opponent and find their strongest reply.";
+"punish.again" = "There is a stronger reply. Try again.";
+"punish.skip" = "Skip";
+"punish.answer" = "Your opponent can play %@.";
+"import.status.new" = "Not imported";
+"import.status.pending" = "Awaiting review · open to retry";
+"import.status.scoring" = "Scoring";
+"import.status.ready" = "%d mistakes added";
+"mate.ours" = "You have mate in %d";
+"mate.theirs" = "Opponent has mate in %d";
+"mate.colour" = "%@ has mate in %d";
+"mate.noLine" = "The engine reports mate in %d but gives no moves.";
+"mate.you" = "You";
+"mate.opponent" = "Opponent";
+"mate.opens" = "Opening move for %@: %@";
+"mate.unavoidable" = "%@ cannot escape mate";
+"mate.bestTry" = "the best try is %@";
+"mate.onlyReply" = "only one reply for %@";
+"mate.allForced" = "only one reply for %@ at every step";
+"mate.someForced" = "for %@, %d replies along the way are forced";
+"mate.ends" = "%@ checkmates";
+"mate.shortLine" = "the line stops after %d plies, before checkmate";
+"mate.white" = "White";
+"mate.black" = "Black";
+"search.reached" = "Reached";
+"search.depth" = "Depth";
+"search.starting" = "Starting";
+"search.again" = "Analyse for 10 more seconds";
+"intent.goal.attack" = "Attack";
+"intent.goal.defend" = "Defend";
+"intent.goal.trade" = "Trade";
+"intent.goal.hold" = "Occupy";
+"intent.sequence" = "%@; %@ then %@";
+"intent.later" = "%@ then %@";
+"intent.laterGoal" = "%@ then %@: %@";
+"intent.ahead" = "in %d plies, %@";
+"tactic.mate" = "%@ mates";
+"tactic.piece" = "piece";
+"tactic.hanging" = "%1$@ takes the undefended %3$@ on %2$@";
+"tactic.capture" = "%1$@ takes the %3$@ on %2$@ for a gain";
+"tactic.target" = "%2$@ on %1$@";
+"tactic.and" = " and ";
+"tactic.fork" = "%@ attacks both %@";
+"screen.opinion" = "Engine opinion";
+"screen.on" = "On";
+"screen.stopFinder" = "Stop finding";
+"screen.find" = "Find a tactic";
+"screen.finder" = "Tactic finder";
+"screen.finderStopped" = "Finder stopped. Tap Find a tactic to check tactics and mates again.";
+"screen.finderIdle" = "Not searched yet. Tap Find a tactic to check tactics and mates.";
+"screen.hideArrows" = "Hide arrows";
+"screen.showArrows" = "Draw on board";
+"screen.arrowLimit" = "Only the first %d plies are drawn to keep the board readable.";
+"screen.arrowsExplained" = "Arrows use the existing line. They neither play moves nor run another search.";
+"screen.finished" = "This game is over; there is no next move.";
+"screen.noMate" = "No near-term forced mate found for either side.";
+"screen.mateIdle" = "Opening this card searches for 10 seconds and reports any mate found.";
+"screen.spokenMove" = "Ply %d %@";
+"screen.mate" = "Mate";
+"screen.tactics" = "Tactics";
+"screen.mateSubtitle" = "A forced mate may be close";
+"screen.tacticsSubtitle" = "Is there a move that wins material?";
+"finder.checking" = "Checking for tactics";
+"finder.ours" = "You have a tactic";
+"finder.theirs" = "Your opponent has a tactic";
+"finder.none" = "No tactic on this move";
+"import.trackSide" = "Whose mistakes should go in your book?";
+"discovery.checking" = "Checking…";
+"discovery.none" = "None found";
+"discovery.view" = "View";
+"discovery.mateFound" = "Mate found";
+"discovery.tacticFound" = "Tactical opportunity found";

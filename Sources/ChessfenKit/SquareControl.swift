@@ -279,4 +279,23 @@ extension Game {
         let taking = state.sideToMove == colour ? self : passed()
         return taking?.winningCapture(on: square) == true
     }
+
+        /// The same position with the other side to move.
+        ///
+        /// Not a chess move, and the only way to ask what the side that *just* moved could do next:
+        /// after their move it is not their turn, so every question about their own pieces' mobility
+        /// is a question about a position the rules will not produce.
+        ///
+        /// Nil when the side to move is in check, because then this is not a position at all — the
+        /// king could simply be taken. That is the honest refusal, and it also means a move that gives
+        /// check says nothing here, which is right: a check is not the moment to discuss mobility.
+        public func passed() -> Game? {
+            guard !state.inCheck else { return nil }
+            let fields = state.fen.split(separator: " ", omittingEmptySubsequences: false)
+            guard fields.count >= 4 else { return nil }
+            let side = state.sideToMove == .white ? "b" : "w"
+            // En passant goes: it belonged to the move that has just been un-asked.
+            let swapped = "\(fields[0]) \(side) \(fields[2]) - 0 \(state.fullmoveNumber)"
+            return Game(startFEN: swapped)
+        }
 }

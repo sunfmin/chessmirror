@@ -1,5 +1,21 @@
+/// One move of a line, numbered, as the board draws it.
+public struct MoveArrow: Hashable, Sendable {
+    public let step: Int
+    public let move: MoveSquares
+    public let isYours: Bool
+    /// Whether the board is already past this move.
+    public let isPlayed: Bool
+
+    public init(step: Int, move: MoveSquares, isYours: Bool, isPlayed: Bool) {
+        self.step = step
+        self.move = move
+        self.isYours = isYours
+        self.isPlayed = isPlayed
+    }
+}
+
 /// A mate the engine can already see from the position on screen, whoever it belongs to
-/// (docs/adr/0024).
+/// (docs/adr/0025).
 ///
 /// The one thing on this screen that is **news** rather than an answer: nobody asked for it, and
 /// it is not the engine's opinion — a Score is a judgement and 「你三步之后不在了」 is a fact. That
@@ -25,7 +41,7 @@ public struct MateNews: Hashable, Sendable {
     /// The mating line in SAN, as far as the engine gave it.
     public let san: [String]
     /// The line as numbered arrows, in the same violet-and-red the five-move plan is drawn in.
-    public let arrows: [PlanArrow]
+    public let arrows: [MoveArrow]
     /// How many of the replies to the mating side's moves were the only legal move on the board.
     public let forcedReplies: Int
     /// How many replies there are in the line at all, so the count above has a denominator.
@@ -72,10 +88,10 @@ public struct MateNews: Hashable, Sendable {
         let san = best.san
         let opening = game.state.sideToMove
         let arrows = best.uciMoves.prefix(arrowLimit).enumerated().compactMap {
-            index, uci -> PlanArrow? in
+            index, uci -> MoveArrow? in
             guard let move = MoveSquares(uci: uci) else { return nil }
             let mover = index.isMultiple(of: 2) ? opening : opening.opposite
-            return PlanArrow(step: index + 1, move: move, isYours: isYours(mover), isPlayed: false)
+            return MoveArrow(step: index + 1, move: move, isYours: isYours(mover), isPlayed: false)
         }
 
         // How forced it is, counted rather than asserted: replay the line and ask the rules how
@@ -120,9 +136,9 @@ public struct MateNews: Hashable, Sendable {
     private static func head(
         moves: Int, mater: PieceColour, isOurs: Bool, hands: Set<PieceColour>
     ) -> String {
-        if isOurs { return "你有 \(moves) 步杀" }
-        if hands.contains(mater.opposite) { return "对方 \(moves) 步杀" }
-        return "\(name(mater)) \(moves) 步杀"
+        if isOurs { return localized("mate.ours", moves) }
+        if hands.contains(mater.opposite) { return localized("mate.theirs", moves) }
+        return localized("mate.colour", name(mater), moves)
     }
 
     private static func sentence(
@@ -130,18 +146,18 @@ public struct MateNews: Hashable, Sendable {
         moves: Int, replies: Int, forced: Int, reachesMate: Bool
     ) -> String {
         guard let first = san.first else {
-            return "引擎报了 \(moves) 步杀，但没给着法。"
+            return localized("mate.noLine", moves)
         }
         // Who does what, in the same three voices the head uses. With nobody at the board both
         // sides are named by colour, because 「你」 would be a claim about a person who is not there.
         let mover: String
         let replier: String
         if isOurs {
-            mover = "你"
-            replier = "对方"
+            mover = localized("mate.you")
+            replier = localized("mate.opponent")
         } else if hands.contains(mater.opposite) {
-            mover = "对方"
-            replier = "你"
+            mover = localized("mate.opponent")
+            replier = localized("mate.you")
         } else {
             mover = name(mater)
             replier = name(mater.opposite)
@@ -153,27 +169,27 @@ public struct MateNews: Hashable, Sendable {
         // every move loses, and this is the one the engine would still pick.
         var clauses: [String]
         if opens {
-            clauses = ["\(mover)起手 \(first)"]
+            clauses = [localized("mate.opens", mover, first)]
         } else {
-            clauses = ["\(replier)怎么走都躲不掉", "引擎给的最好一手是 \(first)"]
+            clauses = [localized("mate.unavoidable", replier), localized("mate.bestTry", first)]
         }
         if replies > 0, forced == replies {
-            clauses.append(replies == 1 ? "\(replier)只有一个应手" : "\(replier)每一步都只有一个应手")
+            clauses.append(localized(replies == 1 ? "mate.onlyReply" : "mate.allForced", replier))
         } else if forced > 0 {
-            clauses.append("中间\(replier)有 \(forced) 步只有一个应手")
+            clauses.append(localized("mate.someForced", replier, forced))
         }
         if reachesMate, let last = san.last {
-            clauses.append("\(last) 将死")
+            clauses.append(localized("mate.ends", last))
         } else {
-            clauses.append("引擎只给到第 \(san.count) 步，没给到将死那一步")
+            clauses.append(localized("mate.shortLine", san.count))
         }
-        return clauses.joined(separator: "，") + "。"
+        return clauses.joined(separator: localized("clause.separator")) + localized("sentence.end")
     }
 
     /// 白方 / 黑方, for the one framing that is about neither the player nor their opponent. Local
     /// rather than an extension: the app has a `chinese` of its own on this type, and two of them
     /// in scope is one too many.
     private static func name(_ colour: PieceColour) -> String {
-        colour == .white ? "白方" : "黑方"
+        localized(colour == .white ? "mate.white" : "mate.black")
     }
 }

@@ -44,3 +44,34 @@ public enum Score: Hashable, Sendable {
         }
     }
 }
+
+extension Score {
+    /// The steepness of the curve a centipawn is read through. lichess's own constant, from
+    /// `rawWinningChances` in `ui/ceval/src/winningChances.ts`:
+    /// `2 / (1 + exp(-0.00368208 × cp)) - 1`, which is the same curve written as a signed
+    /// advantage instead of a probability.
+    public static let winCurve = 0.003_682_08
+
+    /// White's chance of winning this position, 0…1 (docs/adr/0027).
+    ///
+    /// The scale everything in this app is judged on, because a centipawn is worth a different
+    /// amount in every position: three pawns thrown away from a won game barely moves this, and
+    /// one pawn thrown away from a level one moves it a lot. That is the shape a judgement wants
+    /// and the shape a bar wants, so both read this and there is one curve to be wrong about.
+    ///
+    /// A mate is 1 or 0 and not a large centipawn count: being mated in three and being mated in
+    /// twelve are the same fact about who wins, and the difference between them is not a drop
+    /// anybody should be told about.
+    public var winChance: Double {
+        switch self {
+        case .centipawns(let value):
+            1 / (1 + exp(-Self.winCurve * Double(value)))
+        case .mate(let moves):
+            moves > 0 ? 1 : 0
+        }
+    }
+
+    /// The same number as a percentage, which is the unit every line in this app is drawn in —
+    /// 10% intercept, 10% record, 20% enqueue (docs/adr/0027).
+    public var winPercent: Double { winChance * 100 }
+}

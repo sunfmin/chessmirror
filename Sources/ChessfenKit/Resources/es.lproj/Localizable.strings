@@ -84,28 +84,7 @@
 "library.entry.moves" = "%d jugadas";
 "library.entry.moves.one" = "%d jugada";
 "library.entry.unfinished" = "Sin terminar";
-"library.entry.branches" = "%d variantes";
 "library.entry.branches.one" = "%d variante";
-
-"habit.giveaway" = "Regalar piezas";
-"habit.missedReply" = "No calcular su respuesta";
-"habit.untrueReason" = "Motivo que no se sostiene";
-"habit.noReason" = "Sin motivo";
-"habit.attackWhileHanging" = "Atacar con una pieza colgada";
-
-"habit.giveaway.explained" = "Tras esta jugada te quedó una pieza sin defensa; esta vez el rival no la tomó.";
-"habit.missedReply.explained" = "Tras esta jugada te quedó una pieza sin defensa, y el rival la tomó en la jugada siguiente.";
-"habit.untrueReason.explained" = "Dijiste para qué era la jugada, y en el tablero pasó otra cosa.";
-"habit.noReason.explained" = "Jugada hecha, sin poder decir por qué.";
-"habit.attackWhileHanging.explained" = "Atacabas y capturabas mientras una pieza tuya ya estaba colgada.";
-
-"habit.excluded.unreviewed" = "sin puntuar todavía";
-"habit.excluded.unreadable" = "ilegibles";
-"habit.excluded.waiting" = "aún descargándose de iCloud";
-
-"habit.note.taken" = "nada defendía %@, y el rival lo tomó en la jugada siguiente";
-"habit.note.exposed" = "tras esta jugada, nada defendía %@";
-"habit.note.hanging" = "tu propia pieza en %@ estaba entonces sin defensa";
 
 "check.take.notHere" = "esta jugada no captura nada en %@";
 "check.take.won" = "capturar en %@ ganó material";
@@ -152,15 +131,14 @@
 "import.network.message" = "La red ha fallado durante la descarga: %@";
 "import.network.notHTTP" = "respuesta no HTTP";
 
-"import.done" = "%1$d partidas importadas a «%2$@»";
-"import.done.one" = "%1$d partida importada a «%2$@»";
+"import.done" = "%d partidas importadas";
+"import.done.one" = "%d partida importada";
 "import.done.skipped" = "%d omitidas por estar ya";
 "import.done.skipped.one" = "%d omitida por estar ya";
 "import.done.unreadable" = "otras %d no se han podido leer";
 "import.done.unreadable.one" = "otra %d no se ha podido leer";
 "import.name.players" = "%1$@ contra %2$@";
 "import.name.chapter" = "Capítulo %d";
-"import.collection.player" = "Partidas de %@";
 
 "ok" = "Vale";
 "cancel" = "Cancelar";
@@ -169,7 +147,6 @@
 "rename" = "Renombrar";
 "delete" = "Eliminar";
 "board" = "Tablero";
-"move.number" = "Jugada %d";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -193,43 +170,21 @@
 "library.fromStart" = "Empezar desde la inicial";
 "library.games" = "Partidas";
 "library.empty" = "Haz una jugada y la partida quedará anotada aquí.";
-"library.unfiled" = "Sin clasificar";
 "library.recognising" = "Leyendo el tablero";
 "library.noPicture" = "No se ha podido obtener la imagen";
 "library.noClipboard.title" = "No hay ninguna imagen en el portapapeles";
 "library.noClipboard.message" = "Haz una captura y vuelve.";
 
-"collection.name" = "Nombre de la colección";
-"collection.rename" = "Renombrar colección";
-"collection.new" = "Nueva colección";
-"collection.new.ellipsis" = "Nueva colección…";
-"collection.file" = "Guardar en una colección";
-"collection.remove" = "Sacar de la colección";
-"collection.games" = "%d partidas";
 "collection.games.one" = "%d partida";
-"collection.sorted" = "%d partidas · por nombre";
 "collection.sorted.one" = "%d partida · por nombre";
-"collection.empty" = "Esta colección está vacía. Guarda una partida en ella y volverá a la lista.";
 
 "game.name.title" = "Ponle nombre a esta partida";
 "game.name.field" = "Nombre";
-"game.name.field.long" = "Cómo se llama esta partida";
 "game.name.explained" = "Una colección se ordena por nombre, así que «Ejercicio 002» quedará donde esperas. Déjalo vacío y se usará la hora en que se guardó.";
-"game.file.into" = "Guardar en «%@»";
-"game.file.explained" = "El nombre decide su lugar en la colección y el orden en que van la anterior y la siguiente.";
 
-"habits" = "Manías";
-"habits.card" = "Los errores que repites, contados en tus partidas";
-"habits.subtitle" = "Contados en las partidas que has guardado. Sin nota y sin clasificación.";
-"habits.counting" = "Contando…";
-"habits.nothing" = "Todavía no hay partidas que contar. Puntúa una y aquí habrá algo que decir.";
-"habits.clean" = "%d partidas contadas, sin ninguna manía.";
 "habits.clean.one" = "%d partida contada, sin ninguna manía.";
-"habits.counted" = "%d partidas contadas.";
 "habits.counted.one" = "%d partida contada.";
-"habits.excluded" = "Otras %1$d partidas %2$@, fuera de la cuenta.";
 "habits.excluded.one" = "Otra %1$d partida %2$@, fuera de la cuenta.";
-"habits.times" = "%d veces";
 "habits.times.one" = "%d vez";
 
 "edit.title" = "Corregir piezas";
@@ -261,7 +216,7 @@
 "import.title" = "Importar partidas";
 "import.door.link" = "Enlace";
 "import.door.player" = "Partidas recientes";
-"import.door.link.explained" = "Pega un enlace —un estudio de lichess, o una sola partida— y cada partida que contenga será una partida de la colección.";
+"import.door.link.explained" = "Pega un enlace —un estudio de lichess, o una sola partida— y cada partida que contenga será una partida de la lista.";
 "import.door.player.explained" = "Escribe un usuario de lichess para bajarte sus últimas partidas. Esto se hace antes de subir al avión.";
 "import.field.link" = "Enlace PGN";
 "import.field.player" = "Usuario de lichess";
@@ -269,16 +224,11 @@
 "import.fetch" = "Traer las partidas";
 "import.fetching" = "Descargando…";
 "import.writing" = "Guardando…";
-"import.into" = "A «%@»";
-"import.intoCollection" = "A la colección";
 "import.plan.games" = "%d partidas";
 "import.plan.games.one" = "%d partida";
-"import.plan.named" = "«%1$@» · %2$@";
-"import.more" = "%d más…";
 "import.more.one" = "%d más…";
 "import.unreadable" = "%d partidas no se han podido leer y se omitirán.";
 "import.unreadable.one" = "%d partida no se ha podido leer y se omitirá.";
-"import.apply" = "Importar %d partidas";
 "import.apply.one" = "Importar %d partida";
 "import.again" = "Importar otra cosa";
 
@@ -292,7 +242,6 @@
 "game.blackFirst" = "Empiezan las negras";
 "game.more" = "Más; empiezan las %@";
 "game.promotion" = "¿Coronar a qué?";
-"game.practice" = "Práctica";
 "game.noEngine" = "Sin motor";
 "game.toPlay" = "Le toca";
 "game.inCheck" = "En jaque";
@@ -308,17 +257,6 @@
 "game.settings.collapse" = "Cerrar los ajustes de las %@";
 "game.who" = "Quién juega";
 "game.perMove" = "Por jugada";
-"game.worst" = "Las tres jugadas más caras";
-"game.worst.quiet" = "Las tres que hay que mirar";
-"game.changed" = "Qué cambió esta jugada";
-"game.loose" = "Círculo rojo: más atacada que defendida";
-"game.wrongPiece" = "¿La foto se equivocó de pieza?";
-"game.alternatives" = "Otras jugadas";
-"game.over" = "La partida ha terminado. Abajo están la curva y lo que costó cada jugada.";
-"game.over.quiet" = "La partida ha terminado. Activa «Opinión del motor» y puntuará todas las jugadas.";
-"game.quiet" = "Práctica: el motor se guarda su opinión. Activa arriba «Opinión del motor» para oírla.";
-"game.selfPlaying" = "Los dos bandos son el motor; sigue solo. Retrocede una jugada para pararlo";
-"game.opinion" = "Opinión del motor";
 "game.flip" = "Dar la vuelta al tablero";
 
 "record.previous" = "Jugada anterior";
@@ -327,54 +265,8 @@
 "record.curve" = "Curva de evaluación";
 "record.ply" = "Media jugada %d";
 "record.jump" = "Volver a esta jugada";
-"record.branch" = "Desliza arriba o abajo para cambiar de variante";
 "record.startHere" = "Jugar desde aquí";
 "record.opening" = "Inicio";
-
-"study.computing" = "Calculando esta jugada…";
-"study.why" = "Juegas %@. ¿Por qué?";
-"study.withdraw" = "Retirar";
-"study.commit" = "Esta es mi jugada";
-"study.notReady" = "El motor no está listo, así que esta jugada no se puede puntuar.";
-"study.ask" = "Juegan las %@. ¿Qué jugarías?";
-"study.ask.explained" = "Juega directamente en el tablero. El resultado llega cuando hayas movido.";
-"study.place" = "Número %1$d entre las jugadas más caras de la partida: se jugó %2$@, %3$@ peones.";
-"study.place.practising" = "Número %d entre las jugadas más caras de la partida. Lo que se jugó aquí no se sostiene cuando el motor vuelve a calcular.";
-"study.reason.unclear" = "No sabría decir — anotado.";
-"study.reason.because" = "Porque: %@.";
-"study.reason.where" = "%@ ¿dónde? Toca una casilla del tablero.";
-"study.reason.prompt" = "Di primero para qué es esta jugada.";
-"study.headline.both" = "Buena jugada, y el motivo se sostiene.";
-"study.headline.reasonOnly" = "El motivo es bueno; esta jugada no lo cumple.";
-"study.headline.moveOnly" = "La jugada vale, pero el motivo no se sostiene.";
-"study.headline.neither" = "Ni la jugada ni el motivo se han sostenido.";
-"study.headline.fine" = "La jugada vale.";
-"study.headline.poor" = "La jugada no se sostiene.";
-"verdict.held" = "Acertado";
-"verdict.failed" = "No cumplió";
-"verdict.noClaim" = "Sin decir";
-"study.verdict.noOpinion" = "El motor no da su opinión, así que solo cabe compararla con lo jugado.";
-"study.verdict.best" = "Es la primera opción del motor.";
-"study.verdict.better" = "Mejor que la del motor por %@.";
-"study.verdict.pass" = "Aprobada: %@ por detrás del motor.";
-"study.verdict.worse" = "%1$@: %2$@ por detrás del motor.";
-"study.yours" = "Tú";
-"study.engine" = "Motor";
-"study.played" = "Jugada";
-"study.keep" = "Jugar esta";
-"study.again" = "Otra vez";
-"study.next" = "Siguiente";
-"study.depth.explained" = "Las tres se calculan a profundidad %d, así que son comparables.";
-
-"report.running" = "Recalculando a profundidad %1$d: %2$d/%3$d";
-"report.unscored" = "Esta partida no se ha puntuado.";
-"report.score" = "Puntuar";
-"report.ply" = "Jugada %1$d, %2$@ %3$@";
-"report.start" = "Posición inicial";
-
-"series.previous" = "Partida anterior";
-"series.next" = "Partida siguiente";
-"series.place" = "Partida %1$d de %2$d";
 
 "about" = "Acerca de";
 "about.what" = "Fotografía un tablero, lee la posición y sigue jugando. El reconocimiento y el motor funcionan en este dispositivo; las partidas se guardan en tu propio iCloud. Lo único que se descarga es la partida que tú importes desde un enlace.";
@@ -395,3 +287,148 @@
 "about.licence" = "Licencia";
 "about.source" = "Código fuente";
 "about.licence.explained" = "Esta app lleva Stockfish dentro, publicado bajo la GNU GPL v3, así que la app entera también es GPL v3: puedes usarla, estudiarla, modificarla y redistribuirla libremente, siempre que entregues con ella el código fuente y la misma licencia. El texto completo está en el archivo LICENSE del repositorio.\n\nLos gráficos de las piezas son el juego Cburnett de python-chess (CC BY-SA 3.0).";
+
+/* ------------------------------------------------------------ compartido */
+"share.reading" = "Recibiendo la imagen";
+"share.kept.title" = "Recibida";
+"share.kept.message" = "Abre 棋镜 y ahí está la posición.";
+"share.open" = "Abrir 棋镜";
+
+/* ------------------------------------------------------------ cuentas */
+"settle.took" = "Te regalaron un %d%% y lo cogiste.";
+"settle.missed" = "Te regalaron un %1$d%%, te quedaste un %2$d%%, dejaste un %3$d%%.";
+
+/* ------------------------------------------------------------ las líneas */
+"lines" = "Umbrales";
+"lines.record" = "Anotarla";
+"lines.enqueue" = "Practicarla";
+"lines.explained" = "Cuánto tiene que regalar una jugada para contar. Pasado el primero se anota en la partida; pasado el segundo también ocupa tiempo de práctica, así que ese debería ser más alto. Cerca de la igualdad, un peón es más o menos un 10%.";
+
+/* ------------------------------------------------------------ el cuaderno */
+"book" = "Errores";
+"book.empty" = "Aún no hay nada. Las posiciones que falles llegan solas.";
+"book.fell" = "Has caído en esta posición %d veces";
+"book.played" = "%1$d veces %2$@";
+"book.lastTime" = "la última fue %@";
+"book.cost" = "cuesta %d%%";
+"book.times" = "%d veces";
+"book.remove" = "Sacarla del cuaderno";
+"book.encounters" = "Veces";
+"ago.days" = "hace %d días";
+"ago.hours" = "hace %d horas";
+"ago.justNow" = "ahora mismo";
+"book.items" = "%d posiciones";
+"book.yourMove" = "jugaste";
+"book.better" = "mejor era";
+"book.items.one" = "%d posición";
+"book.fell.one" = "Has caído en esta posición %d vez";
+"book.times.one" = "%d vez";
+"ago.days.one" = "hace %d día";
+"ago.hours.one" = "hace %d hora";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "Practicar";
+"drill.prompt" = "Te toca";
+"drill.judging" = "Calculando lo que costó";
+"drill.passed" = "%1$@ — %2$@. Se sostiene.";
+"drill.failed" = "%1$@ — %2$@. Eso cede %3$d%%.";
+"drill.failed.wanted" = "%1$@ — %2$@. Eso cede %3$d%%. Mejor era %4$@ — %5$@.";
+"drill.keepPlaying" = "Seguir jugando";
+"drill.leave" = "Salir";
+"drill.next" = "Siguiente";
+"drill.seconds" = "tardaste %d segundos";
+"drill.seconds.one" = "tardaste %d segundo";
+"drill.noEngine" = "El motor aún no está listo, así que no se puede juzgar la jugada.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Hoy";
+"daily.left" = "quedan %d";
+"daily.done" = "Listo por hoy";
+"daily.none" = "Nada que practicar hoy";
+"daily.left.one" = "queda %d";
+"till.start" = "Empezar sin errores";
+"till.name" = "Sin errores";
+"till.practice" = "Práctica";
+"till.intercept" = "Umbral de rechazo";
+"till.off" = "Desactivado";
+"till.judging" = "Calculando";
+"till.refused" = "%@ pierde %d%%. Inténtalo de nuevo.";
+"till.hint" = "Pista %d";
+"till.reveal" = "Revelar respuesta";
+"till.relax" = "Ampliar a %d%%";
+"till.shot" = "Hay una oportunidad táctica.";
+"till.quiet" = "No hay táctica confirmada. Mejora tu posición.";
+"till.notFound" = "No encontrada";
+"punish.toggle" = "Encontrar la respuesta rival";
+"punish.prompt" = "Juega por tu rival y encuentra su mejor respuesta.";
+"punish.again" = "Hay una respuesta mejor. Inténtalo de nuevo.";
+"punish.skip" = "Omitir";
+"punish.answer" = "Tu rival puede jugar %@.";
+"import.status.new" = "Sin importar";
+"import.status.pending" = "Pendiente · abre para reintentar";
+"import.status.scoring" = "Evaluando";
+"import.status.ready" = "%d errores añadidos";
+"mate.ours" = "Tienes mate en %d";
+"mate.theirs" = "El rival tiene mate en %d";
+"mate.colour" = "%@ tiene mate en %d";
+"mate.noLine" = "El motor anuncia mate en %d, pero no muestra jugadas.";
+"mate.you" = "Tú";
+"mate.opponent" = "El rival";
+"mate.opens" = "%@ empieza con %@";
+"mate.unavoidable" = "%@ no puede evitar el mate";
+"mate.bestTry" = "el mejor intento es %@";
+"mate.onlyReply" = "%@ solo tiene una respuesta";
+"mate.allForced" = "%@ solo tiene una respuesta en cada paso";
+"mate.someForced" = "%@ tiene %d respuestas forzadas en la línea";
+"mate.ends" = "%@ da mate";
+"mate.shortLine" = "la línea termina tras %d medias jugadas, antes del mate";
+"mate.white" = "Blancas";
+"mate.black" = "Negras";
+"search.reached" = "Alcanzado";
+"search.depth" = "Profundidad";
+"search.starting" = "Iniciando";
+"search.again" = "Analizar 10 segundos más";
+"intent.goal.attack" = "Atacar";
+"intent.goal.defend" = "Defender";
+"intent.goal.trade" = "Cambiar";
+"intent.goal.hold" = "Ocupar";
+"intent.sequence" = "%@; %@ después %@";
+"intent.later" = "%@ después %@";
+"intent.laterGoal" = "%@ después %@: %@";
+"intent.ahead" = "en %d medias jugadas, %@";
+"tactic.mate" = "%@ da mate";
+"tactic.piece" = "pieza";
+"tactic.hanging" = "%1$@ captura la pieza %3$@ indefensa en %2$@";
+"tactic.capture" = "%1$@ captura la pieza %3$@ en %2$@ con ganancia";
+"tactic.target" = "%2$@ en %1$@";
+"tactic.and" = " y ";
+"tactic.fork" = "%@ ataca a la vez %@";
+"screen.opinion" = "Opinión del motor";
+"screen.on" = "Activado";
+"screen.stopFinder" = "Detener búsqueda";
+"screen.find" = "Buscar táctica";
+"screen.finder" = "Buscador de tácticas";
+"screen.finderStopped" = "Búsqueda detenida. Buscar táctica vuelve a comprobar tácticas y mates.";
+"screen.finderIdle" = "Sin analizar. Buscar táctica comprueba tácticas y mates.";
+"screen.hideArrows" = "Ocultar flechas";
+"screen.showArrows" = "Dibujar en tablero";
+"screen.arrowLimit" = "Solo se dibujan las primeras %d medias jugadas para mantener la claridad.";
+"screen.arrowsExplained" = "Las flechas usan la línea existente. No juegan ni vuelven a analizar.";
+"screen.finished" = "La partida terminó; no hay siguiente jugada.";
+"screen.noMate" = "No se encontró mate forzado cercano para ningún bando.";
+"screen.mateIdle" = "Esta tarjeta analiza 10 segundos e informa si encuentra mate.";
+"screen.spokenMove" = "Media jugada %d %@";
+"screen.mate" = "Mate";
+"screen.tactics" = "Tácticas";
+"screen.mateSubtitle" = "Puede haber un mate forzado cercano";
+"screen.tacticsSubtitle" = "¿Hay una jugada que gane material?";
+"finder.checking" = "Buscando tácticas";
+"finder.ours" = "Tienes una táctica";
+"finder.theirs" = "Tu rival tiene una táctica";
+"finder.none" = "No hay táctica en esta jugada";
+"import.trackSide" = "¿Qué bando quieres registrar?";
+"discovery.checking" = "Comprobando…";
+"discovery.none" = "No se ha encontrado";
+"discovery.view" = "Ver";
+"discovery.mateFound" = "Mate encontrado";
+"discovery.tacticFound" = "Oportunidad táctica encontrada";

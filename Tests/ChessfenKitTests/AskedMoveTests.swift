@@ -2,8 +2,9 @@ import ChessfenKit
 import Foundation
 import Testing
 
-/// What 让引擎走 does, and what filing a game stops the screen asking about. Neither is visible in a
-/// picture — a press is a moment and the screenshots are of states — so they are checked here.
+/// What 让引擎走 does, and how long the screen goes on asking about the pieces it read off a
+/// photograph. Neither is visible in a picture — a press is a moment and the screenshots are of
+/// states — so they are checked here.
 @MainActor
 @Suite(.serialized)
 struct AskedMove {
@@ -167,30 +168,45 @@ struct AskedMove {
         #expect(session.analysis == nil, "no Score reaches the screen while practising")
     }
 
-    /// A game somebody has filed has been looked at and kept, so the screen stops asking about the
-    /// pieces it once was not sure of.
-    @Test("filing a game into a collection puts the piece question to rest")
-    func filedGameStopsAsking() throws {
+    /// A game read off a photograph goes on offering the editor for as long as it exists, saved
+    /// and reopened included: the thing most likely to be wrong about such a game is a piece, and
+    /// finding that out ten moves later is the normal case (docs/adr/0028). A game that came out
+    /// of a file nobody photographed has nothing to correct, so it never asks.
+    @Test("a photographed game keeps offering the pieces back; an imported one never asks")
+    func onlyAPhotographAsksAboutItsPieces() throws {
         let fen = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R w KQkq - 0 5"
         let game = try #require(Game(startFEN: fen))
         let shaky: Set<Square> = [Square("c6")!, Square("f6")!]
 
-        let unfiled = GameSession.recognised(game, shaky: shaky)
-        #expect(unfiled.canEditPosition)
-        #expect(unfiled.unconfirmedSquares == shaky)
+        let fresh = GameSession.recognised(game, shaky: shaky)
+        #expect(fresh.canEditPosition)
+        #expect(fresh.unconfirmedSquares == shaky)
 
-        // Filed is a property of a saved game: the collection is written into the file.
-        let filed = try #require(GameSession.opened(GameLibrary.Entry(
-            url: URL(filePath: "/games/chessfen-filed.pgn"),
+        // Saved and opened again: the origin travels in the file, and so does the offer.
+        let reopened = try #require(GameSession.opened(GameLibrary.Entry(
+            url: URL(filePath: "/games/chessfen-photo.pgn"),
             pgn: PGN(game: game, tags: [
-                PGN.Tag(GameOrigin.tagName, GameOrigin.recognised.rawValue),
-                PGN.Tag("Event", "西西里防御"),
+                PGN.Tag(GameOrigin.tagName, GameOrigin.recognised.rawValue)
             ]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )))
-        #expect(!filed.canEditPosition)
-        #expect(filed.unconfirmedSquares.isEmpty)
-        // And filing survives the next move being written: `pgn` must not file it back out.
-        #expect(filed.pgn.tag("Event") == "西西里防御")
+        #expect(reopened.canEditPosition, "a photograph is still a photograph after it is saved")
+
+        // The rings go once a move is played — by then the position has been accepted in practice —
+        // but the way back to the editor does not.
+        let move = try #require(reopened.viewed.state.legalMoves.first)
+        reopened.play(move)
+        #expect(reopened.unconfirmedSquares.isEmpty)
+        #expect(reopened.canEditPosition)
+
+        let imported = try #require(GameSession.opened(GameLibrary.Entry(
+            url: URL(filePath: "/games/somebody-elses.pgn"),
+            pgn: PGN(game: game, tags: [
+                PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue)
+            ]),
+            modified: Date(timeIntervalSince1970: 1_786_000_000)
+        )))
+        #expect(!imported.canEditPosition)
+        #expect(imported.unconfirmedSquares.isEmpty)
     }
 }

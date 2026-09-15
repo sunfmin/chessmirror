@@ -92,9 +92,15 @@ public enum ThinkingTime: Hashable, Sendable {
 /// What a Review has to say about one move, by how much worse the position got.
 ///
 /// Named from the mover's point of view: a Score is White-relative, so Black losing 200
-/// centipawns means the number went *up*. Thresholds are the familiar ones — the same
-/// bands lichess uses — and they are deliberately coarse, because a Review's job is to
-/// point at the moves worth a second look, not to grade a performance.
+/// centipawns means its win chance went *up*. Deliberately coarse, because a Review's job is
+/// to point at the moves worth a second look, not to grade a performance.
+///
+/// Measured in **win probability, not centipawns** (docs/adr/0027). The old bands — 300 a
+/// blunder, 150 a mistake, 50 an inaccuracy — called throwing three pawns away from a won game
+/// a blunder and shrugged at a pawn thrown away from a level one, which is backwards. On this
+/// scale the same three names land where they were always meant to: near equality 10% is about
+/// 109 centipawns, so an ordinary inaccuracy is still an inaccuracy, and 300 centipawns given
+/// up while eight pawns ahead is 9 points and nothing at all.
 public enum MoveQuality: String, Hashable, Sendable, CaseIterable {
     case blunder
     case mistake
@@ -120,30 +126,43 @@ public enum MoveQuality: String, Hashable, Sendable, CaseIterable {
         }
     }
 
-    /// Compares the Score before a move with the Score after it.
+    /// Where the three names begin, in percentage points of win probability given away.
     ///
-    /// A mate score is worth more than any number of pawns, so it is converted to a large
-    /// one rather than compared as a special case: being mated in three is not "minus
-    /// infinity" for these purposes, it is simply very bad, and the difference between
-    /// very bad and slightly less bad should not read as a blunder.
+    /// The lowest of them is also the default 记录线 and 拦截线, which is not a coincidence: a
+    /// move worth a name is a move worth writing down (docs/adr/0027). They are constants
+    /// because they name a move, and the three *lines* — what to stop for, what to write down,
+    /// what to drill — are a `JudgementLines`, which the player sets.
+    public static let inaccuracyFrom = 10.0
+    public static let mistakeFrom = 20.0
+    public static let blunderFrom = 30.0
+
+    /// How much win probability a move gave away, in percentage points, from the mover's own
+    /// point of view. Negative for a move that improved on what the engine had — which happens,
+    /// and reads as a gain rather than being clamped to nothing.
+    ///
+    /// Nil rather than zero when either end is missing. The two are not the same thing: one is
+    /// "this move cost nothing" and the other is "nobody has looked", and a caller that cannot
+    /// tell them apart will file an unreviewed game as a game with no mistakes in it.
+    public static func drop(
+        move mover: PieceColour, before: Score?, after: Score?
+    ) -> Double? {
+        guard let before, let after else { return nil }
+        let mine = mover == .white
+            ? (before.winPercent, after.winPercent)
+            : (100 - before.winPercent, 100 - after.winPercent)
+        return mine.0 - mine.1
+    }
+
+    /// Compares the Score before a move with the Score after it, on the win-probability scale.
     public static func of(
         move mover: PieceColour, before: Score?, after: Score?
     ) -> MoveQuality? {
-        guard let before, let after else { return nil }
-        let lost = (centipawns(before) - centipawns(after)) * (mover == .white ? 1 : -1)
+        guard let lost = drop(move: mover, before: before, after: after) else { return nil }
         return switch lost {
-        case 300...: .blunder
-        case 150..<300: .mistake
-        case 50..<150: .inaccuracy
+        case blunderFrom...: .blunder
+        case mistakeFrom..<blunderFrom: .mistake
+        case inaccuracyFrom..<mistakeFrom: .inaccuracy
         default: .fine
-        }
-    }
-
-    /// Mate scores flattened onto the centipawn scale so differences stay finite.
-    static func centipawns(_ score: Score) -> Int {
-        switch score {
-        case .centipawns(let value): max(-3000, min(3000, value))
-        case .mate(let moves): moves > 0 ? 10000 - moves * 100 : -10000 - moves * 100
         }
     }
 }

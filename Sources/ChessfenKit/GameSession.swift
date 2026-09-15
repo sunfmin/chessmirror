@@ -52,31 +52,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public private(set) var cursor: Int {
         didSet {
             storedViewed = nil
-            // The cursor *is* the question a Drill asks, so moving it takes the answer off the
-            // board with it — the move, the reason, and what either was worth. One home for that,
-            // rather than four places that each remember.
-            guess = nil
-            reveal = nil
-            declaringVerb = nil
-            declaredIntent = nil
-            revealTask?.cancel()
-            revealTask = nil
-            isRevealing = false
-            // A question about a square is a question about *this* position, so the scanner goes
-            // with the cursor as well. Same home, same reason.
-            isScannerArmed = false
-            scan = nil
-            trial = nil
-            scanAnswer = nil
-            askTask?.cancel()
-            isAsking = false
-            walk = nil
-            planDraft = nil
-            planNotes = []
-            planTask?.cancel()
-            isPlanning = false
-            planCheck = nil
-            planOutcome = nil
+            // A shot found here was found for *this* position, so it goes with the cursor. One
+            // home for that, rather than three places that each remember.
             tactic = nil
             isProbingTactics = false
             probedAnalysis = nil
@@ -86,76 +63,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// moves — the whole point of `viewed` being a stored value instead of a derivation
     /// (see `viewed` itself).
     @ObservationIgnored private var storedViewed: Game?
-    /// The move offered at the Ply being studied, on the board and not yet in the Game.
-    public private(set) var guess: Guess?
-    /// Whether the layer showing what the move changed is on.
-    ///
-    /// Off to begin with and off for every Game, like the engine's opinion and for the same reason
-    /// (docs/adr/0015): a board wearing every layer at once is a board nobody reads, and the
-    /// answer to "what did that move do" is worth more when somebody asked for it. On the session
-    /// rather than in the screen so that it cannot come back from a Game the player has left.
-    ///
-    /// One exception, and it is the one moment it is allowed: committing a Guess turns it on. At
-    /// that moment the engine is already speaking, so the tap it would cost buys nothing
-    /// (docs/adr/0021).
-    public private(set) var showsControlChange = false
-    /// The verb chosen, waiting for the Square it is about. A claim with no target is not a claim
-    /// yet, which is why this is not an Intent.
-    public private(set) var declaringVerb: Intent.Verb?
-    /// The finished declaration — a verb and its target, or 说不清 — ready to be committed with
-    /// the move it is about.
-    public private(set) var declaredIntent: Intent?
-    /// What committing it showed. Nil until something has been committed, and cleared by
-    /// anything that changes the question.
-    public private(set) var reveal: Reveal?
-    /// True while the searches behind a reveal are running.
-    public private(set) var isRevealing = false
     /// The uniform-depth pass over the whole Game, while there is one running or just finished.
     public private(set) var reviewPass: ReviewPass?
 
-    // ----------------------------------------------------------------- the scanner
-
-    /// Whether the board is waiting to be pointed at.
-    ///
-    /// Armed by a tap and by nothing else. The scanner is the only thing the layer is allowed to
-    /// say before a Guess is committed, and it only ever answers about the square somebody chose
-    /// (docs/adr/0015, 0021) — so arming it is a deliberate act and never a state the screen
-    /// arrives in.
-    public private(set) var isScannerArmed = false
-    /// The square that was pointed at, and every piece of the side to move that can reach it.
-    public private(set) var scan: Scan?
-    /// The move being tried out: on the board, in no Game, and gone the moment the scanner closes.
-    public private(set) var trial: Trial?
-    /// The Line being played out on the board, when one is.
-    ///
-    /// 走马灯 (docs/adr/0021). The Line is the one somebody already paid for — a Review's or a
-    /// Reveal's — so watching it costs no engine time, and nothing in it is played: the Game, the
-    /// PGN and the Variations are all untouched, and leaving puts the board back exactly.
-    public private(set) var walk: Walk?
-    /// The five moves on the board, with one Intent to come over the whole of them.
-    ///
-    /// 五步计划 (docs/adr/0017). Seeded from the engine's own best line, because a blank five-move
-    /// canvas is a wall: the club player who could already write the line down did not need the
-    /// feature, and everyone else got an empty box. What is asked of them instead is the harder
-    /// half and the half that was always the point — the line is given, the *reason* is theirs,
-    /// and it is judged (docs/adr/0022).
-    public private(set) var planDraft: PlanDraft?
-    /// What each move of the plan is for, and what it gives away — one per step, in order.
-    public private(set) var planNotes: [PlanNote] = []
-    /// True while the search that fills the plan in is running.
-    public private(set) var isPlanning = false
-    private var planTask: Task<Void, Never>?
-    /// How the last committed plan was judged, and at which step.
-    public private(set) var planCheck: PlanCheck?
-    /// Where that plan arrived, by the same reckoning the carousel uses (docs/adr/0021).
-    public private(set) var planOutcome: LineOutcome?
-    /// What the engine said about the scanned position — only ever after somebody asked.
-    public private(set) var scanAnswer: ScanAnswer?
-    /// True while that search is running.
-    public private(set) var isAsking = false
-    private var askTask: Task<Void, Never>?
-
-    private var revealTask: Task<Void, Never>?
     private var reviewTask: Task<Void, Never>?
     /// The Analysis of the position being looked at, replaced each time the engine reports a
     /// deeper one, and cleared the moment anything makes it stale.
@@ -275,7 +185,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     ///
     /// The finder's search is not advice — it is bounded, it was asked a question about shots, and
     /// practice is allowed to keep it (docs/adr/0023). A mate in it is news, and news is not the
-    /// engine's opinion either, so it may be read out where a Score may not (docs/adr/0024). What
+    /// engine's opinion either, so it may be read out where a Score may not (docs/adr/0025). What
     /// is *not* kept is a Score, a Depth or a candidate list: nothing else in here reaches a screen.
     private var probedAnalysis: Analysis?
     /// Analyses already paid for, keyed by the FEN they were found from. A swipe onto another
@@ -336,6 +246,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         self.url = url
         self.tags = tags
         self.cursor = min(max(0, viewing ?? game.plies.count), game.plies.count)
+        if let value = tags.first(where: { $0.name == "Intercept" }).flatMap({ Double($0.value) }),
+            JudgementLines.interceptChoices.contains(value) {
+            lines.intercept = value
+        }
     }
 
     // ------------------------------------------------------------------ ways in
@@ -388,6 +302,22 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return session
     }
 
+    private var pendingImportURL: URL?
+
+    private func reviewImportIfReady() {
+        let session = self
+        if let engine, let library, let pendingImportURL,
+            let entry = library.entries.first(where: { $0.url == pendingImportURL }) {
+            library.reviewImported(entry, using: engine) { [weak session] reviewed in
+                guard let session, session.game.uciMoves == reviewed.game.uciMoves,
+                    session.game.startFEN == reviewed.game.startFEN else { return }
+                session.game = reviewed.game
+                session.tags = reviewed.tags
+                session.pendingImportURL = nil
+            }
+        }
+    }
+
     /// A saved game, opened at the position it began in.
     ///
     /// The beginning rather than the end, because opening a game that is over is reading it: the
@@ -412,6 +342,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     ) -> GameSession? {
         guard !entry.isDownloading else { return nil }
         let session = GameSession(entry: entry, library: library)
+        session.pendingImportURL = entry.url
         session.attach(engine: engine, library: library)
         session.seatEngineOpponent()
         return session
@@ -442,26 +373,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return session
     }
 
-    /// The next saved game in a collection, opened the way this one is being worked: who plays
-    /// each side, and the clock somebody put the engine on. Those are ways of working rather than
-    /// facts about a game, and having to set them again for every position is exactly the friction
-    /// that makes a set of fifty not get done. Which way up the board is is a fact about the game
-    /// being opened, though — each record faces its own side to move, not the last one's. Nil
-    /// while the next file is still on the way (see `opened`).
-    ///
-    /// The one thing that does **not** carry over is the engine's opinion. Working through fifty
-    /// positions with it left on is fifty positions read off a screen instead of fifty positions
-    /// thought about, and that is precisely the set this app exists to make worth doing — so each
-    /// one opens silent and turning it on is a fresh decision (docs/adr/0015).
-    public func next(_ entry: GameLibrary.Entry) -> GameSession? {
-        guard let next = Self.opened(entry, engine: engine, library: library) else { return nil }
-        for colour in [PieceColour.white, .black] {
-            next.setController(controller(for: colour), for: colour)
-        }
-        if let chosenThinkingTime { next.setThinkingTime(chosenThinkingTime) }
-        return next
-    }
-
     /// Reopens a saved game, at the position it began in, facing the side about to move.
     private convenience init(entry: GameLibrary.Entry, library: GameLibrary? = nil) {
         let pgn = entry.pgn
@@ -484,6 +395,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func attach(engine: (any Engine)?, library: GameLibrary?) {
         self.engine = engine
         self.library = library
+        reviewImportIfReady()
     }
 
     /// The side about to move is the person's; the other side answers at one second a move.
@@ -497,6 +409,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func setController(_ controller: Controller, for colour: PieceColour) {
+        guard !isWeighing, activePunishment == nil else { return }
         guard controllers[colour] != controller else { return }
         controllers[colour] = controller
         // Changing who moves for the side already on the clock has to take effect now, not
@@ -537,6 +450,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// running search starts again on the new clock rather than being trimmed to it — the time
     /// asked for is the time it gets.
     public func setThinkingTime(_ time: ThinkingTime) {
+        guard !isWeighing, activePunishment == nil else { return }
         guard thinkingTime != time else { return }
         chosenThinkingTime = time
         retune()
@@ -545,12 +459,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Turns the engine's advice off, or back on. Also takes effect now: a number left standing
     /// from the search that has just been called off is the one thing practice must not show.
     public func setPractising(_ practising: Bool) {
+        guard !isWeighing, !isTilling || practising else { return }
         guard isPractising != practising else { return }
         isPractising = practising
         analysis = nil
-        // A Drill is what the board is while the opinion is off, so turning it on ends any
-        // question in progress rather than leaving an unmarked answer under a curve.
-        withdrawGuess()
         // The one moment a Game can acquire a Review. 复盘 is not a place any more; it is the
         // name of what this switch turns on, and a Game that has never had a uniform pass gets
         // one here (docs/adr/0015).
@@ -561,6 +473,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Turns the tactics finder on, or back off. Takes effect now: a shot left standing after
     /// the switch is thrown is the one thing the live board must not keep drawing.
     public func setFindingTactics(_ on: Bool) {
+        guard !isTilling || !on else { return }
         guard isFindingTactics != on else { return }
         isFindingTactics = on
         if !on {
@@ -573,6 +486,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             retune()
             return
         }
+        // Finding opportunities must not restart a move already on the clock or a review.
+        if thinking != nil || reviewPass?.isRunning == true { return }
         if recallCachedAnalysis(), let found = analysis {
             tactic = Tactic.confirmed(in: viewed, analysis: found)
             probedAnalysis = found
@@ -591,19 +506,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     ///
     /// Nil when the finder is off. It talks about whichever position is on screen, a past Ply
     /// included: the finder is a card of its own now, and swiping onto it is the asking
-    /// (docs/adr/0024, amending 0023).
+    /// (docs/adr/0025, amending 0023).
     public var tacticPrompt: String? {
         guard isFindingTactics, !viewed.isOver else { return nil }
-        if isProbingTactics, tactic == nil { return "在看有没有战术" }
+        if isProbingTactics, tactic == nil { return localized("finder.checking") }
         if let tactic {
-            let whose = isHandTurn ? "有战术" : "对方有战术"
+            let whose = localized(isHandTurn ? "finder.ours" : "finder.theirs")
             return "\(whose)：\(tactic.sentence)"
         }
-        return "这一步没有战术"
+        return localized("finder.none")
     }
 
     /// The mate anybody can see from the position on screen, whoever it belongs to
-    /// (docs/adr/0024).
+    /// (docs/adr/0025).
     ///
     /// **No search of its own.** It reads whichever one has already run: the standing Analysis
     /// when the engine is talking, and the finder's bounded probe when it is not. So the app
@@ -614,7 +529,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Any position the eye is on, the latest or a past one. A mate on a Ply somebody walked back
     /// to is the same fact about the same board, and the card carrying it is one swipe away from
     /// 考一遍 rather than on top of it — so looking is a thing a person does on purpose, and the
-    /// question is not answered before it is asked (docs/adr/0024, amending 0023).
+    /// question is not answered before it is asked (docs/adr/0025, amending 0023).
     public var mateNews: MateNews? {
         guard !viewed.isOver else { return nil }
         guard let source = analysis ?? probedAnalysis else { return nil }
@@ -626,37 +541,21 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         Set([PieceColour.white, .black].filter { controller(for: $0) == .hand })
     }
 
-    /// The collection this game is filed under, according to its own file.
-    ///
-    /// Read from the tags rather than carried alongside them, so that it cannot disagree with what
-    /// the library shows — and so a game that has never been saved has no collection, which is the
-    /// truth about it.
-    public var collection: String? {
-        guard let event = tags.first(where: { $0.name == "Event" })?.value,
-            !GameLibrary.unfiledEvents.contains(event)
-        else { return nil }
-        return event
-    }
-
     // ------------------------------------------------------------- the reading
-
-    /// Whether somebody has filed this game into a collection, which is them saying they are keeping
-    /// it — and so also saying the position it starts from is the one they meant.
-    public var isFiled: Bool { collection != nil }
 
     /// Whether this game's starting position can be taken back to the editor. True for anything
     /// read off a picture, for as long as the game exists: the thing most likely to be wrong
     /// about such a game is a piece, and finding that out ten moves later is the normal case.
     ///
-    /// Except once it has been filed. A game somebody has put in a collection has been looked at
-    /// and kept, so either the reading was right or it has already been put right, and a screen
-    /// that goes on asking about the pieces is asking a question that was answered.
-    public var canEditPosition: Bool { origin == .recognised && !isFiled }
+    /// It used to stop once a game had been filed into a collection, on the grounds that filing
+    /// was somebody saying they had looked at it and kept it. Collections are gone (docs/adr/0028)
+    /// and nothing replaced that signal, so the offer stands for as long as the game does — which
+    /// is the side to err on, because a wrong piece is a different game.
+    public var canEditPosition: Bool { origin == .recognised }
 
     /// The squares recognition was unsure about, while they are still worth pointing at. Once a
     /// move has been played the position has been accepted in practice, and rings on the board
-    /// would be nothing but noise — as they would on a game that has been filed, for the same
-    /// reason `canEditPosition` stops offering the editor.
+    /// would be nothing but noise.
     public var unconfirmedSquares: Set<Square> {
         canEditPosition && game.plies.isEmpty ? shaky : []
     }
@@ -665,6 +564,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// is the case this exists for: correcting a piece straight after the photograph should fix
     /// the game in front of you, not leave a second record behind.
     public func replaceStart(with fresh: Game) -> Bool {
+        guard !isWeighing, activePunishment == nil else { return false }
         guard game.plies.isEmpty else { return false }
         stopSearching()
         game = fresh
@@ -687,97 +587,226 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// the one Rules probe per change that ADR-0003 is about; the reads after it are free.
     public var viewed: Game {
         if let storedViewed { return storedViewed }
-        var rebuilt = game.rewound(to: cursor) ?? game
-        // A held Guess is shown on the board. A move you cannot see is not a move you can weigh,
-        // and the position after it is the thing being asked about.
-        if let guess { rebuilt.apply(guess.move) }
+        let rebuilt = game.rewound(to: cursor) ?? game
         storedViewed = rebuilt
         return rebuilt
     }
 
     /// What the engine expects to happen from the position on screen, in SAN.
     ///
-    /// Four cases, in this order:
-    ///
-    /// - a Guess that has been committed: the line the Reveal's own search produced;
-    /// - a Guess still being held: nothing, because the engine has not been let speak yet
-    ///   (docs/adr/0015), and the layer says so rather than guessing;
-    /// - a Review's line for this position, when one has been written into the file;
-    /// - otherwise the Line the standing Analysis has reached — including a Stint a card spent
-    ///   during Practice, so 走马灯 and 要害格 can talk without waiting for a Review.
+    /// Two cases, in this order: a Review's line for this position, when one has been written
+    /// into the file; otherwise the Line the standing Analysis has reached — including a Stint a
+    /// card spent during Practice, so a card can talk without waiting for a Review.
     public var viewedContinuation: [String] {
-        if guess != nil { return reveal?.guessLine ?? [] }
         let reviewed = game.reviewLine(atPly: cursor)
         if !reviewed.isEmpty { return reviewed }
         return analysis?.best?.san ?? []
     }
 
-    /// The position the board should draw — the trial's, when one is being tried out.
+    /// The position the board should draw.
     ///
-    /// Deliberately *not* `viewed`: the engine, the record, the Review and every other reader go on
-    /// seeing the real position, so a trial cannot start a search, cannot be played by the engine
-    /// on the other side, and cannot reach the Game. It is a hypothesis on a piece of glass.
-    public var board: Game {
-        if let planDraft, !planDraft.isEmpty {
-            var building = viewed
-            for move in planDraft.moves {
-                guard building.apply(move) else { return viewed }
-            }
-            return building
-        }
-        if let walk, walk.step > 0 {
-            var ahead = viewed
-            for san in walk.played {
-                guard ahead.apply(san: san) else { return viewed }
-            }
-            return ahead
-        }
-        guard let trial else { return viewed }
-        var hypothetical = viewed
-        guard hypothetical.apply(trial.move) else { return viewed }
-        return hypothetical
-    }
+    /// Nothing is held on the glass any more — a move played is a move in the Game — so this is
+    /// `viewed`. It stays a separate name because the drawing code asks a different question from
+    /// the engine and the record, and the two are free to diverge again.
+    public var board: Game { activePunishment?.position ?? viewed }
 
-    /// The move that led to whatever the board is showing — the walked one, mid-walk.
-    ///
-    /// Without this the board tints the squares of the real last Ply while showing a position five
-    /// moves past it, which is the one thing a carousel must not do: the tint is how the eye finds
-    /// the move that just happened.
-    public var boardLastMove: MoveSquares? {
-        if let planDraft, let move = planDraft.moves.last {
-            return MoveSquares(uci: move.uci)
-        }
-        if let walk, walk.step > 0 {
-            let ahead = board
-            return ahead.moveSquares(atPly: ahead.plies.count)
-        }
-        return lastMove
-    }
+    /// The move that led to whatever the board is showing.
+    public var boardLastMove: MoveSquares? { activePunishment == nil ? lastMove : nil }
 
     /// The Line the layer should read against whatever the board is showing.
-    ///
-    /// Mid-walk that is what the Line still expects, which is why the 要害格 layer follows the plan
-    /// step by step rather than re-answering the same question five times: the second net moves with
-    /// the board (docs/adr/0021).
-    public var boardContinuation: [String] {
-        // A plan being built is its own second net: what the layer judges each step against is the
-        // rest of *your* plan, which is the one case where no engine is needed to say whether a
-        // square mattered — you have already said what you are going to do with it (docs/adr/0021).
-        if let planDraft { return planDraft.remaining }
-        if let walk { return walk.remaining }
-        return viewedContinuation
-    }
+    public var boardContinuation: [String] { activePunishment == nil ? viewedContinuation : [] }
 
     public var isAtLatest: Bool { cursor >= game.plies.count }
+
+    /// The three lines this game is judged by (docs/adr/0027). Per game rather than global: the
+    /// 拦截线 is 耕棋's switch as well as its dial, and 耕棋 is a thing one game is played under.
+    public var lines: JudgementLines = .standard
+
+    /// 耕棋: whether a move by hand is measured before it is allowed to stand.
+    ///
+    /// The switch and the dial are one control, because they are one question — "how much am I
+    /// allowed to give away before I am stopped" — and off is the answer "anything" (docs/adr/0027).
+    /// It is a *per game* setting and it sits beside 谁执白 and 引擎想多久 rather than in the
+    /// app's settings: any position can be tilled, including one reached by playing on from a
+    /// 错题 or read off a photograph.
+    public var isTilling: Bool { lines.intercept != nil }
+    public var findsPunishment = false
+    public private(set) var punishment: Punishment?
+    public var activePunishment: Punishment? {
+        guard let punishment, !punishment.isFinished else { return nil }
+        return punishment
+    }
+
+    /// Moves the 拦截线, or switches 耕棋 off with nil. **The only difficulty dial there is** —
+    /// how strong the opponent is and how much slack the coach cuts are two different questions,
+    /// and answering both with one knob makes it impossible to say who improved (docs/adr/0009).
+    public func setIntercept(_ line: Double?) {
+        guard !isWeighing, activePunishment == nil else { return }
+        guard lines.intercept != line else { return }
+        lines.intercept = line
+        if line != nil {
+            isPractising = true
+            analysis = nil
+            stopReview()
+            setFindingTactics(false)
+        }
+        // Whatever was refused was refused under the old line. A move that would stand under the
+        // new one is not a move somebody should still be being told about.
+        refused = nil
+        save()
+        retune()
+    }
+
+    /// True while 耕棋 is working out what the move just played costs. The board shows the move
+    /// during this: it has been played, and whether it is allowed to stand is the question.
+    public private(set) var isWeighing = false
+
+    /// The move 耕棋 has just taken back, for the screen to say one sentence about. Cleared by
+    /// the next move, because it is about a board that is no longer there.
+    public private(set) var refused: Refusal?
+
+    /// A move that was played and taken back, and what it gave away.
+    public struct Refusal: Hashable, Sendable {
+        public let san: String
+        /// Percentage points of win probability, from the mover's own side.
+        public let drop: Double
+
+        public init(san: String, drop: Double) {
+            self.san = san
+            self.drop = drop
+        }
+
+        /// 「Qh4 掉 23%，退回去重走。」 — what went wrong and nothing about what to do instead.
+        /// The hint ladder is a separate thing somebody has to ask for (docs/adr/0031).
+        public var sentence: String {
+            localized("till.refused", san, Int(drop.rounded()))
+        }
+    }
+
+    /// What has been refused at the position on the board, oldest first. Written onto the move
+    /// that finally stands and then cleared.
+    private var triedHere: [Game.Ply.Tried] = []
+    private var weighing: Task<Void, Never>?
+    func waitForJudgement() async { await weighing?.value }
+    func waitForPreparedInterception() async { await searchTask?.value }
+    private var positionBeforeWeighing: Game?
+    public static let interceptDepth = 16
+    public private(set) var hintLayer = 0
+    public private(set) var relaxedIntercept: Double?
+    private struct PendingHelp {
+        var tried: [Game.Ply.Tried]
+        var layer: Int
+        var relaxed: Double?
+        var refusal: Refusal?
+    }
+    private var helpByPosition: [String: PendingHelp] = [:]
+    private var helpPosition: String?
+
+    private func restoreHelpForViewedPosition() {
+        let fen = viewed.state.fen
+        guard helpPosition != fen else { return }
+        if let helpPosition {
+            helpByPosition[helpPosition] = PendingHelp(
+                tried: triedHere, layer: hintLayer, relaxed: relaxedIntercept, refusal: refused
+            )
+        }
+        helpPosition = fen
+        let pending = helpByPosition[fen]
+        triedHere = pending?.tried ?? []
+        hintLayer = pending?.layer ?? 0
+        relaxedIntercept = pending?.relaxed
+        refused = pending?.refusal
+    }
+    public var hintScore: Score? {
+        guard activePunishment == nil else { return nil }
+        guard hintLayer >= 1, interceptTable?.fen == viewed.state.fen else { return nil }
+        return interceptTable?.analysis.best?.score
+    }
+    public var hintHasTactic: Bool {
+        guard hintLayer >= 2, let table = interceptTable, table.fen == viewed.state.fen else { return false }
+        return Tactic.confirmed(in: viewed, analysis: table.analysis) != nil
+    }
+
+    public func requestHint() {
+        guard activePunishment == nil else { return }
+        guard isTilling, !isWeighing, isHandTurn, isAtLatest else { return }
+        hintLayer = min(3, hintLayer + 1)
+    }
+
+    public func relaxIntercept(to value: Double) {
+        guard isTilling, hintLayer == 3, !isWeighing, [20.0, 30.0].contains(value),
+            value > (lines.intercept ?? 0) else { return }
+        relaxedIntercept = value
+    }
+
+    private func interceptsHere(_ drop: Double) -> Bool {
+        drop >= (relaxedIntercept ?? lines.intercept ?? .infinity)
+    }
+
+    private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil) {
+        if relaxedIntercept != nil, let drop, lines.records(drop) {
+            triedHere.append(.init(san: san, drop: drop, notFound: true))
+        }
+        if !triedHere.isEmpty || hintLayer > 0 {
+            game.setTried(triedHere, hints: hintLayer, atPly: ply)
+        }
+        triedHere = []
+        hintLayer = 0
+        relaxedIntercept = nil
+    }
+
+    public func revealTillingMove() {
+        guard isTilling, hintLayer == 3, !isWeighing, isAtLatest, isHandTurn,
+            let table = interceptTable, table.fen == game.state.fen,
+            let uci = table.analysis.bestMove, let move = game.state.move(matching: uci)
+        else { return }
+        // Mark the original failed attempt, rather than manufacturing another occurrence.
+        triedHere = triedHere.map { .init(san: $0.san, drop: $0.drop, notFound: true) }
+        commit(move, by: .asked)
+    }
+    private var interceptTable: (fen: String, analysis: Analysis)?
+
+    private func preparedDrop(for move: Move, in position: Game) -> Double? {
+        guard let table = interceptTable, table.fen == position.state.fen,
+            table.analysis.depth >= Self.interceptDepth, !table.analysis.isPartial,
+            let candidate = table.analysis.lines.first(where: {
+                position.state.move(matching: $0.bestMove ?? "") == move
+            })
+        else { return nil }
+        return MoveQuality.drop(move: position.state.sideToMove,
+                                before: table.analysis.best?.score, after: candidate.score)
+    }
+
+    private func prepareInterception(on position: Game, using engine: any Engine) {
+        if interceptTable?.fen == position.state.fen { return }
+        interceptTable = nil
+        searchProgress = nil
+        searchTask = Task { [weak self] in
+            for await snapshot in engine.analyse(position, budget: .depth(Self.interceptDepth), lines: 8) {
+                guard !Task.isCancelled, let self else { return }
+                noteProgress(snapshot)
+                if snapshot.depth >= Self.interceptDepth, !snapshot.isPartial {
+                    interceptTable = (position.state.fen, snapshot)
+                }
+            }
+        }
+    }
+
+    /// What came of the opponent's mistake the move on screen was the reply to, or nil — which is
+    /// most moves, because most moves are replies to nothing in particular.
+    ///
+    /// Read off the cursor, so it is the settlement for the move the eye is standing on. Nothing
+    /// computes it ahead of the reply: the whole point is that a gift is named only once it has
+    /// been taken or missed.
+    public var settlement: Settlement? {
+        game.settlement(atPly: cursor, lines: lines)
+    }
 
     /// The move that led to the position on screen.
     public var lastMove: MoveSquares? { game.moveSquares(atPly: cursor) }
 
-    /// The lines that were played from the position on screen instead of the move that
-    /// follows it.
-    public var variationsHere: [[Game.Ply]] { game.variations(atPly: cursor) }
-
     public func step(by delta: Int) {
+        guard !isWeighing, activePunishment == nil else { return }
         let wanted = min(max(0, cursor + delta), game.plies.count)
         guard wanted != cursor else { return }
         cursor = wanted
@@ -787,6 +816,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func jumpToLatest() {
+        guard !isWeighing, activePunishment == nil else { return }
         guard cursor != game.plies.count else { return }
         cursor = game.plies.count
         adoptViewedAnalysis()
@@ -799,6 +829,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// through again. It is the other end of `jumpToLatest`, and between them a game is readable
     /// without a single move being taken off it.
     public func jumpToStart() {
+        guard !isWeighing, activePunishment == nil else { return }
         guard cursor != 0 else { return }
         cursor = 0
         adoptViewedAnalysis()
@@ -806,60 +837,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
-    /// Straight to a named Ply — how a Game's worst moves are walked through in turn
-    /// (docs/adr/0017). Zero is the position the Game began in.
+    /// Straight to a named Ply. Zero is the position the Game began in.
     public func jump(toPly ply: Int) {
+        guard !isWeighing, activePunishment == nil else { return }
         let wanted = min(max(0, ply), game.plies.count)
         guard wanted != cursor else { return }
         cursor = wanted
         adoptViewedAnalysis()
         Sounds.current.play(.move)
-        retune()
-    }
-
-    /// Carries on down one of the lines that was left behind here.
-    public func enterVariation(_ index: Int, atPly ply: Int? = nil) {
-        let at = ply ?? cursor
-        guard game.promoteVariation(index, atPly: at) else { return }
-        cursor = at + 1
-        adoptViewedAnalysis()
-        save()
-        retune()
-    }
-
-    /// The Ply whose siblings the record can cycle, if the eye is on a fork.
-    public var forkPly: Int? {
-        if cursor > 0, game.siblings(atPly: cursor - 1).count > 1 { return cursor - 1 }
-        if cursor < game.plies.count, game.siblings(atPly: cursor).count > 1 { return cursor }
-        return nil
-    }
-
-    /// Swipes the record onto the next (or previous) sibling at the fork the eye is on.
-    /// The strip stays one line; the tree is what the swipe walks.
-    public func cycleFork(by delta: Int) {
-        guard let ply = forkPly else { return }
-        cycleFork(atPly: ply, by: delta, keepStanding: true)
-    }
-
-    /// Cycles the siblings of a named Ply. A tap on that ply's rail names it; a swipe on the
-    /// strip uses whichever fork the eye is already on, and tries not to jump the cursor.
-    public func cycleFork(atPly ply: Int, by delta: Int, keepStanding: Bool = false) {
-        guard delta != 0 else { return }
-        let siblings = game.siblings(atPly: ply)
-        guard siblings.count > 1 else { return }
-        let current = siblings.firstIndex { $0.variationIndex == nil } ?? 0
-        let count = siblings.count
-        let next = siblings[((current + delta) % count + count) % count]
-        guard let index = next.variationIndex else { return }
-        let standing = cursor
-        guard game.promoteVariation(index, atPly: ply) else { return }
-        if keepStanding {
-            cursor = standing <= ply ? ply : ply + 1
-        } else {
-            cursor = ply + 1
-        }
-        adoptViewedAnalysis()
-        save()
         retune()
     }
 
@@ -870,12 +855,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// Whether a person may move on the board as it is being looked at. True in the past as
-    /// well as the present: playing from an earlier position is how a branch is made.
+    /// well as the present: playing from an earlier position is how a move is taken back
+    /// (docs/adr/0028) — what followed it is dropped, and the game carries on from there.
     public var isHandTurn: Bool {
+        if let activePunishment { return !activePunishment.isJudging }
         guard !viewed.isOver else { return false }
-        // An answer is on the board and has not been committed or taken back. Until it is, the
-        // board is not accepting anything else: a Drill with two answers on it has none.
-        if guess != nil { return false }
         if !isAtLatest { return true }
         return controller(for: viewed.state.sideToMove) == .hand
     }
@@ -894,27 +878,158 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// A move made by a person. The clock this stops is what the engine will mirror.
     public func play(_ move: Move) {
-        guard isHandTurn else { return }
-        commit(move, by: .hand)
+        if let activePunishment {
+            activePunishment.submit(move)
+            return
+        }
+        guard isHandTurn, !isWeighing else { return }
+        // 耕棋 measures a move before it is allowed to stand, and only a move being played *now*:
+        // a move played back down the game is somebody taking one back, which is a different act
+        // and is what 耕棋 is for rather than something to stop them doing.
+        guard isTilling, isAtLatest, !game.isOver else {
+            commit(move, by: .hand)
+            return
+        }
+        if let drop = preparedDrop(for: move, in: game), !interceptsHere(drop) {
+            stopSearching()
+            commit(move, by: .hand)
+            return
+        }
+        weigh(move)
+    }
+
+    /// Plays the move, asks what it cost, and either lets it stand or puts it back.
+    ///
+    /// The move goes on the board first and comes off if it is refused, rather than being held
+    /// while the engine thinks: a piece that does not move when you move it reads as a broken
+    /// app, and the roll-back *is* the lesson — the board going back to where it was is the one
+    /// unmistakable way to say "not that" (docs/adr/0027).
+    private func weigh(_ move: Move) {
+        guard engine != nil else { return }
+        let position = game
+        var played = game
+        guard played.apply(move), let landed = played.plies.last else {
+            Sounds.current.play(.refused)
+            return
+        }
+        if let began = turnBegan { lastHumanThink = ContinuousClock.now - began }
+        stopSearching()
+        stopReview()
+        positionBeforeWeighing = position
+        game = played
+        cursor = game.plies.count
+        analysis = nil
+        refused = nil
+        isWeighing = true
+        Sounds.current.play(move, outcome: game.state.outcome)
+        weighing?.cancel()
+        weighing = Task { [weak self] in
+            await self?.settle(move, san: landed.san, from: position, to: played)
+        }
+    }
+
+    /// Complete the depth gate when a move arrives before the prepared table. A move outside
+    /// that table needs its resulting position searched before it can be refused.
+    private func settle(_ move: Move, san: String, from position: Game, to played: Game) async {
+        guard let engine else { return }
+        if interceptTable?.fen != position.state.fen {
+            for await snapshot in engine.analyse(position, budget: .depth(Self.interceptDepth), lines: 8) {
+                guard !Task.isCancelled else { return }
+                noteProgress(snapshot)
+                if snapshot.depth >= Self.interceptDepth, !snapshot.isPartial {
+                    interceptTable = (position.state.fen, snapshot)
+                }
+            }
+        }
+        guard !Task.isCancelled else { return }
+        var drop = preparedDrop(for: move, in: position)
+        let outsideTable = drop == nil
+        if drop == nil, let table = interceptTable, table.fen == position.state.fen {
+            var after: Score?
+            if played.state.outcome == .checkmate {
+                after = .mate(in: played.state.sideToMove == .white ? -1 : 1)
+            } else if played.state.outcome.isDraw {
+                after = .centipawns(0)
+            } else {
+                for await snapshot in engine.analyse(played, budget: .depth(Self.interceptDepth), lines: 1) {
+                    guard !Task.isCancelled else { return }
+                    noteProgress(snapshot)
+                    if snapshot.depth >= Self.interceptDepth, !snapshot.isPartial {
+                        after = snapshot.best?.score
+                    }
+                }
+            }
+            drop = MoveQuality.drop(move: position.state.sideToMove,
+                                    before: table.analysis.best?.score, after: after)
+        }
+        // Only a prospective refusal of an unlisted move pays for confirmation. A passing
+        // candidate never enters this search. Keep a complete depth-16 sample so both sides
+        // of the comparison have the same depth, even if the timed search deepens further.
+        var confirmationUnavailable = false
+        if outsideTable, let initial = drop, interceptsHere(initial), !played.isOver {
+            var confirmed: Score?
+            for await snapshot in engine.analyse(played, budget: .time(.milliseconds(400)), lines: 1) {
+                guard !Task.isCancelled else { return }
+                noteProgress(snapshot)
+                if snapshot.depth == Self.interceptDepth, !snapshot.isPartial {
+                    confirmed = snapshot.best?.score
+                }
+            }
+            if let confirmed {
+                drop = MoveQuality.drop(move: position.state.sideToMove,
+                                        before: interceptTable?.analysis.best?.score, after: confirmed)
+            } else {
+                // The minimum-depth judgement exists, but refusal did not earn confirmation.
+                // A timed search can finish early on a busy device. Prefer a missed mistake
+                // over taking back a move without the promised evidence (#33).
+                confirmationUnavailable = true
+            }
+        }
+        guard !Task.isCancelled else { return }
+        isWeighing = false
+        positionBeforeWeighing = nil
+        weighing = nil
+        guard let drop else {
+            game = position
+            cursor = game.plies.count
+            retune()
+            return
+        }
+        guard interceptsHere(drop), !confirmationUnavailable else {
+            // It stands. Whatever was refused on the way here rides along with it, as a comment
+            // on the move that was actually played (docs/adr/0028).
+            recordHelp(atPly: cursor - 1, san: san, drop: drop)
+            save()
+            retune()
+            return
+        }
+        triedHere.append(Game.Ply.Tried(san: san, drop: drop))
+        refused = Refusal(san: san, drop: drop)
+        game = position
+        cursor = game.plies.count
+        Sounds.current.play(.refused)
+        if findsPunishment { punishment = Punishment(position: played, engine: engine) }
+        // No save and no retune: nothing happened to the game, and the engine is not owed a
+        // reply to a move that was taken back.
     }
 
     /// The one way a move lands: the write, the cursor, the noise, the save, the retune. The
     /// three public paths differ only in the clock and who may be moving, and having them each
     /// hand-roll this is how one of them eventually forgets a line of it.
     private func commit(_ move: Move, by mover: Mover) {
-        // A move actually played answers the question the scanner was asking, whoever played it.
-        endScan()
+        guard !isWeighing else { return }
+        let measuredDrop = preparedDrop(for: move, in: viewed)
         // The clock. Only a hand move at the latest position stops it: Mirrored Time is the
         // length of a *player's* last turn, and neither an engine move nor a move asked of it
         // was the player thinking (docs/adr/0009).
         if mover == .hand, isAtLatest, let turnBegan {
             lastHumanThink = ContinuousClock.now - turnBegan
         }
-        // A move played over an earlier one: what used to follow becomes a Variation, and the
-        // capture of a whole line being replaced is worth its own noise. Computed before the
-        // play, which is what the comparison is against. The engine's own moves always land at
-        // the latest position, so this is only ever a hand or asked concern.
-        let branching = mover != .engine && !isAtLatest && game.plies[cursor].uci != move.uci
+        // A move played over an earlier one: what used to follow is dropped, and losing a line is
+        // worth its own noise. Computed before the play, which is what the comparison is against.
+        // The engine's own moves always land at the latest position, so this is only ever a hand
+        // or asked concern.
+        let replacing = mover != .engine && !isAtLatest && game.plies[cursor].uci != move.uci
         if mover == .engine {
             // Played only at the latest position: it was found for the position its search
             // started from, and applying it anywhere else would be a different move.
@@ -928,643 +1043,22 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             cursor += 1
         }
         Sounds.current.play(move, outcome: viewed.state.outcome)
-        if branching { Sounds.current.play(.check) }
+        if replacing { Sounds.current.play(.check) }
         // The invariant: the Analysis that described the position before this move is stale,
         // the game is written to its file, and the engine is asked what it makes of the new
         // position — whoever moved.
         analysis = nil
+        recordHelp(atPly: cursor - 1, san: game.plies[cursor - 1].san, drop: measuredDrop)
+        refused = nil
         save()
         retune()
     }
 
     // ------------------------------------------------------------------ a study
 
-    /// Whether the one board is a Drill rather than a game right now: the engine's opinion is off
-    /// and the Ply being looked at is a past one, so there is a move that was played from here and
-    /// it has not been given away (docs/adr/0015).
-    ///
-    /// Not a mode and not a screen. It is a reading of the two things a person has already
-    /// said — the switch, and where they are looking.
-    public var isStudying: Bool {
-        isPractising && !isAtLatest && !viewed.isOver
-    }
-
-    /// The Depth a study is settled at: the Game's own Review Depth when it has one, so a Drill's
-    /// numbers and the file's numbers are the same numbers, and a default when it does not.
-    public var studyDepth: Int { game.reviewDepth ?? Self.reviewDepth }
-
     public static let reviewDepth = 14
 
-    /// Offers a move at the Ply being studied — on the board, not in the Game.
-    ///
-    /// The move is not played. Nothing is written, nothing is saved, and the Game is untouched: a
-    /// Drill's answer has to be visible before it is marked, and taking it back has to cost
-    /// nothing, or the honest first guess never gets made.
-    public func offer(_ move: Move) {
-        guard isStudying, guess == nil, reveal == nil else { return }
-        // A move being offered ends the asking: the scanner is what you use *before* committing,
-        // and a trial left on the board under a Guess would be two hypotheses at once.
-        endScan()
-        endWalk()
-        let position = viewed
-        guard position.state.move(matching: move.uci) != nil else {
-            Sounds.current.play(.refused)
-            return
-        }
-        guess = Guess(ply: cursor + 1, move: move, san: SAN.text(for: move, in: position.state))
-        storedViewed = nil
-        Sounds.current.play(.move)
-    }
-
     // ----------------------------------------------------------------- point at a square
-
-    /// Arms the scanner: the next tap on the board is a question about that square.
-    public func armScanner() {
-        // One hypothesis on the board at a time: a trial inside a walked line, or beside five plan
-        // arrows pointing somewhere else, is a position nobody can name. The walk is ended because
-        // nothing in it was the player's; a plan is refused instead, because a plan holds a reason
-        // they typed and closing it under them would throw that away.
-        guard !isScannerArmed, planDraft == nil else { return }
-        endWalk()
-        isScannerArmed = true
-        scan = nil
-        trial = nil
-        scanAnswer = nil
-    }
-
-    /// Asks about one square: which of your pieces can legally get there.
-    ///
-    /// Only while armed, and only about the position being looked at. A scan makes no move, starts
-    /// no search and writes nothing — the answer is a list of your own legal moves, which is a fact
-    /// the player could count themselves and the app is merely quicker at.
-    public func scan(at square: Square) {
-        guard isScannerArmed else { return }
-        trial = nil
-        scanAnswer = nil
-        askTask?.cancel()
-        isAsking = false
-        scan = viewed.scan(at: square)
-        Sounds.current.play(scan?.isEmpty == false ? .move : .refused)
-    }
-
-    /// Plays one of the scanned moves as a hypothesis and says what it buys and costs.
-    public func tryOut(_ move: Move) {
-        guard let scan, scan.arrivals.contains(where: { $0.move == move }) else { return }
-        scanAnswer = nil
-        askTask?.cancel()
-        isAsking = false
-        trial = viewed.tryOut(move)
-        Sounds.current.play(trial == nil ? .refused : .move)
-    }
-
-    /// Takes the trial back off the board, keeping the question.
-    public func takeBackTrial() {
-        guard trial != nil || scanAnswer != nil else { return }
-        askTask?.cancel()
-        isAsking = false
-        trial = nil
-        scanAnswer = nil
-    }
-
-    /// Closes the scanner and leaves nothing behind.
-    public func endScan() {
-        askTask?.cancel()
-        isAsking = false
-        isScannerArmed = false
-        scan = nil
-        trial = nil
-        scanAnswer = nil
-    }
-
-    /// Asks the engine what it would play here, and reads its answer through the seven verbs.
-    ///
-    /// Last, and only on a tap. The whole design is in the order: you point at a square, you hear
-    /// what your own move is worth in your own terms, and only then do you find out what the engine
-    /// thought. Reversed, it is a hint button (docs/adr/0015). One bounded search at the study
-    /// Depth, so it is the same number the Reveal would show and not a live search's whatever.
-    public func askEngine() {
-        guard let engine, scan != nil, !isAsking, scanAnswer == nil else { return }
-        let position = viewed
-        let depth = studyDepth
-        let tried = trial?.san
-        isAsking = true
-        askTask?.cancel()
-        askTask = Task { [weak self] in
-            await engine.clear()
-            var best: Line?
-            for await snapshot in engine.analyse(position, budget: .depth(depth), lines: 1) {
-                if Task.isCancelled { return }
-                best = snapshot.best ?? best
-                self?.noteProgress(snapshot)
-            }
-            guard let self, !Task.isCancelled else { return }
-            isAsking = false
-            guard let best, let san = best.san.first else { return }
-            scanAnswer = ScanAnswer(
-                depth: depth,
-                best: san,
-                score: best.score,
-                reading: position.reading(of: best.san),
-                isSameAsTrial: san == tried
-            )
-        }
-    }
-
-    // ----------------------------------------------------------------- 五步计划
-
-    /// Opens the board as a place to try a line out, with the engine's next five drawn on it.
-    ///
-    /// Only at a past position, and that is not a limitation so much as what a plan *is* here: it
-    /// goes into the file as a Variation, a Variation is an alternative to a move, and at the latest
-    /// position there is no move for it to be an alternative to — a line played there is the game,
-    /// which the app already has a name for (docs/adr/0017).
-    ///
-    /// The five moves arrive from the engine rather than from the player, and that is the one place
-    /// on this screen where the engine goes first (docs/adr/0022). What it does not hand over is the
-    /// claim: the reason is still declared, still in the seven verbs, and still judged move by move.
-    public func startPlan() {
-        guard planDraft == nil, !isAtLatest, cursor < game.plies.count else { return }
-        endScan()
-        endWalk()
-        withdrawGuess()
-        planCheck = nil
-        planOutcome = nil
-        planNotes = []
-        // The layer marks each square as the line is walked, so it comes on with it — the same
-        // exception a commit and a carousel get, and for the same reason (docs/adr/0015).
-        showsControlChange = true
-        planDraft = PlanDraft(ply: cursor)
-        lookAhead()
-    }
-
-    /// Plays one move into the plan — any legal move, the engine's or one of your own.
-    ///
-    /// Deviating is the point. The five on the board are what the engine would do; playing something
-    /// else and watching the next five change is the only way to find out what your idea was worth,
-    /// and an app that only let you tap along the engine's line would be a replay button.
-    ///
-    /// Walking past five is allowed and 交卷 is not: exploring is free, and it is the *claim* the cap
-    /// is about (docs/adr/0018).
-    public func playInPlan(_ move: Move) {
-        guard planDraft != nil else {
-            Sounds.current.play(.refused)
-            return
-        }
-        var tip = board
-        guard let legal = tip.state.move(matching: move.uci) else {
-            Sounds.current.play(.refused)
-            return
-        }
-        let san = SAN.text(for: legal, in: tip.state)
-        guard tip.apply(legal), var draft = planDraft else {
-            Sounds.current.play(.refused)
-            return
-        }
-        draft.steps.append(PlanDraft.Step(move: legal, san: san))
-        // Stale the moment a move is played: the five that were drawn were five from the *old*
-        // position, and leaving them up for the length of a search would be five arrows pointing
-        // at a board that has moved.
-        draft.ahead = []
-        planDraft = draft
-        planNotes = []
-        Sounds.current.play(.move)
-        lookAhead()
-    }
-
-    /// Plays the first `steps` moves of what the engine is showing.
-    ///
-    /// What the carousel's play button was, folded into the rows: tapping row three means "take me
-    /// three moves down this line", and what you get is the position, not a recital.
-    public func followPlan(through steps: Int) {
-        guard let draft = planDraft, steps > 0, steps <= draft.ahead.count else { return }
-        for step in draft.ahead.prefix(steps) {
-            guard planDraft != nil else { return }
-            var tip = board
-            guard let legal = tip.state.move(matching: step.move.uci) else { break }
-            let san = SAN.text(for: legal, in: tip.state)
-            guard var walking = planDraft else { return }
-            walking.steps.append(PlanDraft.Step(move: legal, san: san))
-            planDraft = walking
-        }
-        guard var draft = planDraft else { return }
-        draft.ahead = []
-        planDraft = draft
-        planNotes = []
-        Sounds.current.play(.move)
-        lookAhead()
-    }
-
-    /// Takes the last move back off the board and looks ahead again from where that leaves you.
-    public func undoPlanMove() {
-        guard var draft = planDraft, !draft.steps.isEmpty else { return }
-        draft.steps.removeLast()
-        draft.ahead = []
-        planDraft = draft
-        planNotes = []
-        lookAhead()
-    }
-
-    /// Asks the engine what it would play from the tip of the walk, and reads every ply of it.
-    ///
-    /// One bounded search at the study Depth, so the plan and everything else a study says are the
-    /// same number deep. Nothing arriving is not a failure and does not close anything: the board is
-    /// still a board, and walking a line out on it by hand is what this was before the engine was
-    /// asked to go first.
-    ///
-    /// **The table is not cleared between look-aheads, and that is the difference between a plan and
-    /// a stream of suggestions.** Everywhere else a study searches it forgets first, so the Depth
-    /// means what it says and a Reveal's number and the scanner's are the same number (docs/adr/0016).
-    /// Nothing here shows a Score, so nothing here needs that — and clearing costs something real.
-    /// Measured on Stockfish at depth 14 after 1.e4 e5, walking the engine's own line four moves:
-    ///
-    ///     cold   Nf3 Nc6 d4 exd4 Nxd4 → Nc6 Bb5 a6 Bxc6 dxc6 → Bb5 a6 Ba4 Nf6 O-O
-    ///     warm   Nf3 Nc6 d4 exd4 Nxd4 → Nc6 Bb5 a6 Ba4 Nf6   → Bb5 a6 Ba4 Nf6 O-O
-    ///
-    /// Cold, the tail is rewritten at every step and the five on the board have nothing to do with
-    /// the five that were there a move ago. Warm, each answer is the last one rolled forward by one
-    /// move. The line still changes when the engine genuinely changes its mind — the tail of a PV is
-    /// searched shallower than its head, so playing a move buys it a ply of depth and sometimes a
-    /// different idea — but that change now means something (docs/adr/0022).
-    private func lookAhead() {
-        guard let engine, let draft = planDraft, draft.ahead.isEmpty else { return }
-        let position = board
-        let ply = draft.ply
-        let walked = draft.steps.count
-        let depth = studyDepth
-        isPlanning = true
-        planTask?.cancel()
-        planTask = Task { [weak self] in
-            var best: Line?
-            for await snapshot in engine.analyse(position, budget: .depth(depth), lines: 1) {
-                if Task.isCancelled { return }
-                best = snapshot.best ?? best
-                self?.noteProgress(snapshot)
-            }
-            guard let self, !Task.isCancelled else { return }
-            isPlanning = false
-            // Overtaken: another move went on the board while this search was running, and five
-            // arrows out of a position nobody is standing in are worse than none.
-            guard var draft = planDraft, draft.ply == ply, draft.steps.count == walked,
-                draft.ahead.isEmpty, let best
-            else { return }
-            var tip = position
-            for san in best.san.prefix(Game.Ply.planLimit) {
-                let at = tip
-                guard tip.apply(san: san), let played = tip.plies.last,
-                    let move = at.state.move(matching: played.uci)
-                else { break }
-                // Written the way this package writes it, not the way the engine adapter did: the
-                // notation on the rows and the notation everywhere else have to be one string.
-                draft.ahead.append(
-                    PlanDraft.Step(move: move, san: SAN.text(for: move, in: at.state))
-                )
-            }
-            planDraft = draft
-            readPlan()
-        }
-    }
-
-    /// Reads every move the engine is showing — what it is for, and what it costs. Stored rather
-    /// than derived so a view body never pays for it.
-    private func readPlan() {
-        guard let draft = planDraft, !draft.ahead.isEmpty else {
-            planNotes = []
-            return
-        }
-        // Read as the player, not as whoever happens to move at the tip: after one move of your own
-        // the engine's five open with the opponent's reply, and 「你的」 has to go on meaning yours.
-        planNotes = board.readPlan(of: draft.aheadSans, as: viewed.state.sideToMove) ?? []
-    }
-
-    /// The rest of a walked Line, as numbered arrows on the board now showing.
-    ///
-    /// Numbered to match the chips on 五步. What you already walked is not drawn: those moves
-    /// happened, and the tint under the last one is how the board says so. At most five, because
-    /// that is the card, and past that a board is a scribble.
-    public var walkArrows: [PlanArrow] {
-        guard let walk else { return [] }
-        let remaining = Array(walk.remaining.prefix(5))
-        guard !remaining.isEmpty else { return [] }
-        let yoursToMove = board.state.sideToMove == viewed.state.sideToMove
-        var position = board
-        var arrows: [PlanArrow] = []
-        for (offset, san) in remaining.enumerated() {
-            guard position.apply(san: san), let played = position.plies.last,
-                let move = MoveSquares(uci: played.uci)
-            else { break }
-            arrows.append(
-                PlanArrow(
-                    step: walk.step + offset + 1,
-                    move: move,
-                    isYours: offset.isMultiple(of: 2) == yoursToMove,
-                    isPlayed: false
-                )
-            )
-        }
-        return arrows
-    }
-
-    /// The five the engine is showing, as the board draws them: one numbered arrow each.
-    ///
-    /// The sides alternate, so whose move a step is follows from its number — a legal line has no
-    /// other shape. What you already walked is not drawn: those moves happened, and the tint under
-    /// the last one is how the board says so everywhere else.
-    public var planArrows: [PlanArrow] {
-        guard let planDraft else { return [] }
-        // Whose move step one is depends on how far you have walked, so the parity is measured
-        // against the player and not against the head of the line.
-        let opensOnYours = board.state.sideToMove == viewed.state.sideToMove
-        return planDraft.ahead.enumerated().map { index, step in
-            PlanArrow(
-                step: index + 1,
-                move: MoveSquares(from: step.move.from, to: step.move.to),
-                isYours: index.isMultiple(of: 2) == opensOnYours,
-                isPlayed: false
-            )
-        }
-    }
-
-    /// Whether there is a line and a reason to commit, and it is short enough to be told false.
-    public var canCommitPlan: Bool {
-        guard let planDraft, !planDraft.isEmpty, !planDraft.isTooLong, declaredIntent != nil
-        else { return false }
-        return true
-    }
-
-    /// Writes the walked line into the Game as a Variation with one Intent over the whole of it, and
-    /// judges it by the same checker a single-Ply Intent uses.
-    ///
-    /// What is written is what you *played*, never what the engine was showing when you stopped: a
-    /// plan is a claim about moves somebody made.
-    public func commitPlan() {
-        guard let draft = planDraft, let intent = declaredIntent, !draft.isEmpty, !draft.isTooLong,
-            let before = game.rewound(to: draft.ply)
-        else { return }
-        let line = draft.steps.map { (uci: $0.move.uci, san: $0.san) }
-        guard game.recordPlan(line, intent: intent, atPly: draft.ply) else { return }
-        planTask?.cancel()
-        isPlanning = false
-        planCheck = intent.check(plan: draft.sans, in: before)
-        planOutcome = before.outcome(of: draft.sans)
-        planDraft = nil
-        planNotes = []
-        declaringVerb = nil
-        declaredIntent = nil
-        save()
-    }
-
-    /// Throws the plan away. Nothing was written, so there is nothing to undo.
-    public func abandonPlan() {
-        guard planDraft != nil else { return }
-        planTask?.cancel()
-        isPlanning = false
-        planDraft = nil
-        planNotes = []
-        declaringVerb = nil
-        declaredIntent = nil
-    }
-
-    // ----------------------------------------------------------------- 走马灯
-
-    /// Starts playing the stored Line out on the board.
-    ///
-    /// The Line is whichever one somebody already paid for — the Review's for this Ply, or the one
-    /// a committed Guess's search produced. No search is started to play a carousel: an app that
-    /// went and fetched a line when somebody pressed play would be spending a Stint on a picture
-    /// (docs/adr/0020, 0021). Nothing to play means nothing happens and the screen says why.
-    public func startWalk(line: [String]? = nil) {
-        // Not over a plan: the board would show one line and the arrows another, and the plan has a
-        // transport of its own for exactly this.
-        guard planDraft == nil else { return }
-        // A walk already under way is not replaced: the person is reading it. One still sitting
-        // on the first ply may take a longer Line as the Stint deepens, so 五步 does not freeze
-        // on the first one-move snapshot.
-        if let walk, walk.step > 0 { return }
-        let line = line ?? viewedContinuation
-        guard !line.isEmpty, walk?.line != line else { return }
-        guard let outcome = viewed.outcome(of: line) else { return }
-        endScan()
-        // Watching the squares change hands is the whole point of playing it, so the layer comes on
-        // with it — the same one exception a commit gets, and for the same reason (docs/adr/0015).
-        showsControlChange = true
-        let quiet = walk != nil
-        walk = Walk(line: line, step: 0, outcome: outcome)
-        if !quiet { Sounds.current.play(.move) }
-    }
-
-    /// Steps the Line forward or back. Clamped at both ends rather than wrapping: a carousel that
-    /// silently starts again is a carousel you cannot read the end of.
-    public func stepWalk(by delta: Int) {
-        guard var walking = walk else { return }
-        let wanted = min(max(0, walking.step + delta), walking.line.count)
-        guard wanted != walking.step else { return }
-        walking.step = wanted
-        walk = walking
-        Sounds.current.play(.move)
-    }
-
-    /// Puts the board back where it was.
-    public func endWalk() {
-        guard walk != nil else { return }
-        walk = nil
-    }
-
-    /// Takes the offered move back off the board, and any reveal with it.
-    public func withdrawGuess() {
-        guard guess != nil || reveal != nil || declaredIntent != nil || declaringVerb != nil
-        else { return }
-        revealTask?.cancel()
-        revealTask = nil
-        isRevealing = false
-        guess = nil
-        reveal = nil
-        declaringVerb = nil
-        declaredIntent = nil
-        storedViewed = nil
-    }
-
-    // ----------------------------------------------------------------- and why
-
-    public func setShowsControlChange(_ shows: Bool) {
-        showsControlChange = shows
-    }
-
-    /// Picks the verb, which is half a claim. Passing nil takes the choice back.
-    ///
-    /// A verb without a target cannot be committed: every one of the seven is a statement *about a
-    /// Square*, and the one that is not — 说不清 — has its own way in below (docs/adr/0018).
-    public func choose(_ verb: Intent.Verb?) {
-        declaringVerb = verb
-        declaredIntent = nil
-    }
-
-    /// Names the Square the chosen verb is about, which finishes the claim.
-    public func aim(at square: Square) {
-        guard let verb = declaringVerb else { return }
-        declaredIntent = .claim(verb, square)
-    }
-
-    /// 说不清 — one tap, no target, and nothing discouraging about it.
-    ///
-    /// It is recorded exactly as the other seven are. A Game with twenty-five of these is itself
-    /// the diagnosis, and the app that made it hard to say would never obtain one.
-    public func declareUnclear() {
-        declaringVerb = nil
-        declaredIntent = .unclear
-    }
-
-    /// Whether there is a move and a reason to commit. Both, because a Drill takes a reason as
-    /// well as a move: an answer with no reason attached teaches only whether you were lucky.
-    public var canCommitGuess: Bool {
-        guess != nil && declaredIntent != nil && engine != nil && !isRevealing && reveal == nil
-    }
-
-    /// Marks the offered move: your move, the engine's, and the one that was played, all at one
-    /// Depth.
-    ///
-    /// Three searches rather than one, and all three at the same Depth, because the comparison is
-    /// the whole product. A guess weighed against a deeper opinion of the alternative is a guess
-    /// marked wrong by arithmetic (docs/adr/0016).
-    public func commitGuess() {
-        guard let guess, let engine, !isRevealing, reveal == nil, declaredIntent != nil
-        else { return }
-        guard let before = game.rewound(to: guess.ply - 1),
-            let guessed = try? applied(guess.move, to: before),
-            game.plies.indices.contains(guess.ply - 1)
-        else { return }
-
-        // Written now, before a single search runs and whether or not it turns out to be true.
-        // Committing is the act; what the engine says afterwards is a separate fact about it.
-        let declared = declaredIntent
-        if let declared { record(guess, reason: declared) }
-        // Checked against the board and not against the engine: whether f7 gained a defender is
-        // a question about the position, and the rules code can answer it in microseconds
-        // (docs/adr/0018).
-        let check = declared?.check(guess.move, in: before)
-
-        let playedSAN = game.plies[guess.ply - 1].san
-        let playedPosition = game.rewound(to: guess.ply)
-        let mover = game.mover(ofPly: guess.ply)
-        let depth = studyDepth
-        let recorded = game.reviewScore(atPly: guess.ply)
-        let ply = guess.ply
-        let offered = guess.san
-
-        // The one moment the layer is allowed to appear by itself. Before a Guess is committed
-        // it would be the blunder-check performed on the player's behalf (docs/adr/0015); at the
-        // commit the engine is already talking, and hiding the reading behind another tap buys
-        // nothing (docs/adr/0021).
-        showsControlChange = true
-        isRevealing = true
-        revealTask?.cancel()
-        revealTask = Task { [weak self] in
-            // At one Depth and from nothing already known: the game screen has been analysing
-            // these same positions unbounded, and a search that inherits that is not at the Depth
-            // it says it is.
-            await engine.clear()
-
-            var best: Line?
-            for await snapshot in engine.analyse(before, budget: .depth(depth), lines: 1) {
-                if Task.isCancelled { return }
-                best = snapshot.best ?? best
-                self?.noteProgress(snapshot)
-            }
-            // Analysed rather than merely evaluated: `evaluate` throws the Line away, and the
-            // Line after the Guess is what the board reads to say which squares mattered. Same
-            // search, same Depth, one more thing kept (docs/adr/0021).
-            var afterGuess: Line?
-            for await snapshot in engine.analyse(guessed, budget: .depth(depth), lines: 1) {
-                if Task.isCancelled { return }
-                afterGuess = snapshot.best ?? afterGuess
-                self?.noteProgress(snapshot)
-            }
-            let guessScore = afterGuess?.score
-            // The move that was played needs no search when it *is* the guess, and none when the
-            // file already holds it at this very Depth.
-            let playedScore: Score?
-            if offered == playedSAN {
-                playedScore = guessScore
-            } else if let recorded, depth == self?.game.reviewDepth {
-                playedScore = recorded
-            } else if let playedPosition {
-                playedScore = await engine.evaluate(playedPosition, budget: .depth(depth))
-            } else {
-                playedScore = nil
-            }
-
-            guard let self, !Task.isCancelled else { return }
-            reveal = Reveal(
-                ply: ply,
-                mover: mover,
-                depth: depth,
-                guess: offered,
-                guessScore: guessScore,
-                played: playedSAN,
-                playedScore: playedScore,
-                best: best?.san.first,
-                bestScore: best?.score,
-                guessLine: Array((afterGuess?.san ?? []).prefix(Game.Ply.lineLimit)),
-                // Read from the Line the same search produced, not asked for separately: the
-                // engine gives a number and a sequence of moves and never a reason, and this is
-                // the reason (docs/adr/0021).
-                bestReading: before.reading(of: best?.san ?? []),
-                intent: declared,
-                intentCheck: check
-            )
-            isRevealing = false
-            revealTask = nil
-        }
-    }
-
-    /// Writes a committed Guess into the Game — on the played Ply when it *is* the played move,
-    /// and as an alternative to it when it is not.
-    ///
-    /// Two homes because there are two facts. "I played Nf3 and here is why" belongs on Nf3; "I
-    /// would have played d4, and here is why" is a line that was not played, which is what PGN's
-    /// brackets have been for since 1994.
-    private func record(_ guess: Guess, reason: Intent) {
-        let index = guess.ply - 1
-        guard game.plies.indices.contains(index) else { return }
-        if game.plies[index].uci == guess.move.uci {
-            game.setIntent(reason, atPly: guess.ply)
-        } else {
-            game.recordGuess(
-                uci: guess.move.uci, san: guess.san, intent: reason, atPly: index
-            )
-        }
-        save()
-    }
-
-    /// Plays the offered move for real: it becomes the move at this point in the Game, and the
-    /// line it replaces is kept beside it — which is what playing from a past position has always
-    /// done.
-    ///
-    /// The way a Drill turns into analysis. A guess worth playing is a line worth having, and the
-    /// alternative — a study that can only ever be thrown away — is how somebody's best idea of
-    /// the session gets lost.
-    public func keepGuess() {
-        guard let guess else { return }
-        let index = guess.ply - 1
-        let uci = guess.move.uci
-        let move = guess.move
-        let recorded = game.variations(atPly: index).firstIndex { $0.first?.uci == uci }
-        withdrawGuess()
-        guard cursor == index else { return }
-        if let recorded {
-            // Committing already wrote it down as an alternative, so this promotes what is there
-            // rather than writing the same move a second time — and promoting carries the reason
-            // with it.
-            enterVariation(recorded)
-        } else {
-            play(move)
-        }
-    }
-
-    /// A Game's worst moves as a list of questions, worst first — nil for a Game no Review has
-    /// been over, which is a refusal and not an empty list (docs/adr/0017).
-    public func worstMoves(_ count: Int = 3) -> [Criticality]? {
-        game.worstMoves(count)
-    }
 
     private func applied(_ move: Move, to game: Game) throws -> Game {
         var next = game
@@ -1583,6 +1077,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// which is what makes the switch answerable for it: a Game the player has never let the
     /// engine talk about has no marks in it at all.
     public func startReview(depth: Int? = nil) {
+        guard !isWeighing, activePunishment == nil else { return }
         guard let engine, !game.plies.isEmpty, reviewPass?.isRunning != true else { return }
         let depth = depth ?? Self.reviewDepth
         let reviewed = game
@@ -1651,7 +1146,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The engine's own turn does, though: it is already walking this move under its own Controller,
     /// and 马上走 is how you stop waiting for it. Asking a second time for a move that is already
     /// being played is two controls doing one job.
-    public var canPlayBestMove: Bool { engine != nil && !viewed.isOver && !isEngineTurn }
+    public var canPlayBestMove: Bool {
+        engine != nil && !viewed.isOver && !isEngineTurn && !isWeighing && activePunishment == nil
+    }
 
     /// Starts the engine thinking about a move it will play when it is let go.
     ///
@@ -1731,6 +1228,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Takes the last move of the game off. Only from the latest position: in the middle of a
     /// game, going backwards is browsing, and deleting is not what a back button means.
     public func undo() {
+        guard !isWeighing, activePunishment == nil else { return }
         guard isAtLatest, !game.plies.isEmpty else { return }
         stopSearching()
         game.undo()
@@ -1764,6 +1262,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Starts the game again from the position it began in, with `colour` to move.
     public func restart(withSideToMove colour: PieceColour) {
+        guard !isWeighing, activePunishment == nil else { return }
         guard let fresh = restarted(withSideToMove: colour) else { return }
         stopSearching()
         // A game with moves in it has already been written to its own file. Leaving that file
@@ -1804,6 +1303,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Starts whatever the position calls for. Safe to call repeatedly.
     public func retune() {
+        guard !isWeighing, activePunishment == nil else { return }
+        restoreHelpForViewedPosition()
         stopSearching()
         thinking = nil
         thinkingBest = nil
@@ -1817,7 +1318,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // be doing right now" has to include "nothing, nobody is watching".
         guard let engine, !position.isOver, !engine.isPaused else { return }
 
-        // Wherever the eye is, not only on the latest position (docs/adr/0024). The engine still
+        if isEngineTurn {
+            isProbingTactics = false
+            tactic = nil
+            probedAnalysis = nil
+            continueAfterProbe()
+            return
+        }
+
+        // Wherever the eye is, not only on the latest position (docs/adr/0025). The engine still
         // only *plays* from the latest one — `isEngineTurn` says so — so a probe at a past Ply
         // costs one bounded search and moves nothing.
         if isFindingTactics {
@@ -1840,6 +1349,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             tactic = Tactic.confirmed(in: position, analysis: found)
             probedAnalysis = found
             isProbingTactics = false
+            continueAfterProbe()
             return
         }
         tactic = Tactic.proposed(in: position)
@@ -1850,6 +1360,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 position, budget: .depth(Tactic.probeDepth), lines: 2
             ) {
                 if Task.isCancelled { return }
+                // How deep it has got, and nothing else off the snapshot. The probe is the only
+                // search most cards ever run now, and a search that does not account for itself
+                // is indistinguishable from an engine that died (docs/adr/0020). The Score stays
+                // out of it: `record` is what lets an opinion reach the board, and this is not
+                // one — which is why practice can leave this line alone.
+                self?.noteProgress(snapshot)
                 last = snapshot
             }
             guard let self, !Task.isCancelled else { return }
@@ -1895,6 +1411,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // Before the practice gate: the clock the engine mirrors is a record of how long the
             // player took, and that is true whether or not anyone was being advised.
             turnBegan = ContinuousClock.now
+            if isTilling {
+                prepareInterception(on: position, using: engine)
+                return
+            }
             // Practice turns off exactly this search — the one whose only product is advice. It
             // is refused here rather than in the screen for the reason the pause is: "what should
             // the engine be doing right now" has one answer, and a screen that forgot would leave
@@ -1913,6 +1433,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// is the second kind however few seconds it runs for. The other is that cancelling is already
     /// how every search in this app ends, a thumb coming off 让引擎走 included.
     private func advise(on position: Game, using engine: any Engine, lines: Int = 3) {
+        guard !isTilling, !isWeighing else { return }
         isAdviceSpent = false
         searchProgress = nil
         searchTask = Task { [weak self] in
@@ -1963,11 +1484,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Review in flight keep the engine — those are not advice, and a swipe must not take them
     /// off the clock.
     public func adviseForCard() {
+        guard !isTilling, !isWeighing else { return }
+        if let url, library?.reviewingURLs.contains(url) == true { return }
         guard let engine, !viewed.isOver, !engine.isPaused else { return }
-        guard thinking == nil, planDraft == nil, reviewPass?.isRunning != true else { return }
-        // A Guess still being held is the player answering; the engine does not speak first
-        // (docs/adr/0015).
-        guard guess == nil else { return }
+        guard thinking == nil, reviewPass?.isRunning != true else { return }
         if recallCachedAnalysis() {
             if searchTask == nil { isAdviceSpent = true }
             return
@@ -2008,14 +1528,20 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Cancelling is the whole of it: the stream's termination stops the engine, on its own
     /// queue and with the generation check that a bare stop call never had.
     public func suspend() {
+        punishment?.skip()
+        weighing?.cancel()
+        weighing = nil
+        if let positionBeforeWeighing {
+            game = positionBeforeWeighing
+            cursor = game.plies.count
+        }
+        positionBeforeWeighing = nil
+        isWeighing = false
         stopSearching()
         thinking = nil
         // A pass that outlived the screen would come back having written Scores nobody watched
         // arrive, at a Depth chosen by a screen that has gone.
         stopReview()
-        revealTask?.cancel()
-        revealTask = nil
-        isRevealing = false
     }
 
     private func noteProgress(_ snapshot: Analysis) {
@@ -2070,16 +1596,17 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public var pgn: PGN {
         var written = PGN(game: game, tags: tags)
-        // Event is only filled in when the game is not in a collection. It used to be set to the
-        // app's name unconditionally, which would have rubbed out the collection of every filed game
-        // on its next move — the tag naming the collection and the tag naming the app are the same
-        // tag, and the file is the only place either of them lives (docs/adr/0010).
-        if written.tag("Event").map(GameLibrary.unfiledEvents.contains) ?? true {
-            written.setTag("Event", to: "Chessfen")
+        // Event carries the app's name, which is what PGN's "which set of games is this" tag is
+        // worth saying now that there are no collections (docs/adr/0028). Written unconditionally:
+        // an Event an import brought in names somebody else's tournament, and the file this app
+        // writes is this app's.
+        written.setTag("Event", to: "Chessfen")
+        if origin != .imported {
+            written.setTag("White", to: controller(for: .white).playerName)
+            written.setTag("Black", to: controller(for: .black).playerName)
         }
-        written.setTag("White", to: controller(for: .white).playerName)
-        written.setTag("Black", to: controller(for: .black).playerName)
         written.setTag("Result", to: game.resultToken)
+        written.setTag("Intercept", to: lines.intercept.map(String.init(describing:)))
         written.setTag(GameOrigin.tagName, to: origin.tagValue)
         if written.tag("Date") == nil {
             written.tags.append(PGN.dateTag())
@@ -2096,6 +1623,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// worth keeping — and once a file exists it keeps being written to, even if the moves are
     /// taken back off it again.
     public func save() {
+        guard !isWeighing else { return }
         guard let library else { return }
         guard url != nil || !game.plies.isEmpty else { return }
         if url == nil { url = library.newURL() }

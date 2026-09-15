@@ -9,13 +9,17 @@ import UniformTypeIdentifiers
 /// There is no review here. A Review is not a place: it is what the engine's opinion switched on
 /// looks like, on the same board the game is played on (docs/adr/0015).
 enum Step: Hashable {
-    /// One collection, addressed by its name — which is also all a collection is.
-    case collection(String)
     case confirm(PositionProposal)
     case game(GameSession)
-    /// The tally over the library. It carries nothing, because it is counted when it is opened
-    /// and stored nowhere (docs/adr/0018).
-    case habits
+    /// The 错题本. It carries nothing, because it is derived from the games every time it is
+    /// opened and is not a second store of anything (docs/adr/0028, docs/adr/0029).
+    case book
+    /// One 错题, carried by value: it is a position and the occasions hanging off it, and both
+    /// were computed before this screen was pushed.
+    case mistake(Mistake)
+    /// The same 错题, being practised. Separate from looking at it, because a drill is a question
+    /// and the history is the answer to a different one (docs/adr/0029).
+    case drill(Mistake, Drill.Source)
 }
 
 /// A typed name, or nil for one that was only spaces — which is how a name is taken back off.
@@ -27,6 +31,8 @@ private func trimmed(_ text: String) -> String? {
 struct LibraryScreen: View {
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
+    @Environment(MistakeIndex.self) private var index
+    private let judgement = JudgementSetting.shared
 
     @State private var path: [Step] = []
     @State private var isCameraOpen = false
@@ -36,17 +42,8 @@ struct LibraryScreen: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var isRecognising = false
     @State private var failure: (title: String, message: String)?
-    /// The import sheet being shown, and the collection it is pinned to — nil when opened
-    /// from the library, where the collection is asked for instead.
-    @State private var importTarget: ImportTarget?
-
-    private struct ImportTarget: Identifiable {
-        let collection: String?
-        var id: String { collection ?? "library" }
-    }
-    /// The collection being renamed, and the name being typed for it.
-    @State private var renamingCollection: String?
-    @State private var collectionDraft = ""
+    @State private var isImporting = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -57,7 +54,8 @@ struct LibraryScreen: View {
                         note(reason, symbol: "exclamationmark.triangle.fill")
                     }
                     entries
-                    if !library.entries.isEmpty { habitsCard }
+                    dailyDoor
+                    bookDoor
                     games
                 }
                 .padding(.horizontal, 16)
@@ -87,19 +85,26 @@ struct LibraryScreen: View {
                 }
             }
             .sheet(isPresented: $isAboutShowing) { AboutScreen() }
-            .sheet(item: $importTarget) { target in
-                ImportSheet(targetCollection: target.collection)
-            }
+            .sheet(isPresented: $isImporting) { ImportSheet(onOpen: open) }
             .navigationDestination(for: Step.self) { step in
                 switch step {
-                case .collection(let name):
-                    CollectionScreen(name: name, path: $path)
                 case .confirm(let proposal):
                     ConfirmPositionScreen(proposal: proposal, path: $path)
                 case .game(let session):
                     GameScreen(session: session, path: $path)
-                case .habits:
-                    HabitsScreen(path: $path)
+                case .book:
+                    BookScreen(path: $path)
+                case .mistake(let mistake):
+                    BookEntryScreen(mistake: mistake, path: $path)
+                case .drill(let mistake, let source):
+                    DrillHost(
+                        mistake: mistake,
+                        engine: engine.service,
+                        lines: judgement.lines,
+                        log: index.log,
+                        source: source,
+                        path: $path
+                    )
                 }
             }
             .overlay {
@@ -151,15 +156,24 @@ struct LibraryScreen: View {
         } message: {
             Text(failure?.message ?? "")
         }
-        .alert(localized("collection.rename"), isPresented: .constant(renamingCollection != nil)) {
-            TextField(localized("collection.name"), text: $collectionDraft)
-            Button(localized("ok")) {
-                if let old = renamingCollection, let name = trimmed(collectionDraft) {
-                    library.renameCollection(old, to: name)
-                }
-                renamingCollection = nil
-            }
-            Button(localized("cancel"), role: .cancel) { renamingCollection = nil }
+        // A picture somebody shared into the app from somewhere else. The extension wrote it
+        // and stopped there; this is the half that reads it (docs/adr/0033). Coming forward is
+        // the cue rather than the URL, because the URL is only a shortcut — a share the system
+        // declined to open the app for is still waiting here, and is found the next time the
+        // app is looked at. `initial` covers a launch that starts active.
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            guard phase == .active else { return }
+            takeWhatWasShared()
+        }
+        .onOpenURL { _ in takeWhatWasShared() }
+        // The 错题本 is derived, so it is brought up to date whenever the games change or a line
+        // moves — and costs nothing when neither has, because the index walks only what is new
+        // (docs/adr/0028). `initial` covers the launch, where the library is already listed.
+        .onChange(of: library.entries, initial: true) { _, entries in
+            index.update(from: entries, lines: judgement.lines)
+        }
+        .onChange(of: judgement.lines) { _, lines in
+            index.update(from: library.entries, lines: lines)
         }
     }
 
@@ -241,6 +255,18 @@ struct LibraryScreen: View {
             .background(Palette.ink, in: RoundedRectangle(cornerRadius: 14))
 
             Button {
+                start(Game(startFEN: PGN.standardStartFEN), tilling: true)
+            } label: {
+                Label(localized("till.start"), systemImage: "leaf")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(18)
+                    .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .disabled(!engine.isReady)
+
+            Button {
                 start(Game(startFEN: PGN.standardStartFEN))
             } label: {
                 HStack(spacing: 10) {
@@ -256,7 +282,7 @@ struct LibraryScreen: View {
             .buttonStyle(.plain)
 
             Button {
-                importTarget = ImportTarget(collection: nil)
+                isImporting = true
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "link")
@@ -272,11 +298,79 @@ struct LibraryScreen: View {
         }
     }
 
-    /// The library: the collections as cards, then the games nobody has filed.
+    /// 日课, and how much of it is left (docs/adr/0030).
     ///
-    /// A collection stays shut. It is a thing you go into — fifty positions spilled out here would
-    /// bury the ways in, and the unfiled games under them. Unfiled games are not a collection and do
-    /// not become one, so they stay exactly as they were: a list.
+    /// It opens the next question rather than a list of them, and that is the design rather than
+    /// a shortcut: a screen listing today's queue is a screen somebody picks from, and picking is
+    /// exactly what a spaced schedule exists to take off them (docs/adr/0032). There is one verb
+    /// here and it is 下一道.
+    @ViewBuilder private var dailyDoor: some View {
+        let left = index.daily.remaining
+        Button {
+            guard let next = index.daily.next else { return }
+            path.append(.drill(next.mistake, .daily))
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "sun.max")
+                Text(localized("daily")).font(.subheadline.weight(.medium))
+                Spacer(minLength: 0)
+                Text(
+                    left > 0
+                        ? localized("daily.left", plural: left)
+                        : localized(index.book.isEmpty ? "daily.none" : "daily.done")
+                )
+                .font(.caption.weight(.medium))
+                .foregroundStyle(left > 0 ? Palette.parchment : Palette.inkSoft)
+                if left > 0 {
+                    Image(systemName: "chevron.right").font(.caption2)
+                }
+            }
+            .foregroundStyle(left > 0 ? Palette.parchment : Palette.ink)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 13)
+            .background(
+                left > 0 ? Palette.analysis : Palette.chipRest,
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(left == 0)
+    }
+
+    /// The way into the 错题本, carrying how many are in it (docs/adr/0028).
+    ///
+    /// Always on the screen, including when it is empty: a door that appears only once there is
+    /// something behind it is a door nobody learns about, and the sentence behind it when it is
+    /// empty says what puts things there.
+    private var bookDoor: some View {
+        Button {
+            path.append(.book)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "book.closed")
+                Text(localized("book")).font(.subheadline.weight(.medium))
+                Spacer(minLength: 0)
+                if !index.book.isEmpty {
+                    Text(localized("book.items", plural: index.book.mistakes.count))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Palette.alarm)
+                }
+                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Palette.inkSoft)
+            }
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 13)
+            .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The games, as one flat list.
+    ///
+    /// Flat, and that is the change: a game used to be a work that got curated into a collection,
+    /// and it is raw material now — nobody curates the source of their own mistakes (docs/adr/0028).
+    /// What a person looks for here is the game they just played, so the order is the order they
+    /// arrived in and there is nothing to open first.
     private var games: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(localized("library.games")).eyebrow().padding(.top, 6)
@@ -289,97 +383,7 @@ struct LibraryScreen: View {
                     .padding(.vertical, 10)
             }
 
-            ForEach(library.collections) { collection in
-                if let name = collection.name {
-                    collectionCard(name, count: collection.entries.count)
-                }
-            }
-
-            if let unfiled = library.collections.first(where: { $0.name == nil }) {
-                // A heading only once there is something else above it to tell these apart from.
-                if library.collections.count > 1 {
-                    HStack(spacing: 6) {
-                        Image(systemName: "tray").font(.caption2).foregroundStyle(Palette.inkSoft)
-                        Text(localized("library.unfiled"))
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Palette.ink)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.top, 6)
-                    .padding(.horizontal, 2)
-                }
-                GameList(entries: unfiled.entries) { open($0) }
-            }
-        }
-    }
-
-    /// The way to 老毛病. Not a score and not a badge: the card says nothing about how the player
-    /// is doing, because whether there is anything to say is only known once the games have been
-    /// read, and reading them is what the screen behind this does.
-    private var habitsCard: some View {
-        Button {
-            path.append(.habits)
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "repeat")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.parchment)
-                    .frame(width: 30, height: 30)
-                    .background(Palette.alarm, in: RoundedRectangle(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(localized("habits"))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.ink)
-                    Text(localized("habits.card"))
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            .padding(12)
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// A collection, shut: its name, how many games are in it, and the way in.
-    private func collectionCard(_ name: String, count: Int) -> some View {
-        Button {
-            path.append(.collection(name))
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "folder.fill")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.parchment)
-                    .frame(width: 30, height: 30)
-                    .background(Palette.ink, in: RoundedRectangle(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(name)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.ink)
-                    Text(localized("collection.games", plural: count))
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            .padding(12)
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Button {
-                collectionDraft = name
-                renamingCollection = name
-            } label: {
-                Label(localized("collection.rename"), systemImage: "pencil")
-            }
+            GameList(entries: library.entries) { open($0) }
         }
     }
 
@@ -407,6 +411,19 @@ struct LibraryScreen: View {
     }
 
     // ------------------------------------------------------------------ doing
+
+    /// Reads the newest shared picture, if there is one and nothing else is being read.
+    ///
+    /// Newest and only one: somebody who shares three boards in a row is going to look at the
+    /// last of them, and the other two are still wherever they came from. The rest are dropped
+    /// rather than queued, because a queue here would mean the app opening a board nobody
+    /// asked about on some later launch.
+    private func takeWhatWasShared() {
+        guard !isRecognising, path.isEmpty, let inbox = SharedInbox.shared else { return }
+        guard let data = inbox.takeNewest() else { return }
+        inbox.empty()
+        recognise(.data(data))
+    }
 
     private func paste() {
         guard let image = BoardImageLoader.fromClipboard() else {
@@ -460,9 +477,11 @@ struct LibraryScreen: View {
         }
     }
 
-    private func start(_ game: Game?) {
+    private func start(_ game: Game?, tilling: Bool = false) {
         guard let game else { return }
         let session = GameSession.playing(game, engine: engine.service, library: library)
+        session.lines = judgement.lines
+        if tilling { session.setIntercept(10) }
         path.append(.game(session))
     }
 
@@ -474,11 +493,7 @@ struct LibraryScreen: View {
     }
 }
 
-/// A list of games, and everything that can be done to one: open it, name it, file it, delete it.
-///
-/// One definition shared by the library's unfiled pile and by a collection's own screen. The row and
-/// its menu were the same thing in both places, and so were the dialogs behind them — which is the
-/// kind of sameness that drifts apart a version at a time.
+/// A list of games, and everything that can be done to one: open it, name it, delete it.
 struct GameList: View {
     let entries: [GameLibrary.Entry]
     let open: (GameLibrary.Entry) -> Void
@@ -487,16 +502,6 @@ struct GameList: View {
 
     @State private var renaming: GameLibrary.Entry?
     @State private var nameDraft = ""
-    @State private var filing: Filing?
-    @State private var collectionDraft = ""
-
-    /// A game on its way into a collection. The collection is nil while it is still being named,
-    /// which is the only difference between filing into one that exists and making a new one.
-    private struct Filing: Identifiable {
-        let entry: GameLibrary.Entry
-        let collection: String?
-        var id: URL { entry.url }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -514,48 +519,6 @@ struct GameList: View {
         } message: {
             Text(localized("game.name.explained"))
         }
-        // Filing asks for the name in the same breath, because in a collection the name *is* the
-        // order: a game put into one without being named sits wherever its timestamp falls, which is
-        // never where it belongs in a set someone is working through.
-        .alert(filingTitle, isPresented: .constant(filing != nil)) {
-            if filing?.collection == nil {
-                TextField(localized("collection.name"), text: $collectionDraft)
-            }
-            TextField(localized("game.name.field.long"), text: $nameDraft)
-            Button(localized("ok")) { commitFiling() }
-            Button(localized("cancel"), role: .cancel) { filing = nil }
-        } message: {
-            Text(localized("game.file.explained"))
-        }
-    }
-
-    private var filingTitle: String {
-        guard let filing else { return "" }
-        guard let collection = filing.collection else { return localized("collection.new") }
-        return localized("game.file.into", collection)
-    }
-
-    private func commitFiling() {
-        defer { filing = nil }
-        guard let filing else { return }
-        let collection = filing.collection ?? trimmed(collectionDraft)
-        guard let collection else { return }
-        // Both tags in one write. Two calls each read the entry's own copy of the PGN, so the second
-        // would carry the first one's change away with it — the name would land and the collection
-        // would silently revert.
-        var changes: [(name: String, value: String?)] = [("Event", collection)]
-        // The name is only touched when something was typed, so backing out of naming does not wipe
-        // a name the game already had.
-        if let name = trimmed(nameDraft) {
-            changes.append((GameLibrary.nameTag, name))
-        }
-        library.setTags(changes, on: filing.entry)
-    }
-
-    private func beginFiling(_ entry: GameLibrary.Entry, into collection: String?) {
-        nameDraft = entry.name ?? ""
-        collectionDraft = ""
-        filing = Filing(entry: entry, collection: collection)
     }
 
     private func row(_ entry: GameLibrary.Entry) -> some View {
@@ -578,6 +541,11 @@ struct GameList: View {
                     Text(entry.detail)
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
+                    if entry.origin == .imported {
+                        Text(library.importStatus(entry).label)
+                            .font(.caption)
+                            .foregroundStyle(Palette.inkSoft)
+                    }
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
@@ -595,125 +563,12 @@ struct GameList: View {
             } label: {
                 Label(localized("rename"), systemImage: "pencil")
             }
-            Menu {
-                // The collections that exist, with a tick against the one this game is already in,
-                // so the menu doubles as the answer to "where is this filed".
-                ForEach(library.collectionNames, id: \.self) { name in
-                    Button {
-                        beginFiling(entry, into: name)
-                    } label: {
-                        Label(name, systemImage: entry.collection == name ? "checkmark" : "folder")
-                    }
-                }
-                Button {
-                    beginFiling(entry, into: nil)
-                } label: {
-                    Label(localized("collection.new.ellipsis"), systemImage: "folder.badge.plus")
-                }
-                if entry.collection != nil {
-                    Button {
-                        library.file(entry, under: nil)
-                    } label: {
-                        Label(localized("collection.remove"), systemImage: "tray.and.arrow.up")
-                    }
-                }
-            } label: {
-                Label(localized("collection.file"), systemImage: "folder")
-            }
             Divider()
             Button(role: .destructive) {
                 library.delete(entry)
             } label: {
                 Label(localized("delete"), systemImage: "trash")
             }
-        }
-    }
-}
-
-/// One collection, open: the games in it, in the order 上一局 and 下一局 walk.
-struct CollectionScreen: View {
-    let name: String
-    @Binding var path: [Step]
-
-    @Environment(EngineHost.self) private var engine
-    @Environment(GameLibrary.self) private var library
-
-    @State private var isRenaming = false
-    @State private var draft = ""
-    @State private var isImporting = false
-
-    private var entries: [GameLibrary.Entry] {
-        library.collections.first { $0.name == name }?.entries ?? []
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(localized("collection.sorted", plural: entries.count))
-                    .font(.footnote)
-                    .foregroundStyle(Palette.inkSoft)
-                    .padding(.bottom, 2)
-
-                if entries.isEmpty {
-                    // Reachable: the last game can be moved out or deleted from this very screen. A
-                    // collection is only the games claiming it, so at that moment it stops existing.
-                    Text(localized("collection.empty"))
-                        .font(.footnote)
-                        .foregroundStyle(Palette.inkSoft)
-                        .padding(.vertical, 10)
-                }
-
-                GameList(entries: entries) { entry in
-                    guard let session = GameSession.opened(entry, engine: engine.service, library: library) else {
-                        return
-                    }
-                    path.append(.game(session))
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
-        }
-        .background(Palette.parchment)
-        .navigationTitle(name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Palette.parchment, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .tint(Palette.analysis)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isImporting = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel(localized("import.title"))
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    draft = name
-                    isRenaming = true
-                } label: {
-                    Image(systemName: "pencil")
-                }
-            }
-        }
-        .sheet(isPresented: $isImporting) {
-            // Pinned to this collection: the whole point of the door is that more games
-            // land in here, not in a new collection (docs/adr/0014).
-            ImportSheet(targetCollection: name)
-        }
-        .alert(localized("collection.rename"), isPresented: $isRenaming) {
-            TextField(localized("collection.name"), text: $draft)
-            Button(localized("ok")) {
-                let fresh = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !fresh.isEmpty, fresh != name else { return }
-                library.renameCollection(name, to: fresh)
-                // This screen is addressed by the name, so the path element has to be re-addressed
-                // with it — otherwise renaming leaves you looking at a collection that no longer
-                // exists, which reads as having lost fifty games.
-                path[path.count - 1] = .collection(fresh)
-            }
-            Button(localized("cancel"), role: .cancel) {}
         }
     }
 }

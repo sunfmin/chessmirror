@@ -6,10 +6,8 @@ import SwiftUI
 ///
 /// Two doors and one machine behind them: a link downloads a whole multi-game PGN — a lichess
 /// study or a single game — and a username downloads that player's last few games. Either way
-/// every game in what came down becomes one file in a collection. Opened from the library the
-/// collection is asked for; opened from inside a collection it is pinned, which is the "add more
-/// games to this collection" door. The downloading and reading is `ImportSession`'s; this is the
-/// deck of controls around it, one state per phase.
+/// every game in what came down becomes one file in the library. The downloading and reading is
+/// `ImportSession`'s; this is the deck of controls around it, one state per phase.
 struct ImportSheet: View {
     /// Which door. Not a mode — the two share every state after the download, because after the
     /// download there is no difference between them.
@@ -32,28 +30,27 @@ struct ImportSheet: View {
         }
     }
 
-    /// The collection the import is pinned to, when the sheet was opened from inside one.
-    let targetCollection: String?
     let session: ImportSession
+    let onOpen: ((GameLibrary.Entry) -> Void)?
 
     @Environment(GameLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
 
     @State private var input: String
-    @State private var collectionDraft = ""
     @State private var door: Door = .link
     @State private var player = ""
     @State private var count = PGNImport.recentGames
+    @State private var choosingSide: PGNImport.ImportChapter?
 
     init(
-        targetCollection: String? = nil,
         session: ImportSession = ImportSession(),
         initialInput: String = "",
         initialDoor: Door = .link,
-        initialPlayer: String = ""
+        initialPlayer: String = "",
+        onOpen: ((GameLibrary.Entry) -> Void)? = nil
     ) {
-        self.targetCollection = targetCollection
         self.session = session
+        self.onOpen = onOpen
         _input = State(initialValue: initialInput)
         _door = State(initialValue: initialDoor)
         _player = State(initialValue: initialPlayer)
@@ -77,8 +74,6 @@ struct ImportSheet: View {
                         field(localized("import.field.player"), text: $player, keyboard: .default)
                         howMany
                     }
-
-                    collection
 
                     switch session.phase {
                     case .idle:
@@ -108,8 +103,25 @@ struct ImportSheet: View {
                     Button(localized("cancel")) { dismiss() }
                 }
             }
-            .onAppear(perform: prefill)
-            .onChange(of: session.phase) { _, _ in prefill() }
+        }
+        .confirmationDialog(
+            localized("import.trackSide"),
+            isPresented: Binding(
+                get: { choosingSide != nil },
+                set: { if !$0 { choosingSide = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: choosingSide
+        ) { chapter in
+            ForEach([PieceColour.white, .black], id: \.self) { side in
+                Button("\(side.label) · \(chapter.pgn.tag(side == .white ? "White" : "Black") ?? "?")") {
+                    if let entry = session.open(chapter, into: library, tracking: side) {
+                        onOpen?(entry)
+                        dismiss()
+                    }
+                }
+            }
+            Button(localized("cancel"), role: .cancel) { choosingSide = nil }
         }
     }
 
@@ -167,28 +179,6 @@ struct ImportSheet: View {
             )
     }
 
-    /// Which collection this lands in: asked for, or pinned by the door the sheet came in
-    /// through.
-    @ViewBuilder
-    private var collection: some View {
-        if let targetCollection {
-            Text(localized("import.into", targetCollection)).eyebrow()
-        } else {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(localized("import.intoCollection")).eyebrow()
-                TextField(localized("collection.name"), text: $collectionDraft)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.ink)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12).stroke(Palette.hairline, lineWidth: 0.5)
-                    )
-            }
-        }
-    }
-
     /// What the download found, with the button that makes it real.
     private func ready(_ plan: PGNImport.ImportPlan) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -198,15 +188,20 @@ struct ImportSheet: View {
                     .foregroundStyle(Palette.ink)
                 // The first few names, so what is about to land can be checked against the
                 // study it came from — all of them would scroll a sheet past its point.
-                ForEach(plan.chapters.prefix(5)) { chapter in
-                    Text(chapter.name)
-                        .font(.footnote)
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                if plan.chapters.count > 5 {
-                    Text(localized("import.more", plural: plan.chapters.count - 5))
-                        .font(.footnote)
-                        .foregroundStyle(Palette.inkSoft)
+                ForEach(plan.chapters) { chapter in
+                    Button {
+                        choosingSide = chapter
+                    } label: {
+                        HStack {
+                            Text(chapter.name)
+                            Spacer()
+                            Text(session.status(of: chapter, in: library).label)
+                                .foregroundStyle(Palette.inkSoft)
+                        }
+                    }
+                    .font(.footnote)
+                    .accessibilityLabel(chapter.name)
+                    .accessibilityValue(session.status(of: chapter, in: library).label)
                 }
                 if plan.unreadable > 0 {
                     Text(localized("import.unreadable", plural: plan.unreadable))
@@ -218,17 +213,11 @@ struct ImportSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
 
-            primaryButton(
-                localized("import.apply", plural: plan.chapters.count),
-                isEnabled: canImport, action: importNow
-            )
         }
     }
 
     private func summary(of plan: PGNImport.ImportPlan) -> String {
-        let many = localized("import.plan.games", plural: plan.chapters.count)
-        guard let suggested = plan.suggestedCollection else { return many }
-        return localized("import.plan.named", suggested, many)
+        localized("import.plan.games", plural: plan.chapters.count)
     }
 
     private func done(_ outcome: PGNImport.ImportOutcome) -> some View {
@@ -240,7 +229,6 @@ struct ImportSheet: View {
                 Button {
                     session.reset()
                     input = ""
-                    collectionDraft = ""
                 } label: {
                     Text(localized("import.again"))
                         .font(.subheadline.weight(.medium))
@@ -330,24 +318,6 @@ struct ImportSheet: View {
         }
     }
 
-    /// Whether there is a collection to import into. Pinned sheets always have one; free
-    /// ones need a typed name — the collection is the point of the import, not a nicety,
-    /// and an empty name would file the games nowhere.
-    private var canImport: Bool {
-        targetCollection != nil
-            || !collectionDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    /// The study names its collection; prefill it. Only into a draft nobody has typed
-    /// into yet — a suggestion is not an override.
-    private func prefill() {
-        guard case .ready(let plan) = session.phase,
-            let suggested = plan.suggestedCollection,
-            collectionDraft.isEmpty
-        else { return }
-        collectionDraft = suggested
-    }
-
     private func fetch() {
         guard canFetch else { return }
         switch door {
@@ -359,12 +329,6 @@ struct ImportSheet: View {
     }
 
     private func importNow() {
-        guard canImport, let name = targetCollection ?? Self.trimmed(collectionDraft) else { return }
-        session.apply(into: name, library: library)
-    }
-
-    private static func trimmed(_ text: String) -> String? {
-        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return clean.isEmpty ? nil : clean
+        session.apply(into: library)
     }
 }

@@ -11,6 +11,10 @@ struct ChessfenApp: App {
         return EngineHost.Nets(big: big, small: small)
     })
     @State private var library = GameLibrary()
+    /// The 错题本, kept beside the library rather than inside it: it is derived from the games
+    /// and from the practice log, and it is a cache that can be thrown away at any moment
+    /// (docs/adr/0028, docs/adr/0029).
+    @State private var book = MistakeIndex()
     /// What language every word on every screen comes out in. Read before the first screen is
     /// built, so a person who chose one gets it on the launch screen rather than one frame later.
     @State private var language = LanguageSetting.shared
@@ -21,6 +25,7 @@ struct ChessfenApp: App {
             LibraryScreen()
                 .environment(engine)
                 .environment(library)
+                .environment(book)
                 .environment(language)
                 // The one thing in the app that rebuilds every screen: the words on all of them
                 // change at once, and there is no other way to tell SwiftUI that a plain function

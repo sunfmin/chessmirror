@@ -12,6 +12,40 @@ import Testing
 @MainActor
 @Suite(.serialized, .speaking(.chinese))
 struct ImportScreenScreenshots {
+    @Test(arguments: [PieceColour.white, .black])
+    func openingAGameRequiresChoosingTheTrackedSide(side: PieceColour) async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let session = ImportSession(fetcher: ScriptedFetcher([
+            "https://lichess.org/study/HgiqcIqW.pgn": .success(Self.study)
+        ]))
+        await session.run("https://lichess.org/study/HgiqcIqW.pgn")
+        var opened: GameLibrary.Entry?
+        _ = await ScreenImage.write("import-select-\(side == .white ? "white" : "black")", interact: { window in
+            #expect(ScreenImage.activate("第一题", in: window))
+            await ScreenImage.settle()
+            #expect(opened == nil, "opening the side chooser must not import the game")
+            let files = (try? FileManager.default.contentsOfDirectory(at: directory,
+                includingPropertiesForKeys: nil)) ?? []
+            #expect(!files.contains { $0.pathExtension == "pgn" })
+            #expect(ScreenImage.words(in: window).contains(localized("import.trackSide")))
+            let player = side == .white ? "Sunfmin" : "Stockfish 14"
+            #expect(ScreenImage.activate("\(side.label) · \(player)", in: window))
+            await ScreenImage.settle()
+        }) {
+            ImportSheet(session: session, onOpen: { opened = $0 }).environment(library)
+        }
+        let entry = try #require(opened)
+        let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
+        #expect(pgn.handColours == [side])
+        #expect(pgn.tag("White") == "Sunfmin")
+        #expect(pgn.tag("Black") == "Stockfish 14")
+        let files = try FileManager.default.contentsOfDirectory(at: directory,
+            includingPropertiesForKeys: nil).filter { $0.pathExtension == "pgn" }
+        #expect(files.count == 1, "the other chapter must not be imported")
+    }
+
     /// A two-chapter study in the shape lichess exports, with chapters named like the ones a
     /// person has actually named. Kept here rather than shared with the kit's tests, because
     /// this bundle cannot see the kit's test fixtures — and two chapters is all a sheet needs
@@ -54,8 +88,8 @@ struct ImportScreenScreenshots {
             .appending(path: "chessfen-screens-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
-    /// The empty sheet: where the link goes, where the collection is asked for, the one button.
-    @Test("the idle sheet asks for a link and a collection")
+    /// The empty sheet: where the link goes, and the one button.
+    @Test("the idle sheet asks for a link")
     func idleSheet() async throws {
         let tempDir = tempDir()
         defer { try? FileManager.default.removeItem(at: tempDir) }
@@ -71,12 +105,11 @@ struct ImportScreenScreenshots {
         #expect(rendered.says("PGN 链接"))
         #expect(!rendered.says("lichess 用户名"), "the other door's field is not on this one")
         #expect(rendered.says("获取棋谱"))
-        #expect(rendered.says("导入到作品集"))
-        #expect(rendered.says("作品集名字"))
+        #expect(!rendered.says("作品集"), "nowhere to file anything into any more")
     }
 
-    /// The sheet after the download: the study names itself, its chapters, and its collection.
-    @Test("a downloaded study names itself, its chapters, and its collection")
+    /// The sheet after the download: how many games came down, and what they are called.
+    @Test("a downloaded study counts its games and names them")
     func readySheet() async throws {
         let tempDir = tempDir()
         defer { try? FileManager.default.removeItem(at: tempDir) }
@@ -92,13 +125,14 @@ struct ImportScreenScreenshots {
             ImportSheet(session: session).environment(library(in: tempDir))
         }
 
-        #expect(rendered.says("「Wood Pecker 1-47」· 2 局"))
+        #expect(rendered.says("2 局"))
         #expect(rendered.says("第一题"))
         #expect(rendered.says("第二题"))
-        #expect(rendered.says("导入 2 局"))
-        // The suggested collection lands in the field the way a suggestion should: on its own,
-        // not typed by a person — once in the summary, once as the field's value.
-        #expect(rendered.count(of: "Wood Pecker 1-47") >= 2, "the field holds the suggestion too")
+        #expect(rendered.says("没导入"))
+        #expect(!rendered.says("导入 2 局"))
+        // The study's own name is not said at all: it named a collection, and there is no
+        // collection to name any more (docs/adr/0028). The chapters are what land.
+        #expect(rendered.count(of: "Wood Pecker 1-47") == 0)
     }
 
     /// The sheet after importing: the report, the way out, and the files really on disk.
@@ -114,24 +148,23 @@ struct ImportScreenScreenshots {
             ])
         )
         await session.run("https://lichess.org/study/HgiqcIqW.pgn")
-        _ = session.apply(into: "Wood Pecker", library: library)
+        _ = session.apply(into: library)
 
         let rendered = await ScreenImage.write("import-sheet-done") {
             ImportSheet(session: session).environment(library)
         }
 
-        #expect(rendered.says("导入 2 局到「Wood Pecker」"))
+        #expect(rendered.says("导入了 2 局"))
         #expect(rendered.says("再导入一个"))
         #expect(rendered.says("完成"))
 
-        // And the library really has them: one file per chapter, tagged into the collection.
+        // And the library really has them: one file per chapter, each marked as somebody else's.
         let files = try FileManager.default
             .contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "pgn" }
         #expect(files.count == 2)
         for file in files {
             let pgn = try PGN(parsing: String(contentsOf: file, encoding: .utf8) ?? "")
-            #expect(pgn.tag("Event") == "Wood Pecker")
             #expect(pgn.tag(GameOrigin.tagName) == GameOrigin.imported.tagValue)
         }
     }
@@ -176,10 +209,11 @@ struct ImportScreenScreenshots {
                 .environment(library(in: tempDir))
         }
 
-        #expect(rendered.says("「sunfmin 的对局」· 2 局"), "named after the player, not the event")
+        #expect(rendered.says("2 局"), "how many came down")
         #expect(rendered.says("sunfmin 对 DrNykterstein · 2026.08.30 21:14"))
         #expect(rendered.says("penguingm1 对 sunfmin · 2026.08.29 09:02"), "two games, two names")
-        #expect(rendered.says("导入 2 局"))
+        #expect(rendered.says("没导入"))
+        #expect(!rendered.says("导入 2 局"))
         #expect(rendered.says("填一个 lichess 用户名"), "the door that fetched them is the open one")
         #expect(rendered.says("拉几局"))
     }
@@ -205,30 +239,5 @@ struct ImportScreenScreenshots {
         #expect(rendered.says("找不到这局棋"))
         #expect(rendered.says("链接可能不对"), "and both of the things it could be")
         #expect(rendered.says("重试"))
-    }
-
-    /// Inside a collection the same sheet is pinned to it: the door says where games land.
-    @Test("a collection's + opens an import pinned to that collection")
-    func collectionImport() async throws {
-        let tempDir = tempDir()
-        defer { try? FileManager.default.removeItem(at: tempDir) }
-
-        let library = self.library(in: tempDir)
-
-        let screen = await ScreenImage.write("collection-import") {
-            NavigationStack {
-                CollectionScreen(name: "Wood Pecker", path: .constant([]))
-            }
-            .environment(EngineHost(ScriptedEngine([])))
-            .environment(library)
-        }
-        #expect(screen.says("导入棋局"), "the + is labelled for what it does")
-        #expect(screen.says("这个作品集空了"), "an empty collection says so")
-
-        let sheet = await ScreenImage.write("import-sheet-pinned") {
-            ImportSheet(targetCollection: "Wood Pecker").environment(library)
-        }
-        #expect(sheet.says("导入到「Wood Pecker」"))
-        #expect(!sheet.says("作品集名字"), "no asking for a collection the door already named")
     }
 }

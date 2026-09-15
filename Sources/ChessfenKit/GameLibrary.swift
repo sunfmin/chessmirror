@@ -31,25 +31,11 @@ import Foundation
             GameOrigin(rawValue: pgn?.tag(GameOrigin.tagName) ?? "") ?? .fresh
         }
 
-        /// What this game is called, if anybody has said. Its own tag rather than `Event`, which
-        /// names the collection: PGN has no tag for the name of a single game, and the precedent
-        /// for adding one is `Source` — a reader that does not know it ignores it.
+        /// What this game is called, if anybody has said. Its own tag rather than `Event`: PGN
+        /// has no tag for the name of a single game, and the precedent for adding one is
+        /// `Source` — a reader that does not know it ignores it.
         public var name: String? {
             pgn?.tag(GameLibrary.nameTag).flatMap { $0.isEmpty ? nil : $0 }
-        }
-
-        /// The collection this game is filed under, or nil for one that is not filed.
-        ///
-        /// `Event` is where PGN already puts "which set of games this belongs to", so a collection
-        /// made here is a collection anywhere else the file is opened. Every game the app has ever
-        /// written has `Event "Chessfen"`, which is the app's name and not a collection's, so that
-        /// value reads as unfiled — along with the two ways PGN says it does not know. This is what
-        /// makes existing games need no migration.
-        public var collection: String? {
-            guard let event = pgn?.tag("Event"), !GameLibrary.unfiledEvents.contains(event) else {
-                return nil
-            }
-            return event
         }
 
         /// The name to show, which is the given one or one made from when the game was saved. Never
@@ -67,8 +53,6 @@ import Foundation
             let moves = (pgn.game.plies.count + 1) / 2
             var parts = [origin.label, date, localized("library.entry.moves", plural: moves)]
             parts.append(result == "*" ? localized("library.entry.unfinished") : result)
-            let branches = pgn.game.plies.reduce(0) { $0 + $1.variations.count }
-            if branches > 0 { parts.append(localized("library.entry.branches", plural: branches)) }
             return parts.joined(separator: " · ")
         }
     }
@@ -77,43 +61,6 @@ import Foundation
 
     /// The tag a game's own name lives in.
     public nonisolated static let nameTag = "Name"
-
-    /// `Event` values that mean "not in a collection": the app's own name, which is what it wrote
-    /// into every game before collections existed, and PGN's two ways of saying it does not know.
-    public nonisolated static let unfiledEvents: Set<String> = ["Chessfen", "?", ""]
-
-    /// One collection and the games in it, in the order they should be read and worked through.
-    public struct Collection: Identifiable {
-        /// Nil for the games nobody has filed.
-        public let name: String?
-        public let entries: [Entry]
-        public var id: String { name ?? "" }
-    }
-
-    /// The library as collections, named ones first and 未归类 last.
-    ///
-    /// Within a collection the order is by name, compared the way a person reads numbers, so 第 2 题
-    /// comes before 第 10 题 rather than after it. That order is the one 上一局 and 下一局 follow, so
-    /// naming the games is how that order is set.
-    public var collections: [Collection] {
-        let grouped = Dictionary(grouping: entries) { $0.collection }
-        let named = grouped.keys.compactMap { $0 }.sorted { Self.reads($0, before: $1) }
-        var out = named.map { name in
-            Collection(name: name, entries: sortedByName(grouped[name] ?? []))
-        }
-        if let unfiled = grouped[nil], !unfiled.isEmpty {
-            // Left in the order the flat list had — most recently touched first. Nobody has said
-            // anything about how these relate to each other, so the useful order is "what I was
-            // just doing", not an alphabetical one over names nobody chose.
-            out.append(Collection(name: nil, entries: unfiled))
-        }
-        return out
-    }
-
-    /// The names of the collections that exist, for anywhere one has to be chosen.
-    public var collectionNames: [String] {
-        collections.compactMap(\.name)
-    }
 
     public func sortedByName(_ list: [Entry]) -> [Entry] {
         list.sorted { Self.reads($0.title, before: $1.title) }
@@ -142,14 +89,6 @@ import Foundation
         setTags([(Self.nameTag, name)], on: entry)
     }
 
-    /// Files a game under a collection, or takes it out of one with nil.
-    @discardableResult
-    public func file(_ entry: Entry, under collection: String?) -> Bool {
-        // Unfiled is written as the app's own name rather than removed, because `Event` is a tag
-        // every PGN reader expects to find and this is the value everything else here already has.
-        setTags([("Event", collection ?? "Chessfen")], on: entry)
-    }
-
     /// Rewrites any number of a game's tags, in one read and one write.
     ///
     /// Through the PGN rather than around it: the file is the game (docs/adr/0010), so naming one is
@@ -170,21 +109,48 @@ import Foundation
         return write(pgn, to: entry.url)
     }
 
-    /// Renames a whole collection, which is renaming the tag on every game in it. There is no
-    /// record of a collection apart from the games that claim it, so an empty one cannot exist and
-    /// renaming cannot half-happen in a way that leaves one behind.
-    public func renameCollection(_ name: String, to fresh: String) {
-        for entry in entries where entry.collection == name {
-            file(entry, under: fresh)
-        }
-    }
-
     /// The folder the games are in, which is iCloud's when there is an iCloud (docs/adr/0012).
     /// Everything that touches the disk goes through it, because a file in iCloud has to be
     /// asked for before it can be read and coordinated before it can be written.
     public let folder: GameFolder
 
     public var directory: URL { folder.url }
+    public private(set) var reviewingURLs: Set<URL> = []
+    private var importReviewChain: Task<Void, Never>?
+    func waitForImportReviews() async { await importReviewChain?.value }
+    @ObservationIgnored private var importCounts: [URL: (entry: Entry, count: Int)] = [:]
+    public func importStatus(_ entry: Entry) -> PGNImport.Status {
+        if reviewingURLs.contains(entry.url) { return .scoring }
+        guard entry.pgn?.game.isReviewed == true else { return .awaitingReview }
+        if let cached = importCounts[entry.url], cached.entry == entry { return .ready(cached.count) }
+        let count = Set(MistakeBook.encounters(in: entry).map { $0.0 }).count
+        importCounts[entry.url] = (entry, count)
+        return .ready(count)
+    }
+
+    public func reviewImported(_ entry: Entry, using engine: any Engine,
+                               completed: @escaping @MainActor (PGN) -> Void = { _ in }) {
+        guard entry.origin == .imported, let original = entry.pgn, !original.game.isReviewed,
+            reviewingURLs.insert(entry.url).inserted else { return }
+        let previous = importReviewChain
+        importReviewChain = Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            defer { reviewingURLs.remove(entry.url) }
+            do {
+                await writeChain?.value
+                let judged = try await ImportReview.judge(original, using: engine)
+                guard let current = entries.first(where: { $0.url == entry.url })?.pgn,
+                    current.game == original.game else { return }
+                var result = current
+                result.game = judged.game
+                result.setTag("ReviewSift", to: judged.tag("ReviewSift"))
+                if write(result, to: entry.url) { completed(result) }
+            } catch {
+                // No partial scores are saved; opening the game again retries the job.
+            }
+        }
+    }
 
     public init(folder: GameFolder = GameFolder()) {
         self.folder = folder

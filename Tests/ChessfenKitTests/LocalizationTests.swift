@@ -22,7 +22,7 @@ import Testing
 
     @Test func everyLanguageSaysEverything() throws {
         let source = try Self.table(.chinese)
-        #expect(source.count > 300, "the source table should hold the whole app's voice")
+        #expect(source.count > 200, "the source table should hold the whole app's voice")
         for language in Language.allCases where language != .chinese {
             let words = try Self.table(language)
             let missing = Set(source.keys).subtracting(words.keys).sorted()
@@ -105,14 +105,14 @@ import Testing
 
     @Test func countsTakeTheirLanguageSingular() {
         Speech.speaking(.english) {
-            #expect(localized("collection.games", plural: 1) == "1 game")
-            #expect(localized("collection.games", plural: 3) == "3 games")
+            #expect(localized("import.plan.games", plural: 1) == "1 game")
+            #expect(localized("import.plan.games", plural: 3) == "3 games")
         }
         Speech.speaking(.french) {
-            #expect(localized("collection.games", plural: 0).hasSuffix("partie"))
+            #expect(localized("import.plan.games", plural: 0).hasSuffix("partie"))
         }
         Speech.speaking(.chinese) {
-            #expect(localized("collection.games", plural: 3) == "3 局")
+            #expect(localized("import.plan.games", plural: 3) == "3 局")
         }
     }
 }

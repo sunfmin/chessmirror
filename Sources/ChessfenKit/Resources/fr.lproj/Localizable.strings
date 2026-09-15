@@ -84,28 +84,7 @@
 "library.entry.moves" = "%d coups";
 "library.entry.moves.one" = "%d coup";
 "library.entry.unfinished" = "Inachevée";
-"library.entry.branches" = "%d variantes";
 "library.entry.branches.one" = "%d variante";
-
-"habit.giveaway" = "Pièces données";
-"habit.missedReply" = "Réponse non calculée";
-"habit.untrueReason" = "Raison qui ne tient pas";
-"habit.noReason" = "Sans raison";
-"habit.attackWhileHanging" = "Attaquer en laissant pendre";
-
-"habit.giveaway.explained" = "Après ce coup, une de vos pièces n'était plus gardée — cette fois, l'adversaire ne l'a pas prise.";
-"habit.missedReply.explained" = "Après ce coup, une de vos pièces n'était plus gardée, et l'adversaire l'a prise au coup suivant.";
-"habit.untrueReason.explained" = "Vous avez dit à quoi servait ce coup ; l'échiquier dit autre chose.";
-"habit.noReason.explained" = "Joué, sans pouvoir dire pourquoi.";
-"habit.attackWhileHanging.explained" = "Vous attaquiez et preniez alors qu'une de vos pièces pendait déjà.";
-
-"habit.excluded.unreviewed" = "pas encore notées";
-"habit.excluded.unreadable" = "illisibles";
-"habit.excluded.waiting" = "encore en téléchargement depuis iCloud";
-
-"habit.note.taken" = "rien ne gardait %@, et l'adversaire l'a pris au coup suivant";
-"habit.note.exposed" = "après ce coup, rien ne gardait %@";
-"habit.note.hanging" = "votre propre %@ n'était gardé par personne à ce moment-là";
 
 "check.take.notHere" = "ce coup ne prend rien en %@";
 "check.take.won" = "prendre en %@ a gagné du matériel";
@@ -152,15 +131,14 @@
 "import.network.message" = "Le réseau a échoué pendant le téléchargement : %@";
 "import.network.notHTTP" = "réponse non HTTP";
 
-"import.done" = "%1$d parties importées dans « %2$@ »";
-"import.done.one" = "%1$d partie importée dans « %2$@ »";
+"import.done" = "%d parties importées";
+"import.done.one" = "%d partie importée";
 "import.done.skipped" = "%d déjà présentes ignorées";
 "import.done.skipped.one" = "%d déjà présente ignorée";
 "import.done.unreadable" = "%d autres illisibles";
 "import.done.unreadable.one" = "%d autre illisible";
 "import.name.players" = "%1$@ contre %2$@";
 "import.name.chapter" = "Chapitre %d";
-"import.collection.player" = "Parties de %@";
 
 "ok" = "OK";
 "cancel" = "Annuler";
@@ -169,7 +147,6 @@
 "rename" = "Renommer";
 "delete" = "Supprimer";
 "board" = "Échiquier";
-"move.number" = "Coup %d";
 
 "app.name" = "Chessfen";
 "app.mark" = "棋镜";
@@ -193,43 +170,21 @@
 "library.fromStart" = "Partir de la position initiale";
 "library.games" = "Parties";
 "library.empty" = "Jouez un coup et la partie s'inscrira ici.";
-"library.unfiled" = "Non classées";
 "library.recognising" = "Lecture de l'échiquier";
 "library.noPicture" = "Image inaccessible";
 "library.noClipboard.title" = "Aucune image dans le presse-papiers";
 "library.noClipboard.message" = "Prenez une capture d'écran et revenez.";
 
-"collection.name" = "Nom du recueil";
-"collection.rename" = "Renommer le recueil";
-"collection.new" = "Nouveau recueil";
-"collection.new.ellipsis" = "Nouveau recueil…";
-"collection.file" = "Classer dans un recueil";
-"collection.remove" = "Retirer du recueil";
-"collection.games" = "%d parties";
 "collection.games.one" = "%d partie";
-"collection.sorted" = "%d parties · par nom";
 "collection.sorted.one" = "%d partie · par nom";
-"collection.empty" = "Ce recueil est vide. Classez-y une partie et il revient dans la liste.";
 
 "game.name.title" = "Nommer cette partie";
 "game.name.field" = "Nom";
-"game.name.field.long" = "Comment s'appelle cette partie";
 "game.name.explained" = "Un recueil est trié par nom : « Exercice 002 » se rangera là où vous l'attendez. Laissez vide pour utiliser l'heure d'enregistrement.";
-"game.file.into" = "Classer dans « %@ »";
-"game.file.explained" = "Le nom décide de sa place dans le recueil, et de l'ordre dans lequel on passe d'une partie à l'autre.";
 
-"habits" = "Vieux réflexes";
-"habits.card" = "Les erreurs que vous répétez, comptées dans vos parties";
-"habits.subtitle" = "Comptées dans les parties que vous avez enregistrées. Aucune note, aucun classement.";
-"habits.counting" = "Comptage…";
-"habits.nothing" = "Aucune partie à compter pour l'instant. Notez-en une, et il y aura quelque chose à dire ici.";
-"habits.clean" = "%d parties comptées, aucun vieux réflexe trouvé.";
 "habits.clean.one" = "%d partie comptée, aucun vieux réflexe trouvé.";
-"habits.counted" = "%d parties comptées.";
 "habits.counted.one" = "%d partie comptée.";
-"habits.excluded" = "%1$d autres parties %2$@, non comptées.";
 "habits.excluded.one" = "%1$d autre partie %2$@, non comptée.";
-"habits.times" = "%d fois";
 "habits.times.one" = "%d fois";
 
 "edit.title" = "Corriger les pièces";
@@ -261,7 +216,7 @@
 "import.title" = "Importer des parties";
 "import.door.link" = "Lien";
 "import.door.player" = "Parties récentes";
-"import.door.link.explained" = "Collez un lien — une étude lichess, ou une seule partie — et chaque partie qu'il contient devient une partie du recueil.";
+"import.door.link.explained" = "Collez un lien — une étude lichess, ou une seule partie — et chaque partie qu'il contient devient une partie de la liste.";
 "import.door.player.explained" = "Entrez un nom d'utilisateur lichess pour récupérer ses dernières parties. À faire avant de monter dans l'avion.";
 "import.field.link" = "Lien PGN";
 "import.field.player" = "Nom d'utilisateur lichess";
@@ -269,16 +224,11 @@
 "import.fetch" = "Récupérer";
 "import.fetching" = "Téléchargement…";
 "import.writing" = "Écriture…";
-"import.into" = "Dans « %@ »";
-"import.intoCollection" = "Dans le recueil";
 "import.plan.games" = "%d parties";
 "import.plan.games.one" = "%d partie";
-"import.plan.named" = "« %1$@ » · %2$@";
-"import.more" = "%d autres…";
 "import.more.one" = "%d autre…";
 "import.unreadable" = "%d parties illisibles seront ignorées.";
 "import.unreadable.one" = "%d partie illisible sera ignorée.";
-"import.apply" = "Importer %d parties";
 "import.apply.one" = "Importer %d partie";
 "import.again" = "Importer autre chose";
 
@@ -292,7 +242,6 @@
 "game.blackFirst" = "Les Noirs commencent";
 "game.more" = "Plus ; les %@ commencent";
 "game.promotion" = "Promouvoir en quoi ?";
-"game.practice" = "Exercice";
 "game.noEngine" = "Sans moteur";
 "game.toPlay" = "Au trait";
 "game.inCheck" = "En échec";
@@ -308,17 +257,6 @@
 "game.settings.collapse" = "Fermer les réglages des %@";
 "game.who" = "Joué par";
 "game.perMove" = "Par coup";
-"game.worst" = "Les trois coups les plus coûteux";
-"game.worst.quiet" = "Les trois coups à revoir";
-"game.changed" = "Ce que ce coup a changé";
-"game.loose" = "Cercle rouge : plus attaquée que défendue";
-"game.wrongPiece" = "La photo s'est trompée de pièce ?";
-"game.alternatives" = "Autres coups";
-"game.over" = "La partie est finie. La courbe et le coût de chaque coup sont ci-dessous.";
-"game.over.quiet" = "La partie est finie. Activez « Avis du moteur » et il notera chaque coup.";
-"game.quiet" = "Exercice : le moteur garde son avis pour lui. Activez « Avis du moteur » au-dessus pour l'entendre.";
-"game.selfPlaying" = "Les deux camps sont le moteur ; il joue tout seul. Reculez d'un coup pour l'arrêter";
-"game.opinion" = "Avis du moteur";
 "game.flip" = "Retourner l'échiquier";
 
 "record.previous" = "Coup précédent";
@@ -327,54 +265,8 @@
 "record.curve" = "Courbe d'évaluation";
 "record.ply" = "Demi-coup %d";
 "record.jump" = "Revenir à ce coup";
-"record.branch" = "Glissez vers le haut ou le bas pour changer de variante";
 "record.startHere" = "Jouer d'ici";
 "record.opening" = "Départ";
-
-"study.computing" = "Calcul de ce coup…";
-"study.why" = "Vous jouez %@. Pourquoi ?";
-"study.withdraw" = "Reprendre";
-"study.commit" = "C'est mon coup";
-"study.notReady" = "Le moteur n'est pas prêt : ce coup ne peut pas être noté.";
-"study.ask" = "Aux %@ de jouer. Que joueriez-vous ?";
-"study.ask.explained" = "Jouez un coup sur l'échiquier. Le résultat vient une fois le coup joué.";
-"study.place" = "Numéro %1$d des coups les plus coûteux de la partie : %2$@ a été joué, %3$@ pions.";
-"study.place.practising" = "Numéro %d des coups les plus coûteux de la partie. Ce qui a été joué ici ne tient pas au second examen du moteur.";
-"study.reason.unclear" = "Je ne sais pas — c'est noté.";
-"study.reason.because" = "Parce que : %@.";
-"study.reason.where" = "%@ où ? Touchez une case de l'échiquier.";
-"study.reason.prompt" = "Dites d'abord à quoi sert ce coup.";
-"study.headline.both" = "Bon coup, et la raison tient.";
-"study.headline.reasonOnly" = "La raison est bonne ; ce coup ne la réalise pas.";
-"study.headline.moveOnly" = "Le coup va, mais la raison ne tient pas.";
-"study.headline.neither" = "Ni le coup ni la raison n'ont tenu.";
-"study.headline.fine" = "Le coup va.";
-"study.headline.poor" = "Le coup ne tient pas.";
-"verdict.held" = "Tenu";
-"verdict.failed" = "Raté";
-"verdict.noClaim" = "Rien dit";
-"study.verdict.noOpinion" = "Le moteur n'a pas d'avis : seule la comparaison avec le coup joué reste possible.";
-"study.verdict.best" = "C'est le premier choix du moteur.";
-"study.verdict.better" = "Meilleur que le moteur de %@.";
-"study.verdict.pass" = "Ça passe : %@ derrière le moteur.";
-"study.verdict.worse" = "%1$@ : %2$@ derrière le moteur.";
-"study.yours" = "Vous";
-"study.engine" = "Moteur";
-"study.played" = "Joué";
-"study.keep" = "Jouer celui-ci";
-"study.again" = "Recommencer";
-"study.next" = "Question suivante";
-"study.depth.explained" = "Les trois sont calculés à la profondeur %d : ils se comparent.";
-
-"report.running" = "Recalcul à la profondeur %1$d : %2$d/%3$d";
-"report.unscored" = "Cette partie n'a pas été notée.";
-"report.score" = "Noter";
-"report.ply" = "Coup %1$d, %2$@ %3$@";
-"report.start" = "Position de départ";
-
-"series.previous" = "Partie précédente";
-"series.next" = "Partie suivante";
-"series.place" = "Partie %1$d sur %2$d";
 
 "about" = "À propos";
 "about.what" = "Photographiez un échiquier, lisez la position, continuez la partie. La reconnaissance et le moteur tournent sur cet appareil ; les parties sont enregistrées dans votre propre iCloud. Rien n'est téléchargé, sauf quand vous importez une partie depuis un lien.";
@@ -395,3 +287,148 @@
 "about.licence" = "Licence";
 "about.source" = "Code source";
 "about.licence.explained" = "Cette app embarque Stockfish, publié sous licence GNU GPL v3 ; l'app entière est donc elle aussi en GPL v3 : vous pouvez l'utiliser, l'étudier, la modifier et la redistribuer librement, à condition de transmettre le code source et la même licence avec elle. Le texte complet de la licence est dans le fichier LICENSE du dépôt.\n\nLes graphiques des pièces viennent du jeu Cburnett de python-chess (CC BY-SA 3.0).";
+
+/* ------------------------------------------------------------ partagé */
+"share.reading" = "Réception de l'image";
+"share.kept.title" = "Bien reçue";
+"share.kept.message" = "Ouvrez 棋镜, la position y est.";
+"share.open" = "Ouvrir 棋镜";
+
+/* ------------------------------------------------------------ le compte */
+"settle.took" = "On vous a offert %d%% et vous l'avez pris.";
+"settle.missed" = "On vous a offert %1$d%%, vous en gardez %2$d%%, vous en laissez %3$d%%.";
+
+/* ------------------------------------------------------------ les seuils */
+"lines" = "Seuils";
+"lines.record" = "La noter";
+"lines.enqueue" = "La travailler";
+"lines.explained" = "Ce qu'un coup doit céder pour compter. Au-delà du premier il est noté dans la partie ; au-delà du second il prend aussi du temps de travail, donc celui-ci doit être plus haut. Près de l'égalité, un pion vaut à peu près 10%.";
+
+/* ------------------------------------------------------------ le carnet */
+"book" = "Erreurs";
+"book.empty" = "Rien encore. Les positions que vous ratez arrivent toutes seules.";
+"book.fell" = "Vous êtes tombé %d fois sur cette position";
+"book.played" = "%1$d fois %2$@";
+"book.lastTime" = "la dernière fois %@";
+"book.cost" = "coûte %d%%";
+"book.times" = "%d fois";
+"book.remove" = "La retirer du carnet";
+"book.encounters" = "Fois";
+"ago.days" = "il y a %d jours";
+"ago.hours" = "il y a %d heures";
+"ago.justNow" = "à l'instant";
+"book.items" = "%d positions";
+"book.yourMove" = "vous avez joué";
+"book.better" = "il fallait jouer";
+"book.items.one" = "%d position";
+"book.fell.one" = "Vous êtes tombé %d fois dans cette position";
+"book.times.one" = "%d fois";
+"ago.days.one" = "il y a %d jour";
+"ago.hours.one" = "il y a %d heure";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "S'entraîner";
+"drill.prompt" = "À vous de jouer";
+"drill.judging" = "Calcul de ce que ça a coûté";
+"drill.passed" = "%1$@ — %2$@. Ça tient.";
+"drill.failed" = "%1$@ — %2$@. Ça concède %3$d%%.";
+"drill.failed.wanted" = "%1$@ — %2$@. Ça concède %3$d%%. Il fallait jouer %4$@ — %5$@.";
+"drill.keepPlaying" = "Continuer la partie";
+"drill.leave" = "Quitter";
+"drill.next" = "Suivante";
+"drill.seconds" = "%d secondes";
+"drill.seconds.one" = "%d seconde";
+"drill.noEngine" = "Le moteur n'est pas encore prêt, ce coup ne peut pas être jugé.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Aujourd'hui";
+"daily.left" = "%d restantes";
+"daily.left.one" = "%d restante";
+"daily.done" = "Terminé pour aujourd'hui";
+"daily.none" = "Rien à travailler aujourd'hui";
+"till.start" = "Commencer sans faute";
+"till.name" = "Sans faute";
+"till.practice" = "Pratique";
+"till.intercept" = "Seuil de refus";
+"till.off" = "Désactivé";
+"till.judging" = "Calcul en cours";
+"till.refused" = "%@ coûte %d%%. Réessayez.";
+"till.hint" = "Indice %d";
+"till.reveal" = "Révéler la réponse";
+"till.relax" = "Assouplir à %d%%";
+"till.shot" = "Il y a une possibilité tactique.";
+"till.quiet" = "Aucune tactique confirmée. Améliorez votre position.";
+"till.notFound" = "Non trouvée";
+"punish.toggle" = "Trouver la réponse adverse";
+"punish.prompt" = "Jouez pour l’adversaire et trouvez sa meilleure réponse.";
+"punish.again" = "Il existe une meilleure réponse. Réessayez.";
+"punish.skip" = "Passer";
+"punish.answer" = "Votre adversaire peut jouer %@.";
+"import.status.new" = "Non importée";
+"import.status.pending" = "En attente · ouvrir pour réessayer";
+"import.status.scoring" = "Évaluation en cours";
+"import.status.ready" = "%d erreurs ajoutées";
+"mate.ours" = "Vous avez mat en %d";
+"mate.theirs" = "L’adversaire a mat en %d";
+"mate.colour" = "%@ a mat en %d";
+"mate.noLine" = "Le moteur annonce mat en %d sans donner de coups.";
+"mate.you" = "Vous";
+"mate.opponent" = "L’adversaire";
+"mate.opens" = "%@ commence par %@";
+"mate.unavoidable" = "%@ ne peut pas éviter le mat";
+"mate.bestTry" = "le meilleur essai est %@";
+"mate.onlyReply" = "%@ n’a qu’une réponse";
+"mate.allForced" = "%@ n’a qu’une réponse à chaque étape";
+"mate.someForced" = "%@ a %d réponses forcées dans la variante";
+"mate.ends" = "%@ fait mat";
+"mate.shortLine" = "la variante s’arrête après %d demi-coups, avant le mat";
+"mate.white" = "Les Blancs";
+"mate.black" = "Les Noirs";
+"search.reached" = "Atteint";
+"search.depth" = "Profondeur";
+"search.starting" = "Démarrage";
+"search.again" = "Analyser encore 10 secondes";
+"intent.goal.attack" = "Attaquer";
+"intent.goal.defend" = "Défendre";
+"intent.goal.trade" = "Échanger";
+"intent.goal.hold" = "Occuper";
+"intent.sequence" = "%@ ; %@ puis %@";
+"intent.later" = "%@ puis %@";
+"intent.laterGoal" = "%@ puis %@ : %@";
+"intent.ahead" = "dans %d demi-coups, %@";
+"tactic.mate" = "%@ fait mat";
+"tactic.piece" = "pièce";
+"tactic.hanging" = "%1$@ prend la pièce %3$@ non défendue en %2$@";
+"tactic.capture" = "%1$@ prend la pièce %3$@ en %2$@ avec gain";
+"tactic.target" = "%2$@ en %1$@";
+"tactic.and" = " et ";
+"tactic.fork" = "%@ attaque à la fois %@";
+"screen.opinion" = "Avis du moteur";
+"screen.on" = "Activé";
+"screen.stopFinder" = "Arrêter la recherche";
+"screen.find" = "Chercher une tactique";
+"screen.finder" = "Recherche tactique";
+"screen.finderStopped" = "Recherche arrêtée. Chercher une tactique vérifie à nouveau tactiques et mats.";
+"screen.finderIdle" = "Pas encore analysé. Chercher une tactique vérifie tactiques et mats.";
+"screen.hideArrows" = "Masquer les flèches";
+"screen.showArrows" = "Dessiner sur l’échiquier";
+"screen.arrowLimit" = "Seuls les %d premiers demi-coups sont dessinés pour rester lisibles.";
+"screen.arrowsExplained" = "Les flèches utilisent la variante existante, sans jouer ni relancer l’analyse.";
+"screen.finished" = "La partie est terminée ; aucun coup suivant.";
+"screen.noMate" = "Aucun mat forcé proche trouvé pour les deux camps.";
+"screen.mateIdle" = "Cette carte analyse 10 secondes et signale tout mat trouvé.";
+"screen.spokenMove" = "Demi-coup %d %@";
+"screen.mate" = "Mat";
+"screen.tactics" = "Tactiques";
+"screen.mateSubtitle" = "Un mat forcé peut être proche";
+"screen.tacticsSubtitle" = "Un coup permet-il de gagner du matériel ?";
+"finder.checking" = "Recherche de tactiques";
+"finder.ours" = "Vous avez une tactique";
+"finder.theirs" = "L’adversaire a une tactique";
+"finder.none" = "Pas de tactique sur ce coup";
+"import.trackSide" = "Quel camp suivre dans le carnet d’erreurs ?";
+"discovery.checking" = "Vérification…";
+"discovery.none" = "Rien de trouvé";
+"discovery.view" = "Voir";
+"discovery.mateFound" = "Mat trouvé";
+"discovery.tacticFound" = "Occasion tactique trouvée";

@@ -332,7 +332,7 @@ struct EvalBar: View {
         // because the bar's two ends are the pieces' colours and not "the left one and the right
         // one". The growing end used to be White whatever way up the board was, so with Black at the
         // bottom the bar said the exact opposite of the number printed beside it, to the only person
-        // who could see either (docs/adr/0024).
+        // who could see either (docs/adr/0025).
         let bottomIsWhite = orientation == .whiteAtBottom
         let share = bottomIsWhite ? white : 1 - white
         let bottomTint = bottomIsWhite ? Palette.barWhite : Palette.barBlack
@@ -393,14 +393,13 @@ extension EvalBar.Finish {
     }
 }
 
+/// How much of the bar is White's: White's win chance, and nothing else (docs/adr/0027).
+///
+/// It used to be an Elo curve, `1 / (1 + 10^(-cp/400))`, which is a different shape from the one
+/// the moves are judged on — so the bar could barely move over a move the record was calling a
+/// 失误. One quantity now: what the bar shows is what a mistake is measured in.
 func advantageFraction(_ score: Score?) -> Double {
-    guard let score else { return 0.5 }
-    switch score {
-    case .centipawns(let value):
-        return 1 / (1 + pow(10, -Double(value) / 400))
-    case .mate(let moves):
-        return moves > 0 ? 1 : 0
-    }
+    score?.winChance ?? 0.5
 }
 
 /// A score in a list of engine lines, in the same numerals as the big one so the eye can carry

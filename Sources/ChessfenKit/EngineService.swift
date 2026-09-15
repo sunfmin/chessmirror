@@ -62,6 +62,9 @@ public final class EngineService: @unchecked Sendable {
     private let handle: EngineHandle
     private let queue = DispatchQueue(label: "com.sunfmin.chessfen.engine")
     private let sink = Mutex(Sink())
+    /// Touched only on `queue`. Foreground requests can preempt; background requests cannot.
+    private var searchingGeneration: UInt64?
+    private var backgroundSearches: [(generation: UInt64, start: @Sendable () -> Void)] = []
 
     /// A `CfEngine *` that may cross a queue boundary. Unchecked rather than hopeful: the
     /// pointer is created once, freed once, and every call through it is made on the serial
@@ -173,6 +176,7 @@ public final class EngineService: @unchecked Sendable {
             return waiting
         }
         for continuation in released { continuation.resume() }
+        queue.async { [self] in startNextBackgroundSearch() }
     }
 
     /// Holds until searching is allowed, or until the calling Task is cancelled.
@@ -213,18 +217,47 @@ public final class EngineService: @unchecked Sendable {
     public func analyse(
         _ game: Game, budget: SearchBudget = .untilStopped, lines: Int = 3
     ) -> AsyncStream<Analysis> {
+        analysisRequest(game, budget: budget, lines: lines, background: false).stream
+    }
+
+    public func analyseInBackground(_ game: Game, depth: Int) async -> Analysis? {
+        while !Task.isCancelled {
+            await waitWhilePaused()
+            guard !Task.isCancelled else { return nil }
+            let request = analysisRequest(game, budget: .depth(depth), lines: 1, background: true)
+            var result: Analysis?
+            for await snapshot in request.stream {
+                guard !Task.isCancelled else { return nil }
+                if snapshot.depth == depth, !snapshot.isPartial { result = snapshot }
+            }
+            if let result { return result }
+            // Retry only an interrupted search, not an invalid position or engine failure.
+            if !isPaused, generations.load(ordering: .relaxed) == request.generation { return nil }
+        }
+        return nil
+    }
+
+    private func analysisRequest(
+        _ game: Game, budget: SearchBudget, lines: Int, background: Bool
+    ) -> (stream: AsyncStream<Analysis>, generation: UInt64) {
         let startFEN = game.startFEN
         let moves = game.uciMoves
         let state = game.state
         let perspective = state.sideToMove
         let generation = generations.wrappingAdd(1, ordering: .relaxed).newValue
 
-        return AsyncStream { continuation in
+        let cancelled = Mutex(false)
+        let stream = AsyncStream<Analysis> { continuation in
             continuation.onTermination = { [weak self] _ in
+                cancelled.withLock { $0 = true }
                 self?.stopSearch(generation)
             }
 
-            queue.async { [self] in
+            let start: @Sendable () -> Void = { [self] in
+                guard !cancelled.withLock({ $0 }) else {
+                    startNextBackgroundSearch()
+                    return
+                }
                 // Wind up whatever was running before touching the sink: `wait` is the
                 // guarantee that no more of the old search's callbacks are in flight, so
                 // the old and new streams cannot be crossed.
@@ -255,9 +288,10 @@ public final class EngineService: @unchecked Sendable {
                             let flush = group.withLock { $0.absorb(info) }
                             if flush { emit() }
                         },
-                        onFinish: {
+                        onFinish: { [weak self] in
                             emit()
                             continuation.finish()
+                            self?.searchFinished(generation)
                         }
                     )
                     return previous
@@ -271,6 +305,7 @@ public final class EngineService: @unchecked Sendable {
                 // rather than coming back empty — which is why only the unbounded case is
                 // refused here.
                 let refused = isPaused && !SearchGate.admits(budget)
+                searchingGeneration = generation
                 let started = refused ? false : withCStrings(moves) { pointers in
                     var limits = budget.cLimits
                     return cf_engine_go(
@@ -298,13 +333,44 @@ public final class EngineService: @unchecked Sendable {
                         if current.generation == generation { current = Sink() }
                     }
                     continuation.finish()
+                    searchFinished(generation)
                 }
             }
+            queue.async { [self] in
+                if background, searchingGeneration != nil || isPaused {
+                    backgroundSearches.append((generation, start))
+                } else {
+                    start()
+                }
+            }
+        }
+        return (stream, generation)
+    }
+
+    private func searchFinished(_ generation: UInt64) {
+        queue.async { [self] in
+            guard searchingGeneration == generation else { return }
+            searchingGeneration = nil
+            startNextBackgroundSearch()
+        }
+    }
+
+    private func startNextBackgroundSearch() {
+        guard searchingGeneration == nil, !isPaused, !backgroundSearches.isEmpty else { return }
+        backgroundSearches.removeFirst().start()
+    }
+
+    func queuedBackgroundSearchCount() async -> Int {
+        await withCheckedContinuation { continuation in
+            queue.async { [self] in continuation.resume(returning: backgroundSearches.count) }
         }
     }
 
     /// Stops the search this generation started, and only that one.
     private func stopSearch(_ generation: UInt64) {
+        queue.async { [self] in
+            backgroundSearches.removeAll { $0.generation == generation }
+        }
         let isCurrent = sink.withLock { $0.generation == generation }
         guard isCurrent else { return }
         cf_engine_stop(handle.pointer)

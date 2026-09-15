@@ -34,6 +34,30 @@ public struct PGN: Hashable, Sendable {
         tags.first { $0.name == name }?.value
     }
 
+    /// The colours the player moved themselves, read off the roster.
+    ///
+    /// What the 错题本 is counted over: a game where the engine had Black is a game where Black's
+    /// mistakes belong to Stockfish (docs/adr/0028). `Controller.hand.playerName` is written into
+    /// the file rather than localized for exactly this — a game saved in one language has to
+    /// still be readable in another.
+    ///
+    /// An imported game names two real people and so has no hand here. Which of those two is the
+    /// person holding the phone is a question the import knows the answer to and this does not,
+    /// and answering it by guessing would fill the book with somebody else's blunders.
+    public var handColours: Set<PieceColour> {
+        if let tracked = tag("TrackedSide") {
+            switch tracked {
+            case "white": return [.white]
+            case "black": return [.black]
+            default: return []
+            }
+        }
+        var found: Set<PieceColour> = []
+        if tag("White") == Controller.hand.playerName { found.insert(.white) }
+        if tag("Black") == Controller.hand.playerName { found.insert(.black) }
+        return found
+    }
+
     /// Sets a tag, adds it if it was not there, and removes it for nil.
     ///
     /// In place where it already sits, because the order tags are written in is part of the file:
@@ -130,34 +154,28 @@ public struct PGN: Hashable, Sendable {
             if !ply.line.isEmpty {
                 comment.append("[%line \(ply.line.joined(separator: " "))]")
             }
-            // The player's own words about the move, in the same braced convention as the
-            // engine's (docs/adr/0018). One comment carrying both rather than two, which is how
-            // every other tool that writes these writes them.
-            if let intent = ply.intent {
-                comment.append("[%int \(intent.pgnText)]")
+            // What 耕棋 took back here, and how many hints were open when the move that stands
+            // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
+            // they were played, because a reader that only knows `[%eval]` skips them the same
+            // way it already skips everything else in a comment.
+            for attempt in ply.tried {
+                let help = attempt.notFound ? " notfound" : ""
+                comment.append("[%tried \(attempt.san) \(Self.percent(attempt.drop))\(help)]")
             }
-            // How far that claim reaches, when it reaches past this move. Written beside the Intent
-            // rather than inside it so a reader that knows nothing about plans still gets the verb
-            // and the target, which is the whole reason these live in `[%…]` tokens (docs/adr/0017).
-            if let span = ply.intentSpan {
-                comment.append("[%plan \(span)]")
+            if ply.hints > 0 {
+                comment.append("[%hint \(ply.hints)]")
             }
             if !comment.isEmpty {
                 written.append("{" + comment.joined(separator: " ") + "}")
-            }
-            for variation in ply.variations {
-                // A Variation stands in for this move, so it is numbered as this move.
-                var inner = tokens(for: variation, from: moveNumber, sideToMove: sideToMove)
-                guard !inner.isEmpty else { continue }
-                inner[0] = "(" + inner[0]
-                inner[inner.count - 1] += ")"
-                written.append(contentsOf: inner)
             }
             if sideToMove == .black { moveNumber += 1 }
             sideToMove = sideToMove.opposite
         }
         return written
     }
+
+    /// A drop, as the file says it: `-23%`, the sign saying it is what the move *cost*.
+    static func percent(_ drop: Double) -> String { "-\(drop)%" }
 
     private static func rosterDefault(_ name: String, _ game: Game) -> String {
         switch name {
@@ -230,81 +248,52 @@ public struct PGN: Hashable, Sendable {
         let reviewDepth = (tags.first { $0.name == "ReviewDepth" }?.value).flatMap { Int($0) }
         let isReviewed = reviewDepth != nil
         game.setReviewDepth(reviewDepth)
-
-        // One frame per open bracket. Moves always go to the innermost one, which is what
-        // makes a Variation inside a Variation work without any special handling: it is the
-        // same rule applied one level further in. A frame goes `dead` when something in it
-        // will not read, and a dead frame is dropped whole at its closing bracket: a
-        // Variation is an aside, and files in the wild carry asides that are not moves at
-        // all — refusing to open a game over one would lose the game to save the footnote.
-        var frames: [(game: Game, branchPoint: Int, dead: Bool)] = [(game, -1, false)]
+        // Brackets are skipped whole. PGN has written alternatives in parentheses since 1994 and
+        // files in the wild are full of them — this app does not write one any more (docs/adr/0028)
+        // and has nowhere to put one it reads, so the mainline is read out and the asides are
+        // stepped over. Counted rather than flagged, because they nest.
+        var insideVariation = 0
 
         // Evaluations arrive in comments *after* the move they belong to.
         for token in scanner.readMovetext() {
-            let last = frames.count - 1
+            if insideVariation > 0 {
+                switch token {
+                case .variationStart: insideVariation += 1
+                case .variationEnd: insideVariation -= 1
+                default: break
+                }
+                continue
+            }
             switch token {
             case .move(let san):
-                guard !frames[last].dead else { continue }
-                guard frames[last].game.apply(san: san) else {
-                    guard last > 0 else {
-                        throw ParseError.illegalMove(
-                            san, afterPlies: frames[last].game.plies.count
-                        )
-                    }
-                    frames[last].dead = true
-                    continue
+                guard game.apply(san: san) else {
+                    throw ParseError.illegalMove(san, afterPlies: game.plies.count)
                 }
             case .evaluation(let score):
-                guard !frames[last].dead else { continue }
                 // A ply index of -1 is a comment standing before the first move, which is
                 // the starting position's Score.
-                frames[last].game.setEvaluation(
-                    score, atPly: frames[last].game.plies.count - 1, reviewed: isReviewed
-                )
+                game.setEvaluation(score, atPly: game.plies.count - 1, reviewed: isReviewed)
+            case .tried(let attempt):
+                game.addTried(attempt, atPly: game.plies.count - 1)
+            case .hint(let rungs):
+                game.setHints(rungs, atPly: game.plies.count - 1)
             case .line(let line):
-                guard !frames[last].dead else { continue }
                 // A Line standing before the first move belongs to the starting position and has
                 // nowhere to go: what reads it is a move's own consequences, and there is no move.
-                frames[last].game.setLine(
-                    line, atPly: frames[last].game.plies.count - 1, reviewed: isReviewed
-                )
-            case .intent(let intent):
-                guard !frames[last].dead else { continue }
-                // An Intent belongs to a move, so one standing before the first move has
-                // nothing to belong to — `setIntent` says so by refusing ply 0.
-                frames[last].game.setIntent(intent, atPly: frames[last].game.plies.count)
-            case .plan(let span):
-                guard !frames[last].dead else { continue }
-                frames[last].game.setIntentSpan(span, atPly: frames[last].game.plies.count)
+                game.setLine(line, atPly: game.plies.count - 1, reviewed: isReviewed)
             case .variationStart:
-                // A Variation is an alternative to the move just read, so it starts from the
-                // position that move was played in.
-                let branchPoint = frames[last].game.plies.count - 1
-                guard !frames[last].dead, branchPoint >= 0,
-                      let rewound = frames[last].game.rewound(to: branchPoint)
-                else {
-                    // Brackets before any move have nothing to be an alternative to. Read
-                    // them into a frame that gets thrown away rather than refusing the file.
-                    frames.append((frames[last].game, -1, true))
-                    continue
-                }
-                frames.append((rewound, branchPoint, false))
+                insideVariation = 1
             case .variationEnd:
-                guard frames.count > 1 else { continue }
-                let frame = frames.removeLast()
-                guard !frame.dead, frame.branchPoint >= 0,
-                      frame.game.plies.count > frame.branchPoint
-                else { continue }
-                frames[frames.count - 1].game.addVariation(
-                    Array(frame.game.plies[frame.branchPoint...]), atPly: frame.branchPoint
-                )
+                // A stray closing bracket. Nothing opened, so nothing closes: files in the wild
+                // carry worse than this, and losing a game to save a footnote is the wrong trade.
+                continue
             }
         }
 
         // ReviewDepth does not stay in `tags`: it lives on the Game and `text` writes it back
         // from there, so the fact has one home and cannot be written twice or drift.
         self.tags = tags.filter { $0.name != "ReviewDepth" }
-        self.game = frames[0].game
+        self.game = game
     }
 }
 
@@ -320,8 +309,8 @@ private struct Scanner {
         case move(String)
         case evaluation(Score)
         case line([String])
-        case intent(Intent)
-        case plan(Int)
+        case tried(Game.Ply.Tried)
+        case hint(Int)
         case variationStart
         case variationEnd
     }
@@ -368,8 +357,8 @@ private struct Scanner {
                 // read the same way to a file that must still open.
                 if let score = Self.evaluation(in: comment) { tokens.append(.evaluation(score)) }
                 if let line = Self.line(in: comment) { tokens.append(.line(line)) }
-                if let intent = Self.intent(in: comment) { tokens.append(.intent(intent)) }
-                if let span = Self.plan(in: comment) { tokens.append(.plan(span)) }
+                tokens.append(contentsOf: Self.tried(in: comment).map { .tried($0) })
+                if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
             case ";":
                 _ = read(while: { !$0.isNewline })
             case "(":
@@ -401,16 +390,42 @@ private struct Scanner {
         Self.body(of: "eval", in: comment).flatMap { Score(pgnText: $0) }
     }
 
+    /// Every `[%tried San -23%]` in one comment, in the order they were written. All of them
+    /// rather than the first, which is the one way this differs from every other token here: a
+    /// position 耕棋 stopped somebody at three times has three of them.
+    private static func tried(in comment: String) -> [Game.Ply.Tried] {
+        bodies(of: "tried", in: comment).compactMap { body in
+            let parts = body.split(separator: " ")
+            guard let san = parts.first,
+                parts.count == 2 || (parts.count == 3 && parts[2] == "notfound"),
+                parts[1].hasPrefix("-"), parts[1].hasSuffix("%"),
+                let drop = Double(parts[1].dropFirst().dropLast()),
+                drop.isFinite, (0...100).contains(drop)
+            else { return nil }
+            return Game.Ply.Tried(san: String(san), drop: drop, notFound: parts.count == 3)
+        }
+    }
+
+    private static func hint(in comment: String) -> Int? {
+        body(of: "hint", in: comment).flatMap { Int($0) }
+    }
+
     private static func line(in comment: String) -> [String]? {
         Self.body(of: "line", in: comment).map { $0.split(separator: " ").map(String.init) }
     }
 
-    private static func intent(in comment: String) -> Intent? {
-        Self.body(of: "int", in: comment).flatMap { Intent(pgnText: $0) }
-    }
-
-    private static func plan(in comment: String) -> Int? {
-        Self.body(of: "plan", in: comment).flatMap { Int($0) }
+    /// Every `[%name …]` in one comment, in order. `body` is this asking for the first one.
+    private static func bodies(of name: String, in comment: String) -> [String] {
+        var found: [String] = []
+        var rest = Substring(comment)
+        while let start = rest.range(of: "[%\(name) ") {
+            let after = rest[start.upperBound...]
+            guard let end = after.firstIndex(of: "]") else { break }
+            let body = String(after[..<end]).trimmingCharacters(in: .whitespaces)
+            if !body.isEmpty { found.append(body) }
+            rest = after[after.index(after: end)...]
+        }
+        return found
     }
 
     /// What is between `[%name ` and the next `]`, trimmed. Nil when the token is not there at

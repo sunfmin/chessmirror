@@ -21,7 +21,14 @@ public struct BoardLighting: Sendable {
     private let level: Grid<Double>
 
     /// Takes the 64 square backgrounds, in the picture's own row order.
-    public init(backgrounds: Grid<Double>) {
+    ///
+    /// `followingTheLight` is what a photograph needs and a screenshot does not: a lamp to one
+    /// side makes the answer a different number at each end of the board, and only a median of
+    /// the light squares *beside* a Cell follows that. A computer-drawn board has one light
+    /// value everywhere, so the whole grid is that value — which is not merely cheaper but
+    /// steadier, because the local median is the thing a highlighted square or a move arrow
+    /// can pull off (docs/adr/0033).
+    public init(backgrounds: Grid<Double>, followingTheLight: Bool = true) {
         precondition(backgrounds.width == 8 && backgrounds.height == 8)
 
         // Which of the two colourings is the light one is a question about this board, not
@@ -39,6 +46,10 @@ public struct BoardLighting: Sendable {
         let overall = max(medians[0], medians[1])
 
         var level = Grid<Double>(width: 8, height: 8, repeating: overall)
+        guard followingTheLight else {
+            self.level = level
+            return
+        }
         for row in 0..<8 {
             for column in 0..<8 {
                 var nearby: [Double] = []
@@ -57,5 +68,26 @@ public struct BoardLighting: Sendable {
     /// The light-square level beside one Cell.
     public func light(row: Int, column: Int) -> Double {
         level.contains(x: column, y: row) ? level[column, row] : 0
+    }
+
+    /// How much the light varies across the board, as a fraction of its brightest corner.
+    ///
+    /// Zero on a picture a computer drew: every light square of a screenshot is the same
+    /// value, so the whole grid is one number and there is nothing for the local median to
+    /// follow. A photograph of a real board is never zero — a lamp on one side, a hand's
+    /// shadow, the page curving away — and the ones this app has been handed run from
+    /// about a tenth to a third.
+    public var spread: Double {
+        var lowest = Double.greatestFiniteMagnitude
+        var highest = 0.0
+        for row in 0..<8 {
+            for column in 0..<8 {
+                let value = level[column, row]
+                lowest = min(lowest, value)
+                highest = max(highest, value)
+            }
+        }
+        guard highest > 0 else { return 0 }
+        return (highest - lowest) / highest
     }
 }

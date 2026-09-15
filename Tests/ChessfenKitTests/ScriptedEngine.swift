@@ -36,13 +36,16 @@ final class ScriptedEngine: Engine {
     /// positions rather than about deepening: a study asks three questions of three positions and
     /// has to get three answers.
     private let byPosition: [String: Analysis]
+    private let byBudget: [SearchBudget: [Analysis]]
 
     init(
-        _ snapshots: [Analysis], isEndless: Bool = false, byPosition: [String: Analysis] = [:]
+        _ snapshots: [Analysis], isEndless: Bool = false, byPosition: [String: Analysis] = [:],
+        byBudget: [SearchBudget: [Analysis]] = [:]
     ) {
         self.snapshots = snapshots
         self.isEndless = isEndless
         self.byPosition = byPosition
+        self.byBudget = byBudget
     }
 
     var isPaused: Bool { paused.withLock { $0 } }
@@ -53,8 +56,14 @@ final class ScriptedEngine: Engine {
     func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
         asked.withLock { $0.append(budget) }
         askedLines.withLock { $0.append(lines) }
-        let scripted = byPosition[game.state.fen].map { [$0] } ?? snapshots
-        let isEndless = byPosition[game.state.fen] == nil && self.isEndless
+        let scripted = byBudget[budget] ?? byPosition[game.state.fen].map { [$0] } ?? snapshots
+        let reachedDepth: Bool
+        if case .depth(let target) = budget {
+            reachedDepth = scripted.contains { $0.depth >= target }
+        } else {
+            reachedDepth = false
+        }
+        let isEndless = byPosition[game.state.fen] == nil && self.isEndless && !reachedDepth
         return AsyncStream { continuation in
             for snapshot in scripted { continuation.yield(snapshot) }
             // An endless search never finishes on its own: it ends when the stream goes away,

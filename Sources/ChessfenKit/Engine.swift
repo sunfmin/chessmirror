@@ -43,6 +43,8 @@ public protocol Engine: AnyObject, Sendable {
     /// has room for. Each extra line roughly doubles the time to a given Depth, so the
     /// number is asked per search rather than set once.
     func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis>
+    /// A background position yields to foreground searches and resumes after interruption.
+    func analyseInBackground(_ game: Game, depth: Int) async -> Analysis?
     func pause()
     func resume()
     func clear() async
@@ -53,6 +55,17 @@ public protocol Engine: AnyObject, Sendable {
     func review(
         _ game: Game, depth: Int, onPly: (@Sendable (Int, ReviewedPly) -> Void)?
     ) async -> [ReviewedPly]
+}
+
+extension Engine {
+    public func analyseInBackground(_ game: Game, depth: Int) async -> Analysis? {
+        var result: Analysis?
+        for await snapshot in analyse(game, budget: .depth(depth), lines: 1) {
+            guard !Task.isCancelled else { return nil }
+            if snapshot.depth == depth, !snapshot.isPartial { result = snapshot }
+        }
+        return result
+    }
 }
 
 extension EngineService: Engine {}

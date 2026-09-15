@@ -16,6 +16,33 @@ public enum CastlingGuess: String, Hashable, Sendable, CaseIterable {
     case none = "none"
 }
 
+/// How a picture was made, as the pixels themselves tell it.
+///
+/// Not where the file came from — the album holds both kinds and a share sheet says nothing
+/// about either. What separates them is measurable: a board a computer drew has every light
+/// square at one value and every dark square at another, so the two colours separate about
+/// four times as cleanly as they do in any photograph, which always carries the lamp, the
+/// shadow of a hand, or the shine off a page. A screenshot of a photograph is a photograph
+/// here, which is the right answer: it is the pixels that have to be read.
+public enum Provenance: String, Hashable, Sendable, CaseIterable {
+    /// Clean pixels, square on: a lichess board, a rendered diagram, a screen capture.
+    case screenshot
+
+    /// A camera saw it, through whatever light was in the room.
+    case photograph
+
+    /// Where the line sits. The pictures this app has been handed score 63 and up when drawn
+    /// and 23 and down when photographed — including a photograph of a printed diagram, which
+    /// is the hardest case on the photograph side, and a screenshot recompressed to JPEG at
+    /// 30%, which is the hardest on the other. The line is put between them rather than at
+    /// either edge, because a wrong answer here costs a slower read, not a worse one.
+    public static let cleanCheckerScore = 40.0
+
+    public init(checkerScore: Double) {
+        self = checkerScore >= Self.cleanCheckerScore ? .screenshot : .photograph
+    }
+}
+
 /// The recognised Position plus the evidence behind it.
 public struct Recognition: Sendable {
     public let fen: String
@@ -29,6 +56,10 @@ public struct Recognition: Sendable {
     /// How cleanly the two square colours separated — the same measure that decided the
     /// picture held a board at all.
     public let checkerScore: Double
+    /// The light across the board, as this reading measured it.
+    public let lighting: BoardLighting
+    /// Which kind of picture this was read as, and so which preparation it was given.
+    public let provenance: Provenance
 
     /// The Shaky Squares, in board order — the ones worth a human glance.
     public var shaky: [(square: Square, verdict: SquareVerdict)] {
@@ -68,6 +99,10 @@ public enum Recognizer {
     ) throws -> Recognition {
         let image = source.scaled(toLongestSide: Imaging.workingResolution)
         let rect = try BoardGeometry.findBoard(in: image)
+        // Known before a single Cell is judged, because it is a fact about the board's own
+        // squares — which is what decides the preparation the Cells get.
+        let checkerScore = BoardGeometry.checkerScore(image.luma, rect)
+        let provenance = Provenance(checkerScore: checkerScore)
 
         // Every Cell is read before any of them is judged, because what tells a white piece
         // from a black one is how its body compares to the light of the board around it,
@@ -84,7 +119,11 @@ public enum Recognizer {
             readings.append(line)
         }
 
-        let lighting = BoardLighting(backgrounds: backgrounds)
+        // A screenshot's light needs no following: every light square in it is the same
+        // value, so a local median can only be dragged off by what is drawn *on* the board —
+        // a highlighted square, a move arrow, a check ring. One level for the whole board is
+        // both the true answer there and the cheap one (docs/adr/0033).
+        let lighting = BoardLighting(backgrounds: backgrounds, followingTheLight: provenance == .photograph)
         let grid = (0..<8).map { row in
             (0..<8).map { column in
                 SquareClassifier.classify(
@@ -107,7 +146,9 @@ public enum Recognizer {
             rect: rect,
             orientation: orientation,
             verdicts: verdicts,
-            checkerScore: BoardGeometry.checkerScore(image.luma, rect)
+            checkerScore: checkerScore,
+            lighting: lighting,
+            provenance: provenance
         )
     }
 
@@ -118,12 +159,16 @@ public enum Recognizer {
     /// How many candidate quads earn a full refinement.
     public static let quadsRefined = 4
 
-    /// Recognises the Position in a photograph, straightening it first if it needs it.
+    /// Recognises the Position in a picture, straightening it first if it needs it.
     ///
-    /// The axis-aligned reading is tried first and kept as the thing to beat: a screenshot
-    /// arriving through this door is read exactly as it would have been through the other
-    /// one, and never rectified on spec. Only a picture that reads poorly — or not at all —
-    /// pays for the search over quads.
+    /// The axis-aligned reading is tried first and kept as the thing to beat. A screenshot
+    /// stops there by name: it is already square on, so every quad the search could find is
+    /// a worse version of the rectangle it already has, and warping clean pixels can only
+    /// blur them. That is the whole of the screenshot path — no rectification, no light to
+    /// follow — and it is the door this app is mostly walked through (docs/adr/0033).
+    ///
+    /// Only a photograph pays for the search over quads, and only one that reads poorly:
+    /// a board shot square on from above is straight enough already.
     public static func recognise(
         photograph source: RGBImage,
         turn: PieceColour = .white,
@@ -134,6 +179,7 @@ public enum Recognizer {
         let direct = try? recognise(
             image, turn: turn, orientation: requested, castling: castling
         )
+        if let direct, direct.provenance == .screenshot { return direct }
         if let direct, direct.checkerScore >= alreadyStraightScore { return direct }
 
         // Refining is a descent per quad, so only the most promising few earn one. Their

@@ -2,7 +2,7 @@ import ChessfenKit
 import Foundation
 import Testing
 
-@Suite struct TacticsTests {
+@Suite(.speaking(.chinese)) struct TacticsTests {
     /// White queen on d1, black rook hanging on d5.
     private static let hangingRook = "4k3/8/8/3r4/8/8/8/3QK3 w - - 0 1"
     /// White knight on c4 can jump to d6 and fork the king and the queen on b7.
@@ -86,7 +86,7 @@ import Testing
             Tactic.confirmed(
                 in: game,
                 analysis: analysis([
-                    (.centipawns(220), "e2e4", "e4", ["e5", "Nf3"]),
+                    (.centipawns(300), "e2e4", "e4", ["e5", "Nf3"]),
                     (.centipawns(20), "d2d4", "d4", []),
                 ])
             )
@@ -111,7 +111,7 @@ import Testing
     }
 }
 
-@MainActor @Suite struct TacticsSessionTests {
+@MainActor @Suite(.speaking(.chinese)) struct TacticsSessionTests {
     private func hop() async {
         for _ in 0..<20 {
             await Task.yield()
@@ -165,7 +165,7 @@ import Testing
         #expect(session.tacticPrompt == "这一步没有战术")
     }
 
-    /// The rule this test used to assert has been turned round (docs/adr/0024): the finder is a
+    /// The rule this test used to assert has been turned round (docs/adr/0025): the finder is a
     /// card of its own, and swiping onto that card is the asking — wherever the eye is standing.
     @Test("browsing back and asking again probes the position being looked at")
     func aPastPlyIsProbedToo() async throws {

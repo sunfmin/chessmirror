@@ -58,7 +58,13 @@ final class ScriptedEngine: Engine {
         asked.withLock { $0.append(budget) }
         askedLines.withLock { $0.append(lines) }
         let scripted = byPosition[game.state.fen].map { [$0] } ?? snapshots
-        let isEndless = byPosition[game.state.fen] == nil && self.isEndless
+        let reachedDepth: Bool
+        if case .depth(let target) = budget {
+            reachedDepth = scripted.contains { $0.depth >= target }
+        } else {
+            reachedDepth = false
+        }
+        let isEndless = byPosition[game.state.fen] == nil && self.isEndless && !reachedDepth
         return AsyncStream { continuation in
             for snapshot in scripted { continuation.yield(snapshot) }
             // An endless search never finishes on its own: it ends when the stream goes away,
