@@ -162,8 +162,15 @@ public struct PGN: Hashable, Sendable {
             // they were played, because a reader that only knows `[%eval]` skips them the same
             // way it already skips everything else in a comment.
             for attempt in ply.tried {
-                let help = attempt.notFound ? " notfound" : ""
-                comment.append("[%tried \(attempt.san) \(Self.percent(attempt.drop))\(help)]")
+                var body = "\(attempt.san) \(Self.percent(attempt.drop))"
+                if attempt.notFound { body += " notfound" }
+                // The 应招 follows a bar (docs/adr/0034). A bar and not a word, because what
+                // comes after it is a line of moves and a token of its own would need a second
+                // delimiter inside a comment that already ends at the first `]`.
+                if !attempt.line.isEmpty {
+                    body += " | " + attempt.line.joined(separator: " ")
+                }
+                comment.append("[%tried \(body)]")
             }
             if ply.hints > 0 {
                 comment.append("[%hint \(ply.hints)]")
@@ -399,17 +406,22 @@ private struct Scanner {
 
     /// Every `[%tried San -23%]` in one comment, in the order they were written. All of them
     /// rather than the first, which is the one way this differs from every other token here: a
-    /// position 耕棋 stopped somebody at three times has three of them.
+    /// position 耕棋 stopped somebody at three times has three of them. The 应招 rides after a bar
+    /// in the same token, so the two can never be read apart from each other (docs/adr/0034).
     private static func tried(in comment: String) -> [Game.Ply.Tried] {
         bodies(of: "tried", in: comment).compactMap { body in
-            let parts = body.split(separator: " ")
+            let halves = body.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+            let parts = halves[0].split(separator: " ")
             guard let san = parts.first,
                 parts.count == 2 || (parts.count == 3 && parts[2] == "notfound"),
                 parts[1].hasPrefix("-"), parts[1].hasSuffix("%"),
                 let drop = Double(parts[1].dropFirst().dropLast()),
                 drop.isFinite, (0...100).contains(drop)
             else { return nil }
-            return Game.Ply.Tried(san: String(san), drop: drop, notFound: parts.count == 3)
+            let line = halves.count > 1 ? halves[1].split(separator: " ").map(String.init) : []
+            return Game.Ply.Tried(
+                san: String(san), drop: drop, notFound: parts.count == 3, line: line
+            )
         }
     }
 

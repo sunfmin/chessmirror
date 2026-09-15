@@ -34,6 +34,71 @@ import Testing
     #expect(engine.budgets.allSatisfy { $0 == PositionSearches.budget })
 }
 
+/// Contract: the search that refuses a move is the one that knows the answer to it. The position
+/// the move made is off the board the moment it is taken back, so the 应招 has to be kept with
+/// the move rather than looked up later (docs/adr/0034).
+@MainActor
+@Test func aRefusedMoveKeepsTheReplyItEarned() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let after = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3"]))
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+        ]),
+        after.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(-300), uciMoves: ["e7e5", "d2d4"], san: ["e5", "d4"])
+        ]),
+    ])
+    let session = GameSession.fresh(start, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(5)
+    await session.waitForPreparedInterception()
+    session.play(try #require(start.state.move(matching: "f2f3")))
+    await session.waitForJudgement()
+
+    let tried = try #require(session.pendingAttempts.first)
+    #expect(tried.san == "f3")
+    #expect(tried.line == ["e5", "d4"])
+    // Nothing new was searched to keep it: the answer the refusal already got carried the Line.
+    #expect(engine.positions.filter { $0 == after.state.fen }.count == 1)
+    // And it is drawn from the position the move was refused in, which is the one on the board.
+    let arrows = Reply.arrows(
+        in: try #require(session.refusedPosition), playing: Reply.moves(of: tried)
+    )
+    #expect(arrows.map(\.step) == [1, 2, 3])
+    #expect(arrows.map(\.isYours) == [true, false, true])
+}
+
+/// Contract: a 试招 written down before replies were kept still has one to show, out of the
+/// shared bounded position search — the same search the refusal itself paid for.
+@MainActor
+@Test func aReplyIsAskedForOnlyWhenTheFileKeptNone() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let after = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3"]))
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+        ]),
+        after.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(-300), uciMoves: ["e7e5", "d2d4"], san: ["e5", "d4"])
+        ]),
+    ])
+    var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    game.setTried([.init(san: "f3", drop: 20)], atPly: 0)
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    let tried = try #require(session.visibleAttempts.first)
+    #expect(tried.line.isEmpty)
+    #expect(await session.reply(for: tried) == ["e5", "d4"])
+    #expect(engine.positions.filter { $0 == after.state.fen }.count == 1)
+
+    // A 试招 that already carries its 应招 is answered without touching the engine at all.
+    let searches = engine.searchCount
+    let kept = Game.Ply.Tried(san: "f3", drop: 20, line: ["e5"])
+    #expect(await session.reply(for: kept) == ["e5"])
+    #expect(engine.searchCount == searches)
+}
+
 /// Contract: hold the resulting position at depth 19. Neither side can move and no
 /// opponent clock may start. Only depth 20 can publish the percentage and release or refuse.
 @MainActor

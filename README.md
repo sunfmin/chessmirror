@@ -29,6 +29,9 @@ through your own iCloud Drive.
   threads by default, and opening the game never launches an automatic historical scoring pass.
 - The advantage bar remains visible. Refused attempts appear as a compact horizontal strip
   for the current move, with SAN and percentage cost, instead of a whole-game cost list.
+  Pressing one shows the 应招 it earned — the opponent's answer and the few moves after it, as
+  numbered chips and numbered arrows on the board. The line was kept by the search that refused
+  the move; older files are answered from the shared bounded position search.
   Judgements preserve their achieved depth in PGN. The history curve still includes the last move.
 - A face-to-face toolbar toggle rotates the top player's pieces for over-the-board play on a phone.
 - An optional opponent-reply exercise on a temporary board. Replies within two percentage
@@ -115,8 +118,9 @@ Replace `board.png` with your image. `CHESSFEN_NETS` overrides the source-tree m
 ## Persistence and design
 
 Games are PGN files, with optional photographs alongside them. The append-only practice log is
-separate; schedules and the mistake index are derived. No Slips stores `[%tried SAN -loss%]`,
-an optional `notfound` suffix for assisted attempts, and `[%hint N]`. The `Intercept` tag stores
+separate; schedules and the mistake index are derived. No Slips stores `[%tried SAN -loss%]`, an
+optional `notfound` suffix for assisted attempts, the 应招 after a bar (`[%tried Nf3 -23% | Nxe4
+Nxe4 d5]`), and `[%hint N]`. The `Intercept` tag stores
 the game's threshold. Import review stores local depth in `ReviewDepth` and ordering provenance
 in `ReviewSift`. `TrackedSide` identifies the imported side included in the personal mistake book
 without replacing the PGN's `White` and `Black` player names.
@@ -129,6 +133,7 @@ without replacing the PGN's `White` and `Black` player names.
 - [Position identity](docs/adr/0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md)
 - [Practice facts](docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md)
 - [Daily practice](docs/adr/0032-the-daily-is-one-queue-and-cannot-be-sharded.md)
+- [A refused move's reply](docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md)
 
 ## Licence
 

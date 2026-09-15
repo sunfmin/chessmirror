@@ -456,3 +456,6 @@
 "board.faceToFace" = "面对面";
 "till.returned" = "已退回";
 "search.limit" = "10 秒 / 20 层";
+"tried.reply" = "对手的应招";
+"tried.reply.hint" = "看这一步招来的应招";
+"tried.reply.none" = "这一步没有应招可看。";

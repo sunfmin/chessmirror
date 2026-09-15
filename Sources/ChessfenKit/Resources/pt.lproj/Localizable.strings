@@ -437,3 +437,6 @@
 "search.limit" = "10 s / nível 20";
 "book.recorded" = "%d adicionados ao caderno de erros";
 "standing.change" = "Variação da chance nesta jogada %@";
+"tried.reply" = "A resposta que ele provoca";
+"tried.reply.hint" = "Ver a resposta que este lance provoca";
+"tried.reply.none" = "Este lance não deixa resposta para mostrar.";

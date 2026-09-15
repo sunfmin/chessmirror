@@ -742,6 +742,42 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return game.plies[cursor - 1].tried
     }
 
+    /// The position the 已退回 moves on show were played in — the one their 应招 is drawn from.
+    ///
+    /// The same branch `visibleAttempts` takes, because they are one question: those attempts
+    /// belong to the position on the board, and the position on the board is where they were
+    /// refused. Nil only for a game with nothing played in it yet.
+    public var refusedPosition: Game? {
+        if !triedHere.isEmpty { return viewed }
+        guard cursor > 0 else { return nil }
+        return game.rewound(to: cursor - 1)
+    }
+
+    /// The position a 试招 made. It is the one its 应招 comes back from, and the one the board no
+    /// longer shows, because 耕棋 has already taken the move back.
+    public func position(after tried: Game.Ply.Tried) -> Game? {
+        guard var played = refusedPosition,
+            let move = SAN.move(for: tried.san, in: played.state),
+            played.apply(move)
+        else { return nil }
+        return played
+    }
+
+    /// The 应招 a 试招 earned: what the file kept, or — for a move refused before replies were
+    /// written down — the answer the shared bounded search already has for the position it made.
+    ///
+    /// One door rather than two, so a screen never has to know which kind of 试招 it is showing.
+    /// A stored reply costs nothing; a missing one is asked for at the one budget every other
+    /// position search uses, which normally answers out of the cache the refusal itself wrote
+    /// (docs/adr/0034).
+    public func reply(for tried: Game.Ply.Tried) async -> [String] {
+        if !tried.line.isEmpty { return tried.line }
+        guard let engine, let played = position(after: tried) else { return [] }
+        let result = await engine.positionResult(played)
+        guard !Task.isCancelled else { return [] }
+        return Array((result?.best?.san ?? []).prefix(Reply.limit))
+    }
+
     public var isFaceToFace = false
 
     public struct MoveChange: Equatable, Sendable {
@@ -1078,6 +1114,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         var drop: Double?
         var judgedScore: Score?
         var judgedDepth = interceptTable?.analysis.depth ?? 0
+        /// The 应招 the move earned, picked up from the same search that judged it (docs/adr/0034).
+        /// The position the move made is off the board the moment it is refused, so this is the
+        /// last moment the Line can be had without paying for a second search.
+        var answer: [String] = []
         if let table = interceptTable, table.fen == position.state.fen {
             var after: Score?
             if played.state.outcome == .checkmate {
@@ -1090,6 +1130,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                     noteProgress(snapshot)
                     if !snapshot.isPartial {
                         after = snapshot.best?.score
+                        answer = snapshot.best?.san ?? []
                         judgedDepth = snapshot.depth
                     }
                 }
@@ -1119,7 +1160,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             retune()
             return
         }
-        triedHere.append(Game.Ply.Tried(san: san, drop: drop))
+        triedHere.append(Game.Ply.Tried(san: san, drop: drop, line: answer))
         refused = Refusal(san: san, drop: drop)
         game = position
         cursor = game.plies.count
@@ -1154,7 +1195,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 cursor = game.plies.count
                 isWeighing = false
                 if let verdict = practice.verdict, interceptsHere(verdict.drop) {
-                    triedHere.append(.init(san: verdict.played, drop: verdict.drop))
+                    triedHere.append(
+                        .init(san: verdict.played, drop: verdict.drop, line: verdict.reply)
+                    )
                     refused = Refusal(san: verdict.played, drop: verdict.drop)
                     if let start = game.rewound(to: 0) { game = start }
                     cursor = 0

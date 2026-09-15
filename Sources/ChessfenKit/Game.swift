@@ -65,11 +65,20 @@ public struct Game: Hashable, Sendable {
             /// Percentage points of win probability, from the mover's own side (docs/adr/0027).
             public let drop: Double
             public let notFound: Bool
+            /// The 应招 the move earned: the Line the engine already had for the position the
+            /// move made, the opponent's move first (docs/adr/0034).
+            ///
+            /// Kept with the 试招 rather than searched for later, because the search that
+            /// judged the move had this in hand and nothing afterwards needs to run again to
+            /// say what the move was asking for. Empty for a move refused before replies were
+            /// written down, and for one that left no position to answer in.
+            public let line: [String]
 
-            public init(san: String, drop: Double, notFound: Bool = false) {
+            public init(san: String, drop: Double, notFound: Bool = false, line: [String] = []) {
                 self.san = san
                 self.drop = drop
                 self.notFound = notFound
+                self.line = Array(line.prefix(Reply.limit))
             }
         }
 

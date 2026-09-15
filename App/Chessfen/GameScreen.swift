@@ -65,6 +65,15 @@ struct GameScreen: View {
     @State private var showsMateLine = false
     @State private var revealed: Set<Card> = []
     @State private var showsTacticLine = false
+    /// Which 已退回 move is being read, by its place in `visibleAttempts`, and the 应招 it earned.
+    ///
+    /// A place rather than the move itself, because the same move refused twice is one value
+    /// twice and the strip has to be able to tell the two chips apart. What is drawn is not kept:
+    /// it is the line's, and the line is the session's to answer for.
+    @State private var revealedAttempt: Int?
+    @State private var attemptReply: [String] = []
+    @State private var isAskingReply = false
+    @State private var replyTask: Task<Void, Never>?
 
     struct PromotionRequest: Identifiable {
         let id = UUID()
@@ -142,6 +151,7 @@ struct GameScreen: View {
             revealed.removeAll()
             showsMateLine = false
             showsTacticLine = false
+            hideReply()
         }
         .onChange(of: session.thinking) { _, now in
             guard now == nil, !session.isTilling else { return }
@@ -381,7 +391,8 @@ struct GameScreen: View {
     }
 
     private var attemptFeedback: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let attempts = session.visibleAttempts
+        return VStack(alignment: .leading, spacing: 8) {
             if let exercise = session.activePunishment {
                 Text(localized(exercise.wasIncorrect ? "punish.again" : "punish.prompt"))
                 if exercise.isJudging { ProgressView() }
@@ -393,7 +404,7 @@ struct GameScreen: View {
             if let answer = session.punishment?.revealedMove {
                 Text(localized("punish.answer", answer))
             }
-            if !session.visibleAttempts.isEmpty {
+            if !attempts.isEmpty {
                 HStack(spacing: 10) {
                     Label(localized("till.returned"), systemImage: "arrow.uturn.backward")
                         .font(.caption)
@@ -401,32 +412,151 @@ struct GameScreen: View {
                         .fixedSize()
                     ScrollView(.horizontal) {
                         HStack(spacing: 6) {
-                            ForEach(Array(session.visibleAttempts.reversed().enumerated()), id: \.offset) { _, tried in
-                                HStack(spacing: 8) {
-                                    Text(tried.san).font(.system(.caption, design: .serif).weight(.semibold))
-                                        .foregroundStyle(Palette.ink)
-                                    Text(String(format: "−%.1f%%", tried.drop))
-                                        .font(.caption.monospacedDigit().weight(.medium))
-                                        .foregroundStyle(Palette.alarm)
-                                }
-                                .padding(.horizontal, 10).padding(.vertical, 7)
-                                .background(Palette.raised, in: RoundedRectangle(cornerRadius: 6))
-                                .overlay(alignment: .bottom) {
-                                    UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
-                                        .fill(Palette.alarm.opacity(0.35)).frame(height: 2)
-                                }
-                                .accessibilityElement(children: .combine)
+                            // Newest first, so the move just refused is the one under the thumb.
+                            ForEach(Array(attempts.reversed().enumerated()), id: \.offset) {
+                                offset, tried in
+                                attemptChip(tried, index: attempts.count - 1 - offset)
                             }
                         }
                     }
                     .scrollIndicators(.hidden)
                 }
                 .padding(.vertical, 8)
+                if session.activePunishment == nil, revealedAttempt != nil, let tried = revealedTried {
+                    replyRow(for: tried)
+                }
             }
         }
         .font(.footnote)
         .padding(.horizontal, 13)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One 已退回 move. Pressing it is how the player asks what the move was asking for — the
+    /// 应招 is nobody's business until somebody asks, which is the same rule every other answer
+    /// on this screen is under (docs/adr/0034, docs/adr/0031).
+    ///
+    /// Shut while a 惩罚 exercise is open. That exercise is the same answer with the finding left
+    /// to the player, and a chip that would hand it over is the exercise not being one.
+    private func attemptChip(_ tried: Game.Ply.Tried, index: Int) -> some View {
+        let isOn = revealedAttempt == index
+        return Button {
+            selected = nil
+            revealReply(at: index, of: tried)
+        } label: {
+            HStack(spacing: 8) {
+                Text(tried.san).font(.system(.caption, design: .serif).weight(.semibold))
+                    .foregroundStyle(isOn ? Palette.parchment : Palette.ink)
+                Text(String(format: "−%.1f%%", tried.drop))
+                    .font(.caption.monospacedDigit().weight(.medium))
+                    .foregroundStyle(isOn ? Palette.parchment : Palette.alarm)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .background(isOn ? Palette.analysis : Palette.raised, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(alignment: .bottom) {
+                if !isOn {
+                    UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
+                        .fill(Palette.alarm.opacity(0.35)).frame(height: 2)
+                }
+            }
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
+        }
+        .buttonStyle(.plain)
+        .disabled(session.activePunishment != nil)
+        .accessibilityLabel(tried.san)
+        .accessibilityValue(String(format: "−%.1f%%", tried.drop))
+        .accessibilityHint(localized("tried.reply.hint"))
+    }
+
+    /// The 应招 the move earned: the same numbered chips the cards use, numbered against the
+    /// arrows on the board. One move is the refused one and the rest are the answers to it, so
+    /// the row begins with the move the player made and not with what happened to it.
+    @ViewBuilder private func replyRow(for tried: Game.Ply.Tried) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(localized("tried.reply")).font(.caption).foregroundStyle(Palette.inkSoft)
+                if isAskingReply {
+                    ProgressView().controlSize(.mini)
+                    Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(minHeight: 22)
+            if !replyChips.isEmpty {
+                CardMoves(moves: replyChips)
+            } else if !isAskingReply {
+                Text(localized("tried.reply.none")).font(.caption).foregroundStyle(Palette.inkSoft)
+            }
+        }
+        .padding(.leading, 2)
+        .padding(.bottom, 4)
+    }
+
+    /// The 已退回 move being read, if the strip still has it.
+    private var revealedTried: Game.Ply.Tried? {
+        guard let revealedAttempt, session.visibleAttempts.indices.contains(revealedAttempt)
+        else { return nil }
+        return session.visibleAttempts[revealedAttempt]
+    }
+
+    /// The whole line the board is drawing: the 试招 and the moves that answer it.
+    ///
+    /// Nothing until there is an answer. One arrow for a move that was taken back would be a
+    /// picture of the mistake with the lesson left out, and the row says 「没有应招」 instead.
+    private var revealedLine: [String] {
+        guard let tried = revealedTried, !attemptReply.isEmpty else { return [] }
+        return Reply.moves(of: tried, reply: attemptReply)
+    }
+
+    private var replyArrows: [MoveArrow] {
+        guard !revealedLine.isEmpty, let position = session.refusedPosition else { return [] }
+        return Reply.arrows(in: position, playing: revealedLine)
+    }
+
+    /// The arrows as chips, numbered the same way. Read off the arrows rather than off the line,
+    /// so the two cannot disagree about how far the walk got or whose move a step is.
+    private var replyChips: [CardMoves.Move] {
+        replyArrows.compactMap { arrow in
+            guard revealedLine.indices.contains(arrow.step - 1) else { return nil }
+            return CardMoves.Move(
+                step: arrow.step, san: revealedLine[arrow.step - 1], isYours: arrow.isYours
+            )
+        }
+    }
+
+    /// Reads a 已退回 move, or puts it away again.
+    ///
+    /// A move refused before replies were written down has none to show, and the shared position
+    /// search is asked for it — the same ten seconds or depth twenty every other position gets,
+    /// which the refusal itself has already paid for and cached (docs/adr/0034).
+    private func revealReply(at index: Int, of tried: Game.Ply.Tried) {
+        if revealedAttempt == index {
+            hideReply()
+            return
+        }
+        replyTask?.cancel()
+        revealedAttempt = index
+        attemptReply = tried.line
+        isAskingReply = false
+        guard attemptReply.isEmpty else { return }
+        isAskingReply = true
+        replyTask = Task {
+            let answer = await session.reply(for: tried)
+            guard !Task.isCancelled, revealedAttempt == index else { return }
+            isAskingReply = false
+            attemptReply = answer
+        }
+    }
+
+    /// Puts the 应招 away. A question asked once is not a layer left on: the board goes back to
+    /// the position and says nothing about what the player might have tried.
+    private func hideReply() {
+        replyTask?.cancel()
+        replyTask = nil
+        isAskingReply = false
+        revealedAttempt = nil
+        attemptReply = []
     }
 
     /// Interception is the page's only mode switch. Assessment and explicit answers are separate.
@@ -1518,8 +1648,12 @@ struct GameScreen: View {
             recommendation: nil,
             // Whichever card is in front of you, and only that one: arrows left over from a card
             // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
-            plan: card == .tactics && revealed.contains(.tactics) && showsTacticLine && !session.isTilling
-                ? tacticLineArrows : mateArrows,
+            // A 应招 beats all of them while it is being read: it is the one line somebody has
+            // just asked for, and the board can only carry one at a time.
+            plan: !replyArrows.isEmpty
+                ? replyArrows
+                : (card == .tactics && revealed.contains(.tactics) && showsTacticLine && !session.isTilling
+                    ? tacticLineArrows : mateArrows),
             isInteractive: session.isHandTurn,
             onTap: tap
         )

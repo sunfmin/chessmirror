@@ -58,3 +58,32 @@ import Testing
         """)
     #expect(read.game.plies[0].tried == [.init(san: "f3", drop: 20)])
 }
+
+/// Contract: the 应招 a 试招 earned rides inside the same `[%tried]` token and comes back with
+/// it, so a reply can never be paired with the wrong move or lost on its own (docs/adr/0034).
+@MainActor
+@Test func theReplyIsWrittenBesideTheMoveItAnswers() throws {
+    var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let attempts: [Game.Ply.Tried] = [
+        .init(san: "f3", drop: 19.99, line: ["d5", "exd5", "Qxd5"]),
+        .init(san: "a3", drop: 9.99, notFound: true, line: ["c5"]),
+        .init(san: "h4", drop: 4.0),
+    ]
+    game.setTried(attempts, atPly: 0)
+    let text = PGN(game: game).text
+    #expect(text.contains("[%tried f3 -19.99% | d5 exd5 Qxd5]"))
+    #expect(text.contains("[%tried a3 -9.99% notfound | c5]"))
+    #expect(text.contains("[%tried h4 -4.0%]"))
+    let read = try PGN(parsing: text)
+    #expect(read.game.uciMoves == ["e2e4"])
+    #expect(read.game.plies[0].tried == attempts)
+}
+
+/// A bar with nothing after it is a file written before there was an answer, or one whose
+/// answer was empty. Either way it is a 试招 with no 应招, not a malformed token.
+@Test func anEmptyReplyIsTheSameAsNoReply() throws {
+    let bare = try PGN(parsing: "1. e4 {[%tried f3 -20% |]} *")
+    #expect(bare.game.plies[0].tried == [.init(san: "f3", drop: 20)])
+    let spaced = try PGN(parsing: "1. e4 {[%tried f3 -20% | ]} *")
+    #expect(spaced.game.plies[0].tried == [.init(san: "f3", drop: 20)])
+}

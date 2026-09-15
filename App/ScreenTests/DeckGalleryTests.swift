@@ -188,6 +188,55 @@ struct DeckGallery {
         #expect(!rendered.says("提示 1"))
         #expect(!rendered.says("提示 2"))
     }
+
+    /// Contract: a 已退回 move can be asked what it was asking for. Pressing it puts the 应招 on
+    /// the row and on the board, and pressing it again puts both away (docs/adr/0034).
+    @Test func pressingAReturnedMoveShowsTheReplyItEarned() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        let afterD4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
+        let engine = ScriptedEngine([Analysis(depth: 20, lines: [
+            Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
+            Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"])
+        ])], byPosition: [afterD4.state.fen: Analysis(depth: 20, lines: [
+            Line(score: .centipawns(-300), uciMoves: ["d7d5", "g1f3"], san: ["d5", "Nf3"])
+        ])])
+        let session = GameSession.fresh(game, engine: engine)
+        defer { session.suspend() }
+        session.setIntercept(JudgementLines.defaultIntercept)
+        await hop()
+        session.play(try #require(game.state.move(matching: "d2d4")))
+        await hop()
+        try #require(session.refused != nil)
+        session.play(try #require(game.state.move(matching: "e2e4")))
+        await hop()
+        try #require(session.visibleAttempts.first?.line == ["d5", "Nf3"])
+        let rendered = await ScreenImage.write("tilling-returned-reply", interact: { window in
+            let before = ScreenImage.words(in: window)
+            #expect(!before.contains { $0.contains("Nf3") }, "the answer waits to be asked for")
+            #expect(!before.contains { $0.contains(localized("tried.reply")) })
+            #expect(ScreenImage.activate("d4", in: window), "the returned move must be pressable")
+            await ScreenImage.settle()
+            let after = ScreenImage.words(in: window)
+            #expect(after.contains { $0.contains(localized("tried.reply")) })
+            #expect(after.contains { $0.contains("d5") })
+            #expect(after.contains { $0.contains("Nf3") })
+            #expect(ScreenImage.activate("d4", in: window))
+            await ScreenImage.settle()
+            #expect(!ScreenImage.words(in: window).contains { $0.contains("Nf3") })
+            // Pressed a third time, so the picture is of the answer rather than of the question.
+            #expect(ScreenImage.activate("d4", in: window))
+            await ScreenImage.settle()
+            #expect(ScreenImage.words(in: window).contains { $0.contains("Nf3") })
+        }) {
+            screen(session, engine: engine, opening: .tactics)
+        }
+        #expect(rendered.says(localized("tried.reply")))
+        #expect(rendered.says("Nf3"))
+        #expect(rendered.says("d5"))
+        #expect(rendered.says(localized("till.returned")))
+        #expect(session.game.uciMoves == ["e2e4"])
+        #expect(session.visibleAttempts.first?.line == ["d5", "Nf3"])
+    }
     @Test func viewingAMateRequiresAnExplicitPressAndResetsAfterMoving() async throws {
         let game = try #require(Game(startFEN:
             "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"))

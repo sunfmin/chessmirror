@@ -101,6 +101,12 @@ A move the player played and 耕棋 took back. It never happened in the game, an
 what the 错题 is made of.
 _Avoid_: 变着, 悔棋
 
+**应招 (Reply)**:
+The Line a 试招 earned — the opponent's strongest answer and the few moves after it. Worked out
+by the search that refused the move, kept beside it, and shown only when the 试招 is pressed.
+The 惩罚 exercise asks the player to find this same answer; what differs is who finds it.
+_Avoid_: 反击, 变着, 惩罚
+
 **提示层 (Hint layer)**:
 One rung of what the app will say when asked. Every rung must be asked for, and how far the
 player climbed is part of what the move is worth knowing about.

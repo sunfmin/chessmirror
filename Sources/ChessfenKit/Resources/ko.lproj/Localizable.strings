@@ -411,3 +411,6 @@
 "search.limit" = "10초 / 깊이 20";
 "book.recorded" = "오답 노트에 %d개 추가됨";
 "standing.change" = "이번 수의 승률 변화 %@";
+"tried.reply" = "상대의 응수";
+"tried.reply.hint" = "이 수가 부르는 응수를 봅니다";
+"tried.reply.none" = "이 수에는 보여 줄 응수가 없습니다.";

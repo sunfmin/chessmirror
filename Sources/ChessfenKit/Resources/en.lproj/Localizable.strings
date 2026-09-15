@@ -482,3 +482,6 @@
 "board.faceToFace" = "Face to face";
 "till.returned" = "Returned";
 "search.limit" = "10 s / depth 20";
+"tried.reply" = "The reply it earns";
+"tried.reply.hint" = "Show the reply this move earns";
+"tried.reply.none" = "This move leaves no reply to show.";

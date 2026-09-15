@@ -437,3 +437,6 @@
 "search.limit" = "10 s / profondeur 20";
 "book.recorded" = "%d ajoutés au carnet d’erreurs";
 "standing.change" = "Variation de probabilité pour ce coup %@";
+"tried.reply" = "La réponse qu’il provoque";
+"tried.reply.hint" = "Voir la réponse que ce coup provoque";
+"tried.reply.none" = "Ce coup ne laisse aucune réponse à montrer.";

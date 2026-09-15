@@ -18,10 +18,14 @@ public struct DrillVerdict: Hashable, Sendable {
     /// never invented, because an invented answer is worse than none.
     public let wanted: String?
     public let wantedIntent: Intent?
+    /// The 应招 the attempt earned: the Line the search that judged it produced, in SAN, the
+    /// opponent's move first. Empty for an attempt that held, and for one that left no position
+    /// to answer in (docs/adr/0034).
+    public let reply: [String]
 
     public init(
         played: String, intent: Intent, drop: Double, passed: Bool,
-        wanted: String? = nil, wantedIntent: Intent? = nil
+        wanted: String? = nil, wantedIntent: Intent? = nil, reply: [String] = []
     ) {
         self.played = played
         self.intent = intent
@@ -29,6 +33,7 @@ public struct DrillVerdict: Hashable, Sendable {
         self.passed = passed
         self.wanted = wanted
         self.wantedIntent = wantedIntent
+        self.reply = reply
     }
 
     /// 「Qxd5 吃 d5。过了。」 or 「Bd3 护 e4。掉了 12%。该走 Nf3 攻 e5。」
@@ -173,6 +178,10 @@ public struct DrillVerdict: Hashable, Sendable {
         }
         var afterScore: Score?
         var afterDepth = beforeDepth
+        /// The 应招, out of the same search that settled the attempt (docs/adr/0034). A drill's
+        /// position is taken back the moment it is refused, exactly as 耕棋's is, so this is the
+        /// last moment the answer to it can be had without a second search.
+        var afterLine: [String] = []
         if after.state.outcome == .checkmate {
             afterScore = .mate(in: after.state.sideToMove == .white ? -1 : 1)
         } else if after.state.outcome.isDraw {
@@ -180,7 +189,11 @@ public struct DrillVerdict: Hashable, Sendable {
         } else {
             for await analysis in engine.analysePosition(after) {
                 guard !Task.isCancelled else { return }
-                if !analysis.isPartial { afterScore = analysis.best?.score; afterDepth = analysis.depth }
+                if !analysis.isPartial {
+                    afterScore = analysis.best?.score
+                    afterLine = analysis.best?.san ?? []
+                    afterDepth = analysis.depth
+                }
             }
         }
         guard !Task.isCancelled else { return }
@@ -200,7 +213,8 @@ public struct DrillVerdict: Hashable, Sendable {
                 drop: drop,
                 passed: !lines.records(drop),
                 wanted: wanted?.san,
-                wantedIntent: wanted?.intent
+                wantedIntent: wanted?.intent,
+                reply: Array(afterLine.prefix(Reply.limit))
             )
         )
     }
