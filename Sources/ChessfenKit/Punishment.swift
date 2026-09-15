@@ -45,9 +45,9 @@ import Foundation
         }
         if game.state.outcome.isDraw { return .centipawns(0) }
         var result: Score?
-        for await snapshot in engine.analyse(game, budget: .depth(GameSession.interceptDepth), lines: 1) {
+        for await snapshot in engine.analysePosition(game) {
             guard !Task.isCancelled else { return nil }
-            if snapshot.depth == GameSession.interceptDepth, !snapshot.isPartial { result = snapshot.best?.score }
+            if !snapshot.isPartial { result = snapshot.best?.score }
         }
         return result
     }
@@ -66,9 +66,9 @@ import Foundation
         task = Task { [weak self] in
             guard let self else { return }
             var answer: String?
-            for await snapshot in engine.analyse(position, budget: .depth(GameSession.interceptDepth), lines: 1) {
+            for await snapshot in engine.analysePosition(position) {
                 guard !Task.isCancelled else { return }
-                if snapshot.depth >= GameSession.interceptDepth, !snapshot.isPartial { answer = snapshot.best?.san.first }
+                if !snapshot.isPartial { answer = snapshot.best?.san.first }
             }
             guard !Task.isCancelled else { return }
             revealedMove = answer

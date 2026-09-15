@@ -431,3 +431,8 @@
 "discovery.view" = "Ansehen";
 "discovery.mateFound" = "Matt gefunden";
 "discovery.tacticFound" = "Taktische Chance gefunden";
+"board.faceToFace" = "Gegenübersitzen";
+"till.returned" = "Zurückgenommen";
+"search.limit" = "10 s / Tiefe 20";
+"book.recorded" = "%d zum Fehlerbuch hinzugefügt";
+"standing.change" = "Gewinnchancenänderung dieses Zugs %@";

@@ -96,30 +96,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Whether a move of either kind is being walked.
     public var isThinking: Bool { thinking != nil }
 
-    // ------------------------------------------------------------------- the Stint
+    // --------------------------------------------------------- shared position search
 
-    /// How long a Stint runs: ten seconds of advice, and then the engine stops.
-    ///
-    /// The Analysis in front of a player used to deepen for as long as it was left alone
-    /// (docs/adr/0009), which on a phone left on a table is a search that never ends — eight cores
-    /// on a position nobody is looking at any more, until the battery says otherwise. Ten seconds
-    /// is past the point where another ply changes the recommendation on most positions, and
-    /// 再算 10 秒 is there for the positions where it does.
-    ///
-    /// Settable only so a test does not have to wait ten seconds to watch one end. Not a dial: the
-    /// app never changes it, and asking for another Stint is how a person asks for more.
-    public var adviceStint: Duration = .seconds(10)
-
-    /// Whether the standing Analysis has run its Stint and stopped, with more to give if asked.
-    ///
-    /// False while one is running and false when there is nothing to run — practice, a finished
-    /// game, no engine. It is the whole of what puts 再算 10 秒 on the screen, so it says "stopped
-    /// with more available" rather than merely "not searching".
+    /// The shared search has finished; its answer remains available without more work.
     public private(set) var isAdviceSpent = false
-
-    /// The clock that ends a Stint. Kept beside `searchTask` and taken down with it: a clock left
-    /// ticking over a search that has already been replaced would stop the replacement.
-    private var stintTask: Task<Void, Never>?
 
     /// How the running search is getting on — how long it has been at it and how deep it has got.
     ///
@@ -477,10 +457,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard isPractising != practising else { return }
         isPractising = practising
         analysis = nil
-        // The one moment a Game can acquire a Review. 复盘 is not a place any more; it is the
-        // name of what this switch turns on, and a Game that has never had a uniform pass gets
-        // one here (docs/adr/0015).
-        if !practising, !game.isReviewed { startReview() }
+        // Opening feedback must never start a second, whole-game scoring pass.
         retune()
     }
 
@@ -751,13 +728,21 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if let table = interceptTable, table.fen == viewed.state.fen {
             return table.analysis.best?.score
         }
-        if cursor > 0, let judgement = game.plies[cursor - 1].judgement,
-           judgement.depth >= Self.interceptDepth {
+        if cursor > 0, let judgement = game.plies[cursor - 1].judgement {
             return judgement.score
         }
-        return (game.reviewDepth ?? 0) >= Self.interceptDepth ? game.reviewScore(atPly: cursor) : nil
+        return game.reviewScore(atPly: cursor)
     }
     public var pendingAttempts: [Game.Ply.Tried] { triedHere }
+
+    /// Only the attempts relevant to the position/move being read, never a whole-game list.
+    public var visibleAttempts: [Game.Ply.Tried] {
+        if !triedHere.isEmpty { return triedHere }
+        guard cursor > 0, game.plies.indices.contains(cursor - 1) else { return [] }
+        return game.plies[cursor - 1].tried
+    }
+
+    public var isFaceToFace = false
 
     public struct MoveChange: Equatable, Sendable {
         public let before: Score
@@ -801,15 +786,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return hands.count == 1 ? hands[0] : (orientation == .whiteAtBottom ? .white : .black)
     }
 
-    /// Complete both positions at depth 20, publishing the bar's endpoint and its change
+    /// Reuse both bounded position results, publishing the bar's endpoint and its change
     /// together. Missing or cancelled analysis never becomes a fictitious zero-percent move.
     public func measureLatestMoveChange() async {
         guard hasTillingFeedback, !isWeighing, !game.plies.isEmpty,
               !(measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen), let engine,
               let before = game.rewound(to: game.plies.count - 1) else { return }
         let after = game
-        let baseline = await engine.analyseInBackground(before, depth: Self.interceptDepth)
-        guard !Task.isCancelled, let baseline, baseline.depth >= Self.interceptDepth,
+        let baseline = await engine.positionResult(before)
+        guard !Task.isCancelled, let baseline,
               !baseline.isPartial, let beforeScore = baseline.best?.score else { return }
         let afterScore: Score?
         if after.state.outcome == .checkmate {
@@ -817,9 +802,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         } else if after.state.outcome.isDraw {
             afterScore = .centipawns(0)
         } else {
-            let result = await engine.analyseInBackground(after, depth: Self.interceptDepth)
+            let result = await engine.positionResult(after)
             afterScore = result.flatMap {
-                $0.depth >= Self.interceptDepth && !$0.isPartial ? $0.best?.score : nil
+                !$0.isPartial ? $0.best?.score : nil
             }
         }
         guard !Task.isCancelled, !isWeighing,
@@ -828,36 +813,38 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         measuredMove = (after.uciMoves, after.state.fen, MoveChange(before: beforeScore, after: afterScore))
     }
 
-    /// Backfill older records without competing with the live interception search.
+    /// Explicit legacy migration only; never started automatically by the game screen.
     public func fillMissingTillingJudgements() async {
         guard hasTillingFeedback, !isWeighing, activePunishment == nil, let engine else { return }
         let original = game
         for index in original.plies.indices {
             guard !Task.isCancelled else { return }
-            guard (original.plies[index].judgement?.depth ?? 0) < Self.interceptDepth,
+            guard original.plies[index].judgement == nil,
                   controller(for: original.mover(ofPly: index + 1)) == .hand,
                   let before = original.rewound(to: index),
                   let after = original.rewound(to: index + 1) else { continue }
-            let baseline = await engine.analyseInBackground(before, depth: Self.interceptDepth)
+            let baseline = await engine.positionResult(before)
             guard !Task.isCancelled else { return }
             let result: Score?
+            var achievedDepth = baseline?.depth ?? 0
             if after.state.outcome == .checkmate {
                 result = .mate(in: after.state.sideToMove == .white ? -1 : 1)
             } else if after.state.outcome.isDraw {
                 result = .centipawns(0)
             } else {
-                let evaluated = await engine.analyseInBackground(after, depth: Self.interceptDepth)
-                result = evaluated.flatMap { $0.depth >= Self.interceptDepth && !$0.isPartial ? $0.best?.score : nil }
+                let evaluated = await engine.positionResult(after)
+                result = evaluated.flatMap { !$0.isPartial ? $0.best?.score : nil }
+                achievedDepth = evaluated?.depth ?? 0
             }
             guard !Task.isCancelled else { return }
-            guard let baseline, baseline.depth >= Self.interceptDepth, !baseline.isPartial,
+            guard let baseline, !baseline.isPartial,
                   let result,
                   let drop = MoveQuality.drop(move: before.state.sideToMove, before: baseline.best?.score, after: result)
             else { continue }
             guard hasTillingFeedback, !isWeighing, activePunishment == nil else { return }
             guard game.uciMoves.prefix(index + 1).elementsEqual(original.uciMoves.prefix(index + 1)) else { return }
-            if (game.plies[index].judgement?.depth ?? 0) < Self.interceptDepth {
-                game.setJudgement(.init(drop: drop, score: result, depth: Self.interceptDepth), atPly: index)
+            if game.plies[index].judgement == nil {
+                game.setJudgement(.init(drop: drop, score: result, depth: achievedDepth), atPly: index)
                 save()
             }
         }
@@ -883,9 +870,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         drop > 0 && drop >= (relaxedIntercept ?? lines.intercept ?? .infinity)
     }
 
-    private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil, score: Score? = nil) {
+    private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil, score: Score? = nil, depth: Int? = nil) {
         if isTilling || hasTillingFeedback, let drop, let score {
-            game.setJudgement(.init(drop: drop, score: score, depth: Self.interceptDepth), atPly: ply)
+            game.setJudgement(.init(drop: drop, score: score, depth: depth ?? interceptTable?.analysis.depth ?? 0), atPly: ply)
         }
         if relaxedIntercept != nil, let drop, lines.records(drop) {
             triedHere.append(.init(san: san, drop: drop, notFound: true))
@@ -911,7 +898,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     private func preparedDrop(for move: Move, in position: Game) -> Double? {
         guard let table = interceptTable, table.fen == position.state.fen,
-            table.analysis.depth >= Self.interceptDepth, !table.analysis.isPartial,
+            !table.analysis.isPartial,
             let candidate = table.analysis.lines.first(where: {
                 position.state.move(matching: $0.bestMove ?? "") == move
             })
@@ -925,10 +912,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         interceptTable = nil
         searchProgress = nil
         searchTask = Task { [weak self] in
-            for await snapshot in engine.analyse(position, budget: .depth(Self.interceptDepth), lines: 8) {
+            for await snapshot in engine.analysePosition(position) {
                 guard !Task.isCancelled, let self else { return }
                 noteProgress(snapshot)
-                if snapshot.depth >= Self.interceptDepth, !snapshot.isPartial {
+                if !snapshot.isPartial {
                     interceptTable = (position.state.fen, snapshot)
                 }
             }
@@ -1073,23 +1060,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
-    /// The cached table supplies only the baseline. Every played position must independently
-    /// reach depth 20 before its assessment is published and the opponent is allowed to move.
+    /// Join the baseline and resulting position's shared searches. Completion at either
+    /// ten seconds or depth twenty publishes the assessment and releases the opponent.
     private func settle(_ move: Move, san: String, from position: Game, to played: Game) async {
         guard let engine else { return }
-        if interceptTable?.fen != position.state.fen {
-            for await snapshot in engine.analyse(position, budget: .depth(Self.interceptDepth), lines: 8) {
+        // Join even when an interim baseline exists: it may still be deepening.
+        do {
+            for await snapshot in engine.analysePosition(position) {
                 guard !Task.isCancelled else { return }
                 noteProgress(snapshot)
-                if snapshot.depth >= Self.interceptDepth, !snapshot.isPartial {
+                if !snapshot.isPartial {
                     interceptTable = (position.state.fen, snapshot)
                 }
             }
         }
         guard !Task.isCancelled else { return }
-        let outsideTable = preparedDrop(for: move, in: position) == nil
         var drop: Double?
         var judgedScore: Score?
+        var judgedDepth = interceptTable?.analysis.depth ?? 0
         if let table = interceptTable, table.fen == position.state.fen {
             var after: Score?
             if played.state.outcome == .checkmate {
@@ -1097,38 +1085,18 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             } else if played.state.outcome.isDraw {
                 after = .centipawns(0)
             } else {
-                for await snapshot in engine.analyse(played, budget: .depth(Self.interceptDepth), lines: 1) {
+                for await snapshot in engine.analysePosition(played) {
                     guard !Task.isCancelled else { return }
                     noteProgress(snapshot)
-                    if snapshot.depth >= Self.interceptDepth, !snapshot.isPartial {
+                    if !snapshot.isPartial {
                         after = snapshot.best?.score
+                        judgedDepth = snapshot.depth
                     }
                 }
             }
             drop = MoveQuality.drop(move: position.state.sideToMove,
                                     before: table.analysis.best?.score, after: after)
             judgedScore = after
-        }
-        // Only a prospective refusal of an unlisted move pays for confirmation. A passing
-        // candidate never enters this search. Every judgement must complete the same depth;
-        // a busy device may take longer, but cannot silently let an unjudged move stand.
-        if outsideTable, let initial = drop, interceptsHere(initial), !played.isOver {
-            var confirmed: Score?
-            for await snapshot in engine.analyse(played, budget: .depth(Self.interceptDepth), lines: 1) {
-                guard !Task.isCancelled else { return }
-                noteProgress(snapshot)
-                if snapshot.depth == Self.interceptDepth, !snapshot.isPartial {
-                    confirmed = snapshot.best?.score
-                }
-            }
-            if let confirmed {
-                judgedScore = confirmed
-                drop = MoveQuality.drop(move: position.state.sideToMove,
-                                        before: interceptTable?.analysis.best?.score, after: confirmed)
-            } else {
-                // An interrupted/incomplete search is not evidence that this move passes.
-                drop = nil
-            }
         }
         guard !Task.isCancelled else { return }
         isWeighing = false
@@ -1143,7 +1111,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard interceptsHere(drop) else {
             // It stands. Whatever was refused on the way here rides along with it, as a comment
             // on the move that was actually played (docs/adr/0028).
-            recordHelp(atPly: cursor - 1, san: san, drop: drop, score: judgedScore)
+            recordHelp(atPly: cursor - 1, san: san, drop: drop, score: judgedScore, depth: judgedDepth)
             if let before = interceptTable?.analysis.best?.score, let after = judgedScore {
                 measuredMove = (game.uciMoves, game.state.fen, MoveChange(before: before, after: after))
             }
@@ -1364,7 +1332,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         searchTask = Task { [weak self] in
             // Unbounded: how long it runs is how long the button is held. One line: the
             // answer is one move, and every extra line halves how deep the hold looks.
-            for await snapshot in engine.analyse(position, budget: .untilStopped, lines: 1) {
+            for await snapshot in engine.analysePosition(position) {
                 if Task.isCancelled { return }
                 guard let self else { return }
                 record(snapshot)
@@ -1484,8 +1452,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     private func stopSearching() {
         searchTask?.cancel()
         searchTask = nil
-        stintTask?.cancel()
-        stintTask = nil
         isAdviceSpent = false
     }
 
@@ -1544,9 +1510,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         isProbingTactics = true
         searchTask = Task { [weak self] in
             var last: Analysis?
-            for await snapshot in engine.analyse(
-                position, budget: .depth(Tactic.probeDepth), lines: 2
-            ) {
+            for await snapshot in engine.analysePosition(position) {
                 if Task.isCancelled { return }
                 // How deep it has got, and nothing else off the snapshot. The probe is the only
                 // search most cards ever run now, and a search that does not account for itself
@@ -1578,12 +1542,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // Mirrored Time is only the default, and only against a person: with both Controllers
             // on the engine there is no last human move to mirror, and there is a named clock
             // instead (`thinkingTime`).
-            let budget = thinkingTime.budget(mirroring: lastHumanThink)
             searchTask = Task { [weak self] in
                 var last: Analysis?
                 // One line: the engine is choosing a move, not advising, and each extra line
                 // roughly doubles the time to the same Depth — a weaker move on the same clock.
-                for await snapshot in engine.analyse(position, budget: budget, lines: 1) {
+                for await snapshot in engine.analysePosition(position) {
                     if Task.isCancelled { return }
                     self?.record(snapshot)
                     self?.thinkingBest = snapshot.bestMove
@@ -1612,54 +1575,23 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
-    /// One Stint of advice on a position, and the clock that ends it.
-    ///
-    /// The search itself is unbounded, and what stops it is a timer here rather than a `movetime`
-    /// handed to the engine. Two reasons, and the first is the load-bearing one: the pause gate
-    /// admits a bounded search and refuses an unbounded one, because a bounded search has somebody
-    /// waiting on its answer while an unbounded one belongs to a screen (docs/adr/0009) — and this
-    /// is the second kind however few seconds it runs for. The other is that cancelling is already
-    /// how every search in this app ends, a thumb coming off 让引擎走 included.
-    private func advise(on position: Game, using engine: any Engine, lines: Int = 3) {
+    /// Subscribe to the same bounded result used by judgement, tactics and opponent play.
+    private func advise(on position: Game, using engine: any Engine) {
         guard !isTilling, !isWeighing else { return }
         isAdviceSpent = false
         searchProgress = nil
         searchTask = Task { [weak self] in
-            // A card's Stint is one line — 五步 walks it, 要害 reads it — because each extra
-            // Line costs about a Depth, and the three-candidate panel is gone. Standing advice
-            // with the opinion on still asks for three, the honest picture of a search
-            // (docs/adr/0009).
-            for await snapshot in engine.analyse(
-                position, budget: .untilStopped, lines: max(1, lines)
-            ) {
+            for await snapshot in engine.analysePosition(position) {
                 if Task.isCancelled { return }
                 self?.record(snapshot)
             }
-        }
-        let stint = adviceStint
-        stintTask = Task { [weak self] in
-            try? await Task.sleep(for: stint)
             guard !Task.isCancelled else { return }
-            self?.spendStint()
+            self?.searchTask = nil
+            self?.isAdviceSpent = true
         }
     }
 
-    /// The Stint has run out. The search stops where it got to; what it found stays on screen, and
-    /// the strip under the board offers another one.
-    private func spendStint() {
-        // Only ever an advisory search. Anything walking a move has taken the search over since
-        // the clock was wound, and stopping that is not this clock's business — it has its own
-        // ending, a budget or a thumb.
-        guard thinking == nil, searchTask != nil else { return }
-        stopSearching()
-        isAdviceSpent = true
-    }
-
-    /// Another Stint on the position being looked at.
-    ///
-    /// Not a `retune`: that would start the player's clock again, and Mirrored Time is a record of
-    /// how long *they* have been thinking. Asking the engine for more time is not the player
-    /// taking less.
+    /// Legacy callers may request the answer again, but never a new search of that position.
     public func adviseAgain() {
         guard isAdviceSpent, !isPractising, let engine, !engine.isPaused else { return }
         let position = viewed
@@ -1682,7 +1614,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         if searchTask != nil { return }
         stopSearching()
-        advise(on: viewed, using: engine, lines: 1)
+        advise(on: viewed, using: engine)
     }
 
     /// Cuts the engine's thinking short and takes whatever it likes best right now.

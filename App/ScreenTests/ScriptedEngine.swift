@@ -11,6 +11,7 @@ import Synchronization
 /// the real `retune`, the real `record`, the real Score written against the real ply — what is
 /// faked is only the one thing in the app that cannot be asked twice for the same answer.
 final class ScriptedEngine: Engine {
+    let positionSearches = PositionSearches()
     /// The snapshots every search reports, in order, deepest last — a real search deepens, and a
     /// screen that redraws on each snapshot should be made to do it.
     private let snapshots: [Analysis]
@@ -40,13 +41,16 @@ final class ScriptedEngine: Engine {
     /// positions rather than about deepening: a study asks three questions of three positions and
     /// has to get three answers.
     private let byPosition: [String: Analysis]
+    private let controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)?
 
     init(
-        _ snapshots: [Analysis], isEndless: Bool = false, byPosition: [String: Analysis] = [:]
+        _ snapshots: [Analysis], isEndless: Bool = false, byPosition: [String: Analysis] = [:],
+        controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)? = nil
     ) {
         self.snapshots = snapshots
         self.isEndless = isEndless
         self.byPosition = byPosition
+        self.controlled = controlled
     }
 
     var isPaused: Bool { paused.withLock { $0 } }
@@ -57,9 +61,12 @@ final class ScriptedEngine: Engine {
     func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
         asked.withLock { $0.append(budget) }
         askedLines.withLock { $0.append(lines) }
+        if let stream = controlled?(game, budget) { return stream }
         let scripted = byPosition[game.state.fen].map { [$0] } ?? snapshots
         let reachedDepth: Bool
-        if case .depth(let target) = budget {
+        if case .timeOrDepth = budget {
+            reachedDepth = true
+        } else if case .depth(let target) = budget {
             reachedDepth = scripted.contains { $0.depth >= target }
         } else {
             reachedDepth = false

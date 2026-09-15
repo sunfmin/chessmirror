@@ -432,3 +432,8 @@
 "discovery.view" = "Ver";
 "discovery.mateFound" = "Mate encontrado";
 "discovery.tacticFound" = "Oportunidad táctica encontrada";
+"board.faceToFace" = "Cara a cara";
+"till.returned" = "Devuelta";
+"search.limit" = "10 s / nivel 20";
+"book.recorded" = "%d añadidos al cuaderno de errores";
+"standing.change" = "Cambio de probabilidad de esta jugada %@";

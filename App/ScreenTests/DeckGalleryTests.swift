@@ -16,6 +16,31 @@ import Testing
 @MainActor
 @Suite(.serialized, .speaking(.chinese))
 struct DeckGallery {
+    @Test(arguments: [320, 440]) func faceToFaceRotatesOnlyTheTopPlayersPieces(_ width: Int) async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        let session = GameSession.fresh(game)
+        let engine = ScriptedEngine([])
+        defer { session.suspend() }
+        let rendered = await ScreenImage.write("face-to-face-\(width)", size: CGSize(width: width, height: 850), interact: { window in
+            #expect(!session.isFaceToFace)
+            #expect(ScreenImage.activate(localized("board.faceToFace"), in: window))
+            await ScreenImage.settle()
+            #expect(session.isFaceToFace)
+            #expect(session.game == game)
+            #expect(session.controller(for: .white) == .hand)
+            #expect(session.controller(for: .black) == .hand)
+            let normal = BoardView(pieces: [:], isFaceToFace: session.isFaceToFace)
+            #expect(normal.pieceRotation(for: .black) == 180)
+            #expect(normal.pieceRotation(for: .white) == 0)
+            let flipped = BoardView(pieces: [:], orientation: .blackAtBottom, isFaceToFace: true)
+            #expect(flipped.pieceRotation(for: .white) == 180)
+            #expect(flipped.pieceRotation(for: .black) == 0)
+        }) { screen(session, engine: engine, opening: .tactics) }
+        #expect(rendered.says(localized("board.faceToFace")))
+        #expect(!rendered.says("1. e4"))
+        let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
+        #expect(pixels.fullWidthBoardRows > pixels.width / 2)
+    }
     @Test(arguments: [-133, 133]) func signedChangeAndCurveShareTheLastPosition(_ score: Int) async throws {
         let start = try #require(Game(startFEN: PGN.standardStartFEN))
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
@@ -103,13 +128,8 @@ struct DeckGallery {
             #expect(after.contains(localized("till.intercept")))
             #expect(window.rootViewController?.presentedViewController == nil)
             if engineOpponent {
-                #expect(after.contains(ThinkingTime.fixed(seconds: 3).label))
-                #expect(ScreenImage.activate(ThinkingTime.fixed(seconds: 3).label, in: window))
-                await ScreenImage.settle()
-                #expect(session.thinkingTime == .fixed(seconds: 3))
-                #expect(ScreenImage.activate(ThinkingTime.fixed(seconds: 10).label, in: window))
-                await ScreenImage.settle()
-                #expect(session.thinkingTime == .fixed(seconds: 10))
+                #expect(after.contains(localized("search.limit")))
+                #expect(!after.contains(ThinkingTime.fixed(seconds: 3).label))
             }
             #expect(ScreenImage.activate(localized("punish.toggle"), in: window))
             await ScreenImage.settle()
@@ -135,11 +155,14 @@ struct DeckGallery {
         #expect(GameScreen.boardSide(in: CGSize(width: 440, height: 600)) == 440)
     }
 
-    @Test func tillingShowsPlayedAndRefusedCostBarsWithoutHintButtons() async throws {
+    @Test func tillingShowsOnlyCompactReturnedAttempts() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        let afterD4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
         let engine = ScriptedEngine([Analysis(depth: 20, lines: [
             Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
             Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"])
+        ])], byPosition: [afterD4.state.fen: Analysis(depth: 12, lines: [
+            Line(score: .centipawns(-300), uciMoves: ["d7d5"], san: ["d5"])
         ])])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
@@ -154,10 +177,13 @@ struct DeckGallery {
         let rendered = await ScreenImage.write("tilling-cost-history") {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says("1. d4"))
-        #expect(rendered.says("1. e4"))
+        #expect(rendered.says(localized("till.returned")))
+        #expect(rendered.says("d4"))
+        #expect(!rendered.says("1. d4"))
+        #expect(!rendered.says("1. e4"))
         #expect(rendered.says("−25.1%"))
-        #expect(rendered.says("−0.0%"))
+        #expect(!rendered.says("−0.0%"))
+        #expect(rendered.says(localized("standing.change", "+0.0%")))
         #expect(rendered.says(localized("standing.bar")))
         #expect(!rendered.says("提示 1"))
         #expect(!rendered.says("提示 2"))
@@ -279,11 +305,15 @@ struct DeckGallery {
 
     @Test func punishmentShowsPromptAndExplicitExits() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        let afterD4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
         let engine = ScriptedEngine([Analysis(depth: 20, lines: [
             Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
             Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"])
+        ])], byPosition: [afterD4.state.fen: Analysis(depth: 12, lines: [
+            Line(score: .centipawns(-300), uciMoves: ["d7d5"], san: ["d5"])
         ])])
         let session = GameSession.fresh(game, engine: engine)
+        defer { session.suspend() }
         session.setIntercept(10)
         session.findsPunishment = true
         session.play(try #require(game.state.move(matching: "d2d4")))

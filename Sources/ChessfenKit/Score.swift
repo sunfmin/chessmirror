@@ -6,7 +6,7 @@ import Foundation
 /// be decided once and never drifted from. Stockfish reports from the side to move's point
 /// of view; PGN's `[%eval]` is White-relative; a curve is unreadable unless every point
 /// agrees. The flip happens at the engine boundary and nowhere else.
-public enum Score: Hashable, Sendable {
+public enum Score: Hashable, Sendable, Codable {
     /// Hundredths of a pawn. Positive favours White.
     case centipawns(Int)
     /// Mate in this many moves. Positive means White mates, negative means White is mated.

@@ -479,3 +479,6 @@
 "discovery.tacticFound" = "Tactical opportunity found";
 "book.recorded" = "Saved to mistake book · %d recorded";
 "standing.change" = "Win chance change this move %@";
+"board.faceToFace" = "Face to face";
+"till.returned" = "Returned";
+"search.limit" = "10 s / depth 20";

@@ -7,6 +7,7 @@ import Synchronization
 /// the real `retune`, the real `record`, the real Score written against the real ply — what is
 /// faked is only the one thing in the app that cannot be asked twice for the same answer.
 final class ScriptedEngine: Engine {
+    let positionSearches = PositionSearches()
     /// The snapshots every search reports, in order, deepest last — a real search deepens, and a
     /// screen that redraws on each snapshot should be made to do it.
     private let snapshots: [Analysis]
@@ -23,6 +24,8 @@ final class ScriptedEngine: Engine {
     /// budget is the whole of how hard the engine was asked to play (docs/adr/0009).
     private let asked = Mutex<[SearchBudget]>([])
     private let askedLines = Mutex<[Int]>([])
+    private let askedPositions = Mutex<[String]>([])
+    var positions: [String] { askedPositions.withLock { $0 } }
 
     /// Every search asked for so far, in order, each with the clock it was given.
     var budgets: [SearchBudget] { asked.withLock { $0 } }
@@ -59,10 +62,13 @@ final class ScriptedEngine: Engine {
     func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
         asked.withLock { $0.append(budget) }
         askedLines.withLock { $0.append(lines) }
+        askedPositions.withLock { $0.append(game.state.fen) }
         if let stream = controlled?(game, budget) { return stream }
         let scripted = byBudget[budget] ?? byPosition[game.state.fen].map { [$0] } ?? snapshots
         let reachedDepth: Bool
-        if case .depth(let target) = budget {
+        if case .timeOrDepth = budget {
+            reachedDepth = true
+        } else if case .depth(let target) = budget {
             reachedDepth = scripted.contains { $0.depth >= target }
         } else {
             reachedDepth = false

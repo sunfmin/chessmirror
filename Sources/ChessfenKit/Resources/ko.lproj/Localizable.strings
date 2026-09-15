@@ -406,3 +406,8 @@
 "discovery.view" = "보기";
 "discovery.mateFound" = "메이트 발견";
 "discovery.tacticFound" = "전술 기회 발견";
+"board.faceToFace" = "마주 보기";
+"till.returned" = "되돌림";
+"search.limit" = "10초 / 깊이 20";
+"book.recorded" = "오답 노트에 %d개 추가됨";
+"standing.change" = "이번 수의 승률 변화 %@";

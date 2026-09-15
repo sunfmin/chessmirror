@@ -126,7 +126,7 @@ struct GameScreen: View {
                     settlement
                 }
                 .chromeType()
-                if session.hasTillingFeedback { tillingHistory }
+                if session.hasTillingFeedback { attemptFeedback }
                 if !session.isTilling, !findings.isEmpty { deck }
               }
               .frame(width: proxy.size.width)
@@ -135,9 +135,6 @@ struct GameScreen: View {
             .frame(maxWidth: .infinity)
         }
         .background(Palette.parchment)
-        .task(id: "\(session.hasTillingFeedback)-\(session.isTilling)-\(engine.isReady)-\(session.game.uciMoves.joined(separator: " "))") {
-            await session.fillMissingTillingJudgements()
-        }
         .task(id: "\(session.isWeighing)-\(session.hasTillingFeedback)-\(engine.isReady)-\(session.game.uciMoves.joined(separator: " "))") {
             await session.measureLatestMoveChange()
         }
@@ -170,6 +167,15 @@ struct GameScreen: View {
                 }
                 .accessibilityLabel(localized("library.games"))
                 Spacer(minLength: 0)
+                Button { session.isFaceToFace.toggle() } label: {
+                    Image(systemName: "person.2.fill")
+                        .foregroundStyle(session.isFaceToFace ? Palette.analysis : Palette.inkSoft)
+                        .frame(width: 44, height: 44)
+                        .background(session.isFaceToFace ? Palette.analysis.opacity(0.10) : .clear,
+                                    in: RoundedRectangle(cornerRadius: 8))
+                }
+                .accessibilityLabel(localized("board.faceToFace"))
+                .accessibilityValue(localized(session.isFaceToFace ? "screen.on" : "till.off"))
                 flip.frame(width: 44, height: 44)
                 Menu {
                     // 复盘 is not here. It was a destination, then a switch in the navigation bar,
@@ -193,21 +199,6 @@ struct GameScreen: View {
                     } label: {
                         Label(localized("edit.title"), systemImage: "hand.point.up.left")
                     }
-                    // Time is the only dial (docs/adr/0009), and here it is spent per ply: a
-                    // deeper pass is a better opinion and a longer wait, and nothing else changes.
-                    // It used to be a 重算 menu on a row of its own under the report, next to a
-                    // sentence naming the depth. The depth is said once now, beside the score it
-                    // produced, and changing it is here with the other things done rarely.
-                    Menu {
-                        ForEach([10, 14, 18, 22], id: \.self) { depth in
-                            Button(localized("game.depth", depth)) {
-                                session.startReview(depth: depth)
-                            }
-                        }
-                    } label: {
-                        Label(localized("game.rescore"), systemImage: "arrow.clockwise")
-                    }
-                    .disabled(session.reviewPass?.isRunning == true || !engine.isReady)
                     Toggle(isOn: $isSoundOn) {
                         Label(
                             localized("game.sound"),
@@ -350,7 +341,7 @@ struct GameScreen: View {
                 } else if let change = session.moveChange {
                     let value = change.percent(for: session.feedbackColour)
                     let rounded = (value * 10).rounded() / 10
-                    let label = String(format: "%+.1f%%", rounded == 0 ? 0 : rounded)
+                    let label = String(format: "%+.1f%%", rounded == 0 ? 0.0 : rounded)
                     Text(label)
                         .font(.caption.weight(.medium).monospacedDigit())
                         .foregroundStyle(rounded > 0 ? Palette.analysis : rounded < 0 ? Palette.alarm : Palette.inkSoft)
@@ -381,10 +372,6 @@ struct GameScreen: View {
                 evalTrack
             }
 
-            if let refusal = session.refused, !session.isTilling {
-                Text(refusal.sentence).font(.caption).foregroundStyle(Palette.alarm)
-            }
-
         }
         // A minimum rather than a height: the row used to be cut in half by its own frame the
         // moment the reader's text was bigger than the default, and the strip is the one place the
@@ -393,7 +380,7 @@ struct GameScreen: View {
         .animation(.easeInOut(duration: 0.35), value: session.moveChange)
     }
 
-    private var tillingHistory: some View {
+    private var attemptFeedback: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let exercise = session.activePunishment {
                 Text(localized(exercise.wasIncorrect ? "punish.again" : "punish.prompt"))
@@ -406,51 +393,40 @@ struct GameScreen: View {
             if let answer = session.punishment?.revealedMove {
                 Text(localized("punish.answer", answer))
             }
-            ForEach(session.game.plies.indices, id: \.self) { index in
-                let ply = session.game.plies[index]
-                if ply.judgement != nil || session.controller(for: session.game.mover(ofPly: index + 1)) == .hand {
-                    VStack(spacing: 5) {
-                        ForEach(Array(ply.tried.enumerated()), id: \.offset) { _, tried in
-                            moveCostRow(san: tried.san, number: session.game.moveNumber(ofPly: index + 1),
-                                        drop: tried.drop, refused: true)
+            if !session.visibleAttempts.isEmpty {
+                HStack(spacing: 10) {
+                    Label(localized("till.returned"), systemImage: "arrow.uturn.backward")
+                        .font(.caption)
+                        .foregroundStyle(Palette.inkSoft)
+                        .fixedSize()
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 6) {
+                            ForEach(Array(session.visibleAttempts.reversed().enumerated()), id: \.offset) { _, tried in
+                                HStack(spacing: 8) {
+                                    Text(tried.san).font(.system(.caption, design: .serif).weight(.semibold))
+                                        .foregroundStyle(Palette.ink)
+                                    Text(String(format: "−%.1f%%", tried.drop))
+                                        .font(.caption.monospacedDigit().weight(.medium))
+                                        .foregroundStyle(Palette.alarm)
+                                }
+                                .padding(.horizontal, 10).padding(.vertical, 7)
+                                .background(Palette.raised, in: RoundedRectangle(cornerRadius: 6))
+                                .overlay(alignment: .bottom) {
+                                    UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
+                                        .fill(Palette.alarm.opacity(0.35)).frame(height: 2)
+                                }
+                                .accessibilityElement(children: .combine)
+                            }
                         }
-                        moveCostRow(san: ply.san, number: session.game.moveNumber(ofPly: index + 1),
-                                    drop: (ply.judgement?.depth ?? 0) >= GameSession.interceptDepth
-                                        ? ply.judgement?.drop
-                                        : ((session.game.reviewDepth ?? 0) >= GameSession.interceptDepth
-                                            ? session.game.drop(atPly: index + 1) : nil))
                     }
-                    .padding(.vertical, 6)
-                    .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+                    .scrollIndicators(.hidden)
                 }
-            }
-            ForEach(Array(session.pendingAttempts.enumerated()), id: \.offset) { _, tried in
-                moveCostRow(san: tried.san, number: session.viewed.state.fullmoveNumber,
-                            drop: tried.drop, refused: true)
+                .padding(.vertical, 8)
             }
         }
         .font(.footnote)
         .padding(.horizontal, 13)
-        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func moveCostRow(san: String, number: Int, drop: Double?, refused: Bool = false) -> some View {
-        HStack(spacing: 10) {
-            Text("\(number). \(san)")
-                .font(.footnote.weight(.medium))
-                .monospacedDigit()
-                .frame(width: 78, alignment: .leading)
-            ProgressView(value: min(100, max(0, drop ?? 0)), total: 100)
-                .tint(refused ? Palette.alarm : Palette.analysis)
-                .opacity(drop == nil ? 0.35 : 1)
-                .accessibilityHidden(true)
-            Text(drop.map { String(format: "−%.1f%%", max(0, $0)) } ?? "—")
-                .monospacedDigit()
-                .frame(width: 62, alignment: .trailing)
-        }
-        .foregroundStyle(refused ? Palette.alarm : Palette.ink)
-        .accessibilityElement(children: .combine)
     }
 
     /// Interception is the page's only mode switch. Assessment and explicit answers are separate.
@@ -499,7 +475,6 @@ struct GameScreen: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { session.adviseAgain() }
     }
 
     /// How far the search has got, 0...1, by the same reckoning the hold button uses.
@@ -514,20 +489,7 @@ struct GameScreen: View {
     /// account for itself: a Depth while it climbs, and an offer of another ten seconds when it
     /// has stopped climbing.
     @ViewBuilder private var effort: some View {
-        if session.isAdviceSpent {
-            Button { session.adviseAgain() } label: {
-                HStack(spacing: 3) {
-                    Image(systemName: "arrow.clockwise").font(.system(size: 9))
-                    Text(localized("search.again")).font(.caption.weight(.semibold))
-                }
-                .foregroundStyle(Palette.parchment)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Palette.analysis, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(localized("search.again"))
-        } else if let depth = session.searchProgress?.depth, depth > 0 {
+        if let depth = session.searchProgress?.depth, depth > 0 {
             Text(localized("game.depth", depth))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.inkSoft)
@@ -562,7 +524,7 @@ struct GameScreen: View {
                 // The engine's clock, and only where it decides something: how long this side's
                 // next move takes. It is the only dial in the app (docs/adr/0009).
                 if session.controller(for: colour) == .engine {
-                    Text(session.thinkingTime.label)
+                    Text(localized("search.limit"))
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -733,22 +695,10 @@ struct GameScreen: View {
             .frame(minHeight: 36)
 
             if session.controller(for: colour) == .engine {
-                VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
                     Text(localized("game.perMove")).foregroundStyle(Palette.inkSoft)
-                    HStack(spacing: 4) {
-                        ForEach(ThinkingTime.offered, id: \.self) { time in
-                            Button { session.setThinkingTime(time) } label: {
-                                Text(time.label)
-                                    .font(.caption)
-                                    .foregroundStyle(session.thinkingTime == time ? Palette.analysis : Palette.inkSoft)
-                                    .frame(maxWidth: .infinity, minHeight: 30)
-                                    .background(session.thinkingTime == time ? Palette.analysis.opacity(0.12) : .clear,
-                                                in: RoundedRectangle(cornerRadius: 6))
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(time == .mirrored && session.isSelfPlaying)
-                        }
-                    }
+                    Spacer()
+                    Text(localized("search.limit")).foregroundStyle(Palette.ink)
                 }
                 .padding(.vertical, 5)
             }
@@ -1555,6 +1505,7 @@ struct GameScreen: View {
         BoardView(
             pieces: boardPieces,
             orientation: session.orientation,
+            isFaceToFace: session.isFaceToFace,
             lastMove: session.boardLastMove,
             checks: session.board.state.checkSquares,
             // The doubtful squares stay ringed on the board being played on, right up until the

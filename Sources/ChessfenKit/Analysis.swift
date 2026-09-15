@@ -1,5 +1,5 @@
 /// One principal variation: the moves the engine expects and the Score they lead to.
-public struct Line: Hashable, Sendable {
+public struct Line: Hashable, Sendable, Codable {
     /// White-relative, like every Score in this package.
     public let score: Score
     /// UCI moves from the analysed Position onwards. Never empty for a real Line.
@@ -21,7 +21,7 @@ public struct Line: Hashable, Sendable {
 /// A snapshot, never a verdict: an Analysis runs unbounded, so a later one at a greater
 /// Depth may say something different, and often does. The UI is expected to replace what
 /// it is showing each time one of these arrives.
-public struct Analysis: Hashable, Sendable {
+public struct Analysis: Hashable, Sendable, Codable {
     public let depth: Int
     /// How far the search looked down the most forcing lines.
     public let selectiveDepth: Int

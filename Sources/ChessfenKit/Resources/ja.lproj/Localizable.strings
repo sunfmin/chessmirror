@@ -406,3 +406,8 @@
 "discovery.view" = "見る";
 "discovery.mateFound" = "メイトを発見";
 "discovery.tacticFound" = "戦術のチャンスを発見";
+"board.faceToFace" = "対面";
+"till.returned" = "差し戻し";
+"search.limit" = "10秒 / 深さ20";
+"book.recorded" = "間違い帳に %d 件追加しました";
+"standing.change" = "この手の勝率変化 %@";

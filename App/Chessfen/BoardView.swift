@@ -81,6 +81,7 @@ struct PieceGlyphView: View {
 struct BoardView: View {
     var pieces: [Square: Piece]
     var orientation: Orientation = .whiteAtBottom
+    var isFaceToFace = false
     /// The move that led here: which squares to tint, and which piece travelled where.
     var lastMove: MoveSquares?
     /// Kings in check and whoever is checking them.
@@ -191,6 +192,7 @@ struct BoardView: View {
                 let position = self.cell(of: item.square)
                 PieceGlyphView(piece: item.piece)
                     .frame(width: cell, height: cell)
+                    .rotationEffect(.degrees(pieceRotation(for: item.piece.colour)))
                     .position(
                         x: (CGFloat(position.column) + 0.5) * cell,
                         y: (CGFloat(position.row) + 0.5) * cell
@@ -204,6 +206,11 @@ struct BoardView: View {
     }
 
     // ------------------------------------------------------------- geometry
+
+    func pieceRotation(for colour: PieceColour) -> Double {
+        let top: PieceColour = orientation == .whiteAtBottom ? .black : .white
+        return isFaceToFace && colour == top ? 180 : 0
+    }
 
     private func square(at point: CGPoint, side: CGFloat) -> Square? {
         guard side > 0 else { return nil }

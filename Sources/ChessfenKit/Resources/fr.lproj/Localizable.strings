@@ -432,3 +432,8 @@
 "discovery.view" = "Voir";
 "discovery.mateFound" = "Mat trouvé";
 "discovery.tacticFound" = "Occasion tactique trouvée";
+"board.faceToFace" = "Face à face";
+"till.returned" = "Reprise";
+"search.limit" = "10 s / profondeur 20";
+"book.recorded" = "%d ajoutés au carnet d’erreurs";
+"standing.change" = "Variation de probabilité pour ce coup %@";

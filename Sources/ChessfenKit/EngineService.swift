@@ -15,6 +15,7 @@ import Synchronization
 /// an `AsyncStream` continuation, both of which are safe to touch from anywhere, and they
 /// never call back into the engine.
 public final class EngineService: @unchecked Sendable {
+    public let positionSearches: PositionSearches
     public struct Configuration: Sendable {
         /// Cores to search on. Two are left for the UI and the OS, because a phone that has
         /// stopped answering taps is not a better chess app.
@@ -35,18 +36,11 @@ public final class EngineService: @unchecked Sendable {
         /// `continuationHistory[2][2]` alone being 8 MiB, so the thread count multiplies the
         /// engine's footprint as much as it divides its thinking time.
         ///
-        /// Under the Simulator `activeProcessorCount` is the *Mac's*, so a 14-core machine
-        /// would start twelve search threads — three times what the phone the code is being
-        /// written for will use — on the same machine as Xcode. Two is enough to tell whether
-        /// the app works, which is all the Simulator is for. A device is at or under the
-        /// other cap already, so nothing about how the app plays in someone's hands changes.
+        /// Two search threads on device and simulator: predictable battery/heat rather than
+        /// using every available core to chase a depth whose time limit may already be up.
         static var threadsForThisMachine: Int {
             let spare = max(1, ProcessInfo.processInfo.activeProcessorCount - 2)
-            #if targetEnvironment(simulator)
-                return min(spare, 2)
-            #else
-                return min(spare, 6)
-            #endif
+            return min(spare, 2)
         }
     }
 
@@ -95,7 +89,7 @@ public final class EngineService: @unchecked Sendable {
         static func admits(_ budget: SearchBudget) -> Bool {
             switch budget {
             case .untilStopped: return false
-            case .time, .depth, .nodes: return true
+            case .time, .timeOrDepth, .depth, .nodes: return true
             }
         }
     }
@@ -122,6 +116,12 @@ public final class EngineService: @unchecked Sendable {
     public init(
         bigNetURL: URL, smallNetURL: URL, configuration: Configuration = Configuration()
     ) throws {
+        #if os(iOS) && !targetEnvironment(simulator)
+        positionSearches = PositionSearches(storage: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appending(path: "live-stockfish18-10s20-v1.json"))
+        #else
+        positionSearches = PositionSearches()
+        #endif
         cf_global_init()
         var status = CF_ENGINE_OK
         let created = bigNetURL.withUnsafeFileSystemRepresentation { big in
@@ -576,6 +576,9 @@ extension SearchBudget {
                 + duration.components.attoseconds / 1_000_000_000_000_000
             limits.movetimeMs = Int32(clamping: milliseconds)
         case .depth(let depth):
+            limits.depth = Int32(clamping: depth)
+        case .timeOrDepth(let duration, let depth):
+            limits = SearchBudget.time(duration).cLimits
             limits.depth = Int32(clamping: depth)
         case .nodes(let nodes):
             limits.nodes = nodes

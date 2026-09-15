@@ -22,12 +22,17 @@ through your own iCloud Drive.
   Feedback remains visible while off; answers are explicit multi-move reveals, never a single
   recommendation arrow or a separate practice/analysis eye switch.
   Refused moves return to their original position and become PGN comments on the eventual move.
-  Every live human move waits for a depth-20 evaluation of the resulting position before the
-  opponent starts. Turning interception off disables rollback, not this assessment gate.
-- Always-visible advantage and per-move cost bars in No Slips, including refused attempts.
-  Completed depth-20 judgements are preserved in PGN; older records are backfilled locally.
+  Every live human move waits for the resulting position's evaluation before the opponent starts.
+  Each position is searched once, stopping at 10 seconds or depth 20, whichever comes first.
+  Judgement, advantage, tactics and opponent replies share the result; device caches survive relaunch.
+  Turning interception off disables rollback, not this assessment gate. Search uses at most two
+  threads by default, and opening the game never launches an automatic historical scoring pass.
+- The advantage bar remains visible. Refused attempts appear as a compact horizontal strip
+  for the current move, with SAN and percentage cost, instead of a whole-game cost list.
+  Judgements preserve their achieved depth in PGN. The history curve still includes the last move.
+- A face-to-face toolbar toggle rotates the top player's pieces for over-the-board play on a phone.
 - An optional opponent-reply exercise on a temporary board. Replies within two percentage
-  points of the best depth-20 evaluation pass; retry, Reveal, and Skip leave the real game intact.
+  points of the shared bounded evaluation pass; retry, Reveal, and Skip leave the real game intact.
 - Import a selected game and score every move locally at depth 16, asynchronously. Imported
   evaluations prioritize suspected mistakes but never exclude moves from the local pass.
   Choose which side to track when opening an imported game; original player names are preserved.

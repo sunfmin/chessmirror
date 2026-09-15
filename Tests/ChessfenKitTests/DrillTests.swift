@@ -49,7 +49,7 @@ private func engine(
 @Test func incompletePracticeJudgementDoesNotRecordAPass() async throws {
     let engine = ScriptedEngine([Analysis(depth: 19, lines: [
         Line(score: .centipawns(0), uciMoves: ["b8c6"], san: ["Nc6"])
-    ])])
+    ], isPartial: true)])
     let log = temporaryLog()
     defer { try? FileManager.default.removeItem(at: log.url) }
     let drill = try #require(Drill(position: afterNf3, engine: engine, log: log))

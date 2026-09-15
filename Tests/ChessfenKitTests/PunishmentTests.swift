@@ -45,6 +45,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
 
     session.setIntercept(nil)
     session.play(try #require(game.state.move(matching: "e2e4")))
+    await session.waitForJudgement()
     #expect(session.game != game)
     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -79,7 +80,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
         await exercise.waitForJudgement()
         #expect(!exercise.isJudging)
         #expect(exercise.isFinished == accepted)
-        #expect(engine.budgets == [.depth(20), .depth(20)])
+        #expect(engine.budgets == [PositionSearches.budget, PositionSearches.budget])
     }
 }
 
@@ -95,10 +96,15 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
 @MainActor
 @Test func sessionPunishmentRestoresGameAndRecordsOnlyTheOriginalAttempt() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let afterD4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
+    let afterReply = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4", "e7e5"]))
     let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
         Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"])
-    ])])
+    ])], byPosition: [
+        afterD4.state.fen: Analysis(depth: 12, lines: [.init(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])]),
+        afterReply.state.fen: Analysis(depth: 12, lines: [.init(score: .centipawns(-300), uciMoves: ["e2e4"], san: ["e4"])])
+    ])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
     #expect(!session.findsPunishment)
@@ -125,6 +131,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     #expect(session.board == game)
     #expect(session.board.state.sideToMove == .white)
     session.play(try #require(game.state.move(matching: "e2e4")))
+    await session.waitForJudgement()
     let read = try PGN(parsing: session.pgn.text)
     try #require(read.game.uciMoves == ["e2e4"])
     #expect(read.game.plies[0].tried.count == 1)

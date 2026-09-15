@@ -11,6 +11,8 @@ public enum SearchBudget: Hashable, Sendable {
     case untilStopped
     /// Mirrored Time: think for about as long as the player took.
     case time(Duration)
+    /// Stop when either limit is reached, without starting another search.
+    case timeOrDepth(Duration, Int)
     case depth(Int)
     case nodes(UInt64)
 
@@ -37,6 +39,7 @@ public enum SearchBudget: Hashable, Sendable {
 /// The whole of what the app asks of an engine, and no more: analysis for the game screen,
 /// evaluate/review for the Review, and the pause gate for the app leaving the front.
 public protocol Engine: AnyObject, Sendable {
+    var positionSearches: PositionSearches { get }
     var isPaused: Bool { get }
     /// `lines` is how many candidate Lines each snapshot carries. A search whose only
     /// product is a move needs one; advice shown to a player wants the three the panel

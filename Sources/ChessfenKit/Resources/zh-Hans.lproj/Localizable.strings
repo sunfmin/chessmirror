@@ -453,3 +453,6 @@
 "discovery.tacticFound" = "发现战术机会";
 "book.recorded" = "已记入错题本 · %d 条记录";
 "standing.change" = "本步胜率变化 %@";
+"board.faceToFace" = "面对面";
+"till.returned" = "已退回";
+"search.limit" = "10 秒 / 20 层";

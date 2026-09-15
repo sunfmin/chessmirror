@@ -146,7 +146,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("手动"))
         #expect(rendered.says("黑方"))
         #expect(rendered.says("引擎"))
-        #expect(rendered.says("跟着我"), "and the engine's clock, where the engine is playing")
+        #expect(rendered.says(localized("search.limit")), "the shared search limit stays visible")
         #expect(
             !rendered.says("谁走"),
             "but the chips that change them stay folded once there are moves"
@@ -219,9 +219,14 @@ struct GameScreenScreenshots {
         )
         // The number this test is about is the engine's opinion, so it is turned on.
         session.setPractising(false)
+        let gate = AsyncStream<Analysis>.makeStream()
+        gate.continuation.yield(Self.opinion(.centipawns(38), best: ("d2d4", "d4")))
+        defer { gate.continuation.finish(); session.suspend() }
 
         let rendered = await ScreenImage.write("game-engine-thinking") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+            screen(session, engine: ScriptedEngine([], controlled: { position, _ in
+                position.state.fen == game.state.fen ? gate.stream : nil
+            }))
         }
 
         #expect(session.isThinking, "the engine's own turn starts the moment the screen appears")
@@ -229,7 +234,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("+0.38"))
         #expect(rendered.says("白方"))
         #expect(rendered.says("引擎"))
-        #expect(rendered.says("跟着我"))
+        #expect(rendered.says(localized("search.limit")))
         #expect(rendered.says("手动"), "and the side a person is holding says so too")
         #expect(
             !session.canPlayBestMove,
@@ -240,23 +245,20 @@ struct GameScreenScreenshots {
     /// Ten seconds later. The advisory search has run its Stint and stopped itself, which is the
     /// whole point of a Stint (docs/adr/0020) — and the strip under the board has to say so, or a
     /// number that quietly stopped moving reads as an engine that died.
-    @Test("when its Stint runs out the strip keeps the answer and offers another ten seconds")
+    @Test("a finished search keeps its answer without offering a duplicate search")
     func adviceSpent() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(
             game, controllers: [.white: .hand, .black: .engine]
         )
         session.setPractising(false)
-        // The app's Stint is ten seconds. A screenshot that waited ten seconds is a screenshot
-        // nobody runs, so this one is over before the screen has finished settling.
-        session.adviceStint = .milliseconds(100)
 
         let rendered = await ScreenImage.write("game-advice-spent") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
         #expect(session.isAdviceSpent, "the search stopped on its own rather than running on")
-        #expect(rendered.says("再算 10 秒"), "and the strip offers the one thing left to do")
+        #expect(!rendered.says("再算 10 秒"), "the same position must never be searched again")
         #expect(rendered.says("+0.38"), "with what it found still standing")
         #expect(rendered.says("优势条"), "and the bar it found it for")
         #expect(!rendered.says("建议 d4"), "finishing a search does not reveal a finding")
@@ -270,9 +272,14 @@ struct GameScreenScreenshots {
         let session = GameSession.fresh(
             game, controllers: [.white: .engine, .black: .engine]
         )
+        let gate = AsyncStream<Analysis>.makeStream()
+        gate.continuation.yield(Self.opinion(.centipawns(38), best: ("e2e4", "e4")))
+        defer { gate.continuation.finish(); session.suspend() }
 
         let rendered = await ScreenImage.write("game-self-play") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+            screen(session, engine: ScriptedEngine([], controlled: { position, _ in
+                position.state.fen == game.state.fen ? gate.stream : nil
+            }))
         }
 
         #expect(session.thinkingTime == .fixed(seconds: 3), "three seconds a move until told else")
@@ -281,8 +288,8 @@ struct GameScreenScreenshots {
         #expect(rendered.says("引擎"))
         // The current clock stays visible; alternative clocks stay in the folded settings.
         #expect(!rendered.says("每步"))
-        #expect(rendered.says("3 秒"))
-        #expect(!rendered.says("10 秒"))
+        #expect(!rendered.says("3 秒"))
+        #expect(rendered.says(localized("search.limit")))
         #expect(!rendered.says("跟着我"))
         #expect(rendered.says("马上走"), "with the way to stop waiting for the move on the clock")
     }

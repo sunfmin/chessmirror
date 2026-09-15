@@ -6,6 +6,7 @@ import Testing
 
 /// An engine that says nothing. Enough for `opened` to hand the other side over to one.
 private final class SilentEngine: Engine, @unchecked Sendable {
+    let positionSearches = PositionSearches()
     var isPaused = false
     func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
         AsyncStream { _ in }

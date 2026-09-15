@@ -72,7 +72,7 @@ public struct DrillVerdict: Hashable, Sendable {
         case picked
     }
 
-    /// Practice uses the same complete depth-20 judgement as live interception.
+    /// The depth ceiling shared with live interception (the ten-second limit can win).
     public static let depth = GameSession.interceptDepth
 
     public let position: PositionKey
@@ -152,12 +152,8 @@ public struct DrillVerdict: Hashable, Sendable {
         isJudging = false
     }
 
-    /// Asks the engine twice at one depth — the position, and the position after the move — and
-    /// settles the difference.
-    ///
-    /// Twice rather than once with a wide MultiPV: the played move may not be in the engine's
-    /// first three lines at all, and a move it never considered is exactly the move worth
-    /// measuring (docs/adr/0016 is why both searches are the same depth).
+    /// Reuses the two bounded position results and settles their difference. A move outside
+    /// the baseline's candidate lines still has a independently evaluated resulting position.
     private func judge(_ move: Move, san: String, before: Game, after: Game) async {
         defer {
             if !Task.isCancelled {
@@ -170,17 +166,21 @@ public struct DrillVerdict: Hashable, Sendable {
         }
         guard let engine else { return }
         var best: Line?
-        for await analysis in engine.analyse(before, budget: .depth(Self.depth), lines: 1) {
+        var beforeDepth = 0
+        for await analysis in engine.analysePosition(before) {
             guard !Task.isCancelled else { return }
-            if analysis.depth >= Self.depth, !analysis.isPartial { best = analysis.best ?? best }
+            if !analysis.isPartial { best = analysis.best ?? best; beforeDepth = analysis.depth }
         }
         var afterScore: Score?
-        if after.isOver {
-            afterScore = await engine.evaluate(after, budget: .depth(Self.depth))
+        var afterDepth = beforeDepth
+        if after.state.outcome == .checkmate {
+            afterScore = .mate(in: after.state.sideToMove == .white ? -1 : 1)
+        } else if after.state.outcome.isDraw {
+            afterScore = .centipawns(0)
         } else {
-            for await analysis in engine.analyse(after, budget: .depth(Self.depth), lines: 1) {
+            for await analysis in engine.analysePosition(after) {
                 guard !Task.isCancelled else { return }
-                if analysis.depth >= Self.depth, !analysis.isPartial { afterScore = analysis.best?.score }
+                if !analysis.isPartial { afterScore = analysis.best?.score; afterDepth = analysis.depth }
             }
         }
         guard !Task.isCancelled else { return }
@@ -191,7 +191,7 @@ public struct DrillVerdict: Hashable, Sendable {
         let wanted = best.flatMap { before.reading(of: $0.san) }?.opening
         startingScore = best?.score
         if let afterScore {
-            game.setJudgement(.init(drop: drop, score: afterScore, depth: Self.depth), atPly: 0)
+            game.setJudgement(.init(drop: drop, score: afterScore, depth: afterDepth), atPly: 0)
         }
         settle(
             DrillVerdict(
