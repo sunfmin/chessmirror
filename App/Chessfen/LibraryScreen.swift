@@ -9,8 +9,6 @@ import UniformTypeIdentifiers
 /// There is no review here. A Review is not a place: it is what the engine's opinion switched on
 /// looks like, on the same board the game is played on (docs/adr/0015).
 enum Step: Hashable {
-    /// One collection, addressed by its name — which is also all a collection is.
-    case collection(String)
     case confirm(PositionProposal)
     case game(GameSession)
     /// The tally over the library. It carries nothing, because it is counted when it is opened
@@ -35,17 +33,7 @@ struct LibraryScreen: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var isRecognising = false
     @State private var failure: (title: String, message: String)?
-    /// The import sheet being shown, and the collection it is pinned to — nil when opened
-    /// from the library, where the collection is asked for instead.
-    @State private var importTarget: ImportTarget?
-
-    private struct ImportTarget: Identifiable {
-        let collection: String?
-        var id: String { collection ?? "library" }
-    }
-    /// The collection being renamed, and the name being typed for it.
-    @State private var renamingCollection: String?
-    @State private var collectionDraft = ""
+    @State private var isImporting = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -85,13 +73,9 @@ struct LibraryScreen: View {
                 }
             }
             .sheet(isPresented: $isAboutShowing) { AboutScreen() }
-            .sheet(item: $importTarget) { target in
-                ImportSheet(targetCollection: target.collection)
-            }
+            .sheet(isPresented: $isImporting) { ImportSheet() }
             .navigationDestination(for: Step.self) { step in
                 switch step {
-                case .collection(let name):
-                    CollectionScreen(name: name, path: $path)
                 case .confirm(let proposal):
                     ConfirmPositionScreen(proposal: proposal, path: $path)
                 case .game(let session):
@@ -146,16 +130,6 @@ struct LibraryScreen: View {
             Button(localized("ok")) { failure = nil }
         } message: {
             Text(failure?.message ?? "")
-        }
-        .alert(localized("collection.rename"), isPresented: .constant(renamingCollection != nil)) {
-            TextField(localized("collection.name"), text: $collectionDraft)
-            Button(localized("ok")) {
-                if let old = renamingCollection, let name = trimmed(collectionDraft) {
-                    library.renameCollection(old, to: name)
-                }
-                renamingCollection = nil
-            }
-            Button(localized("cancel"), role: .cancel) { renamingCollection = nil }
         }
     }
 
@@ -252,7 +226,7 @@ struct LibraryScreen: View {
             .buttonStyle(.plain)
 
             Button {
-                importTarget = ImportTarget(collection: nil)
+                isImporting = true
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "link")
@@ -268,11 +242,12 @@ struct LibraryScreen: View {
         }
     }
 
-    /// The library: the collections as cards, then the games nobody has filed.
+    /// The games, as one flat list.
     ///
-    /// A collection stays shut. It is a thing you go into — fifty positions spilled out here would
-    /// bury the ways in, and the unfiled games under them. Unfiled games are not a collection and do
-    /// not become one, so they stay exactly as they were: a list.
+    /// Flat, and that is the change: a game used to be a work that got curated into a collection,
+    /// and it is raw material now — nobody curates the source of their own mistakes (docs/adr/0028).
+    /// What a person looks for here is the game they just played, so the order is the order they
+    /// arrived in and there is nothing to open first.
     private var games: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(localized("library.games")).eyebrow().padding(.top, 6)
@@ -285,65 +260,7 @@ struct LibraryScreen: View {
                     .padding(.vertical, 10)
             }
 
-            ForEach(library.collections) { collection in
-                if let name = collection.name {
-                    collectionCard(name, count: collection.entries.count)
-                }
-            }
-
-            if let unfiled = library.collections.first(where: { $0.name == nil }) {
-                // A heading only once there is something else above it to tell these apart from.
-                if library.collections.count > 1 {
-                    HStack(spacing: 6) {
-                        Image(systemName: "tray").font(.caption2).foregroundStyle(Palette.inkSoft)
-                        Text(localized("library.unfiled"))
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Palette.ink)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.top, 6)
-                    .padding(.horizontal, 2)
-                }
-                GameList(entries: unfiled.entries) { open($0) }
-            }
-        }
-    }
-
-    /// A collection, shut: its name, how many games are in it, and the way in.
-    private func collectionCard(_ name: String, count: Int) -> some View {
-        Button {
-            path.append(.collection(name))
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "folder.fill")
-                    .font(.footnote)
-                    .foregroundStyle(Palette.parchment)
-                    .frame(width: 30, height: 30)
-                    .background(Palette.ink, in: RoundedRectangle(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(name)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.ink)
-                    Text(localized("collection.games", plural: count))
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            .padding(12)
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Button {
-                collectionDraft = name
-                renamingCollection = name
-            } label: {
-                Label(localized("collection.rename"), systemImage: "pencil")
-            }
+            GameList(entries: library.entries) { open($0) }
         }
     }
 
@@ -438,11 +355,7 @@ struct LibraryScreen: View {
     }
 }
 
-/// A list of games, and everything that can be done to one: open it, name it, file it, delete it.
-///
-/// One definition shared by the library's unfiled pile and by a collection's own screen. The row and
-/// its menu were the same thing in both places, and so were the dialogs behind them — which is the
-/// kind of sameness that drifts apart a version at a time.
+/// A list of games, and everything that can be done to one: open it, name it, delete it.
 struct GameList: View {
     let entries: [GameLibrary.Entry]
     let open: (GameLibrary.Entry) -> Void
@@ -451,16 +364,6 @@ struct GameList: View {
 
     @State private var renaming: GameLibrary.Entry?
     @State private var nameDraft = ""
-    @State private var filing: Filing?
-    @State private var collectionDraft = ""
-
-    /// A game on its way into a collection. The collection is nil while it is still being named,
-    /// which is the only difference between filing into one that exists and making a new one.
-    private struct Filing: Identifiable {
-        let entry: GameLibrary.Entry
-        let collection: String?
-        var id: URL { entry.url }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -478,48 +381,6 @@ struct GameList: View {
         } message: {
             Text(localized("game.name.explained"))
         }
-        // Filing asks for the name in the same breath, because in a collection the name *is* the
-        // order: a game put into one without being named sits wherever its timestamp falls, which is
-        // never where it belongs in a set someone is working through.
-        .alert(filingTitle, isPresented: .constant(filing != nil)) {
-            if filing?.collection == nil {
-                TextField(localized("collection.name"), text: $collectionDraft)
-            }
-            TextField(localized("game.name.field.long"), text: $nameDraft)
-            Button(localized("ok")) { commitFiling() }
-            Button(localized("cancel"), role: .cancel) { filing = nil }
-        } message: {
-            Text(localized("game.file.explained"))
-        }
-    }
-
-    private var filingTitle: String {
-        guard let filing else { return "" }
-        guard let collection = filing.collection else { return localized("collection.new") }
-        return localized("game.file.into", collection)
-    }
-
-    private func commitFiling() {
-        defer { filing = nil }
-        guard let filing else { return }
-        let collection = filing.collection ?? trimmed(collectionDraft)
-        guard let collection else { return }
-        // Both tags in one write. Two calls each read the entry's own copy of the PGN, so the second
-        // would carry the first one's change away with it — the name would land and the collection
-        // would silently revert.
-        var changes: [(name: String, value: String?)] = [("Event", collection)]
-        // The name is only touched when something was typed, so backing out of naming does not wipe
-        // a name the game already had.
-        if let name = trimmed(nameDraft) {
-            changes.append((GameLibrary.nameTag, name))
-        }
-        library.setTags(changes, on: filing.entry)
-    }
-
-    private func beginFiling(_ entry: GameLibrary.Entry, into collection: String?) {
-        nameDraft = entry.name ?? ""
-        collectionDraft = ""
-        filing = Filing(entry: entry, collection: collection)
     }
 
     private func row(_ entry: GameLibrary.Entry) -> some View {
@@ -559,125 +420,12 @@ struct GameList: View {
             } label: {
                 Label(localized("rename"), systemImage: "pencil")
             }
-            Menu {
-                // The collections that exist, with a tick against the one this game is already in,
-                // so the menu doubles as the answer to "where is this filed".
-                ForEach(library.collectionNames, id: \.self) { name in
-                    Button {
-                        beginFiling(entry, into: name)
-                    } label: {
-                        Label(name, systemImage: entry.collection == name ? "checkmark" : "folder")
-                    }
-                }
-                Button {
-                    beginFiling(entry, into: nil)
-                } label: {
-                    Label(localized("collection.new.ellipsis"), systemImage: "folder.badge.plus")
-                }
-                if entry.collection != nil {
-                    Button {
-                        library.file(entry, under: nil)
-                    } label: {
-                        Label(localized("collection.remove"), systemImage: "tray.and.arrow.up")
-                    }
-                }
-            } label: {
-                Label(localized("collection.file"), systemImage: "folder")
-            }
             Divider()
             Button(role: .destructive) {
                 library.delete(entry)
             } label: {
                 Label(localized("delete"), systemImage: "trash")
             }
-        }
-    }
-}
-
-/// One collection, open: the games in it, in the order 上一局 and 下一局 walk.
-struct CollectionScreen: View {
-    let name: String
-    @Binding var path: [Step]
-
-    @Environment(EngineHost.self) private var engine
-    @Environment(GameLibrary.self) private var library
-
-    @State private var isRenaming = false
-    @State private var draft = ""
-    @State private var isImporting = false
-
-    private var entries: [GameLibrary.Entry] {
-        library.collections.first { $0.name == name }?.entries ?? []
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(localized("collection.sorted", plural: entries.count))
-                    .font(.footnote)
-                    .foregroundStyle(Palette.inkSoft)
-                    .padding(.bottom, 2)
-
-                if entries.isEmpty {
-                    // Reachable: the last game can be moved out or deleted from this very screen. A
-                    // collection is only the games claiming it, so at that moment it stops existing.
-                    Text(localized("collection.empty"))
-                        .font(.footnote)
-                        .foregroundStyle(Palette.inkSoft)
-                        .padding(.vertical, 10)
-                }
-
-                GameList(entries: entries) { entry in
-                    guard let session = GameSession.opened(entry, engine: engine.service, library: library) else {
-                        return
-                    }
-                    path.append(.game(session))
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
-        }
-        .background(Palette.parchment)
-        .navigationTitle(name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Palette.parchment, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .tint(Palette.analysis)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isImporting = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel(localized("import.title"))
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    draft = name
-                    isRenaming = true
-                } label: {
-                    Image(systemName: "pencil")
-                }
-            }
-        }
-        .sheet(isPresented: $isImporting) {
-            // Pinned to this collection: the whole point of the door is that more games
-            // land in here, not in a new collection (docs/adr/0014).
-            ImportSheet(targetCollection: name)
-        }
-        .alert(localized("collection.rename"), isPresented: $isRenaming) {
-            TextField(localized("collection.name"), text: $draft)
-            Button(localized("ok")) {
-                let fresh = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !fresh.isEmpty, fresh != name else { return }
-                library.renameCollection(name, to: fresh)
-                // This screen is addressed by the name, so the path element has to be re-addressed
-                // with it — otherwise renaming leaves you looking at a collection that no longer
-                // exists, which reads as having lost fifty games.
-                path[path.count - 1] = .collection(fresh)
-            }
-            Button(localized("cancel"), role: .cancel) {}
         }
     }
 }

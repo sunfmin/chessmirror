@@ -5,7 +5,7 @@ import Foundation
 ///
 /// A link — a lichess study page is the canonical case — is downloaded, the multi-game
 /// PGN split into one block per chapter, and each chapter becomes one file in the
-/// library, tagged into a collection. The pure reading lives here as a caseless enum
+/// library, one file per game. The pure reading lives here as a caseless enum
 /// and the one thing with state — where the download has got to — is `ImportSession`,
 /// the same split `BoardIntake` and `GameSession` use.
 public enum PGNImport {
@@ -111,17 +111,13 @@ public enum PGNImport {
 
     /// Everything the download found, ready to be applied.
     public struct ImportPlan: Hashable, Sendable {
-        /// The collection the games suggest for themselves: the lichess `StudyName`,
-        /// or the `Event` a single-game PGN names itself after.
-        public let suggestedCollection: String?
         public let chapters: [ImportChapter]
         /// Chapters that were there but would not parse. Counted rather than fatal —
         /// one broken chapter must not take the whole study down, and the count is
         /// the report (`GameLibrary.Entry` lists unreadable files for the same reason).
         public let unreadable: Int
 
-        public init(suggestedCollection: String?, chapters: [ImportChapter], unreadable: Int) {
-            self.suggestedCollection = suggestedCollection
+        public init(chapters: [ImportChapter], unreadable: Int) {
             self.chapters = chapters
             self.unreadable = unreadable
         }
@@ -129,14 +125,12 @@ public enum PGNImport {
 
     /// What applying a plan did, once it is a matter of record.
     public struct ImportOutcome: Hashable, Sendable {
-        public let collection: String
         public let imported: Int
-        /// Chapters skipped because a game of that name was already in the collection.
+        /// Chapters skipped because that game was already in the library.
         public let skipped: Int
         public let unreadable: Int
 
-        public init(collection: String, imported: Int, skipped: Int, unreadable: Int) {
-            self.collection = collection
+        public init(imported: Int, skipped: Int, unreadable: Int) {
             self.imported = imported
             self.skipped = skipped
             self.unreadable = unreadable
@@ -145,7 +139,7 @@ public enum PGNImport {
         /// The one sentence the screen shows. Each clause only when it happened — a
         /// clean import should say one thing and stop.
         public var message: String {
-            var parts = [localized("import.done", plural: imported, collection)]
+            var parts = [localized("import.done", plural: imported)]
             if skipped > 0 { parts.append(localized("import.done.skipped", plural: skipped)) }
             if unreadable > 0 {
                 parts.append(localized("import.done.unreadable", plural: unreadable))
@@ -392,15 +386,18 @@ public enum PGNImport {
     /// would dedup into one game); `Date` skips PGN's `????.??.??`. Whatever is
     /// left, the chapter's position in the study is its name — "第 N 章" is true
     /// even when nothing else is.
+    ///
+    /// `Event` values that name nothing: this app's own name, which every game it has ever
+    /// written carries, and PGN's two ways of saying it does not know.
+    static let namelessEvents: Set<String> = ["Chessfen", "?", ""]
+
     public static func name(for pgn: PGN, chapter ordinal: Int) -> String {
         if let chapterName = pgn.tag("ChapterName"), !chapterName.isEmpty { return chapterName }
         // A lichess game export before the Event check, because its Event is "Rated Blitz
         // game" — true of a million of them, and a name every game in an import would share.
         // Who played and when is what tells one of somebody's Tuesday games from the next.
         if lichessGameID(of: pgn) != nil, let played = playersAndDate(of: pgn) { return played }
-        if let event = pgn.tag("Event"), !event.isEmpty,
-            !GameLibrary.unfiledEvents.contains(event)
-        {
+        if let event = pgn.tag("Event"), !event.isEmpty, !Self.namelessEvents.contains(event) {
             return event
         }
         let white = pgn.tag("White") ?? "?"
@@ -445,22 +442,9 @@ public enum PGNImport {
         return lichessGameID(from: url)
     }
 
-    /// The collection a plan suggests for itself: the lichess `StudyName`, or the
-    /// `Event` a standalone PGN already names itself after. Nil when neither is a
-    /// name worth keeping, and the person says.
-    public static func suggestedCollection(for pgn: PGN) -> String? {
-        if let studyName = pgn.tag("StudyName"), !studyName.isEmpty { return studyName }
-        if let event = pgn.tag("Event"), !event.isEmpty,
-            !GameLibrary.unfiledEvents.contains(event)
-        {
-            return event
-        }
-        return nil
-    }
-
     // -------------------------------------------------------------- applying
 
-    /// The chapters to write, minus any the target collection already holds.
+    /// The chapters to write, minus any the library already holds.
     ///
     /// Keyed on `ImportChapter.identity`: a lichess game is the game its own URL names, and
     /// everything else is its name. Importing the same study or the same twenty games again
@@ -559,30 +543,26 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
             phase = .failed(.notALink)
             return
         }
-        await run(candidates, suggesting: nil)
+        await run(candidates)
     }
 
     /// The other door: somebody's recent games, newest first.
     ///
     /// The same pipeline — one download, split, one file per game — because a multi-game PGN
-    /// is a multi-game PGN whether lichess calls it a study or an account's history. What
-    /// differs is only the name the collection suggests for itself: these games have no study
-    /// to be named after, and "Rated Blitz game" is not a name.
+    /// is a multi-game PGN whether lichess calls it a study or an account's history.
     public func recent(of user: String, count: Int = PGNImport.recentGames) async {
         guard let url = PGNImport.recentGamesURL(user: user, count: count) else {
             phase = .failed(.notAPlayer)
             return
         }
-        let name = user.trimmingCharacters(in: .whitespacesAndNewlines)
-        let bare = name.hasPrefix("@") ? String(name.dropFirst()) : name
-        await run([url], suggesting: localized("import.collection.player", bare))
+        await run([url])
     }
 
-    private func run(_ candidates: [URL], suggesting suggested: String?) async {
+    private func run(_ candidates: [URL]) async {
         phase = .fetching
         let fetching = fetcher
         // The language goes with it. What comes back off this task is not only a download: it
-        // names the games and the collection, and a detached task starts outside whatever
+        // names the games, and a detached task starts outside whatever
         // language was scoped around this one (docs/adr/0019).
         let language = Speech.language
         phase = await Task.detached(priority: .userInitiated) { () -> Phase in
@@ -604,13 +584,9 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
                         lastError = unreadable > 0 ? .noReadableGames : .notPGN
                         continue
                     }
+                    _ = first
                     return .ready(
-                        PGNImport.ImportPlan(
-                            suggestedCollection: suggested
-                                ?? PGNImport.suggestedCollection(for: first.pgn),
-                            chapters: chapters,
-                            unreadable: unreadable
-                        )
+                        PGNImport.ImportPlan(chapters: chapters, unreadable: unreadable)
                     )
                 }
                 return .failed(lastError)
@@ -618,22 +594,22 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         }.value
     }
 
-    /// Writes the plan's chapters into the library, one file per game, under the
-    /// given collection — the same write path a game played by hand takes
-    /// (`GameLibrary.write`), so an imported game is a game like any other.
+    /// Writes the plan's chapters into the library, one file per game — the same write path a
+    /// game played by hand takes (`GameLibrary.write`), so an imported game is a game like any
+    /// other.
     ///
     /// Synchronous because it is file writes, which are fast and belong where the
     /// library already is; the download was the part worth taking off the main
     /// thread.
     @discardableResult
-    public func apply(into collection: String, library: GameLibrary) -> PGNImport.ImportOutcome? {
+    public func apply(into library: GameLibrary) -> PGNImport.ImportOutcome? {
         guard case let .ready(plan) = phase else { return nil }
         phase = .importing
         // What is already there, by the same identity the incoming games are compared by: a
         // lichess game the library holds is that game whatever it has since been renamed to.
         let existing = Set(
             library.entries.compactMap { entry -> String? in
-                guard entry.collection == collection, let pgn = entry.pgn else { return nil }
+                guard let pgn = entry.pgn else { return nil }
                 return PGNImport.identity(of: pgn, named: entry.name ?? entry.title)
             }
         )
@@ -641,7 +617,6 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         var imported = 0
         for chapter in chapters {
             var pgn = chapter.pgn
-            pgn.setTag("Event", to: collection)
             pgn.setTag(GameLibrary.nameTag, to: chapter.name)
             pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
             // A fresh name per chapter, asked right before the write so two chapters
@@ -650,8 +625,7 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
             if library.write(pgn, to: url) { imported += 1 }
         }
         let outcome = PGNImport.ImportOutcome(
-            collection: collection, imported: imported, skipped: skipped,
-            unreadable: plan.unreadable
+            imported: imported, skipped: skipped, unreadable: plan.unreadable
         )
         phase = .done(outcome)
         return outcome

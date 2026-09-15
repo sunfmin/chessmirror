@@ -42,31 +42,6 @@ func savedRecordFacesSideToMove() throws {
     #expect(try #require(GameSession.opened(standardEntry)).orientation == .whiteAtBottom)
 }
 
-@MainActor @Test("上一局 and 下一局 face the game they open, not the one before")
-func seriesNavigationFacesEachRecord() throws {
-    let standard = try #require(Game(startFEN: PGN.standardStartFEN))
-    let whiteFirst = GameLibrary.Entry(
-        url: URL(filePath: "/games/chessfen-white-first.pgn"),
-        pgn: PGN(game: standard, tags: []),
-        modified: Date(timeIntervalSince1970: 1_786_000_200)
-    )
-    let blackFirst = GameLibrary.Entry(
-        url: URL(filePath: "/games/chessfen-black-first.pgn"),
-        pgn: PGN(
-            game: try #require(Game(startFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1")),
-            tags: []
-        ),
-        modified: Date(timeIntervalSince1970: 1_786_000_300)
-    )
-
-    let session = try #require(GameSession.opened(whiteFirst))
-    #expect(session.orientation == .whiteAtBottom)
-    // A turn around the board is a fact about the game being opened, not a way of working
-    // that carries over from the one before.
-    #expect(try #require(session.next(blackFirst)).orientation == .blackAtBottom)
-    #expect(try #require(session.next(whiteFirst)).orientation == .whiteAtBottom)
-}
-
 @MainActor @Test("handing the first move over turns the board round with it")
 func restartTurnsTheBoard() throws {
     let standard = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -163,36 +138,4 @@ func everyGameStartsSilent() throws {
         modified: Date(timeIntervalSince1970: 1_786_000_600)
     )
     #expect(try #require(GameSession.opened(entry)).isPractising)
-}
-
-/// And it is never found where it was left. Who plays which colour and the engine's clock are ways
-/// of working, set up once for a set of fifty; the engine's opinion is the one thing standing
-/// between a player and the answer, so the next position asks the question again.
-@MainActor @Test("the next game in a collection does not inherit the engine's opinion")
-func theSwitchDoesNotTravel() throws {
-    let standard = try #require(Game(startFEN: PGN.standardStartFEN))
-    let first = try #require(GameSession.opened(
-        GameLibrary.Entry(
-            url: URL(filePath: "/games/chessfen-silent-2.pgn"),
-            pgn: PGN(game: standard, tags: []),
-            modified: Date(timeIntervalSince1970: 1_786_000_700)
-        )
-    ))
-    first.setPractising(false)
-    first.setThinkingTime(.fixed(seconds: 5))
-    first.setController(.engine, for: .white)
-    #expect(!first.isPractising)
-
-    let second = try #require(first.next(
-        GameLibrary.Entry(
-            url: URL(filePath: "/games/chessfen-silent-3.pgn"),
-            pgn: PGN(game: standard, tags: []),
-            modified: Date(timeIntervalSince1970: 1_786_000_800)
-        )
-    ))
-
-    #expect(second.isPractising, "the answer is not waiting for you in the next position")
-    // The ways of working still carry, which is the distinction being drawn.
-    #expect(second.thinkingTime == .fixed(seconds: 5))
-    #expect(second.controller(for: .white) == .engine)
 }

@@ -107,11 +107,10 @@ func pgnSkipsCommentsVariationsAndAnnotations() throws {
     #expect(read.game.reviewScore(atPly: 1) == nil)
     #expect(read.game.plies[1].importedEvaluation == nil)
     #expect(read.tag("Round") == "3")
-    // The Sicilian aside is a real line and is kept. The bracket nested inside it says
-    // "2... d6" where it is white's move, so it is not a line at all — it is dropped, and
-    // dropping it does not cost the rest of the file.
-    #expect(read.game.variations(atPly: 1).map { $0.map(\.san) } == [["c5", "Nf3"]])
-    #expect(read.game.variations(atPly: 2).isEmpty)
+    // The Sicilian aside, and the bracket nested inside it, are stepped over whole: this app
+    // does not write a variation any more and has nowhere to put one it reads (docs/adr/0028).
+    // Stepped over rather than refused — the mainline above is the whole of what the file is for.
+    #expect(read.game.plies.count == 5, "and not one ply of the aside came through")
 }
 
 @Test("a PGN with no FEN tag starts from the standard position")

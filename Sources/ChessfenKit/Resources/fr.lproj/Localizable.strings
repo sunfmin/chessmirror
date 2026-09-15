@@ -84,7 +84,6 @@
 "library.entry.moves" = "%d coups";
 "library.entry.moves.one" = "%d coup";
 "library.entry.unfinished" = "Inachevée";
-"library.entry.branches" = "%d variantes";
 "library.entry.branches.one" = "%d variante";
 
 "check.take.notHere" = "ce coup ne prend rien en %@";
@@ -132,15 +131,14 @@
 "import.network.message" = "Le réseau a échoué pendant le téléchargement : %@";
 "import.network.notHTTP" = "réponse non HTTP";
 
-"import.done" = "%1$d parties importées dans « %2$@ »";
-"import.done.one" = "%1$d partie importée dans « %2$@ »";
+"import.done" = "%d parties importées";
+"import.done.one" = "%d partie importée";
 "import.done.skipped" = "%d déjà présentes ignorées";
 "import.done.skipped.one" = "%d déjà présente ignorée";
 "import.done.unreadable" = "%d autres illisibles";
 "import.done.unreadable.one" = "%d autre illisible";
 "import.name.players" = "%1$@ contre %2$@";
 "import.name.chapter" = "Chapitre %d";
-"import.collection.player" = "Parties de %@";
 
 "ok" = "OK";
 "cancel" = "Annuler";
@@ -172,30 +170,17 @@
 "library.fromStart" = "Partir de la position initiale";
 "library.games" = "Parties";
 "library.empty" = "Jouez un coup et la partie s'inscrira ici.";
-"library.unfiled" = "Non classées";
 "library.recognising" = "Lecture de l'échiquier";
 "library.noPicture" = "Image inaccessible";
 "library.noClipboard.title" = "Aucune image dans le presse-papiers";
 "library.noClipboard.message" = "Prenez une capture d'écran et revenez.";
 
-"collection.name" = "Nom du recueil";
-"collection.rename" = "Renommer le recueil";
-"collection.new" = "Nouveau recueil";
-"collection.new.ellipsis" = "Nouveau recueil…";
-"collection.file" = "Classer dans un recueil";
-"collection.remove" = "Retirer du recueil";
-"collection.games" = "%d parties";
 "collection.games.one" = "%d partie";
-"collection.sorted" = "%d parties · par nom";
 "collection.sorted.one" = "%d partie · par nom";
-"collection.empty" = "Ce recueil est vide. Classez-y une partie et il revient dans la liste.";
 
 "game.name.title" = "Nommer cette partie";
 "game.name.field" = "Nom";
-"game.name.field.long" = "Comment s'appelle cette partie";
 "game.name.explained" = "Un recueil est trié par nom : « Exercice 002 » se rangera là où vous l'attendez. Laissez vide pour utiliser l'heure d'enregistrement.";
-"game.file.into" = "Classer dans « %@ »";
-"game.file.explained" = "Le nom décide de sa place dans le recueil, et de l'ordre dans lequel on passe d'une partie à l'autre.";
 
 "habits.clean.one" = "%d partie comptée, aucun vieux réflexe trouvé.";
 "habits.counted.one" = "%d partie comptée.";
@@ -231,7 +216,7 @@
 "import.title" = "Importer des parties";
 "import.door.link" = "Lien";
 "import.door.player" = "Parties récentes";
-"import.door.link.explained" = "Collez un lien — une étude lichess, ou une seule partie — et chaque partie qu'il contient devient une partie du recueil.";
+"import.door.link.explained" = "Collez un lien — une étude lichess, ou une seule partie — et chaque partie qu'il contient devient une partie de la liste.";
 "import.door.player.explained" = "Entrez un nom d'utilisateur lichess pour récupérer ses dernières parties. À faire avant de monter dans l'avion.";
 "import.field.link" = "Lien PGN";
 "import.field.player" = "Nom d'utilisateur lichess";
@@ -239,11 +224,8 @@
 "import.fetch" = "Récupérer";
 "import.fetching" = "Téléchargement…";
 "import.writing" = "Écriture…";
-"import.into" = "Dans « %@ »";
-"import.intoCollection" = "Dans le recueil";
 "import.plan.games" = "%d parties";
 "import.plan.games.one" = "%d partie";
-"import.plan.named" = "« %1$@ » · %2$@";
 "import.more" = "%d autres…";
 "import.more.one" = "%d autre…";
 "import.unreadable" = "%d parties illisibles seront ignorées.";
@@ -285,7 +267,6 @@
 "record.curve" = "Courbe d'évaluation";
 "record.ply" = "Demi-coup %d";
 "record.jump" = "Revenir à ce coup";
-"record.branch" = "Glissez vers le haut ou le bas pour changer de variante";
 "record.startHere" = "Jouer d'ici";
 "record.opening" = "Départ";
 

@@ -133,14 +133,6 @@ public struct PGN: Hashable, Sendable {
             if !comment.isEmpty {
                 written.append("{" + comment.joined(separator: " ") + "}")
             }
-            for variation in ply.variations {
-                // A Variation stands in for this move, so it is numbered as this move.
-                var inner = tokens(for: variation, from: moveNumber, sideToMove: sideToMove)
-                guard !inner.isEmpty else { continue }
-                inner[0] = "(" + inner[0]
-                inner[inner.count - 1] += ")"
-                written.append(contentsOf: inner)
-            }
             if sideToMove == .black { moveNumber += 1 }
             sideToMove = sideToMove.opposite
         }
@@ -218,73 +210,48 @@ public struct PGN: Hashable, Sendable {
         let reviewDepth = (tags.first { $0.name == "ReviewDepth" }?.value).flatMap { Int($0) }
         let isReviewed = reviewDepth != nil
         game.setReviewDepth(reviewDepth)
-
-        // One frame per open bracket. Moves always go to the innermost one, which is what
-        // makes a Variation inside a Variation work without any special handling: it is the
-        // same rule applied one level further in. A frame goes `dead` when something in it
-        // will not read, and a dead frame is dropped whole at its closing bracket: a
-        // Variation is an aside, and files in the wild carry asides that are not moves at
-        // all — refusing to open a game over one would lose the game to save the footnote.
-        var frames: [(game: Game, branchPoint: Int, dead: Bool)] = [(game, -1, false)]
+        // Brackets are skipped whole. PGN has written alternatives in parentheses since 1994 and
+        // files in the wild are full of them — this app does not write one any more (docs/adr/0028)
+        // and has nowhere to put one it reads, so the mainline is read out and the asides are
+        // stepped over. Counted rather than flagged, because they nest.
+        var insideVariation = 0
 
         // Evaluations arrive in comments *after* the move they belong to.
         for token in scanner.readMovetext() {
-            let last = frames.count - 1
+            if insideVariation > 0 {
+                switch token {
+                case .variationStart: insideVariation += 1
+                case .variationEnd: insideVariation -= 1
+                default: break
+                }
+                continue
+            }
             switch token {
             case .move(let san):
-                guard !frames[last].dead else { continue }
-                guard frames[last].game.apply(san: san) else {
-                    guard last > 0 else {
-                        throw ParseError.illegalMove(
-                            san, afterPlies: frames[last].game.plies.count
-                        )
-                    }
-                    frames[last].dead = true
-                    continue
+                guard game.apply(san: san) else {
+                    throw ParseError.illegalMove(san, afterPlies: game.plies.count)
                 }
             case .evaluation(let score):
-                guard !frames[last].dead else { continue }
                 // A ply index of -1 is a comment standing before the first move, which is
                 // the starting position's Score.
-                frames[last].game.setEvaluation(
-                    score, atPly: frames[last].game.plies.count - 1, reviewed: isReviewed
-                )
+                game.setEvaluation(score, atPly: game.plies.count - 1, reviewed: isReviewed)
             case .line(let line):
-                guard !frames[last].dead else { continue }
                 // A Line standing before the first move belongs to the starting position and has
                 // nowhere to go: what reads it is a move's own consequences, and there is no move.
-                frames[last].game.setLine(
-                    line, atPly: frames[last].game.plies.count - 1, reviewed: isReviewed
-                )
+                game.setLine(line, atPly: game.plies.count - 1, reviewed: isReviewed)
             case .variationStart:
-                // A Variation is an alternative to the move just read, so it starts from the
-                // position that move was played in.
-                let branchPoint = frames[last].game.plies.count - 1
-                guard !frames[last].dead, branchPoint >= 0,
-                      let rewound = frames[last].game.rewound(to: branchPoint)
-                else {
-                    // Brackets before any move have nothing to be an alternative to. Read
-                    // them into a frame that gets thrown away rather than refusing the file.
-                    frames.append((frames[last].game, -1, true))
-                    continue
-                }
-                frames.append((rewound, branchPoint, false))
+                insideVariation = 1
             case .variationEnd:
-                guard frames.count > 1 else { continue }
-                let frame = frames.removeLast()
-                guard !frame.dead, frame.branchPoint >= 0,
-                      frame.game.plies.count > frame.branchPoint
-                else { continue }
-                frames[frames.count - 1].game.addVariation(
-                    Array(frame.game.plies[frame.branchPoint...]), atPly: frame.branchPoint
-                )
+                // A stray closing bracket. Nothing opened, so nothing closes: files in the wild
+                // carry worse than this, and losing a game to save a footnote is the wrong trade.
+                continue
             }
         }
 
         // ReviewDepth does not stay in `tags`: it lives on the Game and `text` writes it back
         // from there, so the fact has one home and cannot be written twice or drift.
         self.tags = tags.filter { $0.name != "ReviewDepth" }
-        self.game = frames[0].game
+        self.game = game
     }
 }
 

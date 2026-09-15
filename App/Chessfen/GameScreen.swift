@@ -194,28 +194,6 @@ struct GameScreen: View {
                             Label(localized("game.exportPGN"), systemImage: "square.and.arrow.up")
                         }
                     }
-                    // The order a collection is filed in is the order 练习 walks it, and going back
-                    // to the library between two positions is the thing that makes anyone stop.
-                    // 旁注 used to carry these and went with the ten-card deck, so they are here
-                    // now, with the other things done rarely rather than often.
-                    if let place = placeInSeries, let collection = session.collection {
-                        Section("这一局在「\(collection)」里，第 \(place.index + 1)/\(place.entries.count)") {
-                            Button {
-                                guard let target = place.entries[safe: place.index - 1] else { return }
-                                turnTo(target)
-                            } label: {
-                                Label("上一局", systemImage: "chevron.left")
-                            }
-                            .disabled(place.index - 1 < 0)
-                            Button {
-                                guard let target = place.entries[safe: place.index + 1] else { return }
-                                turnTo(target)
-                            } label: {
-                                Label("下一局", systemImage: "chevron.right")
-                            }
-                            .disabled(place.index + 1 >= place.entries.count)
-                        }
-                    }
                     // 先走 throws a game away, and it stays on offer for as long as the game lasts,
                     // because whose move it was is a field no photograph could settle and finding
                     // out it was guessed wrong three moves later is the normal way to find out.
@@ -727,21 +705,6 @@ struct GameScreen: View {
         .frame(minHeight: 42)
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
-        .simultaneousGesture(forkSwipe)
-        .accessibilityHint(session.forkPly == nil ? "" : "上下滑动切换分支")
-    }
-
-    /// Vertical swipe on the one row walks the tree: up is the next sibling, down the previous.
-    private var forkSwipe: some Gesture {
-        DragGesture(minimumDistance: 24).onEnded { value in
-            let dy = value.translation.height
-            let dx = value.translation.width
-            guard abs(dy) > abs(dx) * 1.2, abs(dy) > 28 else { return }
-            selected = nil
-            withAnimation(.snappy(duration: 0.22)) {
-                session.cycleFork(by: dy < 0 ? 1 : -1)
-            }
-        }
     }
 
     /// Whether there is a curve to draw at all: one is made of Scores, and Scores are the engine's
@@ -816,44 +779,23 @@ struct GameScreen: View {
 
     private func half(_ cell: PlyCell) -> some View {
         let on = cell.cursor == session.cursor
-        let forked = cell.siblingCount > 1
-        let mark = cell.isTrunk ? Palette.ink : Palette.mine
-        return HStack(spacing: 3) {
-            if forked {
-                Button {
-                    withAnimation(.snappy(duration: 0.22)) {
-                        session.cycleFork(atPly: cell.cursor - 1, by: 1)
-                    }
-                } label: {
-                    ForkRail(current: cell.branchNumber ?? 1, of: cell.siblingCount, tint: mark)
+        return Button { walk(to: cell.cursor) } label: {
+            Text(cell.san)
+                .font(on ? .notation.weight(.bold) : .notation)
+                .foregroundStyle(on ? Palette.parchment : Palette.ink)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background {
+                    if on { RoundedRectangle(cornerRadius: 5).fill(Palette.analysis) }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("切换分支")
-                .accessibilityValue(cell.spoken)
-                .accessibilityHint("点一下换到下一条线")
-            }
-            Button { walk(to: cell.cursor) } label: {
-                Text(cell.san)
-                    .font(on ? .notation.weight(.bold) : .notation)
-                    .foregroundStyle(on && !forked ? Palette.parchment : mark)
-                    .padding(.horizontal, forked ? 3 : 5)
-                    .padding(.vertical, 2)
-                    .background {
-                        if on && !forked {
-                            RoundedRectangle(cornerRadius: 5).fill(Palette.analysis)
-                        } else if on && forked {
-                            RoundedRectangle(cornerRadius: 5).stroke(mark, lineWidth: 1.2)
-                        }
-                    }
-            }
-            .buttonStyle(.plain)
         }
+        .buttonStyle(.plain)
         .id(cell.cursor)
-        .accessibilityElement(children: forked ? .contain : .combine)
+        .accessibilityElement(children: .combine)
         // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver is a
         // move with no place in the game, and place is the whole of what this strip is for.
         .accessibilityLabel(cell.spoken)
-        .accessibilityHint(localized(forked ? "record.branch" : "record.jump"))
+        .accessibilityHint(localized("record.jump"))
     }
 
     /// What a ranked move cost its mover, in pawns. A move that *gained* is ranked too and reads
@@ -949,24 +891,14 @@ struct GameScreen: View {
 
 
 
-    /// The games in this one's collection, and which one this is. Nil for a game that is not in a
-    /// collection, or one not yet written to disk — there is nothing to be next to.
-    private var placeInSeries: (entries: [GameLibrary.Entry], index: Int)? {
-        guard let collection = session.collection, let url = session.url,
-            let entries = library.collections.first(where: { $0.name == collection })?.entries,
-            let index = entries.firstIndex(where: { $0.url == url })
-        else { return nil }
-        return (entries, index)
-    }
-
     // ------------------------------------------------------------------ the deck
 
     /// One card of the deck under the record (docs/adr/0025).
     ///
-    /// A kind rather than an index, because which card is dealt comes from the position — a past
-    /// Ply opens on 练习 where the latest one opens on 要害 — and a card that cannot answer here
-    /// says so on its own face rather than disappearing. An index would point at a different card
-    /// every time the position changed shape.
+    /// A kind rather than an index, because which card is dealt comes from the position — news
+    /// opens on 杀招 and everything else on 战术 — and a card that cannot answer here says so on
+    /// its own face rather than disappearing. An index would point at a different card every time
+    /// the position changed shape.
     enum Card: Hashable {
         case mate, tactics
     }
@@ -1415,18 +1347,6 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ doing
 
-    /// Opens the next game in the collection in place of this one.
-    ///
-    /// It replaces the top of the path rather than pushing, so working through fifty positions does
-    /// not build a stack of fifty screens to come back through — and the way back is still the
-    /// library, which is where it was. How you are working carries over — that is `session.next`.
-    private func turnTo(_ entry: GameLibrary.Entry) {
-        session.suspend()
-        guard let next = session.next(entry) else { return }
-        selected = nil
-        path[path.count - 1] = .game(next)
-    }
-
     private func tap(_ square: Square) {
         guard session.isHandTurn else { return }
 
@@ -1545,15 +1465,7 @@ struct GameScreen: View {
         var side = session.game.startingSideToMove
 
         for (index, ply) in session.game.plies.enumerated() {
-            let siblings = session.game.siblings(atPly: index)
-            let here = siblings.first { $0.variationIndex == nil }
-            let cell = PlyCell(
-                cursor: index + 1,
-                san: ply.san,
-                isTrunk: ply.isTrunk,
-                branchNumber: here?.number,
-                siblingCount: siblings.count
-            )
+            let cell = PlyCell(cursor: index + 1, san: ply.san)
             if side == .white {
                 cards.append(MoveCard(number: number, white: cell, black: nil))
             } else if let last = cards.last, last.number == number, last.black == nil {
@@ -1569,58 +1481,12 @@ struct GameScreen: View {
     }
 }
 
-/// One ply as the record draws it: the cursor that puts it on the board, what it is called, and
-/// where it sits in the tree — trunk or a numbered branch.
+/// One ply as the record draws it: the cursor that puts it on the board and what it is called.
 struct PlyCell: Hashable {
     let cursor: Int
     let san: String
-    let isTrunk: Bool
-    let branchNumber: Int?
-    let siblingCount: Int
 
-    var spoken: String {
-        let step = "第 \(cursor) 步 \(san)"
-        guard siblingCount > 1, let branchNumber else { return step }
-        let kind = isTrunk ? "树干" : "树枝"
-        return "\(step)，\(kind) \(branchNumber)/\(siblingCount)"
-    }
-}
-
-/// The tree, compressed to one column of ticks. PGN writes a fork as parentheses; this is
-/// that crease, thin enough to live in the scoresheet's own row. Each sibling is a ring on
-/// a spine, the current one filled — a number sitting after the SAN was being read as a
-/// move, which is the one thing a scoresheet cannot afford.
-struct ForkRail: View {
-    let current: Int
-    let of: Int
-    var tint: Color
-
-    private var ticks: Int { min(max(of, 2), 4) }
-
-    var body: some View {
-        let shown = tickIndex(current)
-        ZStack {
-            Capsule().fill(tint.opacity(0.3)).frame(width: 1.5)
-            VStack(spacing: ticks == 2 ? 7 : 3) {
-                ForEach(1...ticks, id: \.self) { n in
-                    let on = n == shown
-                    Circle()
-                        .strokeBorder(tint.opacity(on ? 1 : 0.38), lineWidth: 1.2)
-                        .background(Circle().fill(on ? tint : Color.clear))
-                        .frame(width: on ? 6 : 4.5, height: on ? 6 : 4.5)
-                }
-            }
-        }
-        .frame(width: 11, height: 28)
-        .contentShape(Rectangle())
-    }
-
-    private func tickIndex(_ current: Int) -> Int {
-        if of <= 4 { return min(max(current, 1), ticks) }
-        if current <= 1 { return 1 }
-        if current >= of { return ticks }
-        return min(2, ticks)
-    }
+    var spoken: String { "第 \(cursor) 步 \(san)" }
 }
 
 /// One move number and its two halves — the way a scoresheet is ruled, and the unit the record

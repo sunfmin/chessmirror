@@ -81,7 +81,6 @@
 "library.entry.unreadable" = "읽을 수 없음";
 "library.entry.moves" = "%d수";
 "library.entry.unfinished" = "미완";
-"library.entry.branches" = "분기 %d";
 
 "check.take.notHere" = "이 수는 %@에서 아무것도 잡지 않는다";
 "check.take.won" = "%@에서 잡아 기물을 벌었다";
@@ -128,12 +127,11 @@
 "import.network.message" = "받는 도중 네트워크 오류: %@";
 "import.network.notHTTP" = "HTTP 응답이 아님";
 
-"import.done" = "%2$@에 %1$d판을 가져왔다";
+"import.done" = "%d판을 가져왔다";
 "import.done.skipped" = "이미 있는 %d판은 건너뛰었다";
 "import.done.unreadable" = "다른 %d판은 읽지 못했다";
 "import.name.players" = "%1$@ 대 %2$@";
 "import.name.chapter" = "%d장";
-"import.collection.player" = "%@의 대국";
 
 "ok" = "확인";
 "cancel" = "취소";
@@ -165,28 +163,14 @@
 "library.fromStart" = "초기 국면부터";
 "library.games" = "대국 기록";
 "library.empty" = "한 수 두면 이 대국이 여기에 남는다.";
-"library.unfiled" = "미분류";
 "library.recognising" = "판을 읽는 중";
 "library.noPicture" = "사진을 가져오지 못함";
 "library.noClipboard.title" = "클립보드에 사진이 없음";
 "library.noClipboard.message" = "스크린샷을 찍고 다시 오라.";
 
-"collection.name" = "모음집 이름";
-"collection.rename" = "모음집 이름 바꾸기";
-"collection.new" = "새 모음집";
-"collection.new.ellipsis" = "새 모음집…";
-"collection.file" = "모음집에 넣기";
-"collection.remove" = "모음집에서 빼기";
-"collection.games" = "%d판";
-"collection.sorted" = "%d판 · 이름순";
-"collection.empty" = "이 모음집은 비어 있다. 대국을 넣으면 목록에 다시 나타난다.";
-
 "game.name.title" = "이 대국에 이름 붙이기";
 "game.name.field" = "이름";
-"game.name.field.long" = "이 대국의 이름";
 "game.name.explained" = "모음집은 이름순으로 늘어서므로 「002번 문제」 같은 이름은 생각한 자리에 들어간다. 비워 두면 저장한 시각을 쓴다.";
-"game.file.into" = "「%@」에 넣기";
-"game.file.explained" = "이름이 모음집 안의 순서를 정하고, 이전 대국·다음 대국의 차례도 정한다.";
 
 "edit.title" = "기물 고치기";
 "edit.seePhoto" = "사진 보기";
@@ -217,7 +201,7 @@
 "import.title" = "기보 가져오기";
 "import.door.link" = "링크";
 "import.door.player" = "최근 대국";
-"import.door.link.explained" = "링크를 붙여 넣으라. lichess 스터디든 한 판이든, 그 안의 대국이 각각 모음집의 한 판이 된다.";
+"import.door.link.explained" = "링크를 붙여 넣으라. lichess 스터디든 한 판이든, 그 안의 대국이 각각 목록의 한 판이 된다.";
 "import.door.player.explained" = "lichess 사용자 이름을 넣으면 최근 몇 판을 받아 온다. 비행기 타기 전에 해 두라.";
 "import.field.link" = "PGN 링크";
 "import.field.player" = "lichess 사용자 이름";
@@ -225,10 +209,7 @@
 "import.fetch" = "기보 받기";
 "import.fetching" = "받는 중…";
 "import.writing" = "저장하는 중…";
-"import.into" = "「%@」에 넣기";
-"import.intoCollection" = "넣을 모음집";
 "import.plan.games" = "%d판";
-"import.plan.named" = "「%1$@」· %2$@";
 "import.more" = "%d판 더…";
 "import.unreadable" = "%d판은 읽지 못해 건너뛴다.";
 "import.apply" = "%d판 가져오기";
@@ -267,7 +248,6 @@
 "record.curve" = "점수 곡선";
 "record.ply" = "%d수째";
 "record.jump" = "이 수로 돌아가기";
-"record.branch" = "위아래로 쓸어 분기를 바꾼다";
 "record.startHere" = "여기서부터 두기";
 "record.opening" = "시작";
 

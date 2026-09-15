@@ -84,7 +84,6 @@
 "library.entry.moves" = "%d Züge";
 "library.entry.moves.one" = "%d Zug";
 "library.entry.unfinished" = "Unbeendet";
-"library.entry.branches" = "%d Varianten";
 "library.entry.branches.one" = "%d Variante";
 
 "check.take.notHere" = "dieser Zug schlägt nichts auf %@";
@@ -132,15 +131,14 @@
 "import.network.message" = "Während des Downloads ging das Netz nicht: %@";
 "import.network.notHTTP" = "keine HTTP-Antwort";
 
-"import.done" = "%1$d Partien in „%2$@“ importiert";
-"import.done.one" = "%1$d Partie in „%2$@“ importiert";
+"import.done" = "%d Partien importiert";
+"import.done.one" = "%d Partie importiert";
 "import.done.skipped" = "%d schon vorhandene übersprungen";
 "import.done.skipped.one" = "%d schon vorhandene übersprungen";
 "import.done.unreadable" = "%d weitere waren nicht lesbar";
 "import.done.unreadable.one" = "%d weitere war nicht lesbar";
 "import.name.players" = "%1$@ gegen %2$@";
 "import.name.chapter" = "Kapitel %d";
-"import.collection.player" = "Partien von %@";
 
 "ok" = "OK";
 "cancel" = "Abbrechen";
@@ -172,30 +170,17 @@
 "library.fromStart" = "Von der Grundstellung";
 "library.games" = "Partien";
 "library.empty" = "Mach einen Zug, dann steht die Partie hier.";
-"library.unfiled" = "Nicht einsortiert";
 "library.recognising" = "Brett wird gelesen";
 "library.noPicture" = "Bild nicht bekommen";
 "library.noClipboard.title" = "Kein Bild in der Zwischenablage";
 "library.noClipboard.message" = "Mach einen Screenshot und komm wieder.";
 
-"collection.name" = "Name der Sammlung";
-"collection.rename" = "Sammlung umbenennen";
-"collection.new" = "Neue Sammlung";
-"collection.new.ellipsis" = "Neue Sammlung…";
-"collection.file" = "In eine Sammlung legen";
-"collection.remove" = "Aus der Sammlung nehmen";
-"collection.games" = "%d Partien";
 "collection.games.one" = "%d Partie";
-"collection.sorted" = "%d Partien · nach Namen";
 "collection.sorted.one" = "%d Partie · nach Namen";
-"collection.empty" = "Diese Sammlung ist leer. Leg eine Partie hinein, dann steht sie wieder in der Liste.";
 
 "game.name.title" = "Partie benennen";
 "game.name.field" = "Name";
-"game.name.field.long" = "Wie heißt diese Partie";
 "game.name.explained" = "Eine Sammlung ist nach Namen sortiert, ein Name wie „Aufgabe 002“ landet also da, wo du ihn erwartest. Leer lassen: dann gilt die Speicherzeit.";
-"game.file.into" = "In „%@“ legen";
-"game.file.explained" = "Der Name entscheidet, an welcher Stelle sie in der Sammlung steht — und in welcher Reihenfolge vorige und nächste Partie kommen.";
 
 "habits.clean.one" = "%d Partie gezählt, keine alte Gewohnheit gefunden.";
 "habits.counted.one" = "%d Partie gezählt.";
@@ -231,7 +216,7 @@
 "import.title" = "Partien importieren";
 "import.door.link" = "Link";
 "import.door.player" = "Letzte Partien";
-"import.door.link.explained" = "Füge einen Link ein — eine lichess-Studie oder eine einzelne Partie — und jede Partie darin wird zu einer Partie in einer Sammlung.";
+"import.door.link.explained" = "Füge einen Link ein — eine lichess-Studie oder eine einzelne Partie — und jede Partie darin wird zu einer Partie in der Liste.";
 "import.door.player.explained" = "Gib einen lichess-Benutzernamen ein, um die letzten Partien zu holen. Das macht man vor dem Abflug.";
 "import.field.link" = "PGN-Link";
 "import.field.player" = "lichess-Benutzername";
@@ -239,11 +224,8 @@
 "import.fetch" = "Partien holen";
 "import.fetching" = "Wird geladen…";
 "import.writing" = "Wird geschrieben…";
-"import.into" = "Nach „%@“";
-"import.intoCollection" = "In die Sammlung";
 "import.plan.games" = "%d Partien";
 "import.plan.games.one" = "%d Partie";
-"import.plan.named" = "„%1$@“ · %2$@";
 "import.more" = "%d weitere…";
 "import.more.one" = "%d weitere…";
 "import.unreadable" = "%d Partien sind nicht lesbar und werden übersprungen.";
@@ -285,7 +267,6 @@
 "record.curve" = "Bewertungskurve";
 "record.ply" = "Halbzug %d";
 "record.jump" = "Zu diesem Zug zurück";
-"record.branch" = "Zum Wechseln der Variante nach oben oder unten wischen";
 "record.startHere" = "Von hier spielen";
 "record.opening" = "Anfang";
 

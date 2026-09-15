@@ -81,7 +81,6 @@
 "library.entry.unreadable" = "読み取れない";
 "library.entry.moves" = "%d 手";
 "library.entry.unfinished" = "未了";
-"library.entry.branches" = "分岐 %d";
 
 "check.take.notHere" = "この手は %@ で何も取っていない";
 "check.take.won" = "%@ で取って駒得になった";
@@ -128,12 +127,11 @@
 "import.network.message" = "ダウンロード中にネットワークエラー：%@";
 "import.network.notHTTP" = "HTTP 応答ではない";
 
-"import.done" = "%2$@ に %1$d 局を取り込んだ";
+"import.done" = "%d 局を取り込んだ";
 "import.done.skipped" = "すでにある %d 局は飛ばした";
 "import.done.unreadable" = "ほかに %d 局は読めなかった";
 "import.name.players" = "%1$@ 対 %2$@";
 "import.name.chapter" = "第 %d 章";
-"import.collection.player" = "%@ の対局";
 
 "ok" = "OK";
 "cancel" = "キャンセル";
@@ -165,28 +163,14 @@
 "library.fromStart" = "初期局面から";
 "library.games" = "対局の記録";
 "library.empty" = "一手指せば、この対局はここに残る。";
-"library.unfiled" = "未分類";
 "library.recognising" = "盤を読んでいる";
 "library.noPicture" = "画像を取得できなかった";
 "library.noClipboard.title" = "クリップボードに画像がない";
 "library.noClipboard.message" = "スクリーンショットを撮ってから、もう一度。";
 
-"collection.name" = "作品集の名前";
-"collection.rename" = "作品集の名前を変更";
-"collection.new" = "新しい作品集";
-"collection.new.ellipsis" = "新しい作品集…";
-"collection.file" = "作品集に入れる";
-"collection.remove" = "作品集から出す";
-"collection.games" = "%d 局";
-"collection.sorted" = "%d 局・名前順";
-"collection.empty" = "この作品集は空。対局を入れれば一覧に戻る。";
-
 "game.name.title" = "この対局に名前をつける";
 "game.name.field" = "名前";
-"game.name.field.long" = "この対局の名前";
 "game.name.explained" = "作品集は名前順に並ぶので、「第 002 問」のような名前は思ったところに入る。空にすれば保存した時刻を使う。";
-"game.file.into" = "「%@」に入れる";
-"game.file.explained" = "名前が作品集の中の順番を決め、前の一局・次の一局の順番も決める。";
 
 "edit.title" = "駒を直す";
 "edit.seePhoto" = "写真を見る";
@@ -217,7 +201,7 @@
 "import.title" = "棋譜を取り込む";
 "import.door.link" = "リンク";
 "import.door.player" = "最近の対局";
-"import.door.link.explained" = "リンクを貼る。lichess のスタディでも一局でもよく、その中の各対局が作品集の一局になる。";
+"import.door.link.explained" = "リンクを貼る。lichess のスタディでも一局でもよく、その中の各対局が一覧の一局になる。";
 "import.door.player.explained" = "lichess のユーザー名を入れて、最近の対局を落としてくる。飛行機に乗る前にどうぞ。";
 "import.field.link" = "PGN リンク";
 "import.field.player" = "lichess ユーザー名";
@@ -225,10 +209,7 @@
 "import.fetch" = "棋譜を取得";
 "import.fetching" = "ダウンロード中…";
 "import.writing" = "書き込み中…";
-"import.into" = "「%@」に取り込む";
-"import.intoCollection" = "取り込む作品集";
 "import.plan.games" = "%d 局";
-"import.plan.named" = "「%1$@」・%2$@";
 "import.more" = "ほかに %d 局…";
 "import.unreadable" = "%d 局は読めないので飛ばす。";
 "import.apply" = "%d 局を取り込む";
@@ -267,7 +248,6 @@
 "record.curve" = "評価の曲線";
 "record.ply" = "%d 手目";
 "record.jump" = "この手に戻る";
-"record.branch" = "上下にスワイプして分岐を切り替える";
 "record.startHere" = "ここから指す";
 "record.opening" = "開始";
 

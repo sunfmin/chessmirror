@@ -97,10 +97,8 @@
 "library.entry.moves" = "%d moves";
 "library.entry.moves.one" = "%d move";
 "library.entry.unfinished" = "Unfinished";
-"library.entry.branches" = "%d branches";
 "library.entry.branches.one" = "%d branch";
 
-/* ---------------------------------------------------------------- the habits */
 
 /* ---------------------------------------------------------------- what you said, against the board */
 
@@ -151,15 +149,14 @@
 "import.network.message" = "The network failed during the download: %@";
 "import.network.notHTTP" = "not an HTTP response";
 
-"import.done" = "Imported %1$d games into “%2$@”";
-"import.done.one" = "Imported %1$d game into “%2$@”";
+"import.done" = "Imported %d games";
+"import.done.one" = "Imported %d game";
 "import.done.skipped" = "skipped %d already there";
 "import.done.skipped.one" = "skipped %d already there";
 "import.done.unreadable" = "%d more could not be read";
 "import.done.unreadable.one" = "%d more could not be read";
 "import.name.players" = "%1$@ vs %2$@";
 "import.name.chapter" = "Chapter %d";
-"import.collection.player" = "%@’s games";
 
 /* ---------------------------------------------------------------- words used everywhere */
 
@@ -202,7 +199,6 @@
 "library.fromStart" = "Start from the opening";
 "library.games" = "Games";
 "library.empty" = "Play a move and the game will be filed here.";
-"library.unfiled" = "Unfiled";
 "library.recognising" = "Reading the board";
 "library.noPicture" = "Could not get the picture";
 "library.noClipboard.title" = "No picture on the clipboard";
@@ -210,24 +206,12 @@
 
 /* ---------------------------------------------------------------- collections */
 
-"collection.name" = "Collection name";
-"collection.rename" = "Rename collection";
-"collection.new" = "New collection";
-"collection.new.ellipsis" = "New collection…";
-"collection.file" = "File in a collection";
-"collection.remove" = "Take out of the collection";
-"collection.games" = "%d games";
 "collection.games.one" = "%d game";
-"collection.sorted" = "%d games · by name";
 "collection.sorted.one" = "%d game · by name";
-"collection.empty" = "This collection is empty. File a game into it and it comes back to the list.";
 
 "game.name.title" = "Name this game";
 "game.name.field" = "Name";
-"game.name.field.long" = "What is this game called";
 "game.name.explained" = "A collection is ordered by name, so a name like “Puzzle 002” lands where you expect it. Leave it blank to use the time it was saved.";
-"game.file.into" = "File into “%@”";
-"game.file.explained" = "The name decides where it sits in the collection, and the order the previous and next game follow.";
 
 /* ---------------------------------------------------------------- the habits screen */
 
@@ -269,7 +253,7 @@
 "import.title" = "Import games";
 "import.door.link" = "Link";
 "import.door.player" = "Recent games";
-"import.door.link.explained" = "Paste a link — a lichess study, or a single game — and every game in it becomes one game in a collection.";
+"import.door.link.explained" = "Paste a link — a lichess study, or a single game — and every game in it becomes one game in the list.";
 "import.door.player.explained" = "Type a lichess username to pull down their last few games. Do this before you get on the plane.";
 "import.field.link" = "PGN link";
 "import.field.player" = "lichess username";
@@ -277,11 +261,8 @@
 "import.fetch" = "Fetch the games";
 "import.fetching" = "Downloading…";
 "import.writing" = "Writing…";
-"import.into" = "Into “%@”";
-"import.intoCollection" = "Into collection";
 "import.plan.games" = "%d games";
 "import.plan.games.one" = "%d game";
-"import.plan.named" = "“%1$@” · %2$@";
 "import.more" = "%d more…";
 "import.more.one" = "%d more…";
 "import.unreadable" = "%d could not be read and will be skipped.";
@@ -327,15 +308,11 @@
 "record.curve" = "Evaluation curve";
 "record.ply" = "Ply %d";
 "record.jump" = "Go back to this move";
-"record.branch" = "Swipe up or down to change branch";
 "record.startHere" = "Play from here";
 "record.opening" = "Opening";
 
-/* ---------------------------------------------------------------- asking yourself */
 
-/* ---------------------------------------------------------------- the report */
 
-/* ---------------------------------------------------------------- one game after another */
 
 /* ---------------------------------------------------------------- about */
 

@@ -208,36 +208,6 @@ struct GameScreenScreenshots {
         #expect(rendered.says("开局"), "including the position it began in")
     }
 
-    /// A board just read off a photograph and then filed into a collection: the same reading, with
-    /// its doubts settled by somebody keeping it.
-    @Test("a filed game stops ringing the squares it once was unsure of")
-    func filedBoard() async throws {
-        let fen = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R w KQkq - 0 5"
-        let game = try #require(Game(startFEN: fen))
-        // The filed state exists only as a saved game: a reading somebody kept, with the
-        // collection it was kept in written into the file.
-        let entry = GameLibrary.Entry(
-            url: URL(filePath: "/games/chessfen-2026-08-12-190100.pgn"),
-            pgn: PGN(game: game, tags: [
-                PGN.Tag(GameOrigin.tagName, GameOrigin.recognised.rawValue),
-                PGN.Tag("Event", "西西里防御"),
-            ]),
-            modified: Date(timeIntervalSince1970: 1_786_000_100)
-        )
-        let session = try #require(GameSession.opened(entry))
-
-        let rendered = await ScreenImage.write("game-filed") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
-        }
-
-        #expect(session.isFiled)
-        #expect(session.unconfirmedSquares.isEmpty, "no rings on a board somebody has kept")
-        #expect(!rendered.says("拿不太准"), "and no question about the squares under them")
-        #expect(!rendered.says("改棋子"))
-        // A record opens in practice, so the engine holds its opinion: no advice, no number.
-        #expect(!rendered.says("+0.38"))
-    }
-
     /// The engine on the clock. It is thinking about its own move rather than advising, and the one
     /// thing to do about that is stop waiting.
     @Test("while the engine is on the clock the screen offers to stop waiting for it")
@@ -336,29 +306,29 @@ struct GameScreenScreenshots {
         #expect(rendered.says("让引擎走"))
     }
 
-    /// A move played over an earlier one. The line it replaced is kept as a Variation, offered where
-    /// it branches rather than lost — which is the whole reason 悔棋 is not how you go back.
-    @Test("a move played over an earlier one offers the line it replaced")
-    func variationKept() async throws {
+    /// A move played over an earlier one. It replaces what followed rather than branching beside
+    /// it: a Game is a list now, not a tree (docs/adr/0028), and somebody taking a move back and
+    /// playing another has played one game, not two.
+    @Test("a move played over an earlier one drops the line it replaced")
+    func replayedFromEarlier() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game)
         // Back to before 4. c3, and play something else there.
         session.step(by: -2)
         let other = try #require(session.viewed.state.legalMoves.first { $0.uci == "d2d3" })
         session.play(other)
-        // And stand where the branch is, which is where the line that was replaced is offered.
+        // And stand one back from it, so the record is drawn with a past to walk back into.
         session.step(by: -1)
 
-        let rendered = await ScreenImage.write("game-variation") {
+        let rendered = await ScreenImage.write("game-replayed") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
         }
 
-        #expect(session.variationsHere.count == 1, "the abandoned line is kept, not dropped")
+        #expect(session.game.plies.count == 7, "the tail it was played over is gone, not kept")
         #expect(rendered.says("回到最新"), "and the way back to the present, beside the arrows")
         #expect(rendered.says("第 7 步 d3"), "with the move that replaced it in the record")
-        #expect(rendered.says("树枝 2/2"), "the fork is named on that ply, still on the one row")
-        #expect(rendered.says("切换分支"), "the rail is the switch, not a second list")
-        #expect(!rendered.says("变着 c3 Nf6"), "the other line is reached by flipping, not a second row")
+        #expect(!rendered.says("第 7 步 c3"), "and no sign of the move it replaced")
+        #expect(!rendered.says("第 8 步 Nf6"), "nor of what used to follow that")
     }
 
     /// A finished game. The engine has nothing to search and so says nothing, and the screen has to

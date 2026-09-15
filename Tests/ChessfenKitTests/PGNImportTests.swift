@@ -172,13 +172,12 @@ func blankTextSplitsIntoNothing() {
 
 // ---------------------------------------------------------------- reading
 
-@Test("chapters parse with their names, and the study names the collection")
+@Test("chapters parse with their names")
 func chaptersReadNames() {
     let (chapters, unreadable) = PGNImport.chapters(in: twoChapterStudy)
     #expect(chapters.map(\.name) == ["1", "2"])
     #expect(chapters.map(\.id) == [1, 2])
     #expect(unreadable == 0)
-    #expect(PGNImport.suggestedCollection(for: chapters[0].pgn) == "Wood Pecker 1-47")
 }
 
 @Test("a chapter that will not parse is counted, not fatal")
@@ -291,7 +290,6 @@ func sessionWalksCandidatesInOrder() async {
         return
     }
     #expect(plan.chapters.count == 2)
-    #expect(plan.suggestedCollection == "Wood Pecker 1-47")
 }
 
 @MainActor
@@ -360,7 +358,7 @@ func applyWritesTaggedFiles() async throws {
     )
     await session.run("https://lichess.org/study/HgiqcIqW.pgn")
 
-    let outcome = try #require(session.apply(into: "Wood Pecker", library: library))
+    let outcome = try #require(session.apply(into: library))
     #expect(outcome.imported == 2)
     #expect(outcome.skipped == 0)
     #expect(outcome.unreadable == 0)
@@ -369,7 +367,6 @@ func applyWritesTaggedFiles() async throws {
     #expect(library.entries.count == 2)
     #expect(Set(library.entries.compactMap(\.name)) == ["1", "2"])
     for entry in library.entries {
-        #expect(entry.collection == "Wood Pecker")
         #expect(entry.origin == .imported)
     }
 }
@@ -389,7 +386,7 @@ func reimportSkipsByName() async throws {
         ])
     )
     await first.run("https://lichess.org/study/HgiqcIqW.pgn")
-    _ = try #require(first.apply(into: "Wood Pecker", library: library))
+    _ = try #require(first.apply(into: library))
 
     // The same study, the same door, again — and the names are what identify the games.
     let again = ImportSession(
@@ -398,7 +395,7 @@ func reimportSkipsByName() async throws {
         ])
     )
     await again.run("https://lichess.org/study/HgiqcIqW.pgn")
-    let outcome = try #require(again.apply(into: "Wood Pecker", library: library))
+    let outcome = try #require(again.apply(into: library))
     #expect(outcome.imported == 0)
     #expect(outcome.skipped == 2)
 
@@ -431,8 +428,8 @@ func importedOriginReadsBack() throws {
 }
 
 @MainActor
-@Test("an imported game played on stays in its collection")
-func importedGameKeepsItsCollection() throws {
+@Test("an imported game played on becomes this app's file, and still remembers where it came from")
+func importedGamePlayedOnKeepsItsOrigin() throws {
     let entry = GameLibrary.Entry(
         url: URL(filePath: "/games/x.pgn"),
         pgn: PGN(
@@ -449,8 +446,14 @@ func importedGameKeepsItsCollection() throws {
 
     let move = try #require(session.viewed.state.legalMoves.first)
     session.play(move)
-    #expect(session.pgn.tag("Event") == "Wood Pecker", "a played-on game must not leave its set")
-    #expect(session.pgn.tag(GameOrigin.tagName) == "imported")
+    #expect(
+        session.pgn.tag("Event") == "Chessfen",
+        "the Event somebody else's file carried named their tournament; this one is ours"
+    )
+    #expect(
+        session.pgn.tag(GameOrigin.tagName) == "imported",
+        "and where the game came from is the part worth keeping"
+    )
 }
 
 // -------------------------------------------------------------- lichess games
@@ -603,14 +606,13 @@ func recentGamesImport() async throws {
         return
     }
     #expect(plan.chapters.count == 2)
-    #expect(plan.suggestedCollection == "sunfmin 的对局", "these games have no study to be named after")
     #expect(plan.chapters.map(\.identity) == ["lichess:hf3Zpe5R", "lichess:QQQQwwww"])
     #expect(plan.chapters[0].name.contains("DrNykterstein"))
     #expect(plan.chapters[1].name.contains("penguingm1"), "two games, two names")
 }
 
 @MainActor
-@Test("a game already in the collection is skipped, so importing twice adds nothing")
+@Test("a game already in the library is skipped, so importing twice adds nothing")
 func reimportingGamesAddsNothing() async throws {
     let tempDir = URL(filePath: NSTemporaryDirectory())
         .appending(path: "chessfen-games-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -627,7 +629,7 @@ func reimportingGamesAddsNothing() async throws {
         return session
     }
 
-    let first = try #require(await run().apply(into: "上周", library: library))
+    let first = try #require(await run().apply(into: library))
     #expect(first.imported == 2)
 
     // The same two games again — and renamed in between, because the identity is the game's own
@@ -636,7 +638,7 @@ func reimportingGamesAddsNothing() async throws {
     let renamed = try #require(library.entries.first)
     library.rename(renamed, to: "那局漏着")
 
-    let again = try #require(await run().apply(into: "上周", library: library))
+    let again = try #require(await run().apply(into: library))
     #expect(again.imported == 0)
     #expect(again.skipped == 2)
 

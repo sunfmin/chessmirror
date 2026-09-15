@@ -352,26 +352,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return session
     }
 
-    /// The next saved game in a collection, opened the way this one is being worked: who plays
-    /// each side, and the clock somebody put the engine on. Those are ways of working rather than
-    /// facts about a game, and having to set them again for every position is exactly the friction
-    /// that makes a set of fifty not get done. Which way up the board is is a fact about the game
-    /// being opened, though — each record faces its own side to move, not the last one's. Nil
-    /// while the next file is still on the way (see `opened`).
-    ///
-    /// The one thing that does **not** carry over is the engine's opinion. Working through fifty
-    /// positions with it left on is fifty positions read off a screen instead of fifty positions
-    /// thought about, and that is precisely the set this app exists to make worth doing — so each
-    /// one opens silent and turning it on is a fresh decision (docs/adr/0015).
-    public func next(_ entry: GameLibrary.Entry) -> GameSession? {
-        guard let next = Self.opened(entry, engine: engine, library: library) else { return nil }
-        for colour in [PieceColour.white, .black] {
-            next.setController(controller(for: colour), for: colour)
-        }
-        if let chosenThinkingTime { next.setThinkingTime(chosenThinkingTime) }
-        return next
-    }
-
     /// Reopens a saved game, at the position it began in, facing the side about to move.
     private convenience init(entry: GameLibrary.Entry, library: GameLibrary? = nil) {
         let pgn = entry.pgn
@@ -533,37 +513,21 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         Set([PieceColour.white, .black].filter { controller(for: $0) == .hand })
     }
 
-    /// The collection this game is filed under, according to its own file.
-    ///
-    /// Read from the tags rather than carried alongside them, so that it cannot disagree with what
-    /// the library shows — and so a game that has never been saved has no collection, which is the
-    /// truth about it.
-    public var collection: String? {
-        guard let event = tags.first(where: { $0.name == "Event" })?.value,
-            !GameLibrary.unfiledEvents.contains(event)
-        else { return nil }
-        return event
-    }
-
     // ------------------------------------------------------------- the reading
-
-    /// Whether somebody has filed this game into a collection, which is them saying they are keeping
-    /// it — and so also saying the position it starts from is the one they meant.
-    public var isFiled: Bool { collection != nil }
 
     /// Whether this game's starting position can be taken back to the editor. True for anything
     /// read off a picture, for as long as the game exists: the thing most likely to be wrong
     /// about such a game is a piece, and finding that out ten moves later is the normal case.
     ///
-    /// Except once it has been filed. A game somebody has put in a collection has been looked at
-    /// and kept, so either the reading was right or it has already been put right, and a screen
-    /// that goes on asking about the pieces is asking a question that was answered.
-    public var canEditPosition: Bool { origin == .recognised && !isFiled }
+    /// It used to stop once a game had been filed into a collection, on the grounds that filing
+    /// was somebody saying they had looked at it and kept it. Collections are gone (docs/adr/0028)
+    /// and nothing replaced that signal, so the offer stands for as long as the game does — which
+    /// is the side to err on, because a wrong piece is a different game.
+    public var canEditPosition: Bool { origin == .recognised }
 
     /// The squares recognition was unsure about, while they are still worth pointing at. Once a
     /// move has been played the position has been accepted in practice, and rings on the board
-    /// would be nothing but noise — as they would on a game that has been filed, for the same
-    /// reason `canEditPosition` stops offering the editor.
+    /// would be nothing but noise.
     public var unconfirmedSquares: Set<Square> {
         canEditPosition && game.plies.isEmpty ? shaky : []
     }
@@ -628,10 +592,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The move that led to the position on screen.
     public var lastMove: MoveSquares? { game.moveSquares(atPly: cursor) }
 
-    /// The lines that were played from the position on screen instead of the move that
-    /// follows it.
-    public var variationsHere: [[Game.Ply]] { game.variations(atPly: cursor) }
-
     public func step(by delta: Int) {
         let wanted = min(max(0, cursor + delta), game.plies.count)
         guard wanted != cursor else { return }
@@ -661,60 +621,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
-    /// Straight to a named Ply — how a Game's worst moves are walked through in turn
-    /// (docs/adr/0017). Zero is the position the Game began in.
+    /// Straight to a named Ply. Zero is the position the Game began in.
     public func jump(toPly ply: Int) {
         let wanted = min(max(0, ply), game.plies.count)
         guard wanted != cursor else { return }
         cursor = wanted
         adoptViewedAnalysis()
         Sounds.current.play(.move)
-        retune()
-    }
-
-    /// Carries on down one of the lines that was left behind here.
-    public func enterVariation(_ index: Int, atPly ply: Int? = nil) {
-        let at = ply ?? cursor
-        guard game.promoteVariation(index, atPly: at) else { return }
-        cursor = at + 1
-        adoptViewedAnalysis()
-        save()
-        retune()
-    }
-
-    /// The Ply whose siblings the record can cycle, if the eye is on a fork.
-    public var forkPly: Int? {
-        if cursor > 0, game.siblings(atPly: cursor - 1).count > 1 { return cursor - 1 }
-        if cursor < game.plies.count, game.siblings(atPly: cursor).count > 1 { return cursor }
-        return nil
-    }
-
-    /// Swipes the record onto the next (or previous) sibling at the fork the eye is on.
-    /// The strip stays one line; the tree is what the swipe walks.
-    public func cycleFork(by delta: Int) {
-        guard let ply = forkPly else { return }
-        cycleFork(atPly: ply, by: delta, keepStanding: true)
-    }
-
-    /// Cycles the siblings of a named Ply. A tap on that ply's rail names it; a swipe on the
-    /// strip uses whichever fork the eye is already on, and tries not to jump the cursor.
-    public func cycleFork(atPly ply: Int, by delta: Int, keepStanding: Bool = false) {
-        guard delta != 0 else { return }
-        let siblings = game.siblings(atPly: ply)
-        guard siblings.count > 1 else { return }
-        let current = siblings.firstIndex { $0.variationIndex == nil } ?? 0
-        let count = siblings.count
-        let next = siblings[((current + delta) % count + count) % count]
-        guard let index = next.variationIndex else { return }
-        let standing = cursor
-        guard game.promoteVariation(index, atPly: ply) else { return }
-        if keepStanding {
-            cursor = standing <= ply ? ply : ply + 1
-        } else {
-            cursor = ply + 1
-        }
-        adoptViewedAnalysis()
-        save()
         retune()
     }
 
@@ -725,7 +638,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// Whether a person may move on the board as it is being looked at. True in the past as
-    /// well as the present: playing from an earlier position is how a branch is made.
+    /// well as the present: playing from an earlier position is how a move is taken back
+    /// (docs/adr/0028) — what followed it is dropped, and the game carries on from there.
     public var isHandTurn: Bool {
         guard !viewed.isOver else { return false }
         if !isAtLatest { return true }
@@ -760,11 +674,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if mover == .hand, isAtLatest, let turnBegan {
             lastHumanThink = ContinuousClock.now - turnBegan
         }
-        // A move played over an earlier one: what used to follow becomes a Variation, and the
-        // capture of a whole line being replaced is worth its own noise. Computed before the
-        // play, which is what the comparison is against. The engine's own moves always land at
-        // the latest position, so this is only ever a hand or asked concern.
-        let branching = mover != .engine && !isAtLatest && game.plies[cursor].uci != move.uci
+        // A move played over an earlier one: what used to follow is dropped, and losing a line is
+        // worth its own noise. Computed before the play, which is what the comparison is against.
+        // The engine's own moves always land at the latest position, so this is only ever a hand
+        // or asked concern.
+        let replacing = mover != .engine && !isAtLatest && game.plies[cursor].uci != move.uci
         if mover == .engine {
             // Played only at the latest position: it was found for the position its search
             // started from, and applying it anywhere else would be a different move.
@@ -778,7 +692,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             cursor += 1
         }
         Sounds.current.play(move, outcome: viewed.state.outcome)
-        if branching { Sounds.current.play(.check) }
+        if replacing { Sounds.current.play(.check) }
         // The invariant: the Analysis that described the position before this move is stale,
         // the game is written to its file, and the engine is asked what it makes of the new
         // position — whoever moved.
@@ -1297,13 +1211,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public var pgn: PGN {
         var written = PGN(game: game, tags: tags)
-        // Event is only filled in when the game is not in a collection. It used to be set to the
-        // app's name unconditionally, which would have rubbed out the collection of every filed game
-        // on its next move — the tag naming the collection and the tag naming the app are the same
-        // tag, and the file is the only place either of them lives (docs/adr/0010).
-        if written.tag("Event").map(GameLibrary.unfiledEvents.contains) ?? true {
-            written.setTag("Event", to: "Chessfen")
-        }
+        // Event carries the app's name, which is what PGN's "which set of games is this" tag is
+        // worth saying now that there are no collections (docs/adr/0028). Written unconditionally:
+        // an Event an import brought in names somebody else's tournament, and the file this app
+        // writes is this app's.
+        written.setTag("Event", to: "Chessfen")
         written.setTag("White", to: controller(for: .white).playerName)
         written.setTag("Black", to: controller(for: .black).playerName)
         written.setTag("Result", to: game.resultToken)

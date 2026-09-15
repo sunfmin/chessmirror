@@ -84,7 +84,6 @@
 "library.entry.moves" = "%d lances";
 "library.entry.moves.one" = "%d lance";
 "library.entry.unfinished" = "Por terminar";
-"library.entry.branches" = "%d variantes";
 "library.entry.branches.one" = "%d variante";
 
 "check.take.notHere" = "este lance não captura nada em %@";
@@ -132,15 +131,14 @@
 "import.network.message" = "A rede falhou durante a descarga: %@";
 "import.network.notHTTP" = "resposta não HTTP";
 
-"import.done" = "%1$d partidas importadas para “%2$@”";
-"import.done.one" = "%1$d partida importada para “%2$@”";
+"import.done" = "%d partidas importadas";
+"import.done.one" = "%d partida importada";
 "import.done.skipped" = "%d ignoradas por já existirem";
 "import.done.skipped.one" = "%d ignorada por já existir";
 "import.done.unreadable" = "outras %d não puderam ser lidas";
 "import.done.unreadable.one" = "outra %d não pôde ser lida";
 "import.name.players" = "%1$@ contra %2$@";
 "import.name.chapter" = "Capítulo %d";
-"import.collection.player" = "Partidas de %@";
 
 "ok" = "OK";
 "cancel" = "Cancelar";
@@ -172,30 +170,17 @@
 "library.fromStart" = "Começar da posição inicial";
 "library.games" = "Partidas";
 "library.empty" = "Joga um lance e a partida fica registada aqui.";
-"library.unfiled" = "Sem pasta";
 "library.recognising" = "A ler o tabuleiro";
 "library.noPicture" = "Não foi possível obter a imagem";
 "library.noClipboard.title" = "Não há imagem na área de transferência";
 "library.noClipboard.message" = "Faz uma captura de ecrã e volta.";
 
-"collection.name" = "Nome da coleção";
-"collection.rename" = "Mudar o nome da coleção";
-"collection.new" = "Nova coleção";
-"collection.new.ellipsis" = "Nova coleção…";
-"collection.file" = "Guardar numa coleção";
-"collection.remove" = "Tirar da coleção";
-"collection.games" = "%d partidas";
 "collection.games.one" = "%d partida";
-"collection.sorted" = "%d partidas · por nome";
 "collection.sorted.one" = "%d partida · por nome";
-"collection.empty" = "Esta coleção está vazia. Guarda aqui uma partida e ela volta à lista.";
 
 "game.name.title" = "Dá um nome a esta partida";
 "game.name.field" = "Nome";
-"game.name.field.long" = "Como se chama esta partida";
 "game.name.explained" = "Uma coleção é ordenada por nome, por isso “Exercício 002” fica onde esperas. Deixa vazio para usar a hora em que foi guardada.";
-"game.file.into" = "Guardar em “%@”";
-"game.file.explained" = "O nome decide o lugar dela na coleção, e a ordem em que vêm a anterior e a seguinte.";
 
 "habits.clean.one" = "%d partida contada, sem nenhum vício.";
 "habits.counted.one" = "%d partida contada.";
@@ -231,7 +216,7 @@
 "import.title" = "Importar partidas";
 "import.door.link" = "Link";
 "import.door.player" = "Partidas recentes";
-"import.door.link.explained" = "Cola um link — um estudo do lichess, ou uma só partida — e cada partida que ele tiver passa a ser uma partida da coleção.";
+"import.door.link.explained" = "Cola um link — um estudo do lichess, ou uma só partida — e cada partida que ele tiver passa a ser uma partida da lista.";
 "import.door.player.explained" = "Escreve um utilizador do lichess para trazer as últimas partidas dele. Faz isto antes de entrar no avião.";
 "import.field.link" = "Link PGN";
 "import.field.player" = "Utilizador do lichess";
@@ -239,11 +224,8 @@
 "import.fetch" = "Trazer as partidas";
 "import.fetching" = "A descarregar…";
 "import.writing" = "A gravar…";
-"import.into" = "Para “%@”";
-"import.intoCollection" = "Para a coleção";
 "import.plan.games" = "%d partidas";
 "import.plan.games.one" = "%d partida";
-"import.plan.named" = "“%1$@” · %2$@";
 "import.more" = "mais %d…";
 "import.more.one" = "mais %d…";
 "import.unreadable" = "%d partidas não puderam ser lidas e serão ignoradas.";
@@ -285,7 +267,6 @@
 "record.curve" = "Curva de avaliação";
 "record.ply" = "Meio-lance %d";
 "record.jump" = "Voltar a este lance";
-"record.branch" = "Deslize para cima ou para baixo para mudar de variante";
 "record.startHere" = "Jogar a partir daqui";
 "record.opening" = "Início";
 
