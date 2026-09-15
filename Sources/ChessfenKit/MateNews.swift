@@ -1,5 +1,21 @@
+/// One move of a line, numbered, as the board draws it.
+public struct MoveArrow: Hashable, Sendable {
+    public let step: Int
+    public let move: MoveSquares
+    public let isYours: Bool
+    /// Whether the board is already past this move.
+    public let isPlayed: Bool
+
+    public init(step: Int, move: MoveSquares, isYours: Bool, isPlayed: Bool) {
+        self.step = step
+        self.move = move
+        self.isYours = isYours
+        self.isPlayed = isPlayed
+    }
+}
+
 /// A mate the engine can already see from the position on screen, whoever it belongs to
-/// (docs/adr/0024).
+/// (docs/adr/0025).
 ///
 /// The one thing on this screen that is **news** rather than an answer: nobody asked for it, and
 /// it is not the engine's opinion — a Score is a judgement and 「你三步之后不在了」 is a fact. That
@@ -25,7 +41,7 @@ public struct MateNews: Hashable, Sendable {
     /// The mating line in SAN, as far as the engine gave it.
     public let san: [String]
     /// The line as numbered arrows, in the same violet-and-red the five-move plan is drawn in.
-    public let arrows: [PlanArrow]
+    public let arrows: [MoveArrow]
     /// How many of the replies to the mating side's moves were the only legal move on the board.
     public let forcedReplies: Int
     /// How many replies there are in the line at all, so the count above has a denominator.
@@ -72,10 +88,10 @@ public struct MateNews: Hashable, Sendable {
         let san = best.san
         let opening = game.state.sideToMove
         let arrows = best.uciMoves.prefix(arrowLimit).enumerated().compactMap {
-            index, uci -> PlanArrow? in
+            index, uci -> MoveArrow? in
             guard let move = MoveSquares(uci: uci) else { return nil }
             let mover = index.isMultiple(of: 2) ? opening : opening.opposite
-            return PlanArrow(step: index + 1, move: move, isYours: isYours(mover), isPlayed: false)
+            return MoveArrow(step: index + 1, move: move, isYours: isYours(mover), isPlayed: false)
         }
 
         // How forced it is, counted rather than asserted: replay the line and ask the rules how

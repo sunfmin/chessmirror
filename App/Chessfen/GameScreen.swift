@@ -46,6 +46,9 @@ struct GameScreen: View {
     /// Whether it was arriving at 杀 or 战术 that turned the finder on, rather than a person
     /// pressing its switch. Only what a swipe turned on does a swipe turn off again.
     @State private var finderIsOurs = false
+    /// Whether the finder is off because somebody pressed it off, rather than because nobody has
+    /// pressed it on. The card says different things about the two.
+    @State private var finderClosedByHand = false
     /// Whether a thumb is on 让引擎走 right now. The engine is thinking for exactly as long as it is —
     /// which is why this is read off the session rather than kept here as well. A screen holding
     /// its own copy of "a finger is down" is a screen that can be left holding it: a press that
@@ -57,7 +60,7 @@ struct GameScreen: View {
     ///
     /// A kind rather than an index (see `Card`): the deck is dealt from the position, so an index
     /// would point at a different card every time the position changed shape.
-    @State private var card: Card = .key
+    @State private var card: Card = .tactics
     /// Whether the mate line is drawn on the board. Set by arriving at the news, because a mate
     /// drawn is the whole of what the news is for, and cleared by leaving it.
     @State private var showsMateLine = false
@@ -82,25 +85,27 @@ struct GameScreen: View {
     /// for otherwise.
     ///
     /// A mate is the one thing on this screen allowed to speak first, so 杀招 is where the deck
-    /// opens when a search has already found one — a coloured tab among five is not a prompt
-    /// (docs/adr/0024). Only ever the latest position: a past Ply is a Drill and is handed no mate.
+    /// opens when a search has already found one — a coloured tab is not a prompt (docs/adr/0025).
     private var opensOn: Card {
         if let opening { return opening }
-        // News before work: a mate on the board is the reason 「直接给予提示」 was asked for, and a
-        // coloured dot among five is not a prompt (docs/adr/0024). Only ever the latest position —
-        // a past Ply is a Drill and is handed no mate at all.
+        // News before work: a mate on the board is the reason 「直接给予提示」 was asked for.
         if session.mateNews != nil { return .mate }
-        if isPast, session.isStudying || session.guess != nil { return .drill }
-        return .key
+        return .tactics
     }
 
-    /// Deals the deck, once, and does whatever arriving at that card does — an opening card whose
-    /// layer never came on is a card that lies about what it is showing.
+    /// Deals the deck, once.
+    ///
+    /// Arriving is what asks the engine, and with both remaining cards being questions for it,
+    /// dealing is no longer an arrival: the deck has to open on *something*, and a card that
+    /// happened to be first is not somebody asking (docs/adr/0023). So the opening card is dealt
+    /// at rest, with its own press on it, and only news arrives by itself — a mate is the one
+    /// thing on this screen allowed to speak first, and a screen that was opened straight onto a
+    /// card was opened there by somebody.
     private func deal() {
         guard !hasDealt else { return }
         hasDealt = true
         card = opensOn
-        arrive(at: card)
+        if opening != nil || card == .mate { arrive(at: card) }
     }
 
     var body: some View {
@@ -280,11 +285,7 @@ struct GameScreen: View {
         ) {
             ForEach(promotion?.moves ?? [], id: \.uci) { move in
                 Button(move.promotion?.label ?? move.uci) {
-                    if isDrilling {
-                        session.offer(move)
-                    } else {
-                        session.play(move)
-                    }
+                    session.play(move)
                     promotion = nil
                 }
             }
@@ -669,6 +670,24 @@ struct GameScreen: View {
         .padding(.top, 1)
     }
 
+    private func arrow(
+        _ symbol: String, label: String, enabled: Bool, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Palette.ink)
+                // The 44 points a thumb is entitled to, at the two ends of the control it is used
+                // on most.
+                .frame(width: 38, height: 42)
+                .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 9))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.35)
+        .accessibilityLabel(label)
+    }
+
     // ------------------------------------------------------------------ the record
 
     /// The moves, as one line you push sideways, over the shape of the game.
@@ -837,293 +856,9 @@ struct GameScreen: View {
         .accessibilityHint(localized(forked ? "record.branch" : "record.jump"))
     }
 
-    private func arrow(
-        _ symbol: String, label: String, enabled: Bool, action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Palette.ink)
-                // The 44 points a thumb is entitled to, at the two ends of the control it is used
-                // on most.
-                .frame(width: 38, height: 42)
-                .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 9))
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.35)
-        .accessibilityLabel(label)
-    }
-
     // ------------------------------------------------------------------ the reading
 
     // ------------------------------------------------------------------ the study
-
-    /// The question, the answer, and what the answer was worth — all on the board that asked it.
-    ///
-    /// Browsing back to a past Ply with the engine silent *is* the Drill: there is no mode to
-    /// enter and no screen to go to, so this is what appears under the board when the two things
-    /// a person has already said — the switch is off, the eye is in the past — add up to a
-    /// question (docs/adr/0015).
-    @ViewBuilder private var study: some View {
-        if let reveal = session.reveal {
-            revealed(reveal)
-        } else if session.isRevealing {
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text(localized("study.computing")).font(.footnote).foregroundStyle(Palette.inkSoft)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-        } else if let guess = session.guess {
-            // Four rows and no more. The window under the record is short — shorter than this
-            // question used to be — and a question a person has to scroll to finish answering is
-            // one they answer badly. So the verbs are one row, and the two buttons ride beside
-            // the line that says what the claim reads as.
-            VStack(alignment: .leading, spacing: 8) {
-                Text(localized("study.why", guess.san)).font(.subheadline.weight(.medium))
-                verbs
-                HStack(spacing: 9) {
-                    Text(reason)
-                        .font(.caption)
-                        .foregroundStyle(
-                            session.declaredIntent == nil ? Palette.inkSoft : Palette.analysis
-                        )
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    CardButton(label: localized("study.withdraw")) { session.withdrawGuess() }
-                    CardButton(
-                        label: localized("study.commit"), isOn: true,
-                        isEnabled: session.canCommitGuess
-                    ) {
-                        session.commitGuess()
-                    }
-                }
-                if !engine.isReady {
-                    Text(localized("study.notReady"))
-                        .font(.caption)
-                        .foregroundStyle(Palette.alarm)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-        } else if session.isStudying {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(localized("study.ask", viewed.state.sideToMove.label))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Palette.ink)
-                // Why here. Tapping one of the three chips leaves the list behind, and a board
-                // asking a question with no account of why it picked this position is a question
-                // you can only take on trust.
-                if let (place, ranked) = questionPlace {
-                    Text(
-                        session.isPractising
-                            // The size is the answer to the question being asked, so while the
-                            // engine is silent this says which of the three it is and no more.
-                            ? localized("study.place.practising", place)
-                            : localized(
-                                "study.place", place, ranked.san, Self.cost(ranked.lost)
-                            )
-                    )
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-                Text(localized("study.ask.explained"))
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-        } else if isPast {
-            Text("引擎意见开着，这一步的分已经在上面了。关掉那只眼睛，这一步才能当题做。")
-                .font(.caption)
-                .foregroundStyle(Palette.inkSoft)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-        }
-    }
-
-    /// 练习 — you play, then this card says what the move bought, what it cost, and what the
-    /// engine would have done. A past Ply is a Drill; pointing at a square is how you think
-    /// before you commit.
-    @ViewBuilder private var drillBody: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            study
-            if session.guess == nil, session.reveal == nil, !session.isRevealing {
-                scannerBody
-            }
-        }
-    }
-
-    /// The eight answers to 为什么. Seven verbs that can be told false and 说不清, which is a
-    /// declaration and not a refusal to make one — so it sits with the others, in the same row
-    /// and the same shape (docs/adr/0018).
-    ///
-    /// One row wherever one row holds them, because the room under the record is measured in
-    /// tens of points: the eight of them are the question, and a question whose second half is
-    /// below the fold is half a question. In Chinese, Japanese and Korean each verb is a single
-    /// character and one row is all it takes. In French they are Attaquer and Échanger and
-    /// Défendre, which no phone fits in a line — so `Wrapping` gives them a second one rather
-    /// than cutting seven words down to "Att…" (docs/adr/0019).
-    private var verbs: some View {
-        Wrapping(spacing: 5, lineSpacing: 5) {
-            ForEach(Intent.Verb.allCases, id: \.self) { verb in
-                Button {
-                    session.choose(session.declaringVerb == verb ? nil : verb)
-                } label: {
-                    Text(verb.label)
-                        .font(.subheadline)
-                        .lineLimit(1)
-                        .frame(minWidth: 30)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 7)
-                        .foregroundStyle(
-                            session.declaringVerb == verb ? Palette.parchment : Palette.ink
-                        )
-                        .background(
-                            session.declaringVerb == verb ? Palette.analysis : Palette.chipRest,
-                            in: Capsule()
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            Button {
-                session.declareUnclear()
-            } label: {
-                Text(Intent.unclearLabel)
-                    .font(.footnote)
-                    .lineLimit(1)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 7)
-                    .foregroundStyle(
-                        session.declaredIntent == .unclear ? Palette.parchment : Palette.inkSoft
-                    )
-                    .background(
-                        session.declaredIntent == .unclear ? Palette.analysis : Palette.chipRest,
-                        in: Capsule()
-                    )
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    /// What the claim reads as so far — the one line that tells somebody a verb still needs a
-    /// square, which is the only way this control can be got wrong.
-    private var reason: String {
-        if let intent = session.declaredIntent {
-            return intent == .unclear
-                ? localized("study.reason.unclear") : localized("study.reason.because", intent.label)
-        }
-        if let verb = session.declaringVerb {
-            return localized("study.reason.where", verb.label)
-        }
-        return localized("study.reason.prompt")
-    }
-
-    /// Three moves side by side, never one number. "Your move" against "the engine's" against
-    /// "what was actually played" — because being level with the engine, matching what you did
-    /// last time, and finding the move are three different pieces of news.
-    private func revealed(_ reveal: Reveal) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // The headline names both outcomes without multiplying them: right move for the wrong
-            // reason and wrong move for the right reason are different failures with different
-            // remedies, and only one of them is visible in any other chess app.
-            Text(headline(reveal))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(reveal.counts == false ? Palette.alarm : Palette.ink)
-            Text(verdict(reveal)).font(.caption).foregroundStyle(Palette.inkSoft)
-            if let check = reveal.intentCheck, let intent = reveal.intent {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(intent.label).font(.footnote.weight(.medium))
-                    Text(Self.intentVerdictLabel(check.verdict))
-                        .font(.caption.bold())
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Self.intentVerdictColour(check.verdict).opacity(0.2), in: Capsule()
-                        )
-                    Spacer(minLength: 0)
-                }
-                if let note = check.note {
-                    Text(note).font(.caption).foregroundStyle(Palette.inkSoft)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                revealRow(
-                    localized("study.yours"), reveal.guess, reveal.guessScore, prominent: true
-                )
-                if !reveal.isSameAsBest {
-                    revealRow(localized("study.engine"), reveal.best ?? "—", reveal.bestScore)
-                }
-                if !reveal.isSameAsPlayed {
-                    revealRow(localized("study.played"), reveal.played, reveal.playedScore)
-                }
-            }
-            // The engine's own reason, in the words the player just used for theirs. Two claims in
-            // the same seven verbs is a comparison; a number against a sentence is not
-            // (docs/adr/0021).
-            if let reading = reveal.bestReading {
-                let subject = reveal.isSameAsBest ? "这步" : "引擎那步"
-                Text(
-                    reading.opening.intent == .unclear
-                        ? "\(subject)为什么好，这里说不清。"
-                        : "\(subject)是为了 \(reading.sentence)"
-                )
-                .font(.caption)
-                .foregroundStyle(Palette.inkSoft)
-            }
-
-            HStack(spacing: 9) {
-                if !reveal.isSameAsPlayed {
-                    CardButton(label: localized("study.keep")) { session.keepGuess() }
-                }
-                CardButton(label: localized("study.again")) { session.withdrawGuess() }
-                if let next = nextQuestion {
-                    CardButton(label: localized("study.next"), isOn: true) {
-                        jump(toQuestion: next)
-                    }
-                }
-            }
-            Text(localized("study.depth.explained", reveal.depth))
-                .font(.caption)
-                .foregroundStyle(Palette.inkSoft)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-    }
-
-    private func revealRow(
-        _ title: String, _ san: String, _ score: Score?, prominent: Bool = false
-    ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(title).font(.caption).foregroundStyle(Palette.inkSoft).frame(width: 30, alignment: .leading)
-            Text(san).font(.notation).foregroundStyle(Palette.ink)
-            Spacer(minLength: 0)
-            ScoreCell(score: score, prominent: prominent)
-        }
-    }
-
-    /// Both verdicts in one sentence and no number over them.
-    private func headline(_ reveal: Reveal) -> String {
-        let moveIsFine = reveal.counts ?? false
-        switch reveal.intentCheck?.verdict {
-        case .held:
-            return localized(moveIsFine ? "study.headline.both" : "study.headline.reasonOnly")
-        case .failed:
-            return localized(moveIsFine ? "study.headline.moveOnly" : "study.headline.neither")
-        case .noClaim, nil:
-            return localized(moveIsFine ? "study.headline.fine" : "study.headline.poor")
-        }
-    }
 
     private static func intentVerdictLabel(_ verdict: IntentCheck.Verdict) -> String {
         switch verdict {
@@ -1141,18 +876,6 @@ struct GameScreen: View {
         }
     }
 
-    private func verdict(_ reveal: Reveal) -> String {
-        guard let lost = reveal.lost, let quality = reveal.quality else {
-            return localized("study.verdict.noOpinion")
-        }
-        let gap = String(format: "%.2f", locale: Speech.locale, Double(abs(lost)) / 100)
-        if reveal.isSameAsBest { return localized("study.verdict.best") }
-        if lost <= 0 { return localized("study.verdict.better", gap) }
-        return quality == .fine
-            ? localized("study.verdict.pass", gap)
-            : localized("study.verdict.worse", quality.label, gap)
-    }
-
     /// What a ranked move cost its mover, in pawns. A move that *gained* is ranked too and reads
     /// as a gain rather than a negative loss — "−0.30 丢分" is a sentence nobody parses.
     private static func cost(_ lost: Int) -> String {
@@ -1160,324 +883,11 @@ struct GameScreen: View {
         return lost > 0 ? "−\(pawns)" : "+\(pawns)"
     }
 
-    /// Where the position on screen stands in that list of three, when it is one of them.
-    ///
-    /// The list is ranked and the chips say so, but somebody who tapped one and is now looking at
-    /// a board has left the list behind — and the board's own question, 你会走哪一步, says nothing
-    /// about why it is being asked here.
-    private var questionPlace: (place: Int, ranked: Criticality)? {
-        guard let worst = session.worstMoves(3) else { return nil }
-        guard let index = worst.firstIndex(where: { $0.ply - 1 == session.cursor }) else {
-            return nil
-        }
-        return (index + 1, worst[index])
-    }
-
-    /// The next worst move that is not the one already on screen, so 下一题 walks the three in
-    /// order rather than re-asking the one just answered.
-    private var nextQuestion: Criticality? {
-        guard let worst = session.worstMoves(3) else { return nil }
-        return worst.first { $0.ply - 1 != session.cursor }
-    }
-
-    private func jump(toQuestion ranked: Criticality) {
-        selected = nil
-        // To the position the move was played *from*: the question is what to play here, so the
-        // move itself has to still be ahead of the cursor.
-        session.jump(toPly: ranked.ply - 1)
-    }
-
-    /// 五步计划 — one Intent over a line of your own rather than over one move. The second half of
-    /// the 五步 card, under the engine's own five.
-    ///
-    /// docs/adr/0017 said an Intent should be able to hang off a Variation and nothing was ever
-    /// built for it; this is that. The mirror of the carousel: that one shows the engine's plan
-    /// landing, this one puts your own on trial. The cap is five and its reason is on the screen,
-    /// because a cap whose reason lives only in an ADR reads as an arbitrary limit.
-    @ViewBuilder private var planBody: some View {
-        if isPast {
-            VStack(alignment: .leading, spacing: 6) {
-                if let draft = session.planDraft {
-                    drafting(draft)
-                } else if session.planCheck == nil {
-                    CardLede("在棋盘上走五步，说一个理由，让引擎判对错。")
-                    CardActions {
-                        CardButton(label: "开始写", isOn: true) {
-                            selected = nil
-                            withAnimation(.snappy(duration: 0.2)) { session.startPlan() }
-                        }
-                    }
-                }
-                if let check = session.planCheck { judged(check) }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-        } else {
-            // A plan is committed as a Variation at a Ply (docs/adr/0018), and the latest position
-            // has no Ply after it to hang one on: a plan from here is just playing the game.
-            Text("五步计划要挂在走过的一步上 —— 交卷之后它作为一条变着存进棋谱。用记录条退回一步再来。")
-                .font(.caption)
-                .foregroundStyle(Palette.inkSoft)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-        }
-    }
-
-    /// The board as a place to try a line out: what you walked, what the engine says next, and the
-    /// one reason it is all for.
-    @ViewBuilder private func drafting(_ draft: PlanDraft) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // What you actually played. This is the plan — the rows below are advice.
-            if draft.isEmpty {
-                Text("在棋盘上随便走。走一步，下面就重算一次后面五步。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                HStack(spacing: 7) {
-                    Text("你走的")
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                    Text(draft.sans.joined(separator: " "))
-                        .font(.notation)
-                        .foregroundStyle(Palette.mine)
-                    Spacer(minLength: 0)
-                }
-            }
-
-            if session.isPlanning {
-                EmptyView()
-            } else if session.planNotes.isEmpty {
-                // Not an error and not a dead end: the board is still a board.
-                Text("引擎没给出线路。自己在棋盘上走也行。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                // One line, not three. It used to say the same thing twice — once about the
-                // colours and once about the tapping — in a window 100 points tall.
-                CardNote("紫色是你的，红色是对方最好的应手 —— 不是猜你对手；点哪一行就走到哪一步。")
-                // The rows are the point of the whole section: five moves is a line, five moves each
-                // with a reason and a cost is a plan somebody could have thought of.
-                ForEach(session.planNotes, id: \.step) { note in
-                    step(note)
-                }
-            }
-
-            if draft.isTooLong {
-                Text("走了 \(draft.steps.count) 步了。计划最多五步 —— 再长对方回得太多，对错就没法判了。退回五步以内才能交卷。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.alarm)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if !draft.isEmpty {
-                // One reason for the whole of what you walked, said in the same eight words a single
-                // move's is. The moves may have come from the engine; this half did not, and this is
-                // the half that is marked (docs/adr/0022).
-                Text("你走的这条线是为了什么？说错了会告诉你。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                verbs
-                Text(reason).font(.caption).foregroundStyle(Palette.inkSoft)
-                CardActions {
-                    CardButton(label: "交卷", isOn: true, isEnabled: session.canCommitPlan) {
-                        session.commitPlan()
-                    }
-                    CardButton(label: "退一步") { session.undoPlanMove() }
-                    CardButton(label: "收起") {
-                        withAnimation(.snappy(duration: 0.2)) { session.abandonPlan() }
-                    }
-                }
-            }
-        }
-    }
-
-    /// One numbered row: the move, what it is for, and what it gives away.
-    ///
-    /// Tappable, and what it does is *play* — tapping row three walks the board three moves down the
-    /// line. The number on it is the number on an arrow, so what a tap does is visible before it
-    /// happens. Every row is shown rather than only the next one: "and then what" is a question
-    /// about the moves you have not got to yet.
-    @ViewBuilder private func step(_ note: PlanNote) -> some View {
-        Button {
-            session.followPlan(through: note.step)
-        } label: {
-            // The same row every numbered thing on this screen uses: the figure that is also on
-            // the board, the move, what it is for, and what it gives away.
-            // No verb chip beside the move: the first line of 值 already opens with the verb and
-            // its square, and the same two words twice on one row reads as two different claims.
-            CardRow(
-                badge: .step(note.step, isYours: note.isYours),
-                move: note.san,
-                tag: note.isYours ? nil : "对方",
-                text: note.gains.joined(separator: "；"),
-                under: note.costs.isEmpty ? nil : note.costs.joined(separator: "；")
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 3)
-            // Tappable: the board walks to this step, which is what the number is for.
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// The verdict: which move of the plan made the claim true, or the state it actually left.
-    @ViewBuilder private func judged(_ check: PlanCheck) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(session.game.plans(atPly: session.cursor).last?.intent.label ?? "")
-                    .font(.footnote.weight(.medium))
-                Text(Self.intentVerdictLabel(check.verdict))
-                    .font(.caption.bold())
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Self.intentVerdictColour(check.verdict).opacity(0.2), in: Capsule())
-                if let step = check.step, let san = check.san {
-                    Text(
-                        check.held
-                            ? "第 \(step) 步 \(san) 的时候成立"
-                            : "走到第 \(step) 步 \(san) 还是没成立"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                }
-                Spacer(minLength: 0)
-            }
-            if let note = check.note {
-                Text(note)
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let outcome = session.planOutcome {
-                Text(outcome.sentence)
-                    .font(.caption)
-                    .foregroundStyle(Palette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Text("这条线进了棋谱，是这一步的一个变着。")
-                .font(.caption2)
-                .foregroundStyle(Palette.inkSoft)
-        }
-    }
-
-    /// 点一格问它 — the one thing on this screen allowed to speak before a Guess is committed.
-    ///
-    /// And it only ever speaks about the square somebody pointed at. Everything else on the layer
-    /// waits for the commit, because a warning painted unprompted is the blunder check performed on
-    /// the player's behalf, which is the one thing they are here to learn to do (docs/adr/0015).
-    /// The order inside it is the whole design: which of your pieces can get there, then what the
-    /// move you picked is worth in your own terms, and the engine's opinion last and only on a tap.
-    /// Reversed, it is a hint button (docs/adr/0021).
-    ///
-    /// The chip that used to arm it has gone: arriving at this card is the arming, and leaving puts
-    /// the board back. A layer that only *draws* may follow the card it is named on; anything that
-    /// starts a search still keeps a press of its own (docs/adr/0024).
-    @ViewBuilder private var scannerBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if session.planDraft != nil {
-                Text("在写五步计划。问一格先让位 —— 一块棋盘上只放一个假设。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if let scan = session.scan {
-                scanned(scan)
-            } else if session.isScannerArmed {
-                Text("点棋盘上任意一格，看你哪些子能过去。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-            } else {
-                CardButton(label: "再问一格") { session.armScanner() }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-    }
-
-    /// The ways in, then the trial, then the engine — in that order and never another.
-    @ViewBuilder private func scanned(_ scan: Scan) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if scan.isEmpty {
-                Text("\(scan.target)：你一个子也过不去。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-            } else if let trial = session.trial {
-                // One row shape for both readings, and the dot's colour is the only difference
-                // between what a move buys and what it costs.
-                CardRow(badge: .none, move: "\(trial.san)：", text: "", isNamed: true)
-                ForEach(trial.gains, id: \.self) { line in
-                    CardRow(badge: .mark(isGain: true), text: line)
-                }
-                ForEach(trial.costs, id: \.self) { line in
-                    CardRow(badge: .mark(isGain: false), text: line)
-                }
-                HStack(spacing: 9) {
-                    CardButton(label: "换一个") { session.takeBackTrial() }
-                    if session.scanAnswer == nil, !session.isAsking {
-                        // Last, and on a tap. Before this button is pressed the engine has not been
-                        // asked anything at all — not asked and hidden, not asked (docs/adr/0015).
-                        CardButton(label: "引擎怎么说", isOn: true) { session.askEngine() }
-                    }
-                    Spacer(minLength: 0)
-                }
-                if session.isAsking {
-                    EmptyView()
-                }
-                if let answer = session.scanAnswer { engineAnswer(answer) }
-            } else {
-                Text("\(scan.target)：\(scan.arrivals.count) 个子能过去。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                // Cheapest first, because the cheapest way in is the one worth weighing first.
-                HStack(spacing: 7) {
-                    ForEach(scan.arrivals, id: \.san) { arrival in
-                        Button { session.tryOut(arrival.move) } label: {
-                            Text(arrival.san)
-                                .font(.notation)
-                                .foregroundStyle(Palette.ink)
-                                .padding(.horizontal, 11)
-                                .padding(.vertical, 6)
-                                .background(Palette.chipRest, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder private func engineAnswer(_ answer: ScanAnswer) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(answer.isSameAsTrial ? "引擎也走" : "引擎走")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                Text(answer.best).font(.notation).foregroundStyle(Palette.ink)
-                ScoreCell(score: answer.score)
-                Spacer(minLength: 0)
-            }
-            if let reading = answer.reading {
-                CardNote(
-                    reading.opening.intent == .unclear
-                        ? "引擎那步为什么好，这里说不清。"
-                        : "引擎那步是为了 \(reading.sentence)"
-                )
-            }
-            CardNote("深度 \(answer.depth)")
-        }
-    }
-
     /// Same family as 问一格: a layer you turn on, not a twin of 练习. 练习 is the eval strip;
     /// this is a question about the position (docs/adr/0023).
     ///
     /// It says what the press *does*, not what the card is called: a chip labelled 战术 under a
-    /// head that also says 战术 is a switch nobody can read (docs/adr/0024).
+    /// head that also says 战术 is a switch nobody can read (docs/adr/0025).
     private var finderChip: some View {
         CardButton(
             label: session.isFindingTactics ? "不找了" : "找一记",
@@ -1485,6 +895,7 @@ struct GameScreen: View {
             isEnabled: engine.isReady || session.isFindingTactics
         ) {
             withAnimation(.snappy(duration: 0.2)) {
+                finderClosedByHand = session.isFindingTactics
                 session.setFindingTactics(!session.isFindingTactics)
             }
         }
@@ -1496,7 +907,7 @@ struct GameScreen: View {
     ///
     /// **The switch did become the card.** 战术发现器 has a press of its own on the card, but
     /// arriving here is also a press: the swipe is the asking, and leaving turns it off again
-    /// unless somebody flipped it by hand (docs/adr/0024). 杀招 shares the same probe, so swiping
+    /// unless somebody flipped it by hand (docs/adr/0025). 杀招 shares the same probe, so swiping
     /// between the two does not stop it and start it again.
     @ViewBuilder private var tacticsBody: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1507,7 +918,16 @@ struct GameScreen: View {
             if session.isFindingTactics {
                 tacticAnswer
             } else {
-                Text("发现器是你自己关掉的。按「找一记」再算一次 —— 顺手也就看出来有没有杀。")
+                // Two silences, and they are not the same silence. The deck has to open on one of
+                // its two cards and both of them are questions for the engine, so the card in
+                // front is dealt at rest and nobody has asked anything yet. Saying 「你自己关掉的」
+                // there accuses the reader of an act they did not commit, and the next thing they
+                // look for is the switch they are told they threw.
+                Text(
+                    finderClosedByHand
+                        ? "发现器是你自己关掉的。按「找一记」再算一次 —— 顺手也就看出来有没有杀。"
+                        : "还没算。按「找一记」就找 —— 顺手也就看出来有没有杀。"
+                )
                     .font(.caption)
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1522,9 +942,7 @@ struct GameScreen: View {
     @ViewBuilder private var tacticAnswer: some View {
         if let prompt = session.tacticPrompt {
             Button {
-                guard let line = session.tactic?.line, !line.isEmpty else { return }
                 selected = nil
-                session.startWalk(line: line)
             } label: {
                 Text(prompt)
                     .font(.caption)
@@ -1549,132 +967,6 @@ struct GameScreen: View {
         }
     }
 
-    /// 这步的要害 — what this move is for, and why it was played.
-    ///
-    /// The last Ply of the position on screen, including the latest: there is no rewind to wait
-    /// for. An empty Game still answers, from the engine's next move. A Guess still being held
-    /// is the player answering, and this card does not speak over that.
-    @ViewBuilder private var keyBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if session.guess != nil, session.reveal == nil {
-                Text("先交卷。交卷之前引擎不开口，这里也就还没有话说。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if let purpose = movePurpose {
-                if purpose.opening.intent == .unclear {
-                    CardLede("\(purpose.opening.san) 为什么下，这里说不清。")
-                } else {
-                    CardLede("\(purpose.opening.san) 是为了\(purpose.opening.intent.goal)")
-                    CardNote(purpose.opening.intent.label)
-                    // Looking down the engine's Line, not item N of a list this card does not show.
-                    // The number matches 五步; the SAN is the move; 往后 is why there is no 第 1 步 here.
-                    if let laterLine = purpose.laterLine {
-                        CardNote(laterLine)
-                    }
-                }
-            } else if !session.isSearching {
-                Text("滑到这张卡会算 10 秒。算完就说这一步是为了什么。")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if !looseSquares.isEmpty, session.walk == nil {
-                Text("红圈：被吃的子比守的多")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-    }
-
-    /// What the move on screen is for. The last Ply if there is one, otherwise the engine's next.
-    private var movePurpose: LineReading? {
-        if session.guess != nil, session.reveal == nil { return nil }
-        return viewed.purpose(continuation: session.viewedContinuation)
-    }
-
-    /// 五步 — the engine's Line played out on the board, and 五步计划 underneath it.
-    ///
-    /// One card, because they are one question with two answers: the five the engine would play,
-    /// and five of your own with one reason over the whole of them. 五步计划 was a card of its own
-    /// and went with the rest of them when the deck was cut to five — the session kept all of it
-    /// and nothing on the phone could reach it, which is a feature that fails without anything
-    /// going red. It lives here now, one press below the engine's five.
-    ///
-    /// The session keeps the two off each other's board: `startPlan` ends the walk, `startWalk`
-    /// refuses over a draft. So the walk stands down while a plan is being written rather than
-    /// offering a transport that would be refused.
-    @ViewBuilder private var walkBody: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if session.planDraft == nil { walkSection }
-            planBody
-        }
-    }
-
-    /// The stored Line, played a Ply at a time — and the way to start one when there is nothing
-    /// in hand yet.
-    ///
-    /// Never a line the app went and fetched: what plays is whichever one somebody already paid
-    /// for, a Review's or a Reveal's (docs/adr/0020, 0021). Arriving at the card starts it and
-    /// leaving puts the board back, which is what makes the whole thing ephemeral.
-    @ViewBuilder private var walkSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let walk = session.walk {
-                transport(walk)
-            } else if session.viewedContinuation.isEmpty {
-                if !session.isSearching {
-                    Text("这一步还没有引擎的线可走 —— 滑到这张卡会算 10 秒。")
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                }
-            } else {
-                CardButton(label: "从这儿走一遍") { session.startWalk() }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-    }
-
-    /// The transport, and where the whole line arrives.
-    ///
-    /// Both halves matter and the second one is the point: a carousel that only recites moves leaves
-    /// a beginner watching five plies go by and unable to say what changed. The sentence compares
-    /// the end of the line with its start, out of the same fixed templates over checkable facts as
-    /// the rest of the layer (docs/adr/0021).
-    @ViewBuilder private func transport(_ walk: Walk) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // The line *is* the transport: tapping the third move walks to the third move. There
-            // were three chevrons and a counter here, which is a tape deck for something that was
-            // never a tape — and the numbers on the chips are the numbers on the board's arrows.
-            CardLede(walk.outcome.sentence)
-            HStack(spacing: 8) {
-                Text("第 \(walk.step)/\(walk.line.count) 步")
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                Spacer(minLength: 0)
-                CardButton(label: "回到开头", isEnabled: !walk.isAtStart) {
-                    session.stepWalk(by: -walk.step)
-                }
-            }
-            CardMoves(
-                moves: walk.line.enumerated().map { index, san in
-                    CardMoves.Move(
-                        step: index + 1, san: san, isYours: index.isMultiple(of: 2)
-                    )
-                },
-                standing: walk.step,
-                tap: { step in session.stepWalk(by: step - walk.step) }
-            )
-            Text("这几步没有走进棋谱，退出就回到原来的位置。")
-                .font(.caption2)
-                .foregroundStyle(Palette.inkSoft)
-        }
-    }
-
 
 
     /// The games in this one's collection, and which one this is. Nil for a game that is not in a
@@ -1689,22 +981,22 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ the deck
 
-    /// One card of the deck under the record (docs/adr/0024).
+    /// One card of the deck under the record (docs/adr/0025).
     ///
     /// A kind rather than an index, because which card is dealt comes from the position — a past
     /// Ply opens on 练习 where the latest one opens on 要害 — and a card that cannot answer here
     /// says so on its own face rather than disappearing. An index would point at a different card
     /// every time the position changed shape.
     enum Card: Hashable {
-        case key, mate, tactics, walk, drill
+        case mate, tactics
     }
 
     /// Every card, in one order, whatever the position.
     ///
-    /// **The deck does not change shape.** Five cards that never move can be learnt; a card that
+    /// **The deck does not change shape.** Two cards that never move can be learnt; a card that
     /// cannot answer here says so on its own face.
     private var cards: [Card] {
-        [.key, .mate, .tactics, .walk, .drill]
+        [.mate, .tactics]
     }
 
     /// The deck, and the row of dots that says how many cards there are.
@@ -1721,38 +1013,21 @@ struct GameScreen: View {
         // colour of its own, and the built-in dots have no opinion about which page is urgent.
         .tabViewStyle(.page(indexDisplayMode: .never))
         .onChange(of: card) { was, now in turn(to: now, from: was) }
-        // A move offered at a past Ply is the question being answered, so the deck goes to it.
-        .onChange(of: session.guess?.san) { _, now in
-            if now != nil { card = .drill }
-        }
-        // Arriving starts the walk when a line is already in hand; a Stint that lands later
-        // has to start it then, or 五步 sits empty over a line that has just arrived. The
-        // Line lengthens as the search deepens, and a walk still on its first ply takes that.
-        .onChange(of: session.viewedContinuation) { _, line in
-            if card == .walk, !line.isEmpty { session.startWalk() }
-        }
         // The engine's own move takes the clock. When it puts it down, the card in front
         // still wants a Line, and nobody will swipe again to ask.
         .onChange(of: session.thinking) { _, now in
             guard now == nil, wantsAdvice(card) else { return }
             session.adviseForCard()
-            if card == .walk { session.startWalk() }
         }
         // And a mate that turns up mid-game takes the eye, which is the whole of 「直接给予提示」
-        // on a deck (docs/adr/0024). On the way in only: a 2 步杀 becoming a 1 步杀 is the same
+        // on a deck (docs/adr/0025). On the way in only: a 2 步杀 becoming a 1 步杀 is the same
         // news twice, and would drag somebody back to a card they had deliberately swiped away.
         .onChange(of: session.mateNews == nil) { was, now in
             guard was, !now else { return }
             // Never off a card that is already showing it — swiping to 战术 makes the probe find
-            // the mate, and being thrown to 杀招 for it would make 战术 unreachable — never out from
-            // under work in progress (a plan being written, a question being asked, a square being
-            // scanned), and never off 五步 at all. That card is the one that spends the Stint which
-            // finds the news, and the Line it walks is the *same* search's answer: jumping for the
-            // mate tore down the very walk that had just paid for it. The news still lights 杀招's
-            // tab, so it is one coloured pill away rather than nothing.
-            guard !wantsFinder(card), card != .walk, session.planDraft == nil, session.guess == nil,
-                session.scan == nil
-            else { return }
+            // the mate, and being thrown to 杀招 for it would make 战术 unreachable. The news still
+            // lights 杀招's tab, so it is one coloured pill away rather than nothing.
+            guard !wantsFinder(card) else { return }
             card = .mate
         }
     }
@@ -1769,7 +1044,7 @@ struct GameScreen: View {
         )
     }
 
-    /// One card at a time, the same five whatever the position (docs/adr/0024).
+    /// One card at a time, the same five whatever the position (docs/adr/0025).
     ///
     /// A real child of the column rather than a card laid over a spacer that was measured to find
     /// out how much room there was. The board's frame is fixed and a scroll view accepts whatever it
@@ -1778,7 +1053,7 @@ struct GameScreen: View {
     /// all, off the screen on any pass that settled in one go. The measurement existed for one
     /// reason: so the cards could not push the board around. A child that takes the leftover does
     /// not push anything, because the card's own length never reaches the layout above it
-    /// (docs/adr/0024).
+    /// (docs/adr/0025).
     private var deck: some View {
         VStack(spacing: 0) {
             DeckSurface {
@@ -1807,11 +1082,8 @@ struct GameScreen: View {
 
     @ViewBuilder private func body(of kind: Card) -> some View {
         switch kind {
-        case .key: cardFrame(kind) { keyBody }
         case .mate: cardFrame(kind) { mateBody }
         case .tactics: cardFrame(kind) { tacticsBody }
-        case .walk: cardFrame(kind) { walkBody }
-        case .drill: cardFrame(kind) { drillBody }
         }
     }
 
@@ -1832,11 +1104,11 @@ struct GameScreen: View {
                 if kind == card, wantsAdvice(kind) {
                     if isCardSearching(kind) {
                         CardSearching(
-                            progress: session.searchProgress, phrase: searchPhrase(kind)
+                            progress: session.searchProgress, phrase: "正在算"
                         )
                     } else if let progress = standingProgress {
                         CardSearching(
-                            progress: progress, phrase: searchPhrase(kind), isRunning: false
+                            progress: progress, phrase: "正在算", isRunning: false
                         )
                     }
                 }
@@ -1889,7 +1161,7 @@ struct GameScreen: View {
     /// **The card you are on is the card that acts.** Arriving turns its layer on — the scan, the
     /// walk, the squares, the mate's arrows, the finder — and leaving turns that layer off again,
     /// so the board is only ever drawing the one card in front of you and never the leftovers of
-    /// three you swiped past (docs/adr/0024).
+    /// three you swiped past (docs/adr/0025).
     ///
     /// A swipe therefore spends a Stint where the card reads a Line — 杀招, 战术, 要害, 五步 —
     /// the first time this position is asked about, even during Practice. What that search found
@@ -1902,16 +1174,6 @@ struct GameScreen: View {
 
     private func leave(_ was: Card, for now: Card) {
         switch was {
-        case .drill: session.endScan()
-        case .walk:
-            session.endWalk()
-            session.setShowsControlChange(false)
-            // A plan is this card's own work in progress and leaving is the end of it — the rule
-            // 五步计划 kept as a card of its own (docs/adr/0024). An unwritten draft goes; what was
-            // 交卷'd is a Variation in the Game and is not touched. Without this the board would go
-            // on standing at the draft's tip with no card claiming it.
-            if session.planDraft != nil { session.abandonPlan() }
-        case .key: session.setShowsControlChange(false)
         case .mate:
             showsMateLine = false
             if !wantsFinder(now) { closeFinder() }
@@ -1921,26 +1183,18 @@ struct GameScreen: View {
 
     private func arrive(at now: Card) {
         switch now {
-        case .drill:
-            if session.scan == nil, session.guess == nil { session.armScanner() }
-        case .walk:
-            session.setShowsControlChange(true)
         case .mate:
             showsMateLine = true
             openFinder()
         case .tactics: openFinder()
-        case .key: break
         }
         if wantsAdvice(now) { session.adviseForCard() }
-        if now == .walk { session.startWalk() }
     }
 
-    /// Cards that read a Line spend a Stint on arrival, even during Practice. 练习 keeps its
-    /// own bargain: the player answers first, the engine last.
+    /// Both cards read a Line, so both spend a Stint on arrival, even during Practice.
     private func wantsAdvice(_ kind: Card) -> Bool {
         switch kind {
-        case .mate, .tactics, .key, .walk: true
-        case .drill: false
+        case .mate, .tactics: true
         }
     }
 
@@ -1959,20 +1213,11 @@ struct GameScreen: View {
     /// Whether this card currently has a search in flight, so the frame can say 正在算 and the
     /// depth. Neighbouring pages stay alive in a paged TabView; only the card in front speaks.
     private func isCardSearching(_ kind: Card) -> Bool {
-        switch kind {
-        case .drill: session.isAsking || session.isRevealing
-        default:
-            wantsAdvice(kind) && session.thinking == nil && session.isSearching
-                && !session.isAdviceSpent
-        }
+        wantsAdvice(kind) && session.thinking == nil && session.isSearching
+            && !session.isAdviceSpent
     }
 
-    private func searchPhrase(_ kind: Card) -> String {
-        switch kind {
-        case .walk: "正在算后面五步"
-        default: "正在算"
-        }
-    }
+
 
     /// The two cards the finder answers for: the shot, and the mate that falls out of the same
     /// probe. Swiping between them does not stop and restart it.
@@ -1995,7 +1240,7 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ 杀
 
-    /// The news: a mate somebody can already see, whoever it belongs to (docs/adr/0024).
+    /// The news: a mate somebody can already see, whoever it belongs to (docs/adr/0025).
     ///
     /// Not a switch and not an answer to anything — the one thing on this screen that arrives
     /// unbidden. It says how forced it is because that is the difference between a mate a person
@@ -2040,7 +1285,7 @@ struct GameScreen: View {
             .padding(.top, 10)
         } else {
             // No news is news, and it is three different pieces of it. A card that goes blank when
-            // there is no mate is a card that looks broken (docs/adr/0024).
+            // there is no mate is a card that looks broken (docs/adr/0025).
             VStack(alignment: .leading, spacing: 6) {
                 if viewed.isOver {
                     Text("这局已经走完了，没有下一步可算。")
@@ -2061,7 +1306,7 @@ struct GameScreen: View {
     }
 
     /// The mate line as numbered arrows, while its own card is the one on show.
-    private var mateArrows: [PlanArrow] {
+    private var mateArrows: [MoveArrow] {
         guard showsMateLine, card == .mate, let news = session.mateNews else { return [] }
         return news.arrows
     }
@@ -2099,7 +1344,7 @@ struct GameScreen: View {
     /// runs on to, and the reason the board reserves `cardWanted` rather than this.
     ///
     /// A bound rather than a clamp in the layout itself: the room the deck gets is whatever the
-    /// board leaves, and the board's own budget is what keeps that above this (docs/adr/0024). The
+    /// board leaves, and the board's own budget is what keeps that above this (docs/adr/0025). The
     /// shortest screen the app runs on leaves 137pt, so this is a number nothing reaches — which is
     /// the shape to keep it in. A floor that is doing work is a floor that has been hit.
     static let cardFloor: CGFloat = 120
@@ -2132,7 +1377,7 @@ struct GameScreen: View {
     /// screen less the chrome, less the names, less the card the deck wants. It used to be
     /// `max(240, size.height - 388)`, and the `max` was the bug: on a screen shorter than that sum
     /// the board kept its 240 and the deck paid the difference — on a phone on its side, all of it,
-    /// silently, `opacity(0)`, with every action on the cards gone (docs/adr/0024). `minBoard` is
+    /// silently, `opacity(0)`, with every action on the cards gone (docs/adr/0025). `minBoard` is
     /// still the floor for a screen too short for a board at all; what changed is that the deck's
     /// room is now part of the sum rather than what was left after it.
     static func boardSide(in size: CGSize, accessibilityText: Bool = false) -> CGFloat {
@@ -2156,7 +1401,7 @@ struct GameScreen: View {
     /// What the deck is left under the record on a screen the layout has been handed this much
     /// height — the sum the column comes to, written out so a test can hold it without a window.
     /// The deck takes exactly this by being the one flexible child of a column whose other children
-    /// are fixed, which is why `deck` needs no measurement of its own (docs/adr/0024).
+    /// are fixed, which is why `deck` needs no measurement of its own (docs/adr/0025).
     ///
     /// That height is what `proxy.size.height` is: the glass less the status bar and the navigation
     /// bar, and including the home-indicator band, because the deck is drawn down to the glass
@@ -2176,29 +1421,14 @@ struct GameScreen: View {
             // first move — which is what replaces the old gate: the reading's own uncertainty is
             // visible where it matters, and 改棋子 is one tap away (docs/adr/0011).
             suspects: session.unconfirmedSquares,
-            selected: selected ?? session.scan?.target ?? session.declaredIntent?.target,
+            selected: selected,
             destinations: Set(candidateMoves.map(\.to)),
             captures: Set(candidateMoves.filter(\.isCapture).map(\.to)),
             recommendation: recommendation,
-            mine: myArrow,
-            aim: session.declaredIntent?.target
-                ?? (card == .key ? movePurpose?.opening.intent.target : nil),
-            loose: looseSquares,
-            ways: session.trial == nil ? (session.scan?.origins ?? []) : [],
-            key: keySquares,
-            // Whichever card is in front of you, and only that one: five arrows left over from a
-            // plan you swiped away from are five arrows about a position nobody is looking at
-            // (docs/adr/0024). On 五步 it is the plan's own five while one is being written and the
-            // engine's Line otherwise — the session never lets both exist at once.
-            plan: card == .walk
-                ? (session.planDraft != nil ? session.planArrows : session.walkArrows)
-                : mateArrows,
-            // Tappable while a verb is waiting for its target, too: the board is the only place a
-            // claim's target can be said, which is the whole reason a verb has one.
-            // Not while a line is being walked: the pieces on screen are five moves from where the
-            // game is, and a tap would be a move made in a position nobody is standing in.
-            isInteractive: (session.isHandTurn || session.declaringVerb != nil
-                || session.isScannerArmed) && session.walk == nil,
+            // Whichever card is in front of you, and only that one: arrows left over from a card
+            // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
+            plan: mateArrows,
+            isInteractive: session.isHandTurn,
             onTap: tap
         )
     }
@@ -2218,29 +1448,10 @@ struct GameScreen: View {
     }
 
     private func tap(_ square: Square) {
-        // A verb is chosen and waiting for the Square it is about, so the board is a place to
-        // point at rather than a place to move on. One tap for the verb, one for the target — and
-        // it goes before everything else here because it is the narrowest state on the screen.
-        if session.declaringVerb != nil {
-            session.aim(at: square)
-            selected = nil
-            return
-        }
-        // Armed, so a tap that is not a move is a question about the square. An own-piece tap,
-        // or a destination after one, is still a move — 练习 asks you to play, and pointing at
-        // a square is how you think before you commit, not instead of committing.
-        if session.isScannerArmed {
-            let own = boardPieces[square]?.colour == tapPosition.state.sideToMove
-            if !(session.isHandTurn && (selected != nil || own)) {
-                selected = nil
-                session.scan(at: square)
-                return
-            }
-        }
         guard session.isHandTurn else { return }
 
         if let selected {
-            let moves = tapPosition.state.moves(from: selected).filter { $0.to == square }
+            let moves = viewed.state.moves(from: selected).filter { $0.to == square }
             // More than one move to the same square means a promotion, and only a promotion.
             if moves.count > 1 {
                 promotion = PromotionRequest(moves: moves)
@@ -2248,28 +1459,14 @@ struct GameScreen: View {
                 return
             }
             if let move = moves.first {
-                // A plan being written takes the move instead: it is not an answer to this
-                // position's question, it is the next move of a line (docs/adr/0017).
-                if session.planDraft != nil {
-                    session.playInPlan(move)
-                    self.selected = nil
-                    return
-                }
-                // 练习 is the Drill: a move is *offered* — visible, uncommitted, and yours to
-                // take back. Any other card, a past Ply included, plays it: the line it replaces
-                // is kept as a Variation (docs/adr/0015, 0024).
-                if isDrilling {
-                    session.offer(move)
-                } else {
-                    session.play(move)
-                }
+                session.play(move)
                 self.selected = nil
                 return
             }
         }
 
         // Not a destination, so it is either a new selection or a deselection.
-        if let piece = boardPieces[square], piece.colour == tapPosition.state.sideToMove {
+        if let piece = boardPieces[square], piece.colour == viewed.state.sideToMove {
             selected = square
         } else {
             if selected != nil { Sounds.current.play(.refused) }
@@ -2305,14 +1502,12 @@ struct GameScreen: View {
 
     private var candidateMoves: [Move] {
         guard let selected, session.isHandTurn else { return [] }
-        return tapPosition.state.moves(from: selected)
+        return viewed.state.moves(from: selected)
     }
 
     /// The position a tap is read against — the plan's tip while one is being written, and the
     /// position being studied otherwise. Only moves go through this; everything the app *says*
     /// still comes from `viewed`.
-    private var tapPosition: Game { session.planDraft != nil ? session.board : viewed }
-
     private var recommendation: MoveSquares? {
         // The shot is 战术's own drawing and is drawn while that card is up. The engine's
         // recommendation underneath it is the strip's — 引擎意见 is a switch on the board, not a
@@ -2334,35 +1529,6 @@ struct GameScreen: View {
     /// would be the blunder-check performed on the player's behalf, which is precisely the habit
     /// they exist to build.
     private var isPast: Bool { !session.isAtLatest }
-
-    /// 练习 is in front and this Ply is a question. Other cards play from here instead.
-    private var isDrilling: Bool { card == .drill && session.isStudying }
-
-    /// The player's own move, drawn in their own colour beside the engine's.
-    private var myArrow: MoveSquares? {
-        if let trial = session.trial { return MoveSquares(uci: trial.move.uci) }
-        guard let guess = session.guess else { return nil }
-        return MoveSquares(from: guess.move.from, to: guess.move.to)
-    }
-
-    /// Every piece hanging in the position on screen — on the card that carries the word 红圈,
-    /// and on no other. A ring with no legend anywhere on screen is a mark somebody has to guess
-    /// at (docs/adr/0024).
-    private var looseSquares: Set<Square> {
-        guard card == .key else { return [] }
-        return session.board.loosePieces ?? []
-    }
-
-    /// The one to three squares a walked Line is actually about (docs/adr/0021).
-    ///
-    /// The rules net is in the package; what the screen supplies is the engine's expected
-    /// continuation, and it never starts a search to get one — it is whichever line a Review or a
-    /// Reveal already produced. No line, no claim.
-    private var keySquares: [KeySquare] {
-        // 五步 still follows the squares; the 要害 card itself now names the move's purpose.
-        guard card == .walk, session.showsControlChange else { return [] }
-        return session.board.keySquares(continuation: session.boardContinuation)
-    }
 
     /// How the game on screen ended, if it has.
     ///
@@ -2489,11 +1655,8 @@ struct MoveCard: Identifiable, Hashable {
 extension GameScreen.Card {
     var title: String {
         switch self {
-        case .key: "要害"
         case .mate: "杀招"
         case .tactics: "战术"
-        case .walk: "五步"
-        case .drill: "练习"
         }
     }
 
@@ -2501,11 +1664,8 @@ extension GameScreen.Card {
     /// name above it.
     var subtitle: String {
         switch self {
-        case .key: "刚走的这一步做了什么，为了什么"
         case .mate: "几步之内有人要被将死了"
         case .tactics: "这一步有没有一记赢子的"
-        case .walk: "引擎说的后面几步走一遍；自己走五步，说个理由让它判"
-        case .drill: "你走一步，再看这一步的得失和引擎怎么走"
         }
     }
 }

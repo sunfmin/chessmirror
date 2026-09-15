@@ -165,7 +165,7 @@ import Testing
         #expect(session.tacticPrompt == "这一步没有战术")
     }
 
-    /// The rule this test used to assert has been turned round (docs/adr/0024): the finder is a
+    /// The rule this test used to assert has been turned round (docs/adr/0025): the finder is a
     /// card of its own, and swiping onto that card is the asking — wherever the eye is standing.
     @Test("browsing back and asking again probes the position being looked at")
     func aPastPlyIsProbedToo() async throws {

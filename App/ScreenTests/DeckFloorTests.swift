@@ -100,9 +100,8 @@ struct DeckFloor {
 
     private static let italian = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5", "c2c3", "g8f6"]
 
-    /// The same shape of opinion `game-in-play` is photographed with — one Line with a continuation,
-    /// because 要害 reads the squares a move mattered over off the rest of it (docs/adr/0021) — so
-    /// the card in front is as full as a card gets.
+    /// The same shape of opinion `game-in-play` is photographed with — one Line with a
+    /// continuation, so the card in front is as full as a card gets.
     private static let searching = [
         Analysis(
             depth: 26,
@@ -147,8 +146,8 @@ struct DeckFloor {
         let session = try session()
         let rendered = await ScreenImage.write("deck-small-phone", size: size) { screen(session) }
 
-        for name in ["要害", "杀招", "战术", "五步", "练习"] {
-            #expect(rendered.says(name), "the names are the only way to the other four cards")
+        for name in ["杀招", "战术"] {
+            #expect(rendered.says(name), "the names are the only way to the card behind")
         }
         #expect(rendered.says("正在算"), "and the card in front of them is a card")
 
@@ -170,9 +169,9 @@ struct DeckFloor {
     }
 
     /// The reader's own text size, which is the one thing about a phone a picture suite otherwise
-    /// never varies — and the size at which five names in one capsule stop fitting if the row is
+    /// never varies — and the size at which the names in one capsule stop fitting if the row is
     /// allowed to grow without limit.
-    @Test("the five names fit inside the glass at the largest text size")
+    @Test("the card names fit inside the glass at the largest text size")
     func namesFitAtTheLargestText() async throws {
         let size = CGSize(width: 402, height: 874)
         let session = try session()
@@ -180,13 +179,13 @@ struct DeckFloor {
             screen(session).dynamicTypeSize(.accessibility5)
         }
 
-        for name in ["要害", "杀招", "战术", "五步", "练习"] {
+        for name in ["杀招", "战术"] {
             #expect(rendered.says(name))
         }
 
         let names = try #require(railBounds(of: rendered.url, in: size))
-        // A capsule that has run off both edges still reads all five names out to VoiceOver, and
-        // 练习 is simply not there to press: the margin is the only witness there is.
+        // A capsule that has run off both edges still reads every name out to VoiceOver, and the
+        // card behind is simply not there to press: the margin is the only witness there is.
         #expect(names.left > 8, "the names start \(names.left)pt in, at the edge of the glass")
         #expect(
             size.width - names.right > 8,
@@ -220,7 +219,7 @@ struct DeckFloor {
         return (pixels, width, height)
     }
 
-    /// The five names: their left and right edges, and how far their lowest pixel sits above the
+    /// The names: their left and right edges, and how far their lowest pixel sits above the
     /// bottom of the glass — all in points.
     ///
     /// Told apart by colour. The capsule is walnut at a tenth over parchment (233,220,206), the pill

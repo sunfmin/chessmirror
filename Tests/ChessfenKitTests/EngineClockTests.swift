@@ -345,25 +345,4 @@ struct EngineClock {
         #expect(engine.searchCount == before, "the move is still the one being thought about")
         #expect(session.thinking == .own)
     }
-
-    /// A Guess still being held is the player answering. The engine does not speak first, even
-    /// if the card they are on is one that would otherwise spend a Stint.
-    @Test("a card does not speak while a Guess is still being held")
-    func aCardDoesNotSpeakOverAGuess() async throws {
-        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
-        let engine = ScriptedEngine(Self.searching, isEndless: true)
-        let session = GameSession.fresh(game)
-        session.adviceStint = .milliseconds(40)
-        session.attach(engine: engine, library: nil)
-        session.jump(toPly: 6)
-        session.offer(try #require(session.viewed.state.move(matching: "d2d4")))
-        #expect(session.guess != nil)
-        let before = engine.searchCount
-
-        session.adviseForCard()
-        await hop()
-
-        #expect(engine.searchCount == before)
-        #expect(session.analysis == nil)
-    }
 }

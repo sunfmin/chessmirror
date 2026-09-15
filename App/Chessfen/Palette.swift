@@ -332,7 +332,7 @@ struct EvalBar: View {
         // because the bar's two ends are the pieces' colours and not "the left one and the right
         // one". The growing end used to be White whatever way up the board was, so with Black at the
         // bottom the bar said the exact opposite of the number printed beside it, to the only person
-        // who could see either (docs/adr/0024).
+        // who could see either (docs/adr/0025).
         let bottomIsWhite = orientation == .whiteAtBottom
         let share = bottomIsWhite ? white : 1 - white
         let bottomTint = bottomIsWhite ? Palette.barWhite : Palette.barBlack

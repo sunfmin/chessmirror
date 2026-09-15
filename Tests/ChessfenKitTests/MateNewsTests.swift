@@ -230,7 +230,7 @@ import Testing
         #expect(session.mateNews == nil)
     }
 
-    /// The gate this test used to hold has been lifted (docs/adr/0024): a mate on a Ply somebody
+    /// The gate this test used to hold has been lifted (docs/adr/0025): a mate on a Ply somebody
     /// walked back to is the same fact about the same board, and 考一遍 is a card of its own that
     /// you have to leave to go and look.
     @Test("a past Ply gets the news too, because the news is about the board on screen")

@@ -279,3 +279,96 @@ extension Game {
         return nil
     }
 }
+
+extension Rules {
+    /// How far one piece is from a square, ignoring everything the other side does.
+    ///
+    /// The approximation is deliberate and has to be said out loud: this walks one piece over the
+    /// board as it stands, treating its own side's pieces as walls and the other side's as squares
+    /// it may land on. Nobody replies. What it answers is "how far away is that knight", which is
+    /// the question a player actually asks about an outpost — not "can this be forced", which is a
+    /// search and would cost a Stint (docs/adr/0020).
+    ///
+    /// Nil when the piece cannot get there within `horizon` moves. Three by default: a piece four
+    /// moves away from a square is not a fact about this position.
+    public static func route(
+        to target: Square, from origin: Square, pieces: [Square: Piece], horizon: Int = 3
+    ) -> [Square]? {
+        guard let piece = pieces[origin], origin != target else { return nil }
+        var seen: Set<Square> = [origin]
+        var edge: [(square: Square, path: [Square])] = [(origin, [])]
+        for _ in 0..<horizon {
+            var next: [(square: Square, path: [Square])] = []
+            for (square, path) in edge {
+                for step in steps(of: piece, from: square, pieces: pieces) {
+                    if step == target { return path + [step] }
+                    guard !seen.contains(step) else { continue }
+                    // A square with somebody on it can be landed on and not walked through: what
+                    // happens after a capture is a different position, and this one is not it.
+                    seen.insert(step)
+                    if pieces[step] == nil { next.append((step, path + [step])) }
+                }
+            }
+            edge = next
+            if edge.isEmpty { break }
+        }
+        return nil
+    }
+
+    /// Where one piece may move in one move, by geometry alone: no checks, no pins, no turn order.
+    private static func steps(
+        of piece: Piece, from square: Square, pieces: [Square: Piece]
+    ) -> [Square] {
+        func free(_ file: Int, _ rank: Int) -> Square? {
+            guard (0..<8).contains(file), (0..<8).contains(rank) else { return nil }
+            let there = Square(file: file, rank: rank)
+            return pieces[there]?.colour == piece.colour ? nil : there
+        }
+        func slide(_ directions: [(Int, Int)]) -> [Square] {
+            var found: [Square] = []
+            for (df, dr) in directions {
+                var file = square.file + df
+                var rank = square.rank + dr
+                while let there = free(file, rank) {
+                    found.append(there)
+                    if pieces[there] != nil { break }
+                    file += df
+                    rank += dr
+                }
+            }
+            return found
+        }
+        let straight = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        let slanted = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        switch piece.kind {
+        case .knight:
+            return [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
+                .compactMap { free(square.file + $0.0, square.rank + $0.1) }
+        case .bishop: return slide(slanted)
+        case .rook: return slide(straight)
+        case .queen: return slide(straight + slanted)
+        case .king: return (straight + slanted).compactMap { free(square.file + $0.0, square.rank + $0.1) }
+        case .pawn:
+            // Forwards onto an empty square, sideways onto an occupied one. A pawn's two ways of
+            // moving are the reason it cannot be treated as a slider with a short leash.
+            let ahead = piece.colour == .white ? 1 : -1
+            var found: [Square] = []
+            if (0..<8).contains(square.rank + ahead) {
+                let one = Square(file: square.file, rank: square.rank + ahead)
+                if pieces[one] == nil {
+                    found.append(one)
+                    let home = piece.colour == .white ? 1 : 6
+                    if square.rank == home {
+                        let two = Square(file: square.file, rank: square.rank + ahead * 2)
+                        if pieces[two] == nil { found.append(two) }
+                    }
+                }
+                for file in [square.file - 1, square.file + 1] where (0..<8).contains(file) {
+                    let take = Square(file: file, rank: square.rank + ahead)
+                    if let other = pieces[take], other.colour != piece.colour { found.append(take) }
+                }
+            }
+            return found
+        }
+    }
+}

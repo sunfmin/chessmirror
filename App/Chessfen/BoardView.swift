@@ -93,32 +93,14 @@ struct BoardView: View {
     /// The engine's current Best Move.
     var recommendation: MoveSquares?
     /// The player's own move, drawn beside the engine's and never in its colour. Two arrows
-    /// disagreeing is the picture a Drill is trying to leave behind (docs/adr/0018).
+    /// disagreeing is the whole picture a wrong move is meant to leave behind.
     var mine: MoveSquares?
-    /// The Square a declared Intent is about — the claim's target, ringed.
-    var aim: Square?
-    /// Pieces attacked more often than defended, either colour's. Only ever drawn on a position
-    /// somebody is studying: on the position they are about to move in, this layer would be the
-    /// blunder-check done on their behalf, which is the one thing it exists to teach.
-    var loose: Set<Square> = []
-    /// Where a scanned square can be reached from: pieces of the side to move, dashed.
-    ///
-    /// Dashed and in the player's own colour, because a way in is a possibility and not a move —
-    /// the solid marks on this board all belong to something that happened (docs/adr/0021).
-    var ways: Set<Square> = []
-    /// The one to three squares the move is actually about, in order, most important first.
-    ///
-    /// Not every square that changed hands. Ten squares in two colours is a diff, and a player
-    /// cannot act on a diff — so the rules propose and the engine disposes, and what reaches the
-    /// board is what survived both (docs/adr/0021). Numbered, because each one has a sentence
-    /// under the board and a square with no number cannot be matched to one.
-    var key: [KeySquare] = []
     /// A whole plan at once: one numbered arrow per move, yours and the answers to them.
     ///
     /// Numbered because each arrow has a row of its own under the board, and five unlabelled lines
     /// across a board is a scribble. Thinner than the engine's single Best Move arrow and thinner
     /// than your own — those two are one move each and are a gesture; these are a shape.
-    var plan: [PlanArrow] = []
+    var plan: [MoveArrow] = []
     var coordinates = true
     var isInteractive = true
     var onTap: ((Square) -> Void)?
@@ -261,18 +243,6 @@ struct BoardView: View {
                 if moved.contains(square) {
                     context.fill(Path(box), with: .color(Self.lastMoveWash))
                 }
-                // What the move was about, under the pieces, because it is about the squares.
-                // Two colours for two opposite facts: the mover's own violet for a square it took
-                // a grip on, the alarm colour for one it let go of.
-                if let rank = key.firstIndex(where: { $0.square == square }) {
-                    markSquare(
-                        box,
-                        key[rank].isGain ? Palette.mine : Palette.alarm,
-                        number: rank + 1,
-                        cell: cell,
-                        into: &context
-                    )
-                }
                 if checks.contains(square) { drawCheck(in: box, into: &context) }
                 if coordinates {
                     drawCoordinate(row: row, column: column, in: box, into: &context)
@@ -307,73 +277,16 @@ struct BoardView: View {
                 if destinations.contains(square) {
                     drawDestination(in: box, isCapture: captures.contains(square), into: &context)
                 }
-                if loose.contains(square) { drawLoose(in: box, into: &context) }
-                if ways.contains(square) { drawWay(in: box, into: &context) }
-                if aim == square { drawAim(in: box, into: &context) }
             }
         }
 
-        // The route to the first 要害格, when somebody can actually walk to it. One route and not
-        // three: it is the answer to "and then what happens", and three answers at once is the
-        // scattering this layer was rebuilt to stop being.
-        if let first = key.first {
-            let colour = first.isGain ? Palette.mine : Palette.alarm
-            if first.kind == .shutOut, let stuck = first.shutOut {
-                // A ring and no line. The claim about a shut-out square is that this piece may
-                // *not* go there, and a line drawn to it says the opposite in the same breath.
-                drawWaiting(at: stuck.from, cell: cell, colour: colour, into: &context)
-            } else if let occupation = first.occupation {
-                drawRoute(occupation, cell: cell, colour: colour, into: &context)
-            }
-        }
         // The plan goes under both single-move arrows: it is five moves of context, and context
         // never covers the one move somebody is being asked about.
-        for arrow in plan { drawPlanArrow(arrow, cell: cell, into: &context) }
+        for arrow in plan { drawMoveArrow(arrow, cell: cell, into: &context) }
         // The player's first, so that where the two agree the engine's is the one on top and the
         // board does not read as though only one arrow was drawn.
         if let mine { drawArrow(mine, cell: cell, colour: Palette.mine, into: &context) }
         if let recommendation { drawArrow(recommendation, cell: cell, into: &context) }
-    }
-
-    /// A whole square marked: a tint over it, and a line just inside its edge.
-    ///
-    /// The tint on its own was the trouble. This board is two browns, and a wash pale enough to
-    /// keep a piece readable over a light square disappears into a dark one — so the layer was
-    /// invisible on half the board it was drawn on, and the quieter of its two colours was
-    /// invisible on all of it. The line inside the edge is what carries the mark now: an edge
-    /// reads at full strength against any square colour, and the tint underneath can stay quiet
-    /// enough to draw a piece on top of.
-    ///
-    /// A square, not a circle. The rings on this board are marks about *pieces* — what is hanging,
-    /// what a claim is about — and these are marks about squares, some of which are empty.
-    private func markSquare(
-        _ box: CGRect, _ colour: Color, number: Int, cell: CGFloat,
-        into context: inout GraphicsContext
-    ) {
-        let width = max(1.5, cell * 0.055)
-        context.fill(Path(box), with: .color(colour.opacity(0.24)))
-        context.stroke(
-            Path(box.insetBy(dx: width / 2, dy: width / 2)),
-            with: .color(colour.opacity(0.9)),
-            lineWidth: width
-        )
-        // The number is what joins the square to its sentence. Solid rather than tinted: it has
-        // to read over a piece standing on the square, which is the commonest case there is.
-        let radius = cell * 0.15
-        let centre = CGPoint(x: box.maxX - radius - width, y: box.minY + radius + width)
-        context.fill(
-            Path(ellipseIn: CGRect(
-                x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2
-            )),
-            with: .color(colour)
-        )
-        context.draw(
-            Text("\(number)")
-                .font(.system(size: radius * 1.5, weight: .bold))
-                .foregroundStyle(.white),
-            at: centre,
-            anchor: .center
-        )
     }
 
     private func drawCheck(in box: CGRect, into context: inout GraphicsContext) {
@@ -400,40 +313,6 @@ struct BoardView: View {
         )
     }
 
-    /// A hanging piece: a solid round ring in the alarm colour.
-    ///
-    /// Round and solid, which is what tells it apart from the other three marks a square can
-    /// wear — the last move is a full-square green wash under the pieces, a check is a soft red
-    /// halo with no edge at all, and a shaky square is a dashed orange *square*. Shape carries the
-    /// difference, so none of it depends on telling two reds apart.
-    private func drawLoose(in box: CGRect, into context: inout GraphicsContext) {
-        context.stroke(
-            Path(ellipseIn: box.insetBy(dx: box.width * 0.10, dy: box.width * 0.10)),
-            with: .color(Palette.alarm.opacity(0.95)),
-            lineWidth: box.width * 0.055
-        )
-    }
-
-    /// A piece that could go to the square somebody pointed at. Dashed, so it cannot be mistaken
-    /// for a claim or for a move that was played.
-    private func drawWay(in box: CGRect, into context: inout GraphicsContext) {
-        context.stroke(
-            Path(ellipseIn: box.insetBy(dx: box.width * 0.08, dy: box.width * 0.08)),
-            with: .color(Palette.mine.opacity(0.9)),
-            style: StrokeStyle(lineWidth: box.width * 0.06, dash: [box.width * 0.12, box.width * 0.09])
-        )
-    }
-
-    /// The Square a claim is about: a ring in the player's own violet, inside the loose ring's
-    /// radius so a hanging piece somebody is pointing at wears both marks legibly.
-    private func drawAim(in box: CGRect, into context: inout GraphicsContext) {
-        context.stroke(
-            Path(ellipseIn: box.insetBy(dx: box.width * 0.20, dy: box.width * 0.20)),
-            with: .color(Palette.mine.opacity(0.95)),
-            lineWidth: box.width * 0.07
-        )
-    }
-
     private func drawDestination(
         in box: CGRect, isCapture: Bool, into context: inout GraphicsContext
     ) {
@@ -451,62 +330,6 @@ struct BoardView: View {
                 with: .color(Palette.ink.opacity(0.45))
             )
         }
-    }
-
-    /// A ring round the piece that wants a square and cannot have it. No line: it is not going.
-    private func drawWaiting(
-        at square: Square, cell: CGFloat, colour: Color, into context: inout GraphicsContext
-    ) {
-        let position = self.cell(of: square)
-        let centre = CGPoint(
-            x: (CGFloat(position.column) + 0.5) * cell, y: (CGFloat(position.row) + 0.5) * cell
-        )
-        let radius = cell * 0.34
-        context.stroke(
-            Path(ellipseIn: CGRect(
-                x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2
-            )),
-            with: .color(colour.opacity(0.8)),
-            style: StrokeStyle(lineWidth: cell * 0.06, dash: [cell * 0.1, cell * 0.09])
-        )
-    }
-
-    /// The walk a piece would take to the square, one dash per move.
-    ///
-    /// Dashed rather than solid, and thinner than an arrow, because it is not a move anybody is
-    /// recommending — it is how far away something is. The ring is on the piece that would come,
-    /// so the sentence under the board ("对方的马(g1)3 步就能走进来") has something to point at.
-    private func drawRoute(
-        _ occupation: Occupation, cell: CGFloat, colour: Color,
-        into context: inout GraphicsContext
-    ) {
-        func centre(_ square: Square) -> CGPoint {
-            let position = self.cell(of: square)
-            return CGPoint(
-                x: (CGFloat(position.column) + 0.5) * cell,
-                y: (CGFloat(position.row) + 0.5) * cell
-            )
-        }
-        var path = Path()
-        path.move(to: centre(occupation.from))
-        for step in occupation.route { path.addLine(to: centre(step)) }
-        context.stroke(
-            path,
-            with: .color(colour.opacity(0.8)),
-            style: StrokeStyle(
-                lineWidth: cell * 0.07, lineCap: .round, lineJoin: .round,
-                dash: [cell * 0.12, cell * 0.11]
-            )
-        )
-        let start = centre(occupation.from)
-        let radius = cell * 0.34
-        context.stroke(
-            Path(ellipseIn: CGRect(
-                x: start.x - radius, y: start.y - radius, width: radius * 2, height: radius * 2
-            )),
-            with: .color(colour.opacity(0.8)),
-            lineWidth: cell * 0.06
-        )
     }
 
     private func drawArrow(
@@ -568,8 +391,8 @@ struct BoardView: View {
     /// read differently — one is what you are doing, the other is what you have to survive. The
     /// ones the board is already past are held right back: they are there to keep the shape whole,
     /// not to be looked at.
-    private func drawPlanArrow(
-        _ arrow: PlanArrow, cell: CGFloat, into context: inout GraphicsContext
+    private func drawMoveArrow(
+        _ arrow: MoveArrow, cell: CGFloat, into context: inout GraphicsContext
     ) {
         func centre(_ square: Square) -> CGPoint {
             let position = self.cell(of: square)
