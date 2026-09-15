@@ -691,6 +691,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     func waitForJudgement() async { await weighing?.value }
     func waitForPreparedInterception() async { await searchTask?.value }
     private var positionBeforeWeighing: Game?
+    /// Where the eye was when the move now being weighed was played. A move played from an
+    /// earlier Ply is judged from there, and a refusal has to put the reader back where they were
+    /// rather than at the end of a game they were not looking at.
+    private var cursorBeforeWeighing: Int?
     public static let interceptDepth = 20
     public private(set) var hintLayer = 0
     public private(set) var relaxedIntercept: Double?
@@ -1055,10 +1059,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             commit(move, by: .hand)
             return
         }
-        // 耕棋 measures a move before it is allowed to stand, and only a move being played *now*:
-        // a move played back down the game is somebody taking one back, which is a different act
-        // and is what 耕棋 is for rather than something to stop them doing.
-        guard isTilling || hasTillingFeedback, isAtLatest, !game.isOver else {
+        // 耕棋 measures a move before it is allowed to stand, wherever it is played. It used to
+        // measure only a move played at the end of the game — "a move played back down the game is
+        // somebody taking one back" — and a saved game reopens at its *first* position, so playing
+        // the first move again was the one move 耕棋 never looked at. It looked exactly like 耕棋
+        // being switched off while switched on.
+        guard isTilling || hasTillingFeedback, !viewed.isOver else {
             commit(move, by: .hand)
             return
         }
@@ -1071,10 +1077,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// while the engine thinks: a piece that does not move when you move it reads as a broken
     /// app, and the roll-back *is* the lesson — the board going back to where it was is the one
     /// unmistakable way to say "not that" (docs/adr/0027).
+    ///
+    /// **Judged from the position on the board, not from the end of the game.** A move played from
+    /// an earlier Ply is played from a real position like any other, and the game it interrupts is
+    /// kept whole beside it: a refusal has to leave that game exactly as it was, or the act of
+    /// being stopped would swallow the line the player was reading.
     private func weigh(_ move: Move) {
         guard engine != nil else { return }
-        let position = game
-        var played = game
+        let position = viewed
+        var played = position
         guard played.apply(move), let landed = played.plies.last else {
             Sounds.current.play(.refused)
             return
@@ -1082,7 +1093,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if let began = turnBegan { lastHumanThink = ContinuousClock.now - began }
         stopSearching()
         stopReview()
-        positionBeforeWeighing = position
+        positionBeforeWeighing = game
+        cursorBeforeWeighing = cursor
         game = played
         cursor = game.plies.count
         analysis = nil
@@ -1141,11 +1153,17 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         guard !Task.isCancelled else { return }
         isWeighing = false
+        // What to put back when the move does not stand: the game as it was being read, whole,
+        // and the eye where it was. `position` is only the position it was played from, which is
+        // the whole game when the move was played at the end of it — and a prefix of it otherwise.
+        let gameBefore = positionBeforeWeighing ?? position
+        let cursorBefore = cursorBeforeWeighing
         positionBeforeWeighing = nil
+        cursorBeforeWeighing = nil
         weighing = nil
         guard let drop else {
-            game = position
-            cursor = game.plies.count
+            game = gameBefore
+            cursor = cursorBefore ?? game.plies.count
             retune()
             return
         }
@@ -1162,8 +1180,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         triedHere.append(Game.Ply.Tried(san: san, drop: drop, line: answer))
         refused = Refusal(san: san, drop: drop)
-        game = position
-        cursor = game.plies.count
+        game = gameBefore
+        cursor = cursorBefore ?? game.plies.count
         Sounds.current.play(.refused)
         if findsPunishment { punishment = Punishment(position: played, engine: engine) }
         // No save and no retune: nothing happened to the game, and the engine is not owed a
@@ -1713,9 +1731,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         weighing = nil
         if let positionBeforeWeighing {
             game = positionBeforeWeighing
-            cursor = game.plies.count
+            cursor = cursorBeforeWeighing ?? game.plies.count
         }
         positionBeforeWeighing = nil
+        cursorBeforeWeighing = nil
         isWeighing = false
         stopSearching()
         thinking = nil

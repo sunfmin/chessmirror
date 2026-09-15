@@ -2,6 +2,38 @@
 import Foundation
 import Testing
 
+/// Contract: 耕棋 weighs a move wherever the eye is standing. A saved game reopens at its first
+/// position, so "play the first move again" is the ordinary way a person meets the board — and it
+/// used to be the one way 耕棋 said nothing at all.
+@MainActor
+@Test func aMovePlayedFromAnEarlierPositionIsStillWeighed() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let played = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
+    let afterF3 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3"]))
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
+            .init(score: .centipawns(-20), uciMoves: ["g1f3"], san: ["Nf3"]),
+        ]),
+        afterF3.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
+        ]),
+    ])
+    let session = GameSession.fresh(played, engine: engine)
+    defer { session.suspend() }
+    session.setIntercept(JudgementLines.defaultIntercept)
+    await session.waitForPreparedInterception()
+    session.jump(toPly: 0)
+    await session.waitForPreparedInterception()
+    try #require(!session.isAtLatest, "the eye is on the first position, not the end")
+
+    session.play(try #require(start.state.move(matching: "f2f3")))
+    await session.waitForJudgement()
+
+    #expect(session.refused?.san == "f3", "a move played in 耕棋 mode is weighed from anywhere")
+    #expect(session.game.plies.map(\.san) == ["d4"], "and a refusal leaves the game it was reading alone")
+}
+
 /// Contract: the real session prepares, refuses twice, toggles and revisits a position.
 /// All consumers must share one ten-second search per position, including the refused board.
 @MainActor
