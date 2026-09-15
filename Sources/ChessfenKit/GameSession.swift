@@ -996,7 +996,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var lastMove: MoveSquares? { game.moveSquares(atPly: cursor) }
 
     public func step(by delta: Int) {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
         let wanted = min(max(0, cursor + delta), game.plies.count)
         guard wanted != cursor else { return }
         cursor = wanted
@@ -1006,7 +1006,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func jumpToLatest() {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
         guard cursor != game.plies.count else { return }
         cursor = game.plies.count
         adoptViewedAnalysis()
@@ -1019,7 +1019,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// through again. It is the other end of `jumpToLatest`, and between them a game is readable
     /// without a single move being taken off it.
     public func jumpToStart() {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
         guard cursor != 0 else { return }
         cursor = 0
         adoptViewedAnalysis()
@@ -1029,12 +1029,53 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Straight to a named Ply. Zero is the position the Game began in.
     public func jump(toPly ply: Int) {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
         let wanted = min(max(0, ply), game.plies.count)
         guard wanted != cursor else { return }
         cursor = wanted
         adoptViewedAnalysis()
         Sounds.current.play(.move)
+        retune()
+    }
+
+    // ------------------------------------------------------- walking to a mistake
+
+    /// A Ply this session was asked to walk to when its screen arrives, if any.
+    public private(set) var arrivalWalk: Int?
+
+    /// Whether the record is being walked forward right now. The board is not the player's while
+    /// it is: a tap landing halfway through a fast-forward plays a move from a position that is on
+    /// its way off the screen.
+    public private(set) var isWalkingRecord = false
+
+    /// Asks for the record to be walked to `ply` when the screen arrives, rather than cut to it.
+    ///
+    /// Opening a game from the 错题本 is opening it *at* a mistake, and the game is the story of how
+    /// the player got there. Cutting to the Ply shows the position and nothing about the journey;
+    /// walking shows the moves landing one after another, which is what the record strip has been
+    /// scrolling through either way.
+    public func walkOnArrival(toPly ply: Int) {
+        guard !isWeighing, activePunishment == nil else { return }
+        arrivalWalk = min(max(0, ply), game.plies.count)
+    }
+
+    /// Walks the record to the Ply this session was opened at, one move at a time.
+    ///
+    /// Deliberately not `step(by:)` per Ply: that retunes, which asks the engine about every
+    /// position on the way — twenty searches to watch twenty moves go by. The walk moves the eye
+    /// and the board and nothing else, and retunes once, where the eye stops.
+    public func walkToArrival(step: Duration = .milliseconds(120)) async {
+        guard let target = arrivalWalk else { return }
+        arrivalWalk = nil
+        guard target > cursor else { return }
+        isWalkingRecord = true
+        defer { isWalkingRecord = false }
+        while cursor < target, !Task.isCancelled {
+            cursor += 1
+            adoptViewedAnalysis()
+            try? await Task.sleep(for: step)
+        }
+        guard !Task.isCancelled else { return }
         retune()
     }
 
@@ -1049,7 +1090,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// (docs/adr/0028) — what followed it is dropped, and the game carries on from there.
     public var isHandTurn: Bool {
         if let activePunishment { return !activePunishment.isJudging }
-        guard !isWeighing, !viewed.isOver else { return false }
+        guard !isWeighing, !isWalkingRecord, !viewed.isOver else { return false }
         if !isAtLatest { return true }
         return controller(for: viewed.state.sideToMove) == .hand
     }

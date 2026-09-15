@@ -140,3 +140,31 @@ func everyGameStartsSilent() throws {
     )
     #expect(try #require(GameSession.opened(entry)).isPractising)
 }
+
+/// Contract: a game opened at a mistake is *walked* to it rather than cut to it — the moves land
+/// one after another, and the board is nobody's while they do.
+@MainActor
+@Test func walkingToAMistakePlaysTheMovesItPasses() async throws {
+    let game = try #require(
+        Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"])
+    )
+    let session = GameSession.fresh(game, engine: SilentEngine())
+    defer { session.suspend() }
+    // Where a reopened record stands: the beginning. A game being played stands at its end, and
+    // there is nothing to walk to from there.
+    session.jump(toPly: 0)
+
+    session.walkOnArrival(toPly: 6)
+    #expect(session.cursor == 0, "asking for the walk does not jump there")
+
+    let walk = Task { await session.walkToArrival(step: .milliseconds(220)) }
+    try? await Task.sleep(for: .milliseconds(320))
+    #expect(session.isWalkingRecord)
+    #expect(session.cursor > 0 && session.cursor < 6, "the moves are played, not skipped")
+    #expect(!session.isHandTurn, "and the board is not the player's while it moves")
+
+    await walk.value
+    #expect(session.cursor == 6, "the walk stops where the mistake is")
+    #expect(!session.isWalkingRecord)
+    #expect(session.isHandTurn, "then the board is handed back")
+}

@@ -147,6 +147,10 @@ struct GameScreen: View {
         .task(id: "\(session.isWeighing)-\(session.hasTillingFeedback)-\(engine.isReady)-\(session.game.uciMoves.joined(separator: " "))") {
             await session.measureLatestMoveChange()
         }
+        // A game opened from the 错题本 is opened *at* a mistake, and the arriving is the point:
+        // the record walks to that Ply rather than being cut to it. Nothing happens for a game
+        // opened any other way — there is no Ply to walk to.
+        .task { await session.walkToArrival() }
         .onChange(of: viewed.state.fen) { _, _ in
             revealed.removeAll()
             showsMateLine = false

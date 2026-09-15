@@ -226,11 +226,16 @@ struct BookEntryScreen: View {
 
     /// Straight to the move itself, so the board shows what was played rather than the moment
     /// before it — the position is already on the screen above.
+    ///
+    /// **Walked to, not cut to.** The game is the story of how the player arrived at that move, and
+    /// the story is half of what they are opening it for: the moves land one after another down the
+    /// record, and the strip scrolls along with them. Cutting straight to the Ply showed the
+    /// position with no idea how it was reached.
     private func open(_ encounter: Encounter) {
         guard let entry = entry(for: encounter),
             let session = GameSession.opened(entry, engine: engine.service, library: library)
         else { return }
-        session.jump(toPly: encounter.ply)
+        session.walkOnArrival(toPly: encounter.ply)
         path.append(.game(session))
     }
 }
