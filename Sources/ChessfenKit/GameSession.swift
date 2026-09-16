@@ -694,7 +694,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     private var weighing: Task<Void, Never>?
-    func waitForJudgement() async { await weighing?.value }
+    /// The session's own measurement of the move just played, for the change badge.
+    private var measuring: Task<Void, Never>?
+    func waitForJudgement() async {
+        await weighing?.value
+        await measuring?.value
+    }
     func waitForPreparedInterception() async { await searchTask?.value }
     private var positionBeforeWeighing: Game?
     /// Where the eye was when the move now being weighed was played. A move played from an
@@ -753,15 +758,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard hintLayer >= 1, interceptTable?.fen == viewed.state.fen else { return nil }
         return interceptTable?.analysis.best?.score
     }
-    /// Always-visible position assessment; no recommended move is exposed here.
-    public var tillingScore: Score? {
+    /// The number for the position on screen: the live bounded search of it when 耕棋 has one,
+    /// else the curve's number for it. No recommended move is exposed here.
+    private var tillingScore: Score? {
         if let table = interceptTable, table.fen == viewed.state.fen {
             return table.analysis.best?.score
         }
-        if cursor > 0, let judgement = game.plies[cursor - 1].judgement {
-            return judgement.score
-        }
-        return game.reviewScore(atPly: cursor)
+        return historyScore(atPly: cursor)
     }
     /// The 试招 refused at the position on the board that no move has absorbed yet, oldest
     /// first. Read out of the Game, which is where a refusal is written the moment it happens.
@@ -831,11 +834,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return measuredMove?.change
     }
 
+    /// What the bar shows, by one priority: where the move just played landed, then the position
+    /// on screen, then the standing Analysis.
     public var feedbackScore: Score? {
         moveChange?.after ?? tillingScore ?? analysis?.best?.score
-            ?? (isAtLatest ? measuredMove?.change.after : nil)
     }
 
+    /// The app's number for the position after `ply` moves — what the curve draws — by one
+    /// priority: the move just measured, then what 耕棋 wrote onto the move, then what a Review
+    /// wrote (docs/adr/0016). The live search of the position on screen does not enter here:
+    /// reading an older move is reading history, and the live number belongs to `tillingScore`.
     /// Curve data includes the latest completed position even while reading an older move.
     public func historyScore(atPly ply: Int) -> Score? {
         guard (0...game.plies.count).contains(ply) else { return nil }
@@ -856,11 +864,38 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return hands.count == 1 ? hands[0] : (orientation == .whiteAtBottom ? .white : .black)
     }
 
+    /// What the strip under the board says right now (`Standing`): one sentence, by one priority.
+    ///
+    /// Whether there is an engine at all is the host's fact, not this session's — a session
+    /// with none says nothing, and the screen knows why there is none.
+    public var standing: Standing {
+        if viewed.isOver { return .finished("\(viewed.turn) \(viewed.scoreline)") }
+        if isWeighing { return .weighing }
+        if let refused { return .refused(refused) }
+        if let change = moveChange {
+            let value = change.percent(for: feedbackColour)
+            return .change((value * 10).rounded() / 10)
+        }
+        return isPractising ? .quiet : .score(analysis?.best?.score)
+    }
+
+    private var isLatestMoveMeasured: Bool {
+        measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen
+    }
+
+    /// Badges the move just played if nothing has yet: the session asks for this itself every
+    /// time it retunes, so a move that landed by any door — a hand, the engine, a held button —
+    /// gets its number without a screen having to remember to ask for it.
+    private func measureLatestMove() {
+        guard hasTillingFeedback, !isWeighing, !game.plies.isEmpty, engine != nil,
+              !isLatestMoveMeasured else { return }
+        measuring = Task { [weak self] in await self?.measureLatestMoveChange() }
+    }
+
     /// Reuse both bounded position results, publishing the bar's endpoint and its change
     /// together. Missing or cancelled analysis never becomes a fictitious zero-percent move.
     public func measureLatestMoveChange() async {
-        guard hasTillingFeedback, !isWeighing, !game.plies.isEmpty,
-              !(measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen), let engine,
+        guard hasTillingFeedback, !isWeighing, !game.plies.isEmpty, !isLatestMoveMeasured, let engine,
               let before = game.rewound(to: game.plies.count - 1) else { return }
         let after = game
         let weighed = await engine.weigh(after, from: before)
@@ -1588,6 +1623,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     private func stopSearching() {
         searchTask?.cancel()
         searchTask = nil
+        measuring?.cancel()
+        measuring = nil
         isAdviceSpent = false
     }
 
@@ -1596,6 +1633,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard !isWeighing, activePunishment == nil else { return }
         restoreHelpForViewedPosition()
         stopSearching()
+        measureLatestMove()
         thinking = nil
         thinkingBest = nil
         turnBegan = nil

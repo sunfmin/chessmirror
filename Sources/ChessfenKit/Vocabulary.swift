@@ -86,6 +86,16 @@ extension Game {
         default: state.outcome.label
         }
     }
+
+    /// The scoreline of a finished game, as it is printed rather than as PGN writes it
+    /// (`resultToken`): `1-0`, `0-1`, `½-½`. Empty while the game is being played.
+    public var scoreline: String {
+        switch state.outcome {
+        case .ongoing: ""
+        case .checkmate: state.sideToMove == .white ? "0-1" : "1-0"
+        default: "½-½"
+        }
+    }
 }
 
 extension Set where Element == Square {

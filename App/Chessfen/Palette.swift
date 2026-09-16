@@ -382,15 +382,6 @@ extension EvalBar.Finish {
         case .drawn: localized("standing.drawn")
         }
     }
-
-    /// The result in the numerals a scoresheet uses, set to be read in the clock face the Score was
-    /// read in — so "1/2-1/2" is written the way it is printed rather than as five characters.
-    var scoreline: String {
-        switch self {
-        case .won(let colour): colour == .white ? "1-0" : "0-1"
-        case .drawn: "½-½"
-        }
-    }
 }
 
 /// How much of the bar is White's: White's win chance, and nothing else (docs/adr/0027).
