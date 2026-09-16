@@ -484,6 +484,20 @@ public struct Game: Hashable, Sendable {
         )
     }
 
+    /// What the move at `ply` cost, by whatever number the Game already holds for it: the
+    /// judgement 正着 or the badge wrote on it first, else what a Review makes of it — the rule
+    /// the 错招 list uses (docs/adr/0036). Nil for a move nobody has measured, which is not zero.
+    public func cost(atPly ply: Int) -> Double? {
+        guard ply > 0, plies.indices.contains(ply - 1) else { return nil }
+        return plies[ply - 1].judgement?.drop ?? drop(atPly: ply)
+    }
+
+    /// Whether any move in the Game has a cost to show. A record with nothing measured in it
+    /// has no line of costs to draw.
+    public var hasCosts: Bool {
+        plies.indices.contains { cost(atPly: $0 + 1) != nil }
+    }
+
     /// What came of the opponent's mistake the move at `ply` was the reply to, or nil when the
     /// move before it gave nothing away.
     ///

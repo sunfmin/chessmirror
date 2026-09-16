@@ -138,6 +138,10 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("考一遍"))
         // The record, and the whole walk through it.
         #expect(rendered.says("第 8 步 Nf6"), "the record should carry the game, move by move")
+        #expect(
+            !rendered.words.contains { $0.hasPrefix("第 ") && $0.contains("掉") },
+            "nothing measured, so no line of costs: the strip as it was (#48)"
+        )
         #expect(rendered.says("开局"))
         #expect(rendered.says("上一步"))
         #expect(rendered.says("下一步"))
@@ -664,6 +668,161 @@ struct GameScreenScreenshots {
         // And nothing has leaked back from the language it was all written in.
         #expect(!rendered.says("该走了"))
         #expect(!rendered.says("让引擎走"))
+    }
+
+    // ------------------------------------------------------------ 掉幅 on the record
+
+    /// Every measured move on the record carries its cost under it (#48): a 正着 game prices the
+    /// player's own moves and leaves the engine's blank, and the mark at the foot of a cell speaks
+    /// as a mistake made from that position rather than as this move's cost.
+    @Test("the record says what each measured move cost")
+    func costsOnTheRecord() async throws {
+        let session = try Self.tallied()
+        let rendered = await ScreenImage.write("game-record-costs") {
+            screen(session, engine: ScriptedEngine([]))
+        }
+        let sep = localized("clause.separator")
+        #expect(session.game.hasCosts)
+        #expect(rendered.says(localized("screen.spokenMove", 1, "e4") + sep + localized("book.cost", 1)))
+        #expect(rendered.says(localized("screen.spokenMove", 7, "c3") + sep + localized("book.cost", 1)))
+        #expect(rendered.words.contains(localized("screen.spokenMove", 2, "e5")), "the engine's move was never judged: no cost, and not zero")
+        // Nh3 was refused at the position after 4. Nc6, so that cell wears the mark — and says so.
+        #expect(rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("record.slipMark", 12)))
+        #expect(!rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("book.cost", 12)), "the mark is not this move's cost")
+    }
+
+    /// A reviewed game prices both sides, and a move that cost nothing says 「0」 rather than nothing.
+    @Test("a reviewed record prices both sides, zero included")
+    func costsOnAReviewedRecord() async throws {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        game.applyReview(
+            [30, 30, 30, 90, 90, 90, 90, 90].map { Score.centipawns($0) },
+            startEvaluation: .centipawns(30), depth: 16
+        )
+        let session = GameSession.fresh(game)
+        let rendered = await ScreenImage.write("game-record-costs-reviewed") {
+            screen(session, engine: ScriptedEngine([]))
+        }
+        let sep = localized("clause.separator")
+        let gaveAway = try #require(game.cost(atPly: 4))
+        #expect(gaveAway > 0, "4... Nc6 let the position slide")
+        #expect(rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("book.cost", Drop.points(gaveAway))))
+        #expect(rendered.says(localized("screen.spokenMove", 1, "e4") + sep + localized("book.cost", 0)), "a move that cost nothing says so")
+        #expect(rendered.says(localized("screen.spokenMove", 8, "Nf6") + sep + localized("book.cost", 0)), "the engine's moves are priced too")
+    }
+
+    // ------------------------------------------------------------------------- 复判
+
+    /// f3 e5 with g4 refused at the position on the board, judged at `depth` with Qh4 as its 应招.
+    private static func refusedG4(depth: Int? = 20) throws -> Game {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3", "e7e5"]))
+        game.recordTried(.init(san: "g4", drop: 40, depth: depth, line: ["Qh4"]), atPly: 2)
+        return game
+    }
+
+    private static let afterG4FEN = "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"
+
+    private func until(_ settled: () -> Bool, seconds: Double = 5) async {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(seconds))
+        while !settled(), ContinuousClock.now < deadline {
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    /// Contract: the 应招 reading offers 「算到 28 层」 for a 试招 judged shallower; pressed, the
+    /// button's place shows the depth climbing; when both ends have finished the chip's number, the
+    /// line and the depth change together, and the button is gone (#50, docs/adr/0041).
+    @Test("the reading offers 复判, shows the depth climbing, and lands the deeper number")
+    func rejudgeFromTheReading() async throws {
+        let game = try Self.refusedG4()
+        let before = AsyncStream<Analysis>.makeStream()
+        let after = AsyncStream<Analysis>.makeStream()
+        let afterFEN = Self.afterG4FEN
+        let engine = ScriptedEngine([], controlled: { position, budget in
+            guard budget == PositionSearches.deeper else { return nil }
+            return position.state.fen == afterFEN ? after.stream : before.stream
+        })
+        let session = GameSession.fresh(game, engine: engine)
+        defer { session.suspend() }
+        session.jumpToLatest()
+        let quiet = [Line(score: .centipawns(20), uciMoves: ["d2d4"], san: ["d4"])]
+
+        let rendered = await ScreenImage.write("game-rejudge", interact: { window in
+            #expect(ScreenImage.activate("g4", in: window), "the chip opens the reading")
+            await ScreenImage.settle()
+            var words = ScreenImage.words(in: window)
+            #expect(words.contains { $0.contains(localized("tried.rejudge", 28)) }, "the reading offers it")
+            #expect(words.contains { $0.contains(localized("game.depth", 20)) }, "and says how deep the move was judged")
+            #expect(ScreenImage.activate(localized("tried.rejudge", 28), in: window), "the button must be pressable")
+            await until { engine.searchCount >= 2 }
+            before.continuation.yield(Analysis(depth: 24, lines: quiet))
+            await ScreenImage.settle()
+            words = ScreenImage.words(in: window)
+            #expect(words.contains { $0.contains(localized("game.depth", 24)) }, "the depth climbs where the button was")
+            #expect(!words.contains { $0.contains(localized("tried.rejudge", 28)) })
+            #expect(words.contains { $0.contains("−40%") }, "the chip does not change until the number lands")
+            before.continuation.yield(Analysis(depth: 28, lines: quiet))
+            before.continuation.finish()
+            await until { engine.searchCount >= 4 }
+            after.continuation.yield(Analysis(depth: 28, lines: [Line(score: .mate(in: -1), uciMoves: ["d8h4"], san: ["Qh4"])]))
+            after.continuation.finish()
+            await until { session.rejudging == nil }
+            await ScreenImage.settle()
+        }) {
+            screen(session, engine: engine)
+        }
+        let landed = try #require(session.visibleAttempts.first)
+        #expect(landed.depth == 28)
+        #expect(landed.drop > 40, "a mate in one is worse than the everyday search made it")
+        #expect(rendered.says(localized("game.depth", 28)))
+        #expect(!rendered.says(localized("tried.rejudge", 28)), "at 28 there is nothing more to offer")
+        #expect(rendered.says(Drop.figure(landed.drop)), "the chip carries the new number")
+        #expect(rendered.says("Qh4"), "and the line is the deeper search's")
+        #expect(session.game.uciMoves == ["f2f3", "e7e5"], "the refusal stands")
+    }
+
+    /// A 试招 from an older file carries no depth: the reading shows none, and offers the 复判.
+    @Test("the reading, in English, for a move judged at no known depth", .speaking(.english))
+    func rejudgeOfferedInEnglish() async throws {
+        let engine = ScriptedEngine([])
+        let session = GameSession.fresh(try Self.refusedG4(depth: nil), engine: engine)
+        defer { session.suspend() }
+        session.jumpToLatest()
+        let rendered = await ScreenImage.write("game-rejudge-english", interact: { window in
+            #expect(ScreenImage.activate("g4", in: window))
+            await ScreenImage.settle()
+        }) {
+            screen(session, engine: engine)
+        }
+        #expect(rendered.says("Search to depth 28"))
+        #expect(!rendered.says("Depth 20"), "no depth is invented for an older file")
+        #expect(session.rejudgeOffer(at: 0) == .ready)
+    }
+
+    /// While the engine is spoken for — here, 正着's own search of the position still running —
+    /// the button is there but greyed, and pressing it does nothing.
+    @Test("the button waits while the engine is busy")
+    func rejudgeWaitsForTheEngine() async throws {
+        // An everyday search that never answers, so 正着's preparation of the next move stays open.
+        let engine = ScriptedEngine([], controlled: { _, _ in AsyncStream { _ in } })
+        let session = GameSession.fresh(try Self.refusedG4(), engine: engine)
+        defer { session.suspend() }
+        session.jumpToLatest()
+        session.setTilling(true)
+        await hop()
+        #expect(session.isSearching, "正着 is preparing its interception of the next move")
+        let rendered = await ScreenImage.write("game-rejudge-waiting", interact: { window in
+            #expect(ScreenImage.activate("g4", in: window))
+            await ScreenImage.settle()
+            #expect(session.rejudgeOffer(at: 0) == .waiting)
+            _ = ScreenImage.activate(localized("tried.rejudge", 28), in: window)
+            await ScreenImage.settle()
+            #expect(session.rejudging == nil, "greyed: pressing it starts nothing")
+        }) {
+            screen(session, engine: engine)
+        }
+        #expect(rendered.says(localized("tried.rejudge", 28)), "the button is there to be waited on")
     }
 
     // ------------------------------------------------------------ 正着数 · 连正

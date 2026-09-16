@@ -262,6 +262,7 @@
 "record.ply" = "Meio-lance %d";
 "record.jump" = "Voltar a este lance";
 "record.opening" = "Início";
+"record.slipMark" = "Lance errado a partir daqui, custa %d%%";
 
 "about" = "Acerca de";
 "about.what" = "Fotografa um tabuleiro, lê a posição e continua a jogar. O reconhecimento e o motor correm neste dispositivo; as partidas ficam no teu próprio iCloud. A única coisa que se descarrega é a partida que importares a partir de um link.";
@@ -438,6 +439,8 @@
 "tried.reply" = "A resposta que ele provoca";
 "tried.reply.hint" = "Ver a resposta que este lance provoca";
 "tried.reply.none" = "Este lance não deixa resposta para mostrar.";
+"tried.rejudge" = "Calcular até a profundidade %d";
+"tried.rejudge.hint" = "Julgar este lance mais a fundo para confiar no seu custo";
 "slips.next" = "Erro seguinte";
 "slips.next.hint" = "Ir para o próximo lance errado";
 "slips.hint" = "Ir até lá e jogar de novo";

@@ -430,13 +430,16 @@ struct DeckGallery {
         // And the marks are on the *positions*, which is the thing that went wrong first: the 24%
         // 试招 was made at the opening, the 14% move at Ply 3 was made two Plies in, and the tail
         // refusal at the position the game ends on.
-        func marked(_ cell: String, _ cost: Int) -> String {
-            cell + localized("clause.separator") + localized("book.cost", cost)
+        // The mark speaks as a mistake made *from* the position, apart from what the cell's own
+        // move cost (#48), so the two numbers a cell can carry are never confused.
+        func marked(_ cell: String, _ cost: Int) -> Bool {
+            rendered.words.contains { $0.hasPrefix(cell) && $0.contains(localized("record.slipMark", cost)) }
         }
-        #expect(rendered.says(marked(localized("record.opening"), 24)))
-        #expect(rendered.says(marked(localized("screen.spokenMove", 2, "e5"), 14)))
-        #expect(rendered.says(marked(localized("screen.spokenMove", 3, "Nf3"), 30)))
-        #expect(!rendered.says(marked(localized("screen.spokenMove", 1, "e4"), 24)), "not the move itself")
+        #expect(marked(localized("record.opening"), 24))
+        #expect(marked(localized("screen.spokenMove", 2, "e5"), 14))
+        #expect(marked(localized("screen.spokenMove", 3, "Nf3"), 30))
+        #expect(!marked(localized("screen.spokenMove", 1, "e4"), 24), "not the move itself")
+        #expect(rendered.says(localized("screen.spokenMove", 3, "Nf3") + localized("clause.separator") + localized("book.cost", 14)), "and the cell says what its own move cost")
         // The entry describes the position: where in the game, what it cost, and how many wrong
         // moves were tried at it — and names none of them, because a move is one of N (docs/adr/0036).
         let separator = localized("clause.separator")

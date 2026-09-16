@@ -262,6 +262,7 @@
 "record.ply" = "Media jugada %d";
 "record.jump" = "Volver a esta jugada";
 "record.opening" = "Inicio";
+"record.slipMark" = "Jugada errónea desde aquí, cuesta %d%%";
 
 "about" = "Acerca de";
 "about.what" = "Fotografía un tablero, lee la posición y sigue jugando. El reconocimiento y el motor funcionan en este dispositivo; las partidas se guardan en tu propio iCloud. Lo único que se descarga es la partida que tú importes desde un enlace.";
@@ -438,6 +439,8 @@
 "tried.reply" = "La respuesta que provoca";
 "tried.reply.hint" = "Ver la respuesta que provoca esta jugada";
 "tried.reply.none" = "Esta jugada no deja respuesta que mostrar.";
+"tried.rejudge" = "Calcular hasta profundidad %d";
+"tried.rejudge.hint" = "Juzgar esta jugada más a fondo para fiarse de su coste";
 "slips.next" = "Siguiente error";
 "slips.next.hint" = "Ir a la siguiente jugada equivocada";
 "slips.hint" = "Ir allí y volver a jugarla";

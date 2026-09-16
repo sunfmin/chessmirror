@@ -423,6 +423,7 @@ struct GameScreen: View {
                     Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
                 }
                 Spacer(minLength: 0)
+                rejudgeControl(reading)
             }
             .frame(minHeight: 22)
             if !chips.isEmpty {
@@ -433,6 +434,41 @@ struct GameScreen: View {
         }
         .padding(.leading, 2)
         .padding(.bottom, 4)
+    }
+
+    /// 复判, on the reading's own line (CONTEXT.md, 复判; docs/adr/0041): the depth the 试招 was
+    /// judged at, when it carries one, and the one more thing the reading offers — the move judged
+    /// again, deeper. While that runs, the button's place shows the depth climbing; when the
+    /// number lands, the chip and the line change together and the depth here says how deep.
+    /// Greyed while the engine is spoken for, and gone once the move is judged at 28.
+    @ViewBuilder private func rejudgeControl(_ reading: GameSession.ReplyReading) -> some View {
+        if let running = session.rejudging, running.index == reading.index {
+            ProgressView().controlSize(.mini)
+            Text(running.depth > 0 ? localized("game.depth", running.depth) : localized("till.judging"))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(Palette.inkSoft)
+        } else {
+            if let depth = reading.tried.depth {
+                Text(localized("game.depth", depth))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Palette.inkSoft)
+            }
+            let offer = session.rejudgeOffer(at: reading.index)
+            if offer != .none {
+                Button { session.rejudge(at: reading.index) } label: {
+                    Text(localized("tried.rejudge", PositionSearches.deeperDepth))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(offer == .ready ? Palette.analysis : Palette.inkSoft.opacity(0.6))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Palette.chipRest, in: Capsule())
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(offer != .ready)
+                .accessibilityHint(localized("tried.rejudge.hint"))
+            }
+        }
     }
 
     /// Interception is the page's only mode switch. Assessment and explicit answers are separate.
@@ -1094,6 +1130,9 @@ struct GameScreen: View {
         // Walked once for the whole strip: the marks are a lookup per half, and the walk behind
         // them is a rules probe per Ply.
         let slips = slipByPosition
+        // Whether the record has a line of costs to draw at all: none when nothing in the game
+        // has been measured, so a game nobody judged is the strip exactly as it was.
+        let costs = session.game.hasCosts
         return ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
@@ -1104,8 +1143,8 @@ struct GameScreen: View {
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(Palette.inkSoft)
                                 .frame(minWidth: 13, alignment: .trailing)
-                            if let white = card.white { half(white, slips[white.ply]) }
-                            if let black = card.black { half(black, slips[black.ply]) }
+                            if let white = card.white { half(white, slips[white.ply], costs: costs) }
+                            if let black = card.black { half(black, slips[black.ply], costs: costs) }
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1148,9 +1187,16 @@ struct GameScreen: View {
         }
         .buttonStyle(.plain)
         .id(0)
-        .accessibilityLabel(
-            slip.map { "\(name)\(localized("clause.separator"))\(Drop.cost($0.drop))" } ?? name
-        )
+        .accessibilityLabel(spoken(name, cost: nil, slip: slip))
+    }
+
+    /// What a cell says out loud: its name, what the move cost if it has been measured, and —
+    /// when the mark at its foot is there — that the player went wrong from this position.
+    private func spoken(_ name: String, cost: Double?, slip: Slip?) -> String {
+        var clauses = [name]
+        if let cost { clauses.append(Drop.cost(max(0, cost))) }
+        if let slip { clauses.append(localized("record.slipMark", Drop.points(slip.drop))) }
+        return clauses.joined(separator: localized("clause.separator"))
     }
 
     /// The mark a 错招 leaves at the foot of the position it was made at.
@@ -1171,31 +1217,52 @@ struct GameScreen: View {
     ///
     /// The `slip` passed in is the one whose *position* this cell is, which is the position before
     /// the next move rather than after this one (see `slipByPosition`).
-    private func half(_ cell: Game.Half, _ slip: Slip?) -> some View {
+    ///
+    /// With `costs`, every cell carries a second line — what the move cost, by whatever number the
+    /// game holds for it (`Game.cost(atPly:)`) — so the whole row grows together and the curve
+    /// behind it is drawn against cells that are still even.
+    private func half(_ cell: Game.Half, _ slip: Slip?, costs: Bool) -> some View {
         let on = cell.ply == session.cursor
+        let cost = costs ? session.game.cost(atPly: cell.ply) : nil
         return Button { walk(to: cell.ply) } label: {
-            Text(cell.san)
-                .font(.footnote.weight(on ? .medium : .regular))
-                .foregroundStyle(on ? Palette.parchment : Palette.ink)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background {
-                    if on { RoundedRectangle(cornerRadius: 5).fill(Palette.analysis) }
-                }
-                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
+            VStack(spacing: 1) {
+                Text(cell.san)
+                    .font(.footnote.weight(on ? .medium : .regular))
+                    .foregroundStyle(on ? Palette.parchment : Palette.ink)
+                if costs { costCaption(cost, on: on) }
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background {
+                if on { RoundedRectangle(cornerRadius: 5).fill(Palette.analysis) }
+            }
+            .overlay(alignment: .bottom) { slipMark(slip, on: on) }
         }
         .buttonStyle(.plain)
         .id(cell.ply)
         .accessibilityElement(children: .combine)
         // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver is a
         // move with no place in the game, and place is the whole of what this strip is for — and
-        // a mistake in it is worth saying out loud, because that is what the mark means.
-        .accessibilityLabel(
-            slip.map {
-                "\(cell.spoken)\(localized("clause.separator"))\(Drop.cost($0.drop))"
-            } ?? cell.spoken
-        )
+        // what it cost, and a mistake made from here, are worth saying out loud too.
+        .accessibilityLabel(spoken(cell.spoken, cost: cost, slip: slip))
         .accessibilityHint(localized("record.jump"))
+    }
+
+    /// The move's 掉幅 under it, in the app's one figure. A muted 「0」 for a move that cost
+    /// nothing — that is information: the move was right — and a blank of the same height under
+    /// a move nobody has measured, which is not the same thing as zero.
+    private func costCaption(_ cost: Double?, on: Bool) -> some View {
+        let points = cost.map { Drop.points(max(0, $0)) }
+        let figure: String
+        switch points {
+        case nil: figure = " "
+        case 0: figure = "0"
+        case let points?: figure = "−\(points)%"
+        }
+        let ink = on ? Palette.parchment : Palette.inkSoft
+        return Text(verbatim: figure)
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(points == 0 ? ink.opacity(0.55) : ink)
     }
 
     /// The 错招 by the *position* they were made at, which is what the record strip's cells are:

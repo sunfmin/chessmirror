@@ -262,6 +262,7 @@
 "record.ply" = "Demi-coup %d";
 "record.jump" = "Revenir à ce coup";
 "record.opening" = "Départ";
+"record.slipMark" = "Mauvais coup depuis ici, coûte %d%%";
 
 "about" = "À propos";
 "about.what" = "Photographiez un échiquier, lisez la position, continuez la partie. La reconnaissance et le moteur tournent sur cet appareil ; les parties sont enregistrées dans votre propre iCloud. Rien n'est téléchargé, sauf quand vous importez une partie depuis un lien.";
@@ -438,6 +439,8 @@
 "tried.reply" = "La réponse qu’il provoque";
 "tried.reply.hint" = "Voir la réponse que ce coup provoque";
 "tried.reply.none" = "Ce coup ne laisse aucune réponse à montrer.";
+"tried.rejudge" = "Calculer jusqu’à la profondeur %d";
+"tried.rejudge.hint" = "Juger ce coup plus en profondeur pour que son coût soit fiable";
 "slips.next" = "Erreur suivante";
 "slips.next.hint" = "Aller au coup fautif suivant";
 "slips.hint" = "Y aller et rejouer ce coup";

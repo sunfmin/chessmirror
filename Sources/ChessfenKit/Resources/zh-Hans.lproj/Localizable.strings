@@ -284,6 +284,7 @@
 "record.ply" = "第 %d 步";
 "record.jump" = "回到这一步";
 "record.opening" = "开局";
+"record.slipMark" = "此处走错，掉 %d%%";
 
 
 
@@ -458,6 +459,8 @@
 "tried.reply" = "对手的应招";
 "tried.reply.hint" = "看这一步招来的应招";
 "tried.reply.none" = "这一步没有应招可看。";
+"tried.rejudge" = "算到 %d 层";
+"tried.rejudge.hint" = "把这一步算得更深，让掉幅更可信";
 "slips.next" = "下一处";
 "slips.next.hint" = "走到下一处错招";
 "slips.hint" = "走过去，重新下这一步";

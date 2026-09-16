@@ -262,6 +262,7 @@
 "record.ply" = "Halbzug %d";
 "record.jump" = "Zu diesem Zug zurück";
 "record.opening" = "Anfang";
+"record.slipMark" = "Von hier aus falsch gezogen, kostet %d%%";
 
 "about" = "Über";
 "about.what" = "Brett fotografieren, Stellung lesen, weiterspielen. Erkennung und Engine laufen auf diesem Gerät; die Partien liegen in deinem eigenen iCloud. Geladen wird nur dann etwas, wenn du eine Partie über einen Link importierst.";
@@ -437,6 +438,8 @@
 "tried.reply" = "Die Antwort darauf";
 "tried.reply.hint" = "Die Antwort zeigen, die dieser Zug herausfordert";
 "tried.reply.none" = "Auf diesen Zug gibt es keine Antwort zu sehen.";
+"tried.rejudge" = "Bis Tiefe %d rechnen";
+"tried.rejudge.hint" = "Diesen Zug tiefer prüfen, damit die Kosten stimmen";
 "slips.next" = "Nächster Fehler";
 "slips.next.hint" = "Zum nächsten falschen Zug gehen";
 "slips.hint" = "Dorthin gehen und den Zug neu spielen";

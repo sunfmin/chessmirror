@@ -244,6 +244,7 @@
 "record.ply" = "%d수째";
 "record.jump" = "이 수로 돌아가기";
 "record.opening" = "시작";
+"record.slipMark" = "여기서 잘못 두었다, %d%% 를 잃는다";
 
 "about" = "정보";
 "about.what" = "판을 찍고, 국면을 읽고, 이어서 둔다. 인식도 엔진도 이 기기 안에서 돌아가고, 대국은 자신의 iCloud에 들어간다. 밖으로 나가는 것은 링크에서 기보를 가져올 때뿐이다.";
@@ -413,6 +414,8 @@
 "tried.reply" = "상대의 응수";
 "tried.reply.hint" = "이 수가 부르는 응수를 봅니다";
 "tried.reply.none" = "이 수에는 보여 줄 응수가 없습니다.";
+"tried.rejudge" = "깊이 %d 까지 계산";
+"tried.rejudge.hint" = "이 수를 더 깊이 판정해 손실을 믿을 수 있게 합니다";
 "slips.next" = "다음 실수";
 "slips.next.hint" = "다음 잘못 둔 수로 이동";
 "slips.hint" = "그 자리로 가서 다시 둡니다";

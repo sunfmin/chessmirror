@@ -303,6 +303,7 @@
 "record.ply" = "Ply %d";
 "record.jump" = "Go back to this move";
 "record.opening" = "Opening";
+"record.slipMark" = "Went wrong from here, cost %d%%";
 
 
 
@@ -483,6 +484,8 @@
 "tried.reply" = "The reply it earns";
 "tried.reply.hint" = "Show the reply this move earns";
 "tried.reply.none" = "This move leaves no reply to show.";
+"tried.rejudge" = "Search to depth %d";
+"tried.rejudge.hint" = "Judge this move deeper so its cost can be trusted";
 "slips.next" = "Next slip";
 "slips.next.hint" = "Walk to the next wrong move";
 "slips.hint" = "Go there and play it again";
