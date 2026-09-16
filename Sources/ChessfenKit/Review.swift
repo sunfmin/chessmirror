@@ -17,19 +17,3 @@ public struct ReviewedPly: Hashable, Sendable {
         self.line = line
     }
 }
-
-/// A uniform-depth pass over a Game, while it is running.
-///
-/// Every ply re-scored at one Depth so the Scores can be compared with each other. It is started
-/// by turning the engine's opinion on and by nothing else — there is nowhere else to ask for it,
-/// which is what makes the switch the only moment a Game can acquire one (docs/adr/0015, 0016).
-public struct ReviewPass: Hashable, Sendable {
-    public let depth: Int
-    public var completed: Int
-    public let total: Int
-    public var isRunning: Bool
-
-    public var fraction: Double {
-        total > 0 ? Double(completed) / Double(total) : 0
-    }
-}

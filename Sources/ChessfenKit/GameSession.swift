@@ -77,10 +77,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The 错招 walked out of the Game once, with the key they were walked under. Reading them is
     /// a rules probe per Ply, and the record strip asks on every draw.
     @ObservationIgnored private var storedSlips: (key: String, slips: [Slip])?
-    /// The uniform-depth pass over the whole Game, while there is one running or just finished.
-    public private(set) var reviewPass: ReviewPass?
-
-    private var reviewTask: Task<Void, Never>?
     /// The Analysis of the position being looked at, replaced each time the engine reports a
     /// deeper one, and cleared the moment anything makes it stale.
     public private(set) var analysis: Analysis?
@@ -423,13 +419,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
-    /// Whether the engine is holding either Controller, which is when its clock is worth showing.
-    public var isEnginePlaying: Bool {
-        controller(for: .white) == .engine || controller(for: .black) == .engine
-    }
-
     /// Both Controllers on the engine: the app playing itself, with nobody on the clock.
-    public var isSelfPlaying: Bool {
+    private var isSelfPlaying: Bool {
         controller(for: .white) == .engine && controller(for: .black) == .engine
     }
 
@@ -489,8 +480,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             retune()
             return
         }
-        // Finding opportunities must not restart a move already on the clock or a review.
-        if thinking != nil || reviewPass?.isRunning == true { return }
+        // Finding opportunities must not restart a move already on the clock.
+        if thinking != nil { return }
         if recallCachedAnalysis(), let found = analysis {
             tactic = Tactic.confirmed(in: viewed, analysis: found)
             probedAnalysis = found
@@ -595,17 +586,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return rebuilt
     }
 
-    /// What the engine expects to happen from the position on screen, in SAN.
-    ///
-    /// Two cases, in this order: a Review's line for this position, when one has been written
-    /// into the file; otherwise the Line the standing Analysis has reached — including a Stint a
-    /// card spent during Practice, so a card can talk without waiting for a Review.
-    public var viewedContinuation: [String] {
-        let reviewed = game.reviewLine(atPly: cursor)
-        if !reviewed.isEmpty { return reviewed }
-        return analysis?.best?.san ?? []
-    }
-
     /// The position the board should draw.
     ///
     /// Nothing is held on the glass any more — a move played is a move in the Game — so this is
@@ -615,9 +595,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// The move that led to whatever the board is showing.
     public var boardLastMove: MoveSquares? { activePunishment == nil ? lastMove : nil }
-
-    /// The Line the layer should read against whatever the board is showing.
-    public var boardContinuation: [String] { activePunishment == nil ? viewedContinuation : [] }
 
     public var isAtLatest: Bool { cursor >= game.plies.count }
 
@@ -657,7 +634,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             preferredIntercept = line
             isPractising = true
             analysis = nil
-            stopReview()
             setFindingTactics(false)
         } else {
             isPractising = adviceBeforeTilling ?? true
@@ -895,7 +871,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Puts the 应招 away. A question asked once is not a layer left on: the board goes back to
     /// the position and says nothing about what the player might have tried.
-    public func closeReply() {
+    private func closeReply() {
         replyTask?.cancel()
         replyTask = nil
         replyReading = nil
@@ -945,7 +921,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// The personal side stays personal when the board is flipped. With two manual sides,
     /// the bottom side supplies the perspective, just as it does for the bar.
-    public var feedbackColour: PieceColour {
+    private var feedbackColour: PieceColour {
         let hands = [PieceColour.white, .black].filter { controller(for: $0) == .hand }
         return hands.count == 1 ? hands[0] : (orientation == .whiteAtBottom ? .white : .black)
     }
@@ -1011,11 +987,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             }
         }
     }
-    public var hintHasTactic: Bool {
-        guard hintLayer >= 2, let table = interceptTable, table.fen == viewed.state.fen else { return false }
-        return Tactic.confirmed(in: viewed, analysis: table.analysis) != nil
-    }
-
     public func requestHint() {
         guard activePunishment == nil else { return }
         guard isTilling, !isWeighing, isHandTurn, isAtLatest else { return }
@@ -1150,7 +1121,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     // ------------------------------------------------------- walking to a mistake
 
     /// A Ply this session was asked to walk to when its screen arrives, if any.
-    public private(set) var arrivalWalk: Int?
+    private var arrivalWalk: Int?
 
     /// Whether the record is being walked forward right now. The board is not the player's while
     /// it is: a tap landing halfway through a fast-forward plays a move from a position that is on
@@ -1300,7 +1271,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         if let began = turnBegan { lastHumanThink = ContinuousClock.now - began }
         stopSearching()
-        stopReview()
         positionBeforeWeighing = game
         cursorBeforeWeighing = cursor
         weighBegan = ContinuousClock.now
@@ -1383,7 +1353,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if let practice, !practice.isSettled {
             guard isAtLatest, game.state.fen == practice.game.state.fen else { return }
             stopSearching()
-            stopReview()
             if mover != .hand { notePracticeHelp() }
             practice.play(move)
             guard practice.isJudging else { return }
@@ -1462,7 +1431,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     // ------------------------------------------------------------------ a study
 
-    public static let reviewDepth = 14
 
     // ----------------------------------------------------------------- point at a square
 
@@ -1473,73 +1441,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     private enum StudyRefusal: Error { case illegalMove }
-
-    // ------------------------------------------------------------------ the pass
-
-    /// Re-scores every ply at one Depth, so the Scores in the file can be compared with each
-    /// other and the Game can be ranked (docs/adr/0016, 0017).
-    ///
-    /// Started by turning the engine's opinion on, and by nothing else. There is no other door,
-    /// which is what makes the switch answerable for it: a Game the player has never let the
-    /// engine talk about has no marks in it at all.
-    public func startReview(depth: Int? = nil) {
-        guard !isWeighing, activePunishment == nil else { return }
-        guard let engine, !game.plies.isEmpty, reviewPass?.isRunning != true else { return }
-        let depth = depth ?? Self.reviewDepth
-        let reviewed = game
-        reviewTask?.cancel()
-        reviewPass = ReviewPass(
-            depth: depth, completed: 0, total: reviewed.plies.count, isRunning: true
-        )
-        reviewTask = Task { [weak self] in
-            await engine.clear()
-            var baseline: Score?
-            if let start = reviewed.rewound(to: 0) {
-                baseline = await engine.evaluate(start, budget: .depth(depth))
-            }
-            if Task.isCancelled { return }
-            let results = await engine.review(reviewed, depth: depth) { index, _ in
-                Task { @MainActor in self?.notePassReached(index) }
-            }
-            guard let self, !Task.isCancelled else { return }
-            // Only written if the Game is still the one that was reviewed. A move or a branch
-            // played while the pass ran makes these Scores a report on a game that no longer
-            // exists, and one place to notice that is better than five mutators each
-            // remembering to cancel.
-            guard game.plies.count >= reviewed.plies.count,
-                game.plies.prefix(reviewed.plies.count).map(\.uci) == reviewed.plies.map(\.uci)
-            else {
-                reviewPass = nil
-                return
-            }
-            applyReview(results, startEvaluation: baseline, depth: depth)
-            if var pass = reviewPass {
-                pass.completed = results.count
-                pass.isRunning = false
-                reviewPass = pass
-            }
-        }
-    }
-
-    /// Stops a pass without writing anything.
-    ///
-    /// Half a pass is not half a Review: its Scores would sit in the file beside nothing, at a
-    /// Depth the rest of the game was never searched to. Cancelling therefore leaves the Game
-    /// exactly as unreviewed as it was.
-    public func stopReview() {
-        reviewTask?.cancel()
-        reviewTask = nil
-        if reviewPass?.isRunning == true { reviewPass = nil }
-    }
-
-    /// Read into a local and written back whole. `reviewPass?.completed = max(reviewPass?…)`
-    /// reads the property inside its own modification, which is an exclusivity violation and
-    /// traps at runtime rather than merely reading badly.
-    private func notePassReached(_ index: Int) {
-        guard var pass = reviewPass, pass.isRunning else { return }
-        pass.completed = max(pass.completed, index + 1)
-        reviewPass = pass
-    }
 
     // -------------------------------------------------------- one move, asked for
 
@@ -1872,7 +1773,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard !isTilling, !isWeighing else { return }
         if let url, library?.reviewingURLs.contains(url) == true { return }
         guard let engine, !viewed.isOver, !engine.isPaused else { return }
-        guard thinking == nil, reviewPass?.isRunning != true else { return }
+        guard thinking == nil else { return }
         if recallCachedAnalysis() {
             if searchTask == nil { isAdviceSpent = true }
             return
@@ -1932,9 +1833,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         stopSearching()
         closeReply()
         thinking = nil
-        // A pass that outlived the screen would come back having written Scores nobody watched
-        // arrive, at a Depth chosen by a screen that has gone.
-        stopReview()
     }
 
     private func noteProgress(_ snapshot: Analysis) {

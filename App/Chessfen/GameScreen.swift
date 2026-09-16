@@ -25,10 +25,6 @@ struct GameScreen: View {
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
-    /// The reader's text size, read for one thing only: how much the rows around the board are
-    /// going to cost it (see `boardSide`).
-    @Environment(\.dynamicTypeSize) private var typeSize
-
     @State private var selected: Square?
     @State private var promotion: PromotionRequest?
     @State private var isSoundOn = Sounds.current.isSoundOn
@@ -1225,33 +1221,6 @@ struct GameScreen: View {
         )
     }
 
-    /// What a ranked move cost its mover, in pawns. A move that *gained* is ranked too and reads
-    /// as a gain rather than a negative loss — "−0.30 丢分" is a sentence nobody parses.
-    private static func cost(_ lost: Int) -> String {
-        let pawns = String(format: "%.1f", Double(abs(lost)) / 100)
-        return lost > 0 ? "−\(pawns)" : "+\(pawns)"
-    }
-
-    /// Same family as 问一格: a layer you turn on, not a twin of 练习. 练习 is the eval strip;
-    /// this is a question about the position (docs/adr/0023).
-    ///
-    /// It says what the press *does*, not what the card is called: a chip labelled 战术 under a
-    /// head that also says 战术 is a switch nobody can read (docs/adr/0025).
-    private var finderChip: some View {
-        CardButton(
-            label: localized(session.isFindingTactics ? "screen.stopFinder" : "screen.find"),
-            isOn: !session.isFindingTactics,
-            isEnabled: engine.isReady || session.isFindingTactics
-        ) {
-            withAnimation(.snappy(duration: 0.2)) {
-                finderClosedByHand = session.isFindingTactics
-                session.setFindingTactics(!session.isFindingTactics)
-            }
-        }
-        .accessibilityLabel(localized("screen.finder"))
-        .accessibilityValue(localized(session.isFindingTactics ? "screen.on" : "till.off"))
-    }
-
     /// 战术 — the shot, named in the verbs a player declares in.
     ///
     /// **The switch did become the card.** 战术发现器 has a press of its own on the card, but
@@ -1882,16 +1851,6 @@ struct GameScreen: View {
         guard let selected, session.isHandTurn else { return [] }
         return session.board.state.moves(from: selected)
     }
-
-    /// Whether the position on screen is one being studied rather than one about to be played
-    /// into — the single gate both board layers hang off.
-    ///
-    /// The position and not the screen, and not the switch either: play and study share one board
-    /// now (docs/adr/0015), so what decides whether the app is allowed to point at hanging pieces
-    /// is whether the move in question has already been played. On the live position these layers
-    /// would be the blunder-check performed on the player's behalf, which is precisely the habit
-    /// they exist to build.
-    private var isPast: Bool { !session.isAtLatest }
 
     /// How the game on screen ended, if it has.
     ///
