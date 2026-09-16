@@ -235,7 +235,6 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
     })
     let session = GameSession.fresh(start, controllers: [.white: .hand, .black: .engine], engine: engine)
     session.showPositionFeedback()
-    session.setThinkingTime(.fixed(seconds: 1))
     session.setTilling(enabled)
     defer { gate.continuation.finish(); session.suspend() }
     session.play(try #require(start.state.move(matching: "e2e4")))
@@ -324,7 +323,6 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game)
     session.setPractising(hidden)
-    session.setThinkingTime(.fixed(seconds: 3))
     session.setTilling(true)
     #expect(session.isTilling)
     #expect(session.isPractising)
@@ -336,7 +334,6 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     #expect(session.hasTillingFeedback)
     #expect(session.preferredIntercept == 37)
     #expect(session.game.uciMoves == game.uciMoves)
-    #expect(session.thinkingTime == .fixed(seconds: 3))
     let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
@@ -363,7 +360,6 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine], engine: engine)
     defer { session.suspend() }
-    session.setThinkingTime(.fixed(seconds: 1))
     session.setIntercept(10)
     await session.waitForPreparedInterception()
     try #require((session.searchProgress?.depth ?? 0) > 0)
@@ -611,13 +607,11 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
 
 @MainActor
 @Test(arguments: [0.0, 5.0, 7.0, 37.0, 100.0])
-func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock(_ line: Double) throws {
+func interceptionSettingSurvivesReopening(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
     let session = GameSession.fresh(game)
-    session.setThinkingTime(.fixed(seconds: 3))
     session.setIntercept(line)
     #expect(session.isTilling)
-    #expect(session.thinkingTime == .fixed(seconds: 3))
     let pgn = try PGN(parsing: session.pgn.text)
     let opened = try #require(GameSession.opened(GameLibrary.Entry(
         url: URL(filePath: "/games/tilling.pgn"), pgn: pgn, modified: Date()

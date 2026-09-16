@@ -41,9 +41,6 @@
 "verb.hold" = "Hold";
 "intent.unclear" = "Not sure";
 
-"time.mirrored" = "Match me";
-"time.fixed" = "%d seconds";
-"time.fixed.one" = "%d second";
 
 /* punctuation that joins things up in a sentence */
 "list.separator" = ", ";

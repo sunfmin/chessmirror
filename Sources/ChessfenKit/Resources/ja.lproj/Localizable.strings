@@ -39,8 +39,6 @@
 "verb.hold" = "確保";
 "intent.unclear" = "わからない";
 
-"time.mirrored" = "私と同じ";
-"time.fixed" = "%d 秒";
 
 "list.separator" = "、";
 "clause.separator" = "、";

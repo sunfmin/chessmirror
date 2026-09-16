@@ -39,9 +39,6 @@
 "verb.hold" = "Dominar";
 "intent.unclear" = "No sabría decir";
 
-"time.mirrored" = "Como yo";
-"time.fixed" = "%d segundos";
-"time.fixed.one" = "%d segundo";
 
 "list.separator" = ", ";
 "clause.separator" = "; ";

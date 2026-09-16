@@ -42,16 +42,6 @@ extension Outcome {
     }
 }
 
-extension ThinkingTime {
-    /// On a chip, under a row whose title already says what the number is about.
-    public var label: String {
-        switch self {
-        case .mirrored: localized("time.mirrored")
-        case .fixed(let seconds): localized("time.fixed", plural: seconds)
-        }
-    }
-}
-
 extension FENIssue {
     /// Said as advice rather than as a diagnosis: the player is looking at a board they can fix,
     /// so each of these should name the fix.

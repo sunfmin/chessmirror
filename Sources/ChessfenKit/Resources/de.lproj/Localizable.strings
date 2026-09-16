@@ -39,9 +39,6 @@
 "verb.hold" = "Halten";
 "intent.unclear" = "Weiß nicht";
 
-"time.mirrored" = "Wie ich";
-"time.fixed" = "%d Sekunden";
-"time.fixed.one" = "%d Sekunde";
 
 "list.separator" = ", ";
 "clause.separator" = "; ";

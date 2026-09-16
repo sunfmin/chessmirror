@@ -73,7 +73,6 @@ func recordOpensWithEngineOpponent() throws {
     #expect(session.controller(for: .white) == .hand)
     #expect(session.controller(for: .black) == .engine)
     #expect(session.isPractising)
-    #expect(session.thinkingTime == .fixed(seconds: 1), "a brisk answer, one second a move")
 
     // Black moves first: the engine waits on White instead.
     let blackFirstGame = try #require(
@@ -98,13 +97,12 @@ func recordOpensWithEngineOpponent() throws {
     #expect(beforeEngineArrives.isPractising)
 }
 
-@MainActor @Test("from the opening, Black is the engine, one second a move")
+@MainActor @Test("from the opening, Black is the engine")
 func aFreshOpeningFacesAnEngineOpponent() throws {
     let standard = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.playing(standard, engine: SilentEngine())
     #expect(session.controller(for: .white) == .hand)
     #expect(session.controller(for: .black) == .engine)
-    #expect(session.thinkingTime == .fixed(seconds: 1))
     #expect(session.isPractising)
 }
 

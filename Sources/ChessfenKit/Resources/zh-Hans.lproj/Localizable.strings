@@ -41,8 +41,6 @@
 "verb.hold" = "占";
 "intent.unclear" = "说不清";
 
-"time.mirrored" = "跟着我";
-"time.fixed" = "%d 秒";
 
 /* 一句话里把几样东西连起来的标点 */
 "list.separator" = "、";

@@ -543,8 +543,8 @@ struct GameScreen: View {
                     // is a fact about the opponent the way the clock is, and it changes mid-game
                     // the way a Controller does.
                     rungMenu
-                    // The engine's clock, and only where it decides something: how long this
-                    // side's next move takes. The other dial on the opponent (docs/adr/0009).
+                    // What the engine gets over a move: the budget every live position search
+                    // gets, said so nobody waits for a clock that does not exist (docs/adr/0039).
                     Text(localized("search.limit"))
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
@@ -606,8 +606,7 @@ struct GameScreen: View {
     /// finger, so it was never let go of and the move it was asked for was never played.
     @ViewBuilder private var action: some View {
         if session.thinking == .own {
-            // Mirrored Time means the engine takes about as long as the player just did, which is
-            // right most of the time and longer than anyone wants to sit through the rest of it.
+            // Ten seconds or depth twenty is longer than anyone wants to sit through every move.
             // Stopping the search does not change which move it picks; it just stops waiting.
             Button { session.moveNow() } label: {
                 HStack(spacing: 4) {

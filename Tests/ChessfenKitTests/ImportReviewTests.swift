@@ -11,7 +11,6 @@ import Testing
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, controllers: [.white: .engine, .black: .hand], engine: engine)
     defer { session.suspend() }
-    session.setThinkingTime(.fixed(seconds: 1))
     session.retune()
     #expect(session.thinking == .own)
     session.setFindingTactics(true)

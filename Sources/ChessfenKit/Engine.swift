@@ -3,13 +3,14 @@ import Foundation
 /// How long a search is allowed to think, and what ends it.
 ///
 /// A free type rather than something nested in `EngineService`, because it is the vocabulary of
-/// the *interface* and not of one adapter: `ThinkingTime` and `MirroredTime` are clocks and have
-/// no business naming a Stockfish wrapper to say what a clock means, and a fake engine should be
-/// able to record what it was asked for without importing the real one's namespace.
+/// the *interface* and not of one adapter: `PositionSearches.budget` is what every live search is
+/// given and has no business naming a Stockfish wrapper to say what a budget means, and a fake
+/// engine should be able to record what it was asked for without importing the real one's
+/// namespace.
 public enum SearchBudget: Hashable, Sendable {
     /// Deepen until told to stop. What an Analysis in front of the player uses.
     case untilStopped
-    /// Mirrored Time: think for about as long as the player took.
+    /// Think for this long and stop.
     case time(Duration)
     /// Stop when either limit is reached, without starting another search.
     case timeOrDepth(Duration, Int)

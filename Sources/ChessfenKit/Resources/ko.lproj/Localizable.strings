@@ -39,8 +39,6 @@
 "verb.hold" = "장악";
 "intent.unclear" = "모르겠음";
 
-"time.mirrored" = "나와 같게";
-"time.fixed" = "%d초";
 
 "list.separator" = ", ";
 "clause.separator" = ", ";

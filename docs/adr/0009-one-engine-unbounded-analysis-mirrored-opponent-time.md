@@ -28,6 +28,12 @@ would rather name a number, a fixed number of seconds a move. No `UCI_LimitStren
 > the player measures themself against has to mean the same thing on every phone. Every other
 > search stays at full strength, and everything else here stands.
 
+> Superseded in part by
+> [ADR 0039](0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md): the
+> opponent's move has no clock of its own any more. Mirrored Time, the named three-second clock
+> and the choice between them are gone; the engine's move runs on the same bounded position
+> search every other live reader joins, and 棋力 is the one dial on the opponent.
+
 ## Consequences
 
 - Memory stays at one resident copy of the 67 MiB network plus one transposition table.

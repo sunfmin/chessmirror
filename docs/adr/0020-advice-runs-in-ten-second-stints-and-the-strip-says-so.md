@@ -53,6 +53,11 @@ affordable, because the bar the search produced is also the button that buys it 
 - The engine's own move is untouched. It is bounded by Thinking Time already, and an
   opponent that stopped thinking after ten seconds and asked to be prodded is not an
   opponent.
+
+  > Thinking Time is gone
+  > ([ADR 0039](0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md));
+  > the engine's move is bounded by the shared position budget instead, and it still ends by
+  > itself rather than asking to be prodded.
 - A Review is untouched. Its whole point is one uniform Depth across a Game, and a Stint is
   a wall clock — the two do not mix, which is also why a Review's searches are the bounded
   kind that the pause gate holds rather than refuses.

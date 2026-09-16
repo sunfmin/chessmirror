@@ -17,6 +17,10 @@ weaker human does, while a depth-limited one is sharp tactically and blind to th
 "depth 8" tells a player nothing. The clock is untouched: Mirrored Time and a named number of
 seconds are the courtesy they always were, not a level.
 
+> The clock was already disconnected when this was written, and it has since been deleted
+> ([ADR 0039](0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md)): the
+> opponent's move runs on the shared position budget, and 棋力 is the one dial on it.
+
 **The bound is on the opponent's own moves and nothing else.** 细判 weighs every move at full
 strength at every 棋力, and so do hints, cards and the 战术发现器: a 掉幅 has to mean the same thing
 in every game or the 错题本 cannot add games up (ADR 0016, 0027), and a gentler 正着 is already a

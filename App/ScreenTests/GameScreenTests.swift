@@ -264,9 +264,9 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("建议 d4"), "finishing a search does not reveal a finding")
     }
 
-    /// Both Controllers on the engine: the app playing itself. There is no player's last move to
-    /// mirror, so the screen has to name the clock it is on — and say how to stop it.
-    @Test("with both sides on the engine the screen names the clock and says how to stop")
+    /// Both Controllers on the engine: the app playing itself. The screen names the budget each
+    /// move is on — and says how to stop waiting for it.
+    @Test("with both sides on the engine the screen names the budget and says how to stop")
     func selfPlay() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let session = GameSession.fresh(
@@ -282,7 +282,6 @@ struct GameScreenScreenshots {
             }))
         }
 
-        #expect(session.thinkingTime == .fixed(seconds: 3), "three seconds a move until told else")
         #expect(rendered.says("白方"))
         #expect(rendered.says("黑方"))
         #expect(rendered.says("Stockfish 18"))

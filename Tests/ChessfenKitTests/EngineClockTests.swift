@@ -23,7 +23,6 @@ struct EngineClock {
         await session.waitForPreparedInterception()
         #expect(session.analysis?.bestMove == "e2e4")
         session.adviseAgain()
-        session.setThinkingTime(.fixed(seconds: 30))
         session.retune()
         await session.waitForPreparedInterception()
         #expect(engine.searchCount == 1, "settings and cards reuse the same result")

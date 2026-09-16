@@ -39,9 +39,6 @@
 "verb.hold" = "Occuper";
 "intent.unclear" = "Je ne sais pas";
 
-"time.mirrored" = "Comme moi";
-"time.fixed" = "%d secondes";
-"time.fixed.one" = "%d seconde";
 
 "list.separator" = ", ";
 "clause.separator" = " ; ";

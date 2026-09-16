@@ -173,22 +173,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     private var controllers: [PieceColour: Controller]
     /// The 棋力 the engine plays its own moves at (docs/adr/0038). A fact about the game rather
-    /// than a way of playing it, unlike the clock: it is written onto every move the engine plays,
-    /// and a reopened game comes back at the rung its last engine move was played at.
+    /// than a way of playing it, unlike a Controller: it is written onto every move the engine
+    /// plays, and a reopened game comes back at the rung its last engine move was played at.
     public private(set) var strength: Strength
-    /// The clock somebody has put the engine on, if anybody has. Nil means the game decides —
-    /// see `thinkingTime`, which is the one to read.
-    ///
-    /// Not stored, like the Controllers it goes with: PGN has nowhere to put it, and it is a way
-    /// of playing rather than something about the game.
-    private var chosenThinkingTime: ThinkingTime?
     private var tags: [PGN.Tag]
     private var searchTask: Task<Void, Never>?
-
-    /// When the current player's turn began, and how long they took over the last one.
-    /// Mirrored Time is the whole reason both are kept.
-    private var turnBegan: ContinuousClock.Instant?
-    private var lastHumanThink: Duration?
     /// The best move known to the search the engine was asked for — the arrow it started from, then
     /// whatever it has found since. What letting go of the button plays.
     private var askedBest: String?
@@ -285,9 +274,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return session
     }
 
-    /// A new game to be played: the side to move in hand, the other on the engine answering
-    /// a second at a time. From the opening that is White vs Black-engine; it is the same
-    /// seating as a reopened record.
+    /// A new game to be played: the side to move in hand, the other on the engine. From the
+    /// opening that is White vs Black-engine; it is the same seating as a reopened record.
     public static func playing(
         _ game: Game,
         engine: (any Engine)? = nil,
@@ -306,7 +294,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             drill.mover: .hand, drill.mover.opposite: .engine
         ], engine: engine, library: library)
         session.practice = drill
-        session.setThinkingTime(.openedRecord)
         session.orientation = drill.mover == .white ? .whiteAtBottom : .blackAtBottom
         session.showPositionFeedback()
         return session
@@ -340,11 +327,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// finished game you already know. 下一步 is the first tap either way.
     ///
     /// The Controllers are not stored in PGN — nothing in the format has anywhere to put them — so
-    /// a reopened game starts with the side about to move in hand, the other side on the engine
-    /// answering a second at a time, and in practice: no arrow, no number, nobody whispering an
-    /// answer. Reading faces the play: the person who opens a record plays its first move, and
-    /// the engine answers it — as soon as it has finished loading, if the record got opened
-    /// first.
+    /// a reopened game starts with the side about to move in hand, the other side on the engine,
+    /// and in practice: no arrow, no number, nobody whispering an answer. Reading faces the play:
+    /// the person who opens a record plays its first move, and the engine answers it — as soon as
+    /// it has finished loading, if the record got opened first.
     ///
     /// Nil — refused, not failed — while the file is still on the way from iCloud. Opening it
     /// would give an empty board wearing the real game's file name, and the autosave after the
@@ -417,10 +403,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         reviewImportIfReady()
     }
 
-    /// The side about to move is the person's; the other side answers at one second a move.
+    /// The side about to move is the person's; the other side is the engine's.
     private func seatEngineOpponent() {
         setController(.engine, for: game.startingSideToMove.opposite)
-        setThinkingTime(.openedRecord)
     }
 
     public func controller(for colour: PieceColour) -> Controller {
@@ -448,40 +433,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard self.strength != strength else { return }
         self.strength = strength
         if thinking == .own { retune() }
-    }
-
-    /// Both Controllers on the engine: the app playing itself, with nobody on the clock.
-    private var isSelfPlaying: Bool {
-        controller(for: .white) == .engine && controller(for: .black) == .engine
-    }
-
-    /// How long the engine gets over a move it plays for a colour it controls.
-    ///
-    /// What somebody chose, or what the game calls for if nobody has: Mirrored Time against a
-    /// person, three seconds a move when the engine is playing itself.
-    ///
-    /// Self-play also overrules a standing choice of Mirrored Time, which is the one setting the
-    /// game is allowed to refuse. It is not a preference there so much as a question with no
-    /// answer — there is no player's last move to mirror — and a clock that quietly meant one
-    /// second for ever is worse than the app saying which clock it is actually using.
-    public var thinkingTime: ThinkingTime {
-        guard let chosenThinkingTime else { return isSelfPlaying ? .selfPlay : .mirrored }
-        if chosenThinkingTime == .mirrored, isSelfPlaying { return .selfPlay }
-        return chosenThinkingTime
-    }
-
-    /// Puts the engine on a different clock, mid-move if that is when it is said.
-    ///
-    /// Now rather than next move, for the same reason changing a Controller is: a search that
-    /// carried on under the old clock would make the control a promise about the move after this
-    /// one, and the move being waited for is the one anybody reaches for this because of. The
-    /// running search starts again on the new clock rather than being trimmed to it — the time
-    /// asked for is the time it gets.
-    public func setThinkingTime(_ time: ThinkingTime) {
-        guard !isWeighing, activePunishment == nil else { return }
-        guard thinkingTime != time else { return }
-        chosenThinkingTime = time
-        retune()
     }
 
     /// Turns the engine's advice off, or back on. Also takes effect now: a number left standing
@@ -596,7 +547,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         cursor = 0
         analysis = nil
         thinking = nil
-        lastHumanThink = nil
         shaky = []
         retune()
         return true
@@ -1259,19 +1209,20 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return controller(for: viewed.state.sideToMove) == .hand
     }
 
-    /// Who is putting a move down. The one thing the three ways in differ by is the clock, and
-    /// this is what names that difference.
+    /// Who is putting a move down. The three ways in differ by whose move it is — which decides
+    /// whether 正着 weighs it and whether a rung is written on it.
     private enum Mover {
-        /// A person, on their own turn. Stops the clock the engine will mirror.
+        /// A person, on their own turn.
         case hand
-        /// The engine, asked for one move by a held button. Not the player's thinking, so the
-        /// mirror — a record of how long the *player* took — must not hold them to it.
+        /// The engine, asked for one move by a held button. Weighed like a hand move where 正着
+        /// is on, and no rung is written on it: it was played for the player, not against them.
         case asked
-        /// The engine's own Controller. Its thinking time is not a thinking time to mirror either.
+        /// The engine's own Controller. Lands only at the latest position, with the rung it was
+        /// found at (docs/adr/0038).
         case engine
     }
 
-    /// A move made by a person. The clock this stops is what the engine will mirror.
+    /// A move made by a person.
     public func play(_ move: Move) {
         if let activePunishment {
             activePunishment.submit(move)
@@ -1313,7 +1264,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             Sounds.current.play(.refused)
             return
         }
-        if let began = turnBegan { lastHumanThink = ContinuousClock.now - began }
         stopSearching()
         positionBeforeWeighing = game
         cursorBeforeWeighing = cursor
@@ -1390,8 +1340,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// The one way a move lands: the write, the cursor, the noise, the save, the retune. The
-    /// three public paths differ only in the clock and who may be moving, and having them each
-    /// hand-roll this is how one of them eventually forgets a line of it.
+    /// three public paths differ only in who is moving, and having them each hand-roll this is
+    /// how one of them eventually forgets a line of it.
     private func commit(_ move: Move, by mover: Mover) {
         guard !isWeighing else { return }
         if let practice, !practice.isSettled {
@@ -1438,12 +1388,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         let measuredDrop = preparedDrop(for: move, in: viewed)
         let measuredScore = interceptTable?.analysis.lines.first { $0.bestMove == move.uci }?.score
-        // The clock. Only a hand move at the latest position stops it: Mirrored Time is the
-        // length of a *player's* last turn, and neither an engine move nor a move asked of it
-        // was the player thinking (docs/adr/0009).
-        if mover == .hand, isAtLatest, let turnBegan {
-            lastHumanThink = ContinuousClock.now - turnBegan
-        }
         // A move played over an earlier one: what used to follow is dropped, and losing a line is
         // worth its own noise. Computed before the play, which is what the comparison is against.
         // The engine's own moves always land at the latest position, so this is only ever a hand
@@ -1506,10 +1450,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Starts the engine thinking about a move it will play when it is let go.
     ///
-    /// Held time *is* thinking time, which is the same bargain the engine's own moves are played
-    /// under (Mirrored Time, docs/adr/0009): it is never handicapped, so the only thing that shapes
-    /// how well it plays is how long it is left alone — and here that is a thumb on a button. A tap
-    /// is a snap answer, two seconds is a considered one, and neither is the app deciding.
+    /// Held time *is* thinking time: the move is never bound to a rung, so the only thing that
+    /// shapes how well it plays is how long it is left alone — and here that is a thumb on a
+    /// button. A tap is a snap answer, two seconds is a considered one, and neither is the app
+    /// deciding.
     ///
     /// The search is the shared bounded one every other reader of this position joins
     /// (`PositionSearches`), so a press after the position has been searched plays at once and a
@@ -1580,8 +1524,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         playAsked(move)
     }
 
-    /// A move the engine was asked for. Like a hand move in every way except the clock: the time
-    /// the engine mirrors is a record of how long the *player* took, and this was not that.
+    /// A move the engine was asked for. Like a hand move in every way but one: it is not the
+    /// engine's own, so no rung is written on it.
     private func playAsked(_ move: Move) {
         commit(move, by: .asked)
     }
@@ -1604,7 +1548,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         cursor = game.plies.count
         analysis = nil
-        lastHumanThink = nil
         save()
         retune()
     }
@@ -1636,7 +1579,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         orientation = .facing(colour)
         analysis = nil
         thinking = nil
-        lastHumanThink = nil
         save()
         retune()
     }
@@ -1670,7 +1612,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         measureLatestMove()
         thinking = nil
         thinkingBest = nil
-        turnBegan = nil
 
         let position = viewed
         // Nothing starts while the engine is paused — not the standing Analysis, and not the
@@ -1752,9 +1693,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
         if isEngineTurn {
             thinking = .own
-            // Mirrored Time is only the default, and only against a person: with both Controllers
-            // on the engine there is no last human move to mirror, and there is a named clock
-            // instead (`thinkingTime`).
+            // No clock of its own (docs/adr/0039): the engine's move is bounded the way every
+            // live position search is, and a rung is the one dial on how well it plays.
             let strength = strength
             searchTask = Task { [weak self] in
                 var last: Analysis?
@@ -1780,9 +1720,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 }
             }
         } else {
-            // Before the practice gate: the clock the engine mirrors is a record of how long the
-            // player took, and that is true whether or not anyone was being advised.
-            turnBegan = ContinuousClock.now
             if isTilling || (hasTillingFeedback && isPractising) {
                 prepareInterception(on: position, using: engine)
                 return
@@ -1858,8 +1795,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         thinkingBest = nil
     }
 
-    /// A move the engine played for itself. It does not touch the mirror — the engine's own
-    /// thinking time is not a thinking time for the engine to mirror.
+    /// A move the engine played for itself, under its own Controller.
     private func playByEngine(_ move: Move) {
         commit(move, by: .engine)
     }
