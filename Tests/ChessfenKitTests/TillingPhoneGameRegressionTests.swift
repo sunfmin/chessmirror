@@ -49,11 +49,11 @@ import Testing
             // by a point or two near the line, so "it stood" is not by itself a failure.
             //
             // What is a failure — the bug this test was written for — is a move that stands with
-            // no judgement at all: 耕棋 switched on, the position searched, and nothing written
+            // no judgement at all: 正着 switched on, the position searched, and nothing written
             // down or said. A passing move has to have been weighed, and weighed as a pass.
             let judged = try #require(
                 session.game.plies.last?.judgement,
-                "a move that stands under 耕棋 must have been weighed"
+                "a move that stands under 正着 must have been weighed"
             )
             #expect(judged.drop < 10, "the session passed a move its own search calls a mistake")
             print("Phone regression: \(index / 2 + 1) stood at the session's own judgement, drop=\(judged.drop)")

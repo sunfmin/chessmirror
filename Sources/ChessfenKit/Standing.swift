@@ -11,7 +11,7 @@ import Foundation
 public enum Standing: Hashable, Sendable {
     /// The game is over: who was mated or how it was drawn, and the scoreline.
     case finished(String)
-    /// 耕棋 is working out what the move just played costs.
+    /// 正着 is working out what the move just played costs.
     case weighing
     /// A move has just been taken back, and this is the one sentence about it (docs/adr/0031).
     case refused(GameSession.Refusal)

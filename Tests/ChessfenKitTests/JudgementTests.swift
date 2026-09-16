@@ -41,11 +41,11 @@ func tenPercentIsAboutAPawn() {
 
 // ------------------------------------------------------------------- the lines
 
-@Test("the two standing lines default to five and five, with 耕棋 off")
+@Test("the two standing lines default to five and five, with 正着 off")
 func theLinesHaveDefaults() {
     let lines = JudgementLines.standard
-    #expect(lines.intercept == nil, "耕棋 is a thing you switch on, not a thing you are in")
-    #expect(lines.record == 5, "where 耕棋 stops you is where the book starts")
+    #expect(lines.intercept == nil, "正着 is a thing you switch on, not a thing you are in")
+    #expect(lines.record == 5, "where 正着 stops you is where the book starts")
     #expect(lines.enqueue == 5, "and what is written down is worth the practice time")
 
     #expect(!lines.intercepts(50), "nothing is intercepted while it is off")
@@ -70,7 +70,7 @@ func theLinesAreSeparate() {
     #expect(!lines.enqueues(24))
 
     lines.intercept = nil
-    #expect(!lines.intercepts(99), "and switching 耕棋 off changes neither of the others")
+    #expect(!lines.intercepts(99), "and switching 正着 off changes neither of the others")
     #expect(lines.records(5))
     #expect(lines.enqueues(25))
 }

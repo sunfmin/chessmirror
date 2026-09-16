@@ -2,9 +2,9 @@
 import Foundation
 import Testing
 
-/// Contract: 耕棋 weighs a move wherever the eye is standing. A saved game reopens at its first
+/// Contract: 正着 weighs a move wherever the eye is standing. A saved game reopens at its first
 /// position, so "play the first move again" is the ordinary way a person meets the board — and it
-/// used to be the one way 耕棋 said nothing at all.
+/// used to be the one way 正着 said nothing at all.
 @MainActor
 @Test func aMovePlayedFromAnEarlierPositionIsStillWeighed() async throws {
     let start = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -30,13 +30,13 @@ import Testing
     session.play(try #require(start.state.move(matching: "f2f3")))
     await session.waitForJudgement()
 
-    #expect(session.refused?.san == "f3", "a move played in 耕棋 mode is weighed from anywhere")
+    #expect(session.refused?.san == "f3", "a move played in 正着 mode is weighed from anywhere")
     #expect(session.game.plies.map(\.san) == ["d4"], "and a refusal leaves the game it was reading alone")
 }
 
 /// Contract: a move played from an earlier Ply that *passes* is written down like any other. The
 /// refusal case is the loud one; this is the one that would go unnoticed — a move that stands with
-/// no judgement and no percentage beside it, which is 耕棋 switched on and saying nothing.
+/// no judgement and no percentage beside it, which is 正着 switched on and saying nothing.
 @MainActor
 @Test func aMovePlayedFromAnEarlierPositionIsJudgedWhenItPasses() async throws {
     let start = try #require(Game(startFEN: PGN.standardStartFEN))

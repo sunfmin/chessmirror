@@ -5,7 +5,7 @@ import Foundation
 ///
 /// The kit's `JudgementLines` holds all three; this is the app's half of the two that belong to
 /// the *player* rather than to a game — 记录线, what gets written down, and 入列线, what earns a
-/// place in future practice time. The third, 拦截线, is 耕棋's switch and dial and is set per
+/// place in future practice time. The third, 拦截线, is 正着's switch and dial and is set per
 /// game, so it is not here.
 ///
 /// Modelled on `LanguageSetting` for the same reason (docs/adr/0012): a line that has to be drawn
@@ -30,8 +30,8 @@ import Foundation
         }
     }
 
-    /// The two of them as the kit reads them, with 耕棋 off — which is what an ordinary game is.
-    /// A 耕棋 game takes this and sets its own `intercept` on top.
+    /// The two of them as the kit reads them, with 正着 off — which is what an ordinary game is.
+    /// A 正着 game takes this and sets its own `intercept` on top.
     var lines: JudgementLines {
         JudgementLines(intercept: nil, record: record, enqueue: enqueue)
     }

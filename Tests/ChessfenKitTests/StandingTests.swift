@@ -5,7 +5,7 @@ import Testing
 /// Contract: what the strip under the board says is one sentence chosen by one priority, and the
 /// session chooses it from facts it already holds (`Standing`). Every voice is reachable here
 /// with a scripted engine and no screen, and the number under the bar and the curve read one
-/// ladder: the move just measured, then 耕棋's own judgement, then the Review's.
+/// ladder: the move just measured, then 正着's own judgement, then the Review's.
 
 private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     Analysis(depth: 20, lines: [.init(score: .centipawns(cp), uciMoves: [uci], san: [san])])
@@ -121,7 +121,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     session.jumpToLatest()
 
     #expect(session.historyScore(atPly: 0) == .centipawns(0))
-    #expect(session.historyScore(atPly: 1) == .centipawns(35), "耕棋's own number outranks the Review's")
+    #expect(session.historyScore(atPly: 1) == .centipawns(35), "正着's own number outranks the Review's")
     #expect(session.historyScore(atPly: 2) == .centipawns(20))
     #expect(session.feedbackScore == .centipawns(20), "with no live search the bar reads the same ladder")
     #expect(session.historyScore(atPly: 3) == nil)

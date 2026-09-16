@@ -346,7 +346,7 @@ struct DeckGallery {
         let rendered = await ScreenImage.write("tilling-no-hints") {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says("耕棋"))
+        #expect(rendered.says("正着"))
         #expect(!rendered.says("提示 1"))
         #expect(!rendered.says("提示 2"))
         #expect(rendered.says(localized("game.depth", 20)))

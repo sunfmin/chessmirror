@@ -73,7 +73,7 @@ struct LibraryScreenScreenshots {
     }
 
     /// The two standing lines, where a person can move them (docs/adr/0027). The third is
-    /// 耕棋's and belongs to a game, so it is not on this sheet.
+    /// 正着's and belongs to a game, so it is not on this sheet.
     @Test("the settings sheet offers the record and drill lines, defaulting to 5 and 5")
     func theLinesAreOnTheSettingsSheet() async throws {
         let tempDir = tempDir()
@@ -81,7 +81,7 @@ struct LibraryScreenScreenshots {
 
         #expect(JudgementSetting.shared.lines.record == 5)
         #expect(JudgementSetting.shared.lines.enqueue == 5)
-        #expect(JudgementSetting.shared.lines.intercept == nil, "耕棋 is not a standing setting")
+        #expect(JudgementSetting.shared.lines.intercept == nil, "正着 is not a standing setting")
 
         let rendered = await ScreenImage.write("about-lines") {
             AboutScreen()

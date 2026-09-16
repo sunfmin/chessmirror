@@ -33,7 +33,7 @@ public struct Game: Hashable, Sendable {
         /// no Review" are told apart by `reviewDepth`, which is where every other question about
         /// provenance is already answered.
         public var line: [String] = []
-        /// The moves 耕棋 refused before this one was allowed to stand, in the order they were
+        /// The moves 正着 refused before this one was allowed to stand, in the order they were
         /// played (docs/adr/0027).
         ///
         /// A comment on the move that stands rather than a variation, because that is what they
@@ -59,7 +59,7 @@ public struct Game: Hashable, Sendable {
             }
         }
 
-        /// One move 耕棋 took back, and what it cost.
+        /// One move 正着 took back, and what it cost.
         public struct Tried: Hashable, Sendable {
             public let san: String
             /// Percentage points of win probability, from the mover's own side (docs/adr/0027).
@@ -157,7 +157,7 @@ public struct Game: Hashable, Sendable {
 
     public private(set) var pendingTried: [Pending] = []
 
-    /// Records the refusals made at a position, replacing whatever was there: a position 耕棋
+    /// Records the refusals made at a position, replacing whatever was there: a position 正着
     /// stopped the player at three times has three refusals, not six.
     public mutating func setPendingTried(_ tries: [Ply.Tried], atPly ply: Int) {
         pendingTried.removeAll { $0.ply == ply }
@@ -174,7 +174,7 @@ public struct Game: Hashable, Sendable {
 
     /// Writes one more refusal down at the position it happened at, after the ones already
     /// there (docs/adr/0037). The one door a refusal comes in by while no move stands to carry
-    /// it — 耕棋's and a drill's alike.
+    /// it — 正着's and a drill's alike.
     public mutating func recordTried(_ tried: Ply.Tried, atPly ply: Int) {
         setPendingTried(pendingTries(atPly: ply) + [tried], atPly: ply)
     }
@@ -279,7 +279,7 @@ public struct Game: Hashable, Sendable {
     /// Replaces, where it used to branch. A Game was a tree and is a list now (docs/adr/0028): the
     /// only two things that ever wrote a branch were a Drill's answer and a 五步计划, both gone,
     /// and what is left is somebody taking a move back and playing another — which is one game and
-    /// not two. 耕棋's rolled-back moves are kept as comments, and a list of those is still a list.
+    /// not two. 正着's rolled-back moves are kept as comments, and a list of those is still a list.
     @discardableResult
     public mutating func play(_ move: Move, atPly ply: Int) -> Bool {
         guard (0...plies.count).contains(ply) else { return false }
@@ -512,7 +512,7 @@ public struct Game: Hashable, Sendable {
         plies[ply].hints = rungs
     }
 
-    /// Records what 耕棋 refused before the move at `ply` was allowed to stand.
+    /// Records what 正着 refused before the move at `ply` was allowed to stand.
     public mutating func setJudgement(_ judgement: Ply.Judgement, atPly ply: Int) {
         guard plies.indices.contains(ply) else { return }
         plies[ply].judgement = judgement

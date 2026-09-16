@@ -5,7 +5,7 @@ import Foundation
 /// Separate because they answer different questions, and one control answering all three would
 /// make it impossible to say which of them the player actually wanted moved:
 ///
-/// - **拦截线** is what 耕棋 stops the player for and rolls the board back over. It is 耕棋's only
+/// - **拦截线** is what 正着 stops the player for and rolls the board back over. It is 正着's only
 ///   difficulty dial — the engine's strength is never one, because how strong the opponent is and
 ///   how much slack the coach cuts are two questions, and answering them with one knob makes it
 ///   impossible to say who improved (docs/adr/0009).
@@ -17,7 +17,7 @@ import Foundation
 ///
 /// Percentage points of win probability, from the mover's own point of view.
 public struct JudgementLines: Hashable, Sendable, Codable {
-    /// Where 耕棋 takes the move back. Nil for 耕棋 switched off, which is the ordinary game.
+    /// Where 正着 takes the move back. Nil for 正着 switched off, which is the ordinary game.
     public var intercept: Double?
     /// Where a move gets written down.
     public var record: Double
@@ -30,9 +30,9 @@ public struct JudgementLines: Hashable, Sendable, Codable {
         self.enqueue = enqueue
     }
 
-    /// 5 / 5, with 耕棋 off. The numbers a person who has never touched this gets.
+    /// 5 / 5, with 正着 off. The numbers a person who has never touched this gets.
     ///
-    /// Both at five, which is where 耕棋 intercepts: what the coach stopped you for is worth
+    /// Both at five, which is where 正着 intercepts: what the coach stopped you for is worth
     /// writing down, and what is worth writing down is worth practising. They are still two lines
     /// and either moves on its own (docs/adr/0027) — a player who wants the book kept wider than
     /// the queue raises one of them — but the pair a phone ships with agree.
@@ -41,7 +41,7 @@ public struct JudgementLines: Hashable, Sendable, Codable {
     public static let defaultIntercept = 5.0
     public static let interceptRange = 0.0...100.0
 
-    /// Whether a drop of this many points is one 耕棋 stops for. False when 耕棋 is off, which is
+    /// Whether a drop of this many points is one 正着 stops for. False when 正着 is off, which is
     /// the only reason this is a method rather than a comparison at the call site.
     public func intercepts(_ drop: Double?) -> Bool {
         guard let intercept, let drop else { return false }

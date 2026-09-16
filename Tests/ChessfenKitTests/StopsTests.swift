@@ -51,7 +51,7 @@ import Testing
         #expect(game.stops(by: [.black]).map(\.ply) == [2], "the refusal at the end was White's, not Black's")
     }
 
-    /// The gates: 耕棋's own judgement of a move that stood is a 错招 in the game's own list, and
+    /// The gates: 正着's own judgement of a move that stood is a 错招 in the game's own list, and
     /// not an Encounter in the book, which compares across games and takes only a Review's number.
     @Test func theTwoReadersSeeTheSameStopsThroughDifferentGates() throws {
         var game = try #require(

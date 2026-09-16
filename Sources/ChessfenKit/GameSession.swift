@@ -599,10 +599,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var isAtLatest: Bool { cursor >= game.plies.count }
 
     /// The three lines this game is judged by (docs/adr/0027). Per game rather than global: the
-    /// 拦截线 is 耕棋's switch as well as its dial, and 耕棋 is a thing one game is played under.
+    /// 拦截线 is 正着's switch as well as its dial, and 正着 is a thing one game is played under.
     public var lines: JudgementLines = .standard
 
-    /// 耕棋: whether a move by hand is measured before it is allowed to stand.
+    /// 正着: whether a move by hand is measured before it is allowed to stand.
     ///
     /// The switch and the dial are one control, because they are one question — "how much am I
     /// allowed to give away before I am stopped" — and off is the answer "anything" (docs/adr/0027).
@@ -617,7 +617,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return punishment
     }
 
-    /// Moves the 拦截线, or switches 耕棋 off with nil. **The only difficulty dial there is** —
+    /// Moves the 拦截线, or switches 正着 off with nil. **The only difficulty dial there is** —
     /// how strong the opponent is and how much slack the coach cuts are two different questions,
     /// and answering both with one knob makes it impossible to say who improved (docs/adr/0009).
     public func setTilling(_ enabled: Bool) {
@@ -646,11 +646,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
-    /// True while 耕棋 is working out what the move just played costs. The board shows the move
+    /// True while 正着 is working out what the move just played costs. The board shows the move
     /// during this: it has been played, and whether it is allowed to stand is the question.
     public private(set) var isWeighing = false
 
-    /// The move 耕棋 has just taken back, for the screen to say one sentence about. Cleared by
+    /// The move 正着 has just taken back, for the screen to say one sentence about. Cleared by
     /// the next move, because it is about a board that is no longer there.
     public private(set) var refused: Refusal?
 
@@ -737,7 +737,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard hintLayer >= 1, interceptTable?.fen == viewed.state.fen else { return nil }
         return interceptTable?.analysis.best?.score
     }
-    /// The number for the position on screen: the live bounded search of it when 耕棋 has one,
+    /// The number for the position on screen: the live bounded search of it when 正着 has one,
     /// else the curve's number for it. No recommended move is exposed here.
     private var tillingScore: Score? {
         if let table = interceptTable, table.fen == viewed.state.fen {
@@ -770,7 +770,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// The position a 试招 made. It is the one its 应招 comes back from, and the one the board no
-    /// longer shows, because 耕棋 has already taken the move back.
+    /// longer shows, because 正着 has already taken the move back.
     public func position(after tried: Game.Ply.Tried) -> Game? {
         guard var played = refusedPosition,
             let move = SAN.move(for: tried.san, in: played.state),
@@ -903,7 +903,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// The app's number for the position after `ply` moves — what the curve draws — by one
-    /// priority: the move just measured, then what 耕棋 wrote onto the move, then what a Review
+    /// priority: the move just measured, then what 正着 wrote onto the move, then what a Review
     /// wrote (docs/adr/0016). The live search of the position on screen does not enter here:
     /// reading an older move is reading history, and the live number belongs to `tillingScore`.
     /// Curve data includes the latest completed position even while reading an older move.
@@ -1238,10 +1238,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             commit(move, by: .hand)
             return
         }
-        // 耕棋 measures a move before it is allowed to stand, wherever it is played. It used to
+        // 正着 measures a move before it is allowed to stand, wherever it is played. It used to
         // measure only a move played at the end of the game — "a move played back down the game is
         // somebody taking one back" — and a saved game reopens at its *first* position, so playing
-        // the first move again was the one move 耕棋 never looked at. It looked exactly like 耕棋
+        // the first move again was the one move 正着 never looked at. It looked exactly like 正着
         // being switched off while switched on.
         guard isTilling || hasTillingFeedback, !viewed.isOver else {
             commit(move, by: .hand)
@@ -1372,7 +1372,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                     refused = Refusal(san: verdict.played, drop: verdict.drop)
                     if let start = game.rewound(to: 0) { game = start }
                     cursor = 0
-                    // The drill's refusal goes through the same door as 耕棋's: into the Game, at
+                    // The drill's refusal goes through the same door as 正着's: into the Game, at
                     // the position it happened at (docs/adr/0037).
                     game.recordTried(
                         .init(san: verdict.played, drop: verdict.drop, line: verdict.reply), atPly: 0

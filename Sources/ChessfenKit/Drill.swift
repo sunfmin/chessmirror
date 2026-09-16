@@ -170,10 +170,10 @@ public struct DrillVerdict: Hashable, Sendable {
         isJudging = false
     }
 
-    /// The same 细判 耕棋 gives a move as it lands (`Weighing`): a move outside the baseline's
+    /// The same 细判 正着 gives a move as it lands (`Weighing`): a move outside the baseline's
     /// candidate lines still has an independently evaluated resulting position, and the 应招 comes
     /// out of the same search that settled the attempt (docs/adr/0034) — a drill's position is
-    /// taken back the moment it is refused, exactly as 耕棋's is, so this is the last moment the
+    /// taken back the moment it is refused, exactly as 正着's is, so this is the last moment the
     /// answer to it can be had without a second search.
     private func judge(_ move: Move, san: String, before: Game, after: Game) async {
         defer {

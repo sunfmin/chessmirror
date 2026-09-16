@@ -115,7 +115,7 @@ func onlyRecordedMovesCount() throws {
     #expect(relaxed.isEmpty)
 
     // The same game judged by somebody who wants everything written down — which is what the
-    // phone ships with, because it is where 耕棋 already stops you.
+    // phone ships with, because it is where 正着 already stops you.
     let fussy = MistakeBook.derive(from: [entry], lines: .standard)
     #expect(fussy.mistakes.count == 1)
 }
@@ -201,7 +201,7 @@ func recurrenceOutranksSeverity() {
 
 /// Contract: a 试招 that no move came along to carry is a 遭遇 like any other (docs/adr/0037).
 ///
-/// The text is a game off the phone, unedited: 耕棋 refused Be3 at the position after twelve
+/// The text is a game off the phone, unedited: 正着 refused Be3 at the position after twelve
 /// Plies, the player put the phone down, and the refusal was written where it happened — with no
 /// move to ride on. The book read every move in the file and nothing at the end of it, so the one
 /// position the session actually stopped at was the one position it did not record.
@@ -227,7 +227,7 @@ func aRefusalNothingAbsorbedEntersTheBook() throws {
         """
     let pgn = try PGN(parsing: text)
     #expect(pgn.game.plies.count == 12, "the refused move is not one of them")
-    #expect(!pgn.game.isReviewed, "and nobody has reviewed the game — this is a live 耕棋 file")
+    #expect(!pgn.game.isReviewed, "and nobody has reviewed the game — this is a live 正着 file")
 
     let entry = GameLibrary.Entry(
         url: URL(filePath: "/games/be3.pgn"), pgn: pgn, modified: now
@@ -240,7 +240,7 @@ func aRefusalNothingAbsorbedEntersTheBook() throws {
     #expect(mistake.lastSeen == now)
     #expect(mistake.encounters.first?.wanted == nil, "no Review, so nothing is claimed about it")
     // The position is the one the refused move was played from — White to move, twelve Plies in,
-    // which is the board that was on the screen when 耕棋 gave the move back.
+    // which is the board that was on the screen when 正着 gave the move back.
     #expect(mistake.position.sideToMove == .white)
     let after = try #require(pgn.game.rewound(to: 12))
     #expect(mistake.position == PositionKey(fen: after.state.fen))

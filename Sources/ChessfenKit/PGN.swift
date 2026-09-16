@@ -190,7 +190,7 @@ public struct PGN: Hashable, Sendable {
             if !ply.line.isEmpty {
                 comment.append("[%line \(ply.line.joined(separator: " "))]")
             }
-            // What 耕棋 took back here, and how many hints were open when the move that stands
+            // What 正着 took back here, and how many hints were open when the move that stands
             // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
             // they were played, because a reader that only knows `[%eval]` skips them the same
             // way it already skips everything else in a comment.
@@ -438,7 +438,7 @@ private struct Scanner {
 
     /// Every `[%tried San -23%]` in one comment, in the order they were written. All of them
     /// rather than the first, which is the one way this differs from every other token here: a
-    /// position 耕棋 stopped somebody at three times has three of them. The 应招 rides after a bar
+    /// position 正着 stopped somebody at three times has three of them. The 应招 rides after a bar
     /// in the same token, so the two can never be read apart from each other (docs/adr/0034).
     private static func tried(in comment: String) -> [Game.Ply.Tried] {
         attempts(of: "tried", in: comment).map(\.tried)

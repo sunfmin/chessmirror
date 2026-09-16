@@ -367,8 +367,8 @@
 "daily.left" = "还剩 %d 道";
 "daily.done" = "今天的练完了";
 "daily.none" = "今天没有要练的";
-"till.start" = "开始耕棋";
-"till.name" = "耕棋";
+"till.start" = "开始正着";
+"till.name" = "正着";
 "till.practice" = "练习";
 "till.intercept" = "拦截线";
 "till.off" = "关";

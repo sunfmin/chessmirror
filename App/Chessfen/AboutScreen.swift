@@ -53,8 +53,8 @@ struct AboutScreen: View {
                 }
 
                 // The two lines the player owns, on the one scale everything is judged on
-                // (docs/adr/0027). 拦截线 is not here: it is 耕棋's switch as well as its dial,
-                // and 耕棋 is a thing one game is played under rather than a standing setting.
+                // (docs/adr/0027). 拦截线 is not here: it is 正着's switch as well as its dial,
+                // and 正着 is a thing one game is played under rather than a standing setting.
                 Section {
                     Picker(selection: $judgement.record) {
                         ForEach(JudgementSetting.choices, id: \.self) { line in
