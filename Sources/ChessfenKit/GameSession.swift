@@ -1041,7 +1041,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         else { return }
         // Mark the original failed attempts, rather than manufacturing another occurrence.
         game.setPendingTried(
-            pendingAttempts.map { .init(san: $0.san, drop: $0.drop, notFound: true, line: $0.line) },
+            pendingAttempts.map {
+                .init(san: $0.san, drop: $0.drop, notFound: true, depth: $0.depth, line: $0.line)
+            },
             atPly: cursor
         )
         commit(move, by: .asked)

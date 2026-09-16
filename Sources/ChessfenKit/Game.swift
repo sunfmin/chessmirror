@@ -89,11 +89,19 @@ public struct Game: Hashable, Sendable {
             /// say what the move was asking for. Empty for a move refused before replies were
             /// written down, and for one that left no position to answer in.
             public let line: [String]
+            /// The Depth the 掉幅 was worked out at, so a number a 复判 took deeper can be told
+            /// from an everyday one (docs/adr/0041). Nil for a move read from a file written
+            /// before depths were kept: unknown, and never guessed at.
+            public let depth: Int?
 
-            public init(san: String, drop: Double, notFound: Bool = false, line: [String] = []) {
+            public init(
+                san: String, drop: Double, notFound: Bool = false, depth: Int? = nil,
+                line: [String] = []
+            ) {
                 self.san = san
                 self.drop = drop
                 self.notFound = notFound
+                self.depth = depth
                 self.line = Array(line.prefix(Reply.limit))
             }
         }

@@ -100,7 +100,8 @@ public struct Ruling: Hashable, Sendable {
             // (docs/adr/0034), because the position the move made is off the board from here on.
             var restored = before
             restored.recordTried(
-                .init(san: san, drop: weighed.drop, line: weighed.reply), atPly: cursorBefore
+                .init(san: san, drop: weighed.drop, depth: weighed.depth, line: weighed.reply),
+                atPly: cursorBefore
             )
             verdict = .refused(Refusal(san: san, drop: weighed.drop))
             game = restored
@@ -168,7 +169,7 @@ extension Game {
         }
         var relaxed: [Ply.Tried] = []
         if relaxedIntercept != nil, let drop, lines.records(drop) {
-            relaxed = [.init(san: san, drop: drop, notFound: true)]
+            relaxed = [.init(san: san, drop: drop, notFound: true, depth: depth)]
         }
         absorbPendingTried(atPly: ply, hints: hints, adding: relaxed)
     }

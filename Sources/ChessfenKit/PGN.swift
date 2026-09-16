@@ -148,6 +148,9 @@ public struct PGN: Hashable, Sendable {
     private static func attempt(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
         var body = "\(attempt.san) \(percent(attempt.drop))"
         if attempt.notFound { body += " notfound" }
+        // The Depth after the flag, so a reader that knows only the older forms still sees them
+        // as a prefix (docs/adr/0041). Absent when unknown, never written as a guess.
+        if let depth = attempt.depth { body += " \(depth)" }
         // The 应招 follows a bar (docs/adr/0034). A bar and not a word, because what comes after it
         // is a line of moves and a token of its own would need a second delimiter inside a comment
         // that already ends at the first `]`.
@@ -508,16 +511,28 @@ private struct Scanner {
             }
             let halves = rest.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
             let parts = halves[0].split(separator: " ")
-            guard let san = parts.first,
-                parts.count == 2 || (parts.count == 3 && parts[2] == "notfound"),
+            guard let san = parts.first, parts.count >= 2,
                 parts[1].hasPrefix("-"), parts[1].hasSuffix("%"),
                 let drop = Double(parts[1].dropFirst().dropLast()),
                 drop.isFinite, (0...100).contains(drop)
             else { return nil }
+            // After the cost: a `notfound` flag, then the Depth it was judged at, each at most
+            // once and in that order (docs/adr/0041). Anything else is a token nobody wrote.
+            var notFound = false
+            var depth: Int?
+            for part in parts.dropFirst(2) {
+                if part == "notfound", !notFound, depth == nil {
+                    notFound = true
+                } else if depth == nil, let value = Int(part), value > 0 {
+                    depth = value
+                } else {
+                    return nil
+                }
+            }
             let line = halves.count > 1 ? halves[1].split(separator: " ").map(String.init) : []
             return (
                 ply,
-                Game.Ply.Tried(san: String(san), drop: drop, notFound: parts.count == 3, line: line)
+                Game.Ply.Tried(san: String(san), drop: drop, notFound: notFound, depth: depth, line: line)
             )
         }
     }

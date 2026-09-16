@@ -93,3 +93,36 @@ import Testing
     let spaced = try PGN(parsing: "1. e4 {[%tried f3 -20% | ]} *")
     #expect(spaced.game.plies[0].tried == [.init(san: "f3", drop: 20)])
 }
+
+/// Contract: a 试招 carries the Depth its 掉幅 was worked out at, and the file keeps it after the
+/// flag — `[%tried a3 -9.99% notfound 28 | c5]` — so a number a 复判 took deeper can be told from
+/// an everyday one (docs/adr/0041). A move written before depths were kept has none, and none is
+/// invented for it on the way back in.
+@MainActor
+@Test func theDepthRidesAfterTheFlagAndAnOlderFileHasNone() throws {
+    var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    let attempts: [Game.Ply.Tried] = [
+        .init(san: "f3", drop: 19.99, depth: 28, line: ["d5", "exd5"]),
+        .init(san: "a3", drop: 9.99, notFound: true, depth: 17, line: ["c5"]),
+        .init(san: "h4", drop: 4.0),
+    ]
+    game.setTried(attempts, atPly: 0)
+    game.setPendingTried([.init(san: "Nf3", drop: 12.5, depth: 20)], atPly: 2)
+    let text = PGN(game: game).text
+    #expect(text.contains("[%tried f3 -19.99% 28 | d5 exd5]"))
+    #expect(text.contains("[%tried a3 -9.99% notfound 17 | c5]"))
+    #expect(text.contains("[%tried h4 -4.0%]"))
+    #expect(text.contains("[%pending 2 Nf3 -12.5% 20]"))
+    let read = try PGN(parsing: text)
+    #expect(read.game.plies[0].tried == attempts)
+    #expect(read.game.pendingTries(atPly: 2) == [.init(san: "Nf3", drop: 12.5, depth: 20)])
+
+    let older = try PGN(parsing: "1. e4 {[%tried f3 -20% notfound | d5]} *")
+    #expect(older.game.plies[0].tried == [.init(san: "f3", drop: 20, notFound: true, line: ["d5"])])
+    #expect(older.game.plies[0].tried[0].depth == nil)
+    #expect(Game.Ply.Tried(san: "f3", drop: 20) != Game.Ply.Tried(san: "f3", drop: 20, depth: 20))
+
+    // Out of order, twice, or nonsense after the cost is a token nobody wrote.
+    let bad = try PGN(parsing: "1. e4 {[%tried f3 -20% 28 notfound] [%tried f3 -20% 28 30] [%tried f3 -20% 0] [%tried f3 -20% 28]} *")
+    #expect(bad.game.plies[0].tried == [.init(san: "f3", drop: 20, depth: 28)])
+}

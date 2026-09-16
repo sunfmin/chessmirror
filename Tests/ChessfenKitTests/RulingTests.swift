@@ -65,7 +65,7 @@ struct RulingTests {
         #expect(ruling.takesTheMoveBack)
         #expect(ruling.cursor == 2)
         #expect(ruling.game.uciMoves == before.uciMoves, "the line being read is not swallowed")
-        #expect(ruling.game.pendingTries(atPly: 2) == [.init(san: "Bc4", drop: weighed.drop, line: ["Nf6", "d3"])])
+        #expect(ruling.game.pendingTries(atPly: 2) == [.init(san: "Bc4", drop: weighed.drop, depth: weighed.depth, line: ["Nf6", "d3"])], "with the depth it was judged at (docs/adr/0041)")
         #expect(ruling.game.plies.allSatisfy { $0.judgement == nil && $0.tried.isEmpty })
     }
 
