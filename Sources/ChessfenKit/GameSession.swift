@@ -66,8 +66,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             isProbingTactics = false
             probedAnalysis = nil
             // And a 应招 being read was being read at *this* position: the board moving on is
-            // the question being put away (docs/adr/0034).
+            // the question being put away (docs/adr/0034) — and so is a 复判 of it.
             closeReply()
+            cancelRejudge()
         }
     }
     /// The Game rebuilt where the cursor stands, kept until either the Game or the cursor
@@ -886,6 +887,117 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         replyReading = nil
     }
 
+    // ------------------------------------------------------------------ 复判
+
+    /// A 复判 under way: which 试招 on the strip is being judged again, and how deep both ends
+    /// have got (CONTEXT.md, 复判; docs/adr/0041).
+    public struct Rejudging: Equatable, Sendable {
+        /// Which of `visibleAttempts`.
+        public let index: Int
+        public let tried: Game.Ply.Tried
+        /// The shallower of the two ends so far — zero before either has said anything.
+        public internal(set) var depth: Int
+    }
+
+    public private(set) var rejudging: Rejudging?
+    private var rejudgeTask: Task<Void, Never>?
+
+    /// What the strip may offer for one 试招.
+    public enum RejudgeOffer: Equatable, Sendable {
+        /// Nothing: the move is already judged as deep as a 复判 goes, or there is no engine.
+        case none
+        /// The button, greyed: the engine is spoken for — a move being weighed or walked, the
+        /// position's own search still running, a 复判 already going, the engine paused.
+        case waiting
+        case ready
+    }
+
+    public func rejudgeOffer(at index: Int) -> RejudgeOffer {
+        guard let engine, visibleAttempts.indices.contains(index) else { return .none }
+        if (visibleAttempts[index].depth ?? 0) >= PositionSearches.deeperDepth { return .none }
+        if rejudging != nil || isOccupied || isThinking || isSearching || engine.isPaused {
+            return .waiting
+        }
+        return .ready
+    }
+
+    /// Judges one 试招 again, deeper: both ends of the move to `PositionSearches.deeperDepth`,
+    /// and the move's 掉幅, 应招 and depth rewritten in place when both have finished. The refusal
+    /// itself is not touched, and neither is the move that stood in the same position. Cancelled,
+    /// with nothing written, by a move being played, the eye moving on, or the session going away.
+    public func rejudge(at index: Int) {
+        guard rejudgeOffer(at: index) == .ready, let engine,
+            let before = refusedPosition
+        else { return }
+        let tried = visibleAttempts[index]
+        guard let played = position(after: tried) else { return }
+        rejudging = Rejudging(index: index, tried: tried, depth: 0)
+        rejudgeTask = Task { [weak self] in
+            guard let self else { return }
+            var first: Analysis?
+            for await snapshot in engine.analysePosition(before, budget: PositionSearches.deeper) {
+                guard !Task.isCancelled else { return }
+                first = snapshot
+                rejudging?.depth = snapshot.depth
+            }
+            guard !Task.isCancelled, let first else { return finishRejudge(nil, at: index) }
+            var after = played.state.outcomeScore
+            var depth = first.depth
+            var reply: [String] = []
+            if after == nil {
+                for await snapshot in engine.analysePosition(played, budget: PositionSearches.deeper) {
+                    guard !Task.isCancelled else { return }
+                    after = snapshot.best?.score
+                    reply = snapshot.best?.san ?? []
+                    depth = min(first.depth, snapshot.depth)
+                    rejudging?.depth = depth
+                }
+            }
+            guard !Task.isCancelled, let after,
+                let weighed = Weighing(
+                    mover: before.state.sideToMove, before: first, after: after, depth: depth, reply: reply
+                )
+            else { return finishRejudge(nil, at: index) }
+            finishRejudge(
+                .init(san: tried.san, drop: weighed.drop, notFound: tried.notFound, depth: depth, line: weighed.reply),
+                at: index
+            )
+        }
+    }
+
+    /// Writes the deeper number where the 试招 is — pending at the position, or on the move that
+    /// carried it — and brings an open reading of it up to date. Nothing is written when the
+    /// game has moved on from under it.
+    private func finishRejudge(_ deeper: Game.Ply.Tried?, at index: Int) {
+        defer {
+            rejudgeTask = nil
+            rejudging = nil
+        }
+        guard let deeper, let was = rejudging?.tried, visibleAttempts.indices.contains(index),
+            visibleAttempts[index] == was
+        else { return }
+        var attempts = visibleAttempts
+        attempts[index] = deeper
+        if !pendingAttempts.isEmpty {
+            game.setPendingTried(attempts, atPly: cursor)
+        } else if cursor > 0 {
+            game.setTried(attempts, hints: game.plies[cursor - 1].hints, atPly: cursor - 1)
+        }
+        if let reading = replyReading, reading.index == index, reading.tried == was {
+            replyReading = ReplyReading(
+                index: index, tried: deeper, position: reading.position,
+                line: Reply.moves(of: deeper), isAsking: false
+            )
+        }
+        save()
+    }
+
+    private func cancelRejudge() {
+        rejudgeTask?.cancel()
+        rejudgeTask = nil
+        rejudging = nil
+    }
+
     public var isFaceToFace = false
 
     private var measuredMove: (moves: [String], fen: String, change: MoveChange)?
@@ -1365,6 +1477,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// how one of them eventually forgets a line of it.
     private func commit(_ move: Move, by mover: Mover) {
         guard !isWeighing else { return }
+        // A move played is the game moving on: a 复判 of a 试招 here yields to it, unwritten.
+        cancelRejudge()
         if let practice, !practice.isSettled {
             guard isAtLatest, game.state.fen == practice.game.state.fen else { return }
             stopSearching()
@@ -1836,6 +1950,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         isWeighing = false
         stopSearching()
         closeReply()
+        cancelRejudge()
         thinking = nil
     }
 
