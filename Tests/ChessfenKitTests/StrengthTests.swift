@@ -136,7 +136,7 @@ import Testing
 
     // ------------------------------------------------------------------ the file
 
-    @Test func aGameAtTwoRungsWritesEachMoveAndReadsBackItsStretches() throws {
+    @Test func aGameAtTwoRungsWritesEachMoveAndReadsBackTheRungOfEveryPly() throws {
         var game = try #require(
             Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"])
         )
@@ -150,17 +150,15 @@ import Testing
         let read = try PGN(parsing: text).game
         #expect(read.plies.map(\.strength) == [nil, .elo(1600), nil, .elo(2000)])
         // The player's move is credited to the rung of the reply it was played against.
-        #expect(read.strength(ofPly: 1) == .elo(1600))
-        #expect(read.strength(ofPly: 3) == .elo(2000))
-        #expect(read.stretches == [
-            Game.Stretch(strength: .elo(1600), plies: 1...2),
-            Game.Stretch(strength: .elo(2000), plies: 3...4),
-        ])
+        #expect(
+            (1...4).map { read.strength(ofPly: $0) } == [.elo(1600), .elo(1600), .elo(2000), .elo(2000)],
+            "two stretches: the first two Plies at 1600, the next two at 2000"
+        )
     }
 
     /// A game the player finished with mate has no reply to credit their last move to, so it is
     /// credited to the engine's move before it; a game against a human is credited to nothing.
-    @Test func aStretchIsReadForwardThenBackAndNeverInvented() throws {
+    @Test func aRungIsReadForwardThenBackAndNeverInvented() throws {
         // 1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7# — Black on the engine at 1800.
         var mate = try #require(Game(
             startFEN: PGN.standardStartFEN,
@@ -168,11 +166,11 @@ import Testing
         ))
         for ply in [1, 3, 5] { mate.setStrength(.elo(1800), atPly: ply) }
         #expect(mate.strength(ofPly: 7) == .elo(1800), "Qxf7# was played against the 1800 engine")
-        #expect(mate.stretches == [Game.Stretch(strength: .elo(1800), plies: 1...7)])
+        #expect((1...7).allSatisfy { mate.strength(ofPly: $0) == .elo(1800) }, "one stretch, one rung")
 
         let hands = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
-        #expect(hands.stretches == [Game.Stretch(strength: nil, plies: 1...2)])
-        #expect(hands.strength(ofPly: 1) == nil)
+        #expect((1...2).allSatisfy { hands.strength(ofPly: $0) == nil })
+        #expect(hands.strength(ofPly: 3) == nil, "a Ply nobody has played is at no rung")
     }
 
     @Test func theStandardEloTagIsWrittenOnlyWhenTheWholeGameWasAtOneRung() throws {
@@ -208,7 +206,7 @@ import Testing
         """
         let read = try PGN(parsing: legacy).game
         #expect(read.plies.map(\.strength) == [nil, .full, nil, .full])
-        #expect(read.stretches == [Game.Stretch(strength: .full, plies: 1...4)])
+        #expect((1...4).allSatisfy { read.strength(ofPly: $0) == .full })
 
         let hands = try PGN(parsing: "[White \"手动\"]\n[Black \"手动\"]\n\n1. e4 e5 *").game
         #expect(hands.plies.map(\.strength) == [nil, nil])

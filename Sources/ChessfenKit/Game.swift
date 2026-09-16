@@ -549,48 +549,22 @@ public struct Game: Hashable, Sendable {
         plies[ply].strength = strength
     }
 
-    /// A run of consecutive moves played at one 棋力 (docs/adr/0038).
-    public struct Stretch: Hashable, Sendable {
-        /// The 棋力 in force, or nil for moves against a human.
-        public let strength: Strength?
-        /// The Plies it covers, counting from one.
-        public let plies: ClosedRange<Int>
-
-        public init(strength: Strength?, plies: ClosedRange<Int>) {
-            self.strength = strength
-            self.plies = plies
-        }
-    }
-
     /// The 棋力 the `ply`th move was played at, counting from one.
     ///
     /// An engine move's own; for a move by hand, the 棋力 of the engine move that answered it —
     /// that is the opponent the move was played against — or, when nothing answered because the
     /// game ended there, of the engine move before it. Nil against a human, and nil for every
     /// game saved before 棋力 was written down, which the 正着榜 credits to no rung.
+    ///
+    /// This is the whole of what a "stretch" is (docs/adr/0038): a game can change 棋力 as it
+    /// goes, and each move is credited to the rung in force when it was played. Nothing needs the
+    /// stretches listed out as ranges — the 正着榜 reads the rung move by move.
     public func strength(ofPly ply: Int) -> Strength? {
         guard plies.indices.contains(ply - 1) else { return nil }
         if let own = plies[ply - 1].strength { return own }
         if plies.indices.contains(ply), let reply = plies[ply].strength { return reply }
         if ply >= 2, let before = plies[ply - 2].strength { return before }
         return nil
-    }
-
-    /// The game as a sequence of stretches, in order: a game can change 棋力 as it goes, the way it
-    /// can change a Controller, and each stretch is credited to the rung it was played at.
-    public var stretches: [Stretch] {
-        var stretches: [Stretch] = []
-        for ply in plies.indices.map({ $0 + 1 }) {
-            let strength = strength(ofPly: ply)
-            if let last = stretches.last, last.strength == strength {
-                stretches[stretches.count - 1] = Stretch(
-                    strength: strength, plies: last.plies.lowerBound...ply
-                )
-            } else {
-                stretches.append(Stretch(strength: strength, plies: ply...ply))
-            }
-        }
-        return stretches
     }
 
     /// The one Elo every engine move by `colour` was played at, or nil when there was none, the
