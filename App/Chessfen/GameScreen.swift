@@ -122,7 +122,6 @@ struct GameScreen: View {
                 VStack(spacing: 0) {
                     record
                     wrongMoves
-                    settlement
                 }
                 .chromeType()
 
@@ -349,32 +348,28 @@ struct GameScreen: View {
                             .foregroundStyle(value > 0 ? Palette.analysis : value < 0 ? Palette.alarm : Palette.inkSoft)
                             .contentTransition(.numericText())
                             .accessibilityLabel(localized("standing.change", label))
-                    case .score(let score):
-                        Text(score?.displayText ?? "—")
-                            .font(.caption.weight(.medium).monospacedDigit())
-                            .foregroundStyle(Palette.analysis)
                     case .quiet:
                         EmptyView()
                     }
                 }
-                if !session.isPractising, session.isAdviceSpent, finish == nil {
-                    effort
-                } else if session.hasTillingFeedback, session.activePunishment == nil, !viewed.isOver {
+                // The search has to account for itself (docs/adr/0020): how deep it has got, for
+                // as long as there is a position of the game's to search.
+                if session.hasTillingFeedback, session.phase != .exercising, !viewed.isOver {
                     Text(localized("game.depth", session.searchProgress?.depth ?? 0))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
-                } else if !session.isPractising, finish == nil {
-                    effort
                 }
             }
             .lineLimit(1)
             .minimumScaleFactor(0.85)
 
+            // The bar reads the badge's number, never the engine's opinion of the position
+            // (docs/adr/0040); a finished game reads its result whatever the badge is doing.
             if session.hasTillingFeedback {
                 EvalBar(score: session.feedbackScore,
                         orientation: session.orientation, finish: finish)
-            } else if !session.isPractising || finish != nil {
-                evalTrack
+            } else if finish != nil {
+                EvalBar(score: nil, orientation: session.orientation, finish: finish)
             }
 
         }
@@ -464,57 +459,6 @@ struct GameScreen: View {
         .accessibilityLabel(localized("till.name"))
         .accessibilityValue(localized(session.isTilling ? "screen.on" : "till.off"))
         .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
-    }
-
-    /// Who is ahead, with how hard the engine is still working on that answer drawn underneath it.
-    ///
-    /// One control rather than a bar with a button next to it, because they are the same subject:
-    /// the line is the search that produced the bar, and when the search has stopped the bar is
-    /// what you press for more of it. The line fills with Depth — the same measure the hold button
-    /// uses — so it is the picture of the number beside it rather than a second thing to read.
-    ///
-    /// It goes quiet rather than away when the Stint ends: how deep it got is worth keeping on
-    /// screen, and a line that vanished would say the engine had never run.
-    private var evalTrack: some View {
-        VStack(spacing: 3) {
-            EvalBar(
-                score: session.analysis?.best?.score,
-                orientation: session.orientation,
-                finish: finish
-            )
-            if finish == nil, !session.isPractising {
-                GeometryReader { proxy in
-                    Capsule()
-                        .fill(Palette.analysis.opacity(session.isAdviceSpent ? 0.3 : 0.9))
-                        .frame(width: proxy.size.width * depthFraction)
-                        .animation(.easeOut(duration: 0.3), value: depthFraction)
-                }
-                .frame(height: 2)
-            }
-        }
-        .contentShape(Rectangle())
-    }
-
-    /// How far the search has got, 0...1, by the same reckoning the hold button uses.
-    private var depthFraction: Double {
-        min(Double(session.searchProgress?.depth ?? 0) / SearchDepth.deepEnough, 1)
-    }
-
-    /// What the engine has got to, and — once it has stopped — what to do about that.
-    ///
-    /// A search with no readout is a phone that might be working or might be broken, and the
-    /// answer used to be "it is always working", which was the problem. Now it stops, so it has to
-    /// account for itself: a Depth while it climbs, and an offer of another ten seconds when it
-    /// has stopped climbing.
-    @ViewBuilder private var effort: some View {
-        if let depth = session.searchProgress?.depth, depth > 0 {
-            Text(localized("game.depth", depth))
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(Palette.inkSoft)
-                // It climbs several times a second, and a number that animates while it does is a
-                // number nobody can read.
-                .animation(.none, value: depth)
-        }
     }
 
     // ------------------------------------------------------------------ the two sides
@@ -648,19 +592,13 @@ struct GameScreen: View {
     /// to say — fifty points of a phone, to keep the board from walking when the clock changed
     /// sides. In the row it needs no height of its own, and the board stands just as still.
     @ViewBuilder private func advice(for colour: PieceColour) -> some View {
+        // Only what a thumb on 让引擎走 is being told. Nothing otherwise: a bar that said "no
+        // opinion" every move would be an opinion about how much you are missing (docs/adr/0040).
         if isAsking {
             Text(askedReadout)
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.analysis)
                 .lineLimit(1)
-        } else if session.isPractising {
-            // Nothing. The header already wears 练习 with an eye struck through it, and a bar that
-            // says "no opinion" every move is an opinion about how much you are missing.
-            EmptyView()
-        } else if let reason = engine.unavailableReason {
-            Text(reason).font(.caption).foregroundStyle(Palette.alarm).lineLimit(1)
-        } else {
-            Text(localized("game.thinking")).font(.caption).foregroundStyle(Palette.inkSoft)
         }
     }
 
@@ -1344,38 +1282,6 @@ struct GameScreen: View {
             .accessibilityLabel(prompt)
         }
     }
-
-    /// What came of the opponent's last mistake, said **after** the reply landed (docs/adr/0027).
-    ///
-    /// Never before. "There is something to win here" is the strongest hint in chess, and a line
-    /// that appeared while the player was still thinking would be answering the question it is
-    /// supposed to be asking. Standing on a move is what asks for it, so walking back through a
-    /// game replays the settlements one at a time and nothing is ever said about a position the
-    /// eye has not yet moved past.
-    ///
-    /// Practice hides it with everything else the engine thinks: a Score is the engine's opinion
-    /// and so is a percentage of it (docs/adr/0015).
-    @ViewBuilder private var settlement: some View {
-        if !session.isPractising, let settled = session.settlement {
-            sentence(settled.sentence, colour: settled.isClean ? Palette.analysis : Palette.alarm)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 6)
-                .transition(.opacity)
-        }
-    }
-
-    private func sentence(_ text: String, colour: Color) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Circle().fill(colour).frame(width: 6, height: 6)
-                .padding(.top, 5)
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(Palette.ink)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-
 
     // ------------------------------------------------------------------ the deck
 

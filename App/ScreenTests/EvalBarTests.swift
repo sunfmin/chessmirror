@@ -20,17 +20,10 @@ struct EvalBarSides {
     private static let italian = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5", "c2c3", "g8f6"]
 
     /// White three pawns up: about five sixths of the bar one colour and one sixth the other, so
-    /// neither end can be read as the other by accident.
-    private static let winning = [
-        Analysis(
-            depth: 22,
-            selectiveDepth: 30,
-            lines: [Line(score: .centipawns(300), uciMoves: ["d2d4"], san: ["d4"])],
-            nodes: 20_000_000,
-            nodesPerSecond: 2_400_000,
-            timeMilliseconds: 8_000
-        )
-    ]
+    /// neither end can be read as the other by accident. The bar reads the badge's number — what
+    /// was written on the last move — and never the engine's opinion (docs/adr/0040), so the
+    /// number is written on the move rather than scripted into an engine.
+    private static let winning = Game.Ply.Judgement(drop: 0, score: .centipawns(300), depth: 20)
 
     @Test("the bar's ends wear the colours of the board's own sides")
     func endsFollowTheBoard() async throws {
@@ -63,16 +56,16 @@ struct EvalBarSides {
 
     /// One screen, one way up, with White three pawns to the good on it.
     private func shoot(_ name: String, facing: PieceColour) async throws -> (left: Int, right: Int)? {
-        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        game.setJudgement(Self.winning, atPly: Self.italian.count - 1)
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
         session.orientation = .facing(facing)
-        session.setPractising(false)
 
         let rendered = await ScreenImage.write(name) {
             NavigationStack {
                 GameScreen(session: session, path: .constant([]))
             }
-            .environment(EngineHost(ScriptedEngine(Self.winning, isEndless: true)))
+            .environment(EngineHost(ScriptedEngine([], isEndless: true)))
             .environment(GameLibrary())
         }
         return ends(of: rendered.url, size: CGSize(width: 402, height: 874))

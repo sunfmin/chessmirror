@@ -130,7 +130,6 @@ import Testing
         )
         let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
         session.attach(engine: engine, library: nil)
-        #expect(session.isPractising)
         #expect(!session.isFindingTactics)
 
         session.play(try #require(session.viewed.state.move(matching: "e2e4")))
@@ -235,7 +234,6 @@ import Testing
         session.setFindingTactics(true)
         await hop()
 
-        #expect(session.isPractising)
         #expect(!session.isSearching, "the shared search has finished; 正在算 must not stay on")
         #expect(!session.isProbingTactics)
 

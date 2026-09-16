@@ -315,22 +315,18 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     #expect(session.historyScore(atPly: 2) == .centipawns(2 * score))
 }
 
-/// Contract: toggling interception preserves the previous advice preference and threshold,
-/// survives a real PGN file round trip while OFF, and never changes the game or opponent clock.
+/// Contract: toggling interception remembers its threshold, keeps the badge under the board on,
+/// survives a real PGN file round trip while OFF, and never changes the game.
 @MainActor
-@Test(arguments: [true, false])
-func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) throws {
+@Test func tillingToggleRemembersItsThreshold() throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game)
-    session.setPractising(hidden)
     session.setTilling(true)
     #expect(session.isTilling)
-    #expect(session.isPractising)
     #expect(session.lines.intercept == 5)
     session.setIntercept(37)
     session.setTilling(false)
     #expect(!session.isTilling)
-    #expect(session.isPractising == hidden)
     #expect(session.hasTillingFeedback)
     #expect(session.preferredIntercept == 37)
     #expect(session.game.uciMoves == game.uciMoves)

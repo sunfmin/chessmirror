@@ -140,10 +140,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var picture: RGBImage?
     public var shaky: Set<Square>
 
-    /// Legacy answer-visibility preference. Position feedback is independent of this flag;
-    /// the game screen no longer presents it as a separate practice/analysis mode.
-    public private(set) var isPractising = true
-    private var adviceBeforeTilling: Bool?
     public private(set) var preferredIntercept: Double?
     private var showsPositionFeedback = false
     /// Keep assessment/history visible when interception is temporarily switched off.
@@ -435,17 +431,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if thinking == .own { retune() }
     }
 
-    /// Turns the engine's advice off, or back on. Also takes effect now: a number left standing
-    /// from the search that has just been called off is the one thing practice must not show.
-    public func setPractising(_ practising: Bool) {
-        guard !isWeighing, !isTilling || practising else { return }
-        guard isPractising != practising else { return }
-        isPractising = practising
-        analysis = nil
-        // Opening feedback must never start a second, whole-game scoring pass.
-        retune()
-    }
-
     /// Turns the tactics finder on, or back off. Takes effect now: a shot left standing after
     /// the switch is thrown is the one thing the live board must not keep drawing.
     public func setFindingTactics(_ on: Bool) {
@@ -610,16 +595,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard !isOccupied else { return }
         if let line, !line.isFinite || !JudgementLines.interceptRange.contains(line) { return }
         guard lines.intercept != line else { return }
-        if line != nil, !isTilling { adviceBeforeTilling = isPractising }
         lines.intercept = line
         if let line {
             preferredIntercept = line
-            isPractising = true
             analysis = nil
             setFindingTactics(false)
-        } else {
-            isPractising = adviceBeforeTilling ?? true
-            adviceBeforeTilling = nil
         }
         // Whatever was refused was refused under the old line. A move that would stand under the
         // new one is not a move somebody should still be being told about.
@@ -959,7 +939,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             let value = change.percent(for: feedbackColour)
             return .change((value * 10).rounded() / 10)
         }
-        return isPractising ? .quiet : .score(analysis?.best?.score)
+        return .quiet
     }
 
     private var isLatestMoveMeasured: Bool {
@@ -1074,16 +1054,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             guard !Task.isCancelled, let self else { return }
             searchTask = nil
         }
-    }
-
-    /// What came of the opponent's mistake the move on screen was the reply to, or nil — which is
-    /// most moves, because most moves are replies to nothing in particular.
-    ///
-    /// Read off the cursor, so it is the settlement for the move the eye is standing on. Nothing
-    /// computes it ahead of the reply: the whole point is that a gift is named only once it has
-    /// been taken or missed.
-    public var settlement: Settlement? {
-        game.settlement(atPly: cursor, lines: lines)
     }
 
     /// The move that led to the position on screen.
@@ -1745,42 +1715,33 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                     playByEngine(move)
                 }
             }
-        } else {
-            if isTilling || (hasTillingFeedback && isPractising) {
-                prepareInterception(on: position, using: engine)
-                return
-            }
-            // Practice turns off exactly this search — the one whose only product is advice. It
-            // is refused here rather than in the screen for the reason the pause is: "what should
-            // the engine be doing right now" has one answer, and a screen that forgot would leave
-            // a phone deepening a search nobody is allowed to see the result of.
-            guard !isPractising else { return }
-            advise(on: position, using: engine)
+        } else if isTilling || hasTillingFeedback {
+            // The one search the board itself starts: the position in front of the player, for
+            // 正着 and the badge to read. The engine's opinion of it is not shown, and no search
+            // whose only product is advice is started for the board (docs/adr/0040); a card
+            // that asks gets one (`adviseForCard`).
+            prepareInterception(on: position, using: engine)
         }
     }
 
-    /// Subscribe to the same bounded result used by judgement, tactics and opponent play.
+    /// A card's Stint: the same bounded position search every live reader joins, with its
+    /// opinion kept for the card (docs/adr/0020, 0040) — and, since it is the same search, the
+    /// badge's table filled from it too, so a card that took the search over owes the board nothing.
     private func advise(on position: Game, using engine: any Engine) {
         guard !isTilling, !isWeighing else { return }
         isAdviceSpent = false
         searchProgress = nil
+        interceptTable = nil
         searchTask = Task { [weak self] in
             for await snapshot in engine.analysePosition(position) {
-                if Task.isCancelled { return }
-                self?.record(snapshot)
+                guard !Task.isCancelled, let self else { return }
+                record(snapshot)
+                if !snapshot.isPartial { interceptTable = (position.state.fen, snapshot) }
             }
             guard !Task.isCancelled else { return }
             self?.searchTask = nil
             self?.isAdviceSpent = true
         }
-    }
-
-    /// Legacy callers may request the answer again, but never a new search of that position.
-    public func adviseAgain() {
-        guard isAdviceSpent, !isPractising, let engine, !engine.isPaused else { return }
-        let position = viewed
-        guard !position.isOver, !isEngineTurn else { return }
-        advise(on: position, using: engine)
     }
 
     /// A Stint spent because a card arrived. Runs during Practice too: the swipe is the asking,
@@ -1796,7 +1757,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             if searchTask == nil { isAdviceSpent = true }
             return
         }
-        if searchTask != nil { return }
+        // The board may already be searching this position for the badge (`prepareInterception`).
+        // The card joins the same shared search rather than waiting for a second one: its
+        // subscription does both jobs, so nothing is lost by taking over.
         stopSearching()
         advise(on: viewed, using: engine)
     }
@@ -1882,11 +1845,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     private func record(_ snapshot: Analysis) {
         noteProgress(snapshot)
-        // A move being walked is not advice, and during Practice that search's opinion is dropped
-        // rather than merely hidden — the game's plies stay unmarked and the Review has nothing
-        // to disagree with. A card's Stint is the other case: the swipe asked, so the Line is
-        // kept for the card even while the board stays silent.
-        if isPractising, thinking != nil { return }
+        // A move being walked is not advice, and that search's opinion is dropped rather than
+        // merely hidden — the game's plies stay unmarked and the Review has nothing to disagree
+        // with. A card's Stint is the other case: the swipe asked, so the Line is kept for the
+        // card even while the board stays silent (docs/adr/0040).
+        if thinking != nil { return }
         analysis = snapshot
         analysisByFen[viewed.state.fen] = snapshot
         if isFindingTactics {

@@ -229,7 +229,6 @@
 "game.letEngine.hint" = "押し続けるほど深く読む。離すと指す";
 "game.willPlay" = "%@ を指す";
 "game.suggests" = "%@ はどう";
-"game.thinking" = "考え中";
 "game.hold.deeper" = "長く押すほど深く読む";
 "game.hold.progress" = "%1$.1f 秒・深さ %2$d";
 "game.settings.expand" = "%@ の設定を開く";

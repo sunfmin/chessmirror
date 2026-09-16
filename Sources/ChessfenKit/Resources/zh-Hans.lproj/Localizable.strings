@@ -267,7 +267,6 @@
 "game.letEngine.hint" = "按住不放，引擎算得更深；松手就走";
 "game.willPlay" = "会走 %@";
 "game.suggests" = "建议 %@";
-"game.thinking" = "在算";
 "game.hold.deeper" = "按住越久算得越深";
 "game.hold.progress" = "%1$.1f 秒 · 深 %2$d";
 "game.settings.expand" = "打开%@的设置";

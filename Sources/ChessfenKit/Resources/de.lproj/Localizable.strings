@@ -247,7 +247,6 @@
 "game.letEngine.hint" = "Gedrückt halten für eine tiefere Suche; loslassen, dann zieht sie";
 "game.willPlay" = "Zieht %@";
 "game.suggests" = "Versuch %@";
-"game.thinking" = "Rechnet";
 "game.hold.deeper" = "Je länger du hältst, desto tiefer rechnet sie";
 "game.hold.progress" = "%1$.1f s · Tiefe %2$d";
 "game.settings.expand" = "Einstellungen für %@ öffnen";

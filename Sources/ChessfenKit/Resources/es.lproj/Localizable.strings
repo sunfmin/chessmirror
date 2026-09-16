@@ -247,7 +247,6 @@
 "game.letEngine.hint" = "Mantén pulsado para que busque más hondo; suelta y juega";
 "game.willPlay" = "Jugará %@";
 "game.suggests" = "Prueba %@";
-"game.thinking" = "Calculando";
 "game.hold.deeper" = "Cuanto más lo mantengas, más hondo busca";
 "game.hold.progress" = "%1$.1f s · prof. %2$d";
 "game.settings.expand" = "Abrir los ajustes de las %@";

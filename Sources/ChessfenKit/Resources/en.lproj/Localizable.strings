@@ -286,7 +286,6 @@
 "game.letEngine.hint" = "Hold for a deeper search; let go and it plays";
 "game.willPlay" = "Playing %@";
 "game.suggests" = "Try %@";
-"game.thinking" = "Thinking";
 "game.hold.deeper" = "The longer you hold, the deeper it looks";
 "game.hold.progress" = "%1$.1fs · depth %2$d";
 "game.settings.expand" = "Open %@’s settings";

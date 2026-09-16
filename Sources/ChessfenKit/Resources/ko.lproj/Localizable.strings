@@ -229,7 +229,6 @@
 "game.letEngine.hint" = "누르고 있을수록 깊이 읽고, 떼면 둔다";
 "game.willPlay" = "%@ 둘 것";
 "game.suggests" = "%@ 어떨까";
-"game.thinking" = "계산 중";
 "game.hold.deeper" = "오래 누를수록 깊이 읽는다";
 "game.hold.progress" = "%1$.1f초 · 깊이 %2$d";
 "game.settings.expand" = "%@ 설정 열기";

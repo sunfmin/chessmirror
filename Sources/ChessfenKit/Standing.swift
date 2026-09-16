@@ -4,7 +4,7 @@ import Foundation
 ///
 /// One sentence, chosen by one priority, because the order *is* the meaning: a game that is over
 /// outranks everything, a move being weighed outranks a refusal, a refusal outranks the change
-/// the last move made, and the engine's bare assessment comes last. The screen used to hold that
+/// the last move made, and with nothing to report the strip is quiet. The screen used to hold that
 /// order as a chain of `else if`s, which made the strip's meaning a piece of view code that only
 /// a simulator could test; here it is a value a session produces from the facts it already
 /// holds, and the screen draws whichever voice it is handed.
@@ -18,9 +18,8 @@ public enum Standing: Hashable, Sendable {
     /// The move just played, as the change it made to the player's chances: percentage points
     /// from the player's own side, already rounded to tenths.
     case change(Double)
-    /// The engine's assessment of the position on the board, or nothing yet.
-    case score(Score?)
-    /// Nothing to say: a session in practice with no move to report on.
+    /// Nothing to say: no move to report on. The engine's assessment of the position is never
+    /// one of the voices — it is an opinion, and the strip does not give one (docs/adr/0040).
     case quiet
 
     /// `+1.2%`, `-3.0%`, `0.0%` — never `-0.0%`, which is a number nobody feels.

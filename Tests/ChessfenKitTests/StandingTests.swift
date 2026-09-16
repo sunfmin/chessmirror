@@ -101,14 +101,19 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     #expect(Standing.changeLabel(-23) == "-23.0%")
 }
 
+/// The engine's assessment of the position is never one of the voices (docs/adr/0040): a card
+/// that asked for an Analysis has one, and the strip still says nothing about it.
 @MainActor
-@Test func withNothingToReportPracticeIsQuietAndAnalysisSpeaks() throws {
+@Test func withNothingToReportTheStripIsQuietWhateverTheEngineThinks() async throws {
     let start = try #require(Game(startFEN: PGN.standardStartFEN))
-    let session = GameSession.fresh(start)
+    let engine = ScriptedEngine([analysis(38, "e2e4", "e4")])
+    let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
     #expect(session.standing == .quiet)
-    session.setPractising(false)
-    #expect(session.standing == .score(nil))
+    session.adviseForCard()
+    await session.waitForPreparedInterception()
+    #expect(session.analysis?.best?.score == .centipawns(38), "the card has its answer")
+    #expect(session.standing == .quiet, "and the strip does not repeat it")
 }
 
 @MainActor

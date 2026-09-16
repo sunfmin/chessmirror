@@ -24,6 +24,7 @@ _Avoid_: 损失, 误差, delta
 **收下 (Take-up)**:
 When the opponent's last move gave 胜率 away, how much of that gift the player's reply kept.
 The one place a positive number is honest, and it is settled only after the move is played.
+A reading of the Game with no screen at present (docs/adr/0040).
 _Avoid_: 抓住, 反击
 
 **要害 (Vital)**: _retired._ The word named a card that no longer exists. Do not reuse it.

@@ -131,11 +131,9 @@ struct AskedMove {
     @Test("a tap plays the move the board was already recommending")
     func tapPlaysTheArrow() async throws {
         let session = try session(ScriptedEngine(Self.searching, isEndless: true))
-        // A standing Analysis, arrived at the way the screen gets one: somebody has turned the
-        // engine's opinion on — a Game starts without it — and it is advising while it is the
-        // player's move.
-        session.setPractising(false)
-        session.retune()
+        // A standing Analysis, arrived at the one way the screen gets one: a card asked for it
+        // (docs/adr/0040), while it is the player's move.
+        session.adviseForCard()
         await hop()
         #expect(session.analysis?.bestMove == "d2d4", "the arrow on the board")
 
@@ -201,11 +199,10 @@ struct AskedMove {
         #expect(session.game.plies.last?.san == "d4")
     }
 
-    /// Practice hides what the engine thinks, not what it is doing.
-    @Test("a search asked for while practising reports its progress but not its opinion")
-    func practisingKeepsTheStopwatch() async throws {
+    /// The strip hides what the engine thinks, not what it is doing.
+    @Test("a search asked for reports its progress but not its opinion")
+    func aHeldSearchKeepsTheStopwatch() async throws {
         let session = try session(ScriptedEngine(Self.searching, isEndless: true))
-        session.setPractising(true)
 
         session.beginAskedMove()
         await hop()

@@ -87,24 +87,25 @@ struct GameScreenScreenshots {
         ),
     ]
 
-    /// A game under way against the engine, with the engine talking — which is to say somebody
-    /// has reached down and turned its opinion on, because that is not where a Game starts.
-    @Test("the game screen shows the position, what the engine makes of it, and the moves")
+    /// A game under way against the engine. The engine's opinion of the position is not on the
+    /// screen — there is no switch for it (docs/adr/0040) — but the search of the position is,
+    /// as the depth it has got to.
+    @Test("the game screen shows the position, how deep the engine has looked, and the moves")
     func gameInPlay() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(
             game, controllers: [.white: .hand, .black: .engine]
         )
-        session.setPractising(false)
 
         let rendered = await ScreenImage.write("game-in-play") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
-        // Whose move it is, said in that side's own bar, and what the engine says about it.
+        // Whose move it is, said in that side's own bar, and how far the engine has looked.
         #expect(rendered.says("白方"))
         #expect(rendered.says("该走了"))
-        #expect(rendered.says("+0.38"), "the deeper snapshot should have replaced the shallow one")
+        #expect(rendered.says(localized("game.depth", 26)), "the deeper snapshot should have replaced the shallow one")
+        #expect(!rendered.says("+0.38"), "and not what the engine thinks of the position (docs/adr/0040)")
         #expect(rendered.says("优势条"), "said once, at the end of the bar that draws it")
         #expect(
             !rendered.says("搜索深度"),
@@ -217,8 +218,6 @@ struct GameScreenScreenshots {
         let session = GameSession.fresh(
             game, controllers: [.white: .engine, .black: .hand]
         )
-        // The number this test is about is the engine's opinion, so it is turned on.
-        session.setPractising(false)
         let gate = AsyncStream<Analysis>.makeStream()
         gate.continuation.yield(Self.opinion(.centipawns(38), best: ("d2d4", "d4")))
         defer { gate.continuation.finish(); session.suspend() }
@@ -231,7 +230,7 @@ struct GameScreenScreenshots {
 
         #expect(session.isThinking, "the engine's own turn starts the moment the screen appears")
         #expect(rendered.says("马上走"))
-        #expect(rendered.says("+0.38"))
+        #expect(!rendered.says("+0.38"), "the engine's move is walked without its opinion being shown")
         #expect(rendered.says("白方"))
         #expect(rendered.says("Stockfish 18"), "the engine by name, on its own bar")
         #expect(rendered.says(localized("search.limit")))
@@ -242,24 +241,24 @@ struct GameScreenScreenshots {
         )
     }
 
-    /// Ten seconds later. The advisory search has run its Stint and stopped itself, which is the
-    /// whole point of a Stint (docs/adr/0020) — and the strip under the board has to say so, or a
-    /// number that quietly stopped moving reads as an engine that died.
-    @Test("a finished search keeps its answer without offering a duplicate search")
-    func adviceSpent() async throws {
+    /// Ten seconds later. The position search has run to its budget and stopped itself, which is
+    /// the whole point of a bounded search (docs/adr/0020, 0039) — and the strip under the board
+    /// keeps the depth it reached, or a number that quietly stopped moving reads as an engine
+    /// that died.
+    @Test("a finished search keeps the depth it reached without offering another")
+    func searchSpent() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(
             game, controllers: [.white: .hand, .black: .engine]
         )
-        session.setPractising(false)
 
-        let rendered = await ScreenImage.write("game-advice-spent") {
+        let rendered = await ScreenImage.write("game-search-spent") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
-        #expect(session.isAdviceSpent, "the search stopped on its own rather than running on")
+        #expect(!session.isSearching, "the search stopped on its own rather than running on")
         #expect(!rendered.says("再算 10 秒"), "the same position must never be searched again")
-        #expect(rendered.says("+0.38"), "with what it found still standing")
+        #expect(rendered.says(localized("game.depth", 26)), "with where it got to still standing")
         #expect(rendered.says("优势条"), "and the bar it found it for")
         #expect(!rendered.says("建议 d4"), "finishing a search does not reveal a finding")
     }
@@ -301,7 +300,6 @@ struct GameScreenScreenshots {
         let session = GameSession.fresh(
             game, controllers: [.white: .hand, .black: .engine]
         )
-        session.setPractising(false)
 
         let rendered = await ScreenImage.write("game-in-play-dark", style: .dark) {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
@@ -309,7 +307,7 @@ struct GameScreenScreenshots {
 
         #expect(rendered.says("白方"))
         #expect(rendered.says("该走了"))
-        #expect(rendered.says("+0.38"))
+        #expect(rendered.says(localized("game.depth", 26)))
         #expect(rendered.says("让引擎走"))
     }
 
@@ -338,42 +336,6 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("第 8 步 Nf6"), "nor of what used to follow that")
     }
 
-    /// What the opponent handed over, settled after the reply and never before (docs/adr/0027).
-    ///
-    /// Two pictures of one rule: standing on Black's blunder the screen says nothing about it —
-    /// "there is something to win here" is the strongest hint in chess — and standing one move
-    /// later, on White's reply, it says what became of it.
-    @Test("a gift is named only once the reply to it has been played")
-    func settlementWaitsForTheReply() async throws {
-        let game = try #require(
-            Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3"])
-        )
-        let session = GameSession.fresh(game)
-        session.setPractising(false)
-        // One pass, one depth: Black's e5 hands over thirty points and Nf3 takes most of them.
-        session.applyReview(
-            [.centipawns(20), .centipawns(400), .centipawns(280)],
-            startEvaluation: .centipawns(20),
-            depth: 16
-        )
-
-        session.step(by: -1)
-        let onTheBlunder = await ScreenImage.write("game-gift-unsettled") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
-        }
-        #expect(
-            onTheBlunder.count(of: "送了你") == 0,
-            "standing on the gift, the screen must not say there is one"
-        )
-
-        session.step(by: 1)
-        let afterTheReply = await ScreenImage.write("game-gift-settled") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
-        }
-        #expect(afterTheReply.says("送了你 30%"), "and after the reply it is settled")
-        #expect(afterTheReply.says("你收下了"), "taken whole, so one clause and no arithmetic")
-    }
-
     /// A finished game. The engine has nothing to search and so says nothing, and the screen has to
     /// say who won anyway.
     @Test("a game that ended in mate reads as won, not as level")
@@ -390,10 +352,6 @@ struct GameScreenScreenshots {
         }
 
         #expect(rendered.says("白方将杀"))
-        #expect(
-            session.isPractising,
-            "the engine was never turned on here — the result is not its opinion"
-        )
         #expect(rendered.says("白方胜"), "the bar reads the result rather than sitting half and half")
         #expect(rendered.says("1-0"), "and the number the screen has been showing resolves into it")
         #expect(
@@ -408,9 +366,10 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("该走了"), "and nobody is on the clock in a game that is over")
     }
 
-    /// Practice: the engine plays on but says nothing, so the screen has to account for the
-    /// number it is not showing. Nothing is switched here — this is a Game as it opens.
-    @Test("practice leaves the engine's opinion off the screen and says why")
+    /// The engine plays on but says nothing about the position, so the screen has to account for
+    /// the number it is not showing. Nothing is switched here — this is a Game as it opens, and
+    /// there is no switch (docs/adr/0040).
+    @Test("the engine's opinion is off the screen, and the screen says why")
     func practising() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game)
@@ -419,7 +378,6 @@ struct GameScreenScreenshots {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
-        #expect(session.isPractising, "which is where a Game starts (docs/adr/0015)")
         #expect(!rendered.says("练习"))
         #expect(
             rendered.says("正着"),
@@ -444,7 +402,6 @@ struct GameScreenScreenshots {
             screen(session, engine: engine, opening: .tactics)
         }
 
-        #expect(session.isPractising)
         #expect(!session.isProbingTactics)
         #expect(rendered.says(localized("search.reached")))
         #expect(!rendered.says(localized("till.judging")))
@@ -480,7 +437,6 @@ struct GameScreenScreenshots {
         }
         await hop()
 
-        #expect(session.isPractising)
         #expect(session.isFindingTactics, "arriving at the card opened it")
         #expect(session.tactic?.move.uci == "d1d5")
         #expect(rendered.says("战术"))
@@ -547,8 +503,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("把箭头收起"), "arriving drew them, and one press takes them off")
         #expect(!rendered.says(localized("screen.arrowsExplained")), "instructions belong to the button hint, not another row")
         #expect(session.mateNews?.arrows.count == 3)
-        // Practice is untouched on the board: the mate is a fact, and a Score would be an opinion.
-        #expect(session.isPractising)
+        // The board is untouched: the mate is a fact, and a Score would be an opinion.
         #expect(!rendered.says("建议"), "no recommendation, because that is an opinion")
         // The deck is not on the card it usually opens: the names are on the rail, so what says
         // which one is showing is the card's own subtitle.
@@ -598,7 +553,6 @@ struct GameScreenScreenshots {
         #expect(session.mateNews?.isOurs == false)
         // Your own move is the near colour and the mate is the far one, whoever the news is about.
         #expect(session.mateNews?.arrows.map(\.isYours) == [true, false])
-        #expect(session.isPractising)
         #expect(rendered.says("被将"), "and the bar says what the board already shows")
     }
 
@@ -697,7 +651,6 @@ struct GameScreenScreenshots {
     func gameInFrench() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
-        session.setPractising(false)
 
         let rendered = await ScreenImage.write("game-in-french") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
@@ -754,7 +707,6 @@ struct GameScreenScreenshots {
     func noTallyWithoutNoSlips() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
-        session.setPractising(false)
         let rendered = await ScreenImage.write("game-no-tally") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
@@ -830,25 +782,6 @@ struct GameScreenScreenshots {
     }
 
     // ------------------------------------------------------------------- glue
-
-    /// The Italian eight plies in, with a pass already over it and the switch on — the state both
-    /// pictures of the record are read in.
-    @MainActor
-    private static func reviewed() throws -> GameSession {
-        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: italian))
-        let session = GameSession.fresh(game)
-        session.applyReview(
-            [
-                .centipawns(30), .centipawns(25), .centipawns(35), .centipawns(30),
-                .centipawns(40), .centipawns(35), .centipawns(-420), .centipawns(-410),
-            ],
-            startEvaluation: .centipawns(20),
-            depth: 18
-        )
-        session.jump(toPly: 7)
-        session.setPractising(false)
-        return session
-    }
 
     /// The screen as the app pushes it: inside a navigation stack, with the engine and the library
     /// in the environment. The engine is the only thing that is not the app's own.

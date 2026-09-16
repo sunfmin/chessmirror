@@ -72,7 +72,6 @@ func recordOpensWithEngineOpponent() throws {
     let session = try #require(GameSession.opened(entry, engine: SilentEngine()))
     #expect(session.controller(for: .white) == .hand)
     #expect(session.controller(for: .black) == .engine)
-    #expect(session.isPractising)
 
     // Black moves first: the engine waits on White instead.
     let blackFirstGame = try #require(
@@ -94,7 +93,6 @@ func recordOpensWithEngineOpponent() throws {
     let beforeEngineArrives = try #require(GameSession.opened(entry))
     #expect(beforeEngineArrives.controller(for: .white) == .hand)
     #expect(beforeEngineArrives.controller(for: .black) == .engine)
-    #expect(beforeEngineArrives.isPractising)
 }
 
 @MainActor @Test("from the opening, Black is the engine")
@@ -103,42 +101,6 @@ func aFreshOpeningFacesAnEngineOpponent() throws {
     let session = GameSession.playing(standard, engine: SilentEngine())
     #expect(session.controller(for: .white) == .hand)
     #expect(session.controller(for: .black) == .engine)
-    #expect(session.isPractising)
-}
-
-// ------------------------------------------------------------------- the one switch
-
-/// Every door into a Game opens with the engine silent (docs/adr/0015). An answer on screen is an
-/// answer the eye cannot decline to read, so it is not enough for practice to be *available*: it
-/// has to be where a Game starts, whichever way the Game got here.
-@MainActor @Test("every way into a Game starts with the engine's opinion off")
-func everyGameStartsSilent() throws {
-    let standard = try #require(Game(startFEN: PGN.standardStartFEN))
-    let read = try #require(
-        Game(startFEN: "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R w KQkq - 0 5")
-    )
-
-    #expect(GameSession.fresh(standard).isPractising)
-    #expect(GameSession.recognised(read, shaky: [Square("c6")!]).isPractising)
-    #expect(
-        GameSession.corrected(
-            read,
-            controllers: [.white: .hand, .black: .engine],
-            orientation: .whiteAtBottom,
-            origin: .recognised,
-            picture: nil,
-            shaky: [],
-            engine: nil,
-            library: nil
-        ).isPractising
-    )
-
-    let entry = GameLibrary.Entry(
-        url: URL(filePath: "/games/chessfen-silent-1.pgn"),
-        pgn: PGN(game: standard, tags: []),
-        modified: Date(timeIntervalSince1970: 1_786_000_600)
-    )
-    #expect(try #require(GameSession.opened(entry)).isPractising)
 }
 
 /// Contract: a game opened at a mistake is *walked* to it rather than cut to it — the moves land

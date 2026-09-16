@@ -247,7 +247,6 @@
 "game.letEngine.hint" = "Mantém premido para procurar mais fundo; larga e ele joga";
 "game.willPlay" = "Vai jogar %@";
 "game.suggests" = "Tenta %@";
-"game.thinking" = "A calcular";
 "game.hold.deeper" = "Quanto mais tempo mantiveres, mais fundo ele procura";
 "game.hold.progress" = "%1$.1f s · prof. %2$d";
 "game.settings.expand" = "Abrir as definições das %@";

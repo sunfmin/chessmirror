@@ -207,7 +207,6 @@ import Testing
         session.attach(engine: engine, library: nil)
         await hop()
 
-        #expect(session.isPractising)
         #expect(engine.searchCount == 0)
         #expect(session.mateNews == nil, "a mate nobody has looked for is not news")
     }
@@ -226,7 +225,6 @@ import Testing
         #expect(news.head == "你有 2 步杀")
         #expect(news.arrows.count == 3)
         // The whole point of reading it off the probe: no Score reached the screen.
-        #expect(session.isPractising)
         #expect(session.analysis == nil)
     }
 
