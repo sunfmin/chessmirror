@@ -129,6 +129,7 @@ struct ConfirmPositionScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Palette.parchment, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.visible, for: .navigationBar)
         .tint(Palette.analysis)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
