@@ -42,13 +42,6 @@ public struct JudgementLines: Hashable, Sendable, Codable {
     public static let defaultIntercept = 5.0
     public static let interceptRange = 0.0...100.0
 
-    /// Whether a drop of this many points is one 正着 stops for. False when 正着 is off, which is
-    /// the only reason this is a method rather than a comparison at the call site.
-    public func intercepts(_ drop: Double?) -> Bool {
-        guard let intercept, let drop else { return false }
-        return drop > 0 && drop >= intercept
-    }
-
     public func records(_ drop: Double?) -> Bool {
         guard let drop else { return false }
         return drop >= record

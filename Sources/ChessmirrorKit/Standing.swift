@@ -14,7 +14,7 @@ public enum Standing: Hashable, Sendable {
     /// 正着 is working out what the move just played costs.
     case weighing
     /// A move has just been taken back, and this is the one sentence about it (docs/adr/0031).
-    case refused(Refusal)
+    case refused(Game.Ply.Tried)
     /// 最佳: the move just played is the engine's own first choice from the position it was
     /// played from. Said as a word rather than as `+0.0%`, because it is a fact about which move
     /// it was, read off the search that judged it — not a number that happened to round to zero.

@@ -97,6 +97,11 @@ public struct DrillVerdict: Hashable, Sendable {
     /// The board: the position, and the attempt once it has been played.
     public private(set) var game: Game
     public private(set) var verdict: DrillVerdict?
+    /// 把关's ruling on the attempt, made here with the verdict under this drill's own 线: whether
+    /// the move stands or is taken back, and the game either way. A session practising this
+    /// drill lands it and does nothing else with the judgement — the 线 a drill is judged under
+    /// and the 线 it is refused under are one value, this one.
+    public private(set) var ruling: Ruling?
     /// Whether the engine is still working out what the move cost.
     public private(set) var isJudging = false
     public private(set) var couldNotJudge = false
@@ -116,7 +121,8 @@ public struct DrillVerdict: Hashable, Sendable {
     private var judging: Task<Void, Never>?
     private let engine: (any Engine)?
     private let log: PracticeLog
-    private let lines: JudgementLines
+    /// The three 线 this attempt is judged and ruled under.
+    public let lines: JudgementLines
     private let source: Source
     private let clock: @Sendable () -> Date
     private let startedAt: Date
@@ -207,9 +213,10 @@ public struct DrillVerdict: Hashable, Sendable {
 
     /// Writes the attempt down and shows it. One line, append-only, facts only: which position,
     /// when, how long, whether it held, how many hints were open, and where the drill came from
-    /// (docs/adr/0029).
+    /// (docs/adr/0029). And rules on it, once, under the same 线.
     private func settle(_ settled: DrillVerdict) {
         verdict = settled
+        ruling = Ruling(settled, in: game, startingScore: startingScore, lines: lines)
         log.append(
             .drilled(
                 PracticeLog.Attempt(

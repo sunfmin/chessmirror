@@ -11,7 +11,8 @@ import Foundation
     public static let tolerance = 2.0
     private let engine: any Engine
     private var task: Task<Void, Never>?
-    func waitForJudgement() async { await task?.value }
+    /// Waits until the reply has been checked: what a session's `settled` folds in.
+    public func settled() async { await task?.value }
 
     public init(position: Game, engine: any Engine) {
         self.position = position

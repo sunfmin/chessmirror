@@ -87,7 +87,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     defer { session.suspend() }
 
     session.play(try #require(game.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
 
     #expect(session.phase == .thinking(.own))
     #expect(!session.isOccupied)
@@ -165,7 +165,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     await session.waitForPreparedInterception()
 
     session.play(try #require(game.state.move(matching: "g2g4")))
-    await session.waitForJudgement()
+    await session.settled()
     let exercise = try #require(session.activePunishment)
 
     #expect(session.phase == .exercising)
@@ -179,7 +179,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     #expect(session.isTilling, "正着 is not switched off under an exercise")
 
     exercise.skip()
-    await exercise.waitForJudgement()
+    await exercise.settled()
     #expect(session.phase == .reading)
     #expect(session.isOnClock(.white), "the board is White's again, where the move was refused")
 }

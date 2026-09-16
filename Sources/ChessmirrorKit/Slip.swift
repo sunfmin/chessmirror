@@ -14,21 +14,9 @@ public struct Slip: Hashable, Sendable, Identifiable {
     /// The position it was played from, as a position and not a FEN — the same key the 错题本
     /// identifies a position by, so a 错招 here and a 错题 there can be recognised as one thing.
     public let position: PositionKey
-    /// One wrong move made at this position: a 试招 正着 took back, or the move that stood when it
-    /// stood too expensively.
-    public struct Wrong: Hashable, Sendable {
-        public let san: String
-        /// What it cost, in percentage points of win probability (docs/adr/0027).
-        public let drop: Double
-        /// True when this is one 正着 took back, rather than the move that stood.
-        public let wasTried: Bool
-
-        public init(san: String, drop: Double, wasTried: Bool) {
-            self.san = san
-            self.drop = drop
-            self.wasTried = wasTried
-        }
-    }
+    /// One wrong move made at this position: a 试招 把关 took back, or the move that stood when it
+    /// stood too expensively. The same value the 错题本's 遭遇 are made from (`Game.Stop.Wrong`).
+    public typealias Wrong = Game.Stop.Wrong
 
     /// Every wrong move the player made at this position, worst first.
     ///
@@ -88,14 +76,9 @@ extension Game {
     public func slips(by mine: Set<PieceColour>, lines: JudgementLines) -> [Slip] {
         stops(by: mine).compactMap { stop in
             // Everything wrong that happened here, whether it stood or not — the 试招 in the order
-            // they were refused, and the move that finally stood if it was too expensive too.
-            var wrong = stop.tried
-                .filter { lines.records($0.drop) }
-                .map { Slip.Wrong(san: $0.san, drop: $0.drop, wasTried: true) }
-            if let move = stop.move, let stood = move.judgement?.drop ?? drop(atPly: stop.ply),
-                lines.records(stood) {
-                wrong.append(Slip.Wrong(san: move.san, drop: stood, wasTried: false))
-            }
+            // they were refused, and the move that finally stood if it was too expensive too, by
+            // the cost this game holds for it: the `[%judged]` 把关 wrote, else the Review's.
+            let wrong = stop.wrong(recordedBy: lines, stood: cost(atPly: stop.ply))
             guard !wrong.isEmpty else { return nil }
             return Slip(
                 ply: stop.ply, position: stop.position,

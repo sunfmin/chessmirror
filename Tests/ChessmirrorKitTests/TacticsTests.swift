@@ -134,7 +134,7 @@ import ChessmirrorKitTesting
         #expect(!session.isFindingTactics)
 
         session.play(try #require(session.viewed.state.move(matching: "e2e4")))
-        await session.waitForJudgement()
+        await session.settled()
         await hop()
         // The searches that ran are the shared position searches every move is weighed by
         // (docs/adr/0039, 0040); the finder asked for none of its own.

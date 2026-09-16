@@ -25,8 +25,10 @@ public struct Weighing: Hashable, Sendable {
     public let before: Analysis
     /// The Score of the position the move made.
     public let after: Score
-    /// The Depth the second search reached, or the first search's when the position the move
-    /// made was settled by its outcome. The depth a judgement is worth.
+    /// The depth a judgement is worth: the shallower of the two ends when both were searched,
+    /// and the first search's alone when the position the move made was settled by its outcome
+    /// or read off the first search's own Lines. A 掉幅 is a comparison, and a comparison is only
+    /// as deep as the shallower thing compared (docs/adr/0041).
     public let depth: Int
     /// The 应招 the move earned: the Line the second search produced, in SAN, the opponent's move
     /// first, cut to what a board can carry (docs/adr/0034). Empty when the position the move
@@ -70,6 +72,20 @@ public struct Weighing: Hashable, Sendable {
     public var judgement: Game.Ply.Judgement {
         .init(drop: drop, score: after, depth: depth, best: isBest)
     }
+
+    /// What `Engine.weigh` reports as it goes: the latest snapshot of whichever end is being
+    /// searched, and the depth the judgement would be worth if it stopped now — the shallower
+    /// end so far. A strip that shows the engine working reads the snapshot; a 复判 that shows
+    /// how deep both ends have got reads the depth.
+    public struct Progress: Hashable, Sendable {
+        public let snapshot: Analysis
+        public let depth: Int
+
+        public init(snapshot: Analysis, depth: Int) {
+            self.snapshot = snapshot
+            self.depth = depth
+        }
+    }
 }
 
 extension GameState {
@@ -84,27 +100,33 @@ extension GameState {
 }
 
 extension Engine {
-    /// Weighs the move that took `position` to `played`: the 细判 of one move, at the budget every
-    /// live position search gets.
+    /// Weighs the move that took `position` to `played`: the 细判 of one move, at `budget` — the
+    /// 搜索预算 every live position search gets, unless a 复判 asks for `PositionSearches.deeper`,
+    /// in which case both ends go to the same deeper level (CONTEXT.md, 复判; docs/adr/0041).
+    /// The budget is the one thing that varies between the everyday judgement and the deeper
+    /// one; everything else — the outcome settled without a search, a move read off the first
+    /// search's own Lines, the 应招, the depth the answer is worth — is this one act.
     ///
     /// Nil when the search was cancelled, or when the engine had nothing to say about the
     /// position the move was played from — paused, say. Nil is 「nobody looked」, and a caller
     /// must not read it as a move that cost nothing; the thing to do with it is to put the move
     /// back and say nothing.
     ///
-    /// `progress` hears every snapshot of both searches as it arrives, for a strip that shows
-    /// the engine working. On the main actor because everything that weighs a move is — a
-    /// session, a drill, an exercise — and a progress strip is a piece of screen.
+    /// `progress` hears every snapshot of both searches as it arrives, with the depth the
+    /// judgement would be worth so far, for a strip that shows the engine working. On the main
+    /// actor because everything that weighs a move is — a session, a drill, an exercise — and a
+    /// progress strip is a piece of screen.
     @MainActor
     public func weigh(
-        _ played: Game, from position: Game, progress: (Analysis) -> Void = { _ in }
+        _ played: Game, from position: Game, budget: SearchBudget = PositionSearches.budget,
+        progress: (Weighing.Progress) -> Void = { _ in }
     ) async -> Weighing? {
         // Join even when an interim answer exists: the shared search may still be deepening,
         // and the snapshot that ends the stream is the one the judgement is made from.
         var before: Analysis?
-        for await snapshot in analysePosition(position) {
+        for await snapshot in analysePosition(position, budget: budget) {
             guard !Task.isCancelled else { return nil }
-            progress(snapshot)
+            progress(.init(snapshot: snapshot, depth: snapshot.depth))
             before = snapshot
         }
         guard !Task.isCancelled, let before else { return nil }
@@ -123,12 +145,14 @@ extension Engine {
             reply = Array(line.san.dropFirst())
         }
         if after == nil {
-            for await snapshot in analysePosition(played) {
+            for await snapshot in analysePosition(played, budget: budget) {
                 guard !Task.isCancelled else { return nil }
-                progress(snapshot)
                 after = snapshot.best?.score
                 reply = snapshot.best?.san ?? []
-                depth = snapshot.depth
+                // Two ends at two depths are worth the shallower: the other end's extra plies
+                // are a deeper look at one side of a comparison, not a deeper comparison.
+                depth = min(before.depth, snapshot.depth)
+                progress(.init(snapshot: snapshot, depth: depth))
             }
         }
         guard !Task.isCancelled, let after else { return nil }

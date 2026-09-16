@@ -169,9 +169,7 @@ struct DeckGallery {
         session.setIntercept(JudgementLines.defaultIntercept)
         await hop()
         session.play(try #require(game.state.move(matching: "d2d4")))
-        // The take-back is held on the board for a beat so the roll-back can be seen, so this is
-        // waiting for more than a hop.
-        await until { session.refused != nil }
+        await session.settled()
         try #require(session.refused != nil)
         session.play(try #require(game.state.move(matching: "e2e4")))
         await hop()
@@ -208,9 +206,7 @@ struct DeckGallery {
         session.setIntercept(JudgementLines.defaultIntercept)
         await hop()
         session.play(try #require(game.state.move(matching: "d2d4")))
-        // The take-back is held on the board for a beat so the roll-back can be seen, so this is
-        // waiting for more than a hop.
-        await until { session.refused != nil }
+        await session.settled()
         try #require(session.refused != nil)
         session.play(try #require(game.state.move(matching: "e2e4")))
         await hop()
@@ -371,7 +367,7 @@ struct DeckGallery {
         session.setIntercept(10)
         session.findsPunishment = true
         session.play(try #require(game.state.move(matching: "d2d4")))
-        await until { session.activePunishment != nil }
+        await session.settled()
         try #require(session.activePunishment != nil)
         let rendered = await ScreenImage.write("tilling-opponent-reply") {
             screen(session, engine: engine, opening: .tactics)
@@ -384,17 +380,6 @@ struct DeckGallery {
         #expect(!rendered.says("\(PieceColour.white.label) · \(localized("game.toPlay"))"))
         #expect(session.game.uciMoves == game.uciMoves)
     }
-    /// Waits for something the session does on its own clock — a judgement, a take-back — which
-    /// arrives a search later and, for a refusal, after the beat the board is given to show the
-    /// move. A fixed number of hops is a guess at how long a search takes; this is the thing.
-    private func until(_ settled: () -> Bool, seconds: Double = 5) async {
-        let deadline = ContinuousClock.now.advanced(by: .seconds(seconds))
-        while !settled(), ContinuousClock.now < deadline {
-            await Task.yield()
-            try? await Task.sleep(for: .milliseconds(10))
-        }
-    }
-
     /// Contract: a game says where the player went wrong in it, and walks the board back to each
     /// one — 「这一局我哪儿走错了」 asked as a question, rather than scrolled for (docs/adr/0036).
     @Test func aGameListsItsOwnWrongMovesAndWalksToThem() async throws {

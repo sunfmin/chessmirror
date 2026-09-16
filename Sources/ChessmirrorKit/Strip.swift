@@ -41,7 +41,7 @@ extension Game {
 public struct Strip: Hashable, Sendable {
     /// What the strip says, by one priority (`Standing`).
     public let voice: Standing
-    /// 正着数 and 连正, for as long as 正着 is on or has left something standing; nil otherwise.
+    /// 连正, for as long as 把关 is on or has left something standing; nil otherwise.
     public let tally: Game.NoSlips?
     /// How deep the search of the position has got — zero before it has said anything — for as
     /// long as there is a position of the game's to search and the badge is on. Nil for a game

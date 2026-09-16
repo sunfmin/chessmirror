@@ -801,7 +801,7 @@ struct GameScreenScreenshots {
             await until { engine.searchCount >= 4 }
             after.continuation.yield(Analysis(depth: 28, lines: [Line(score: .mate(in: -1), uciMoves: ["d8h4"], san: ["Qh4"])]))
             after.continuation.finish()
-            await until { session.rejudging == nil }
+            await session.settled()
             await ScreenImage.settle()
         }) {
             screen(session, engine: engine)

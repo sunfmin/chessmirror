@@ -214,15 +214,13 @@ public struct Game: Hashable, Sendable {
     }
 
     /// The move at `ply` takes the refusals made at the position it was played from: they
-    /// become its `tried`, with `extra` after them, and the pending slot at that position is
-    /// emptied. A move that found nothing to take, with no ladder open, leaves whatever the move
-    /// already carried — playing the move that is already there is not a new move.
-    public mutating func absorbPendingTried(
-        atPly ply: Int, hints: Int = 0, adding extra: [Ply.Tried] = []
-    ) {
-        let taken = pendingTries(atPly: ply) + extra
-        if !taken.isEmpty || hints > 0 {
-            setTried(taken, hints: hints, atPly: ply)
+    /// become its `tried`, and the pending slot at that position is emptied. A move that found
+    /// nothing to take leaves whatever the move already carried — playing the move that is
+    /// already there is not a new move.
+    public mutating func absorbPendingTried(atPly ply: Int) {
+        let taken = pendingTries(atPly: ply)
+        if !taken.isEmpty {
+            setTried(taken, atPly: ply)
         }
         setPendingTried([], atPly: ply)
     }
