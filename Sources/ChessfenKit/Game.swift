@@ -392,6 +392,49 @@ public struct Game: Hashable, Sendable {
             : startingFullmoveNumber + ply / 2
     }
 
+    /// The `ply`th move's place as a scoresheet writes it: `12.` for White's move, `12…` for
+    /// Black's. Counted the same way for the move nobody has played yet — a 错招 at the end of a
+    /// game sits at the Ply one past the last move (docs/adr/0037), and that is the place the
+    /// next move takes.
+    public func moveLabel(ofPly ply: Int) -> String {
+        "\(moveNumber(ofPly: ply))\(mover(ofPly: ply) == .white ? "." : "…")"
+    }
+
+    /// One half of a scoresheet row: the move, and the Ply it stands at — which is the cursor
+    /// that puts it on the board.
+    public struct Half: Hashable, Sendable {
+        public let ply: Int
+        public let san: String
+    }
+
+    /// One move number and its two halves — the way a scoresheet is ruled, and the unit a
+    /// record of the game is read in. A Game recognised from a picture usually begins in the
+    /// middle of a row, with Black to move, and then the first row has no White half.
+    public struct ScoresheetRow: Identifiable, Hashable, Sendable {
+        public let number: Int
+        public let white: Half?
+        public let black: Half?
+        public var id: Int { number }
+    }
+
+    /// The moves as a scoresheet rules them. The numbering hangs off where the Game began, and
+    /// this is the one walk that lays the moves out under it.
+    public var scoresheet: [ScoresheetRow] {
+        var rows: [ScoresheetRow] = []
+        for (index, ply) in plies.enumerated() {
+            let half = Half(ply: index + 1, san: ply.san)
+            let number = moveNumber(ofPly: index + 1)
+            if mover(ofPly: index + 1) == .white {
+                rows.append(ScoresheetRow(number: number, white: half, black: nil))
+            } else if let last = rows.last, last.number == number, last.black == nil {
+                rows[rows.count - 1] = ScoresheetRow(number: number, white: last.white, black: half)
+            } else {
+                rows.append(ScoresheetRow(number: number, white: nil, black: half))
+            }
+        }
+        return rows
+    }
+
     /// What a Review made of the move at `ply`, counting from one. Nil when the Game has not
     /// been reviewed, or when either side of the comparison is missing.
     public func quality(atPly ply: Int) -> MoveQuality? {

@@ -1067,8 +1067,7 @@ struct GameScreen: View {
     /// Ply it takes. Every tile in the row is then the same kind of label — 「1.」「2…」「3.」 — which
     /// is what a row of tiles wants, rather than one of them being a word in the middle of figures.
     private func slipNumber(_ slip: Slip) -> String {
-        let side = session.game.mover(ofPly: slip.ply) == .white ? "." : "…"
-        return "\(session.game.moveNumber(ofPly: slip.ply))\(side)"
+        session.game.moveLabel(ofPly: slip.ply)
     }
 
     /// The same place said out loud, in the number the record counts in.
@@ -1116,14 +1115,14 @@ struct GameScreen: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     openingCell
-                    ForEach(moveCards) { card in
+                    ForEach(session.game.scoresheet) { card in
                         HStack(spacing: 6) {
                             Text("\(card.number)")
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(Palette.inkSoft)
                                 .frame(minWidth: 13, alignment: .trailing)
-                            if let white = card.white { half(white, slips[white.cursor]) }
-                            if let black = card.black { half(black, slips[black.cursor]) }
+                            if let white = card.white { half(white, slips[white.ply]) }
+                            if let black = card.black { half(black, slips[black.ply]) }
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1189,9 +1188,9 @@ struct GameScreen: View {
     ///
     /// The `slip` passed in is the one whose *position* this cell is, which is the position before
     /// the next move rather than after this one (see `slipByPosition`).
-    private func half(_ cell: PlyCell, _ slip: Slip?) -> some View {
-        let on = cell.cursor == session.cursor
-        return Button { walk(to: cell.cursor) } label: {
+    private func half(_ cell: Game.Half, _ slip: Slip?) -> some View {
+        let on = cell.ply == session.cursor
+        return Button { walk(to: cell.ply) } label: {
             Text(cell.san)
                 .font(.footnote.weight(on ? .medium : .regular))
                 .foregroundStyle(on ? Palette.parchment : Palette.ink)
@@ -1203,7 +1202,7 @@ struct GameScreen: View {
                 .overlay(alignment: .bottom) { slipMark(slip, on: on) }
         }
         .buttonStyle(.plain)
-        .id(cell.cursor)
+        .id(cell.ply)
         .accessibilityElement(children: .combine)
         // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver is a
         // move with no place in the game, and place is the whole of what this strip is for — and
@@ -1926,43 +1925,12 @@ struct GameScreen: View {
         return !session.isWeighing && !viewed.isOver && viewed.state.sideToMove == colour
     }
 
-    private var moveCards: [MoveCard] {
-        var cards: [MoveCard] = []
-        var number = session.game.startingFullmoveNumber
-        var side = session.game.startingSideToMove
-
-        for (index, ply) in session.game.plies.enumerated() {
-            let cell = PlyCell(cursor: index + 1, san: ply.san)
-            if side == .white {
-                cards.append(MoveCard(number: number, white: cell, black: nil))
-            } else if let last = cards.last, last.number == number, last.black == nil {
-                cards[cards.count - 1] = MoveCard(number: number, white: last.white, black: cell)
-            } else {
-                // A game that begins with Black to move, which is most games read off a photograph.
-                cards.append(MoveCard(number: number, white: nil, black: cell))
-            }
-            if side == .black { number += 1 }
-            side = side.opposite
-        }
-        return cards
-    }
 }
 
-/// One ply as the record draws it: the cursor that puts it on the board and what it is called.
-struct PlyCell: Hashable {
-    let cursor: Int
-    let san: String
-
-    var spoken: String { localized("screen.spokenMove", cursor, san) }
-}
-
-/// One move number and its two halves — the way a scoresheet is ruled, and the unit the record
-/// is scrolled in.
-struct MoveCard: Identifiable, Hashable {
-    let number: Int
-    let white: PlyCell?
-    let black: PlyCell?
-    var id: Int { number }
+extension Game.Half {
+    /// Said the way somebody reading a game aloud says it: a bare "Nf6" out of VoiceOver is a
+    /// move with no place in the game, and place is the whole of what the record strip is for.
+    var spoken: String { localized("screen.spokenMove", ply, san) }
 }
 
 extension GameScreen.Card {
