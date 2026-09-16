@@ -704,13 +704,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         await measuring?.value
     }
     func waitForPreparedInterception() async { await searchTask?.value }
-    private var positionBeforeWeighing: Game?
-    /// Where the eye was when the move now being weighed was played. A move played from an
-    /// earlier Ply is judged from there, and a refusal has to put the reader back where they were
-    /// rather than at the end of a game they were not looking at.
-    private var cursorBeforeWeighing: Int?
-    /// When the move now being weighed landed on the board.
-    private var weighBegan: ContinuousClock.Instant?
+    /// The 原局 the move now being weighed was played from (`Standpoint`): what a refusal, a
+    /// weighing nobody finished, or leaving the screen puts back. Nil when nothing is being weighed.
+    private var standpoint: Standpoint?
 
     /// How long a move that is about to be taken back is left on the board.
     ///
@@ -722,9 +718,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Gives the board its beat to show the move before the move is taken off it.
     private func holdTheMoveOnTheBoard() async {
-        guard let weighedAt = weighBegan else { return }
-        let shown = ContinuousClock.now - weighedAt
-        guard shown < Self.takeBackHold else { return }
+        guard let shown = standpoint?.shown, shown < Self.takeBackHold else { return }
         try? await Task.sleep(for: Self.takeBackHold - shown)
     }
     public static let interceptDepth = 20
@@ -1015,6 +1009,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var isFaceToFace = false
 
     private var measuredMove: (moves: [String], fen: String, change: MoveChange)?
+    /// The game as it stood when a move last landed through `commit` with no judgement on it —
+    /// the one move `measureLatestMoveChange` is owed a judgement for. A move that was already
+    /// in the file when the game was opened keeps whatever it has: filling those in is the
+    /// explicit migration (`fillMissingTillingJudgements`), never something a screen starts.
+    private var landedUnjudged: (moves: [String], fen: String)?
 
     /// Only a newly played move gets a change badge; navigating the record is not a move.
     public var moveChange: MoveChange? {
@@ -1101,7 +1100,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// the same 细判 that rules under 把关, run on the move just played, and its answer written
     /// twice from the one Weighing — onto the move, as its judgement, and into the badge, as the
     /// change. A move that already carries a judgement (it stood under a ruling, or came from a
-    /// file) keeps it, and the badge is read from that rather than searched for again.
+    /// file) keeps it, and the badge is read from that rather than searched for again; a move
+    /// that came from the file without one gets the badge and nothing written.
     /// Missing or cancelled analysis never becomes a fictitious zero-percent move.
     public func measureLatestMoveChange() async {
         guard !isWeighing, !game.plies.isEmpty, !isLatestMoveMeasured, let engine else { return }
@@ -1120,8 +1120,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let weighed = await engine.weigh(after, from: before)
         guard !Task.isCancelled, !isWeighing, let weighed,
               game.uciMoves == after.uciMoves, game.startFEN == after.startFEN else { return }
-        if game.plies[last].judgement == nil {
+        if game.plies[last].judgement == nil, let landed = landedUnjudged,
+           landed.moves == after.uciMoves, landed.fen == after.state.fen {
             game.setJudgement(weighed.judgement, atPly: last)
+            landedUnjudged = nil
             save()
         }
         measuredMove = (
@@ -1174,6 +1176,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// copy of the 细判 that disagreed with the badge about 最佳 (CONTEXT.md, 细判).
     private func absorbRefusals(atPly ply: Int) {
         game.absorbPendingTried(atPly: ply, hints: hintLayer)
+        closeTheLadder()
+    }
+
+    /// A move has stood: the rungs climbed for it are written on it and the ladder is shut,
+    /// and a line it was relaxed to does not carry to the next move.
+    private func closeTheLadder() {
         hintLayer = 0
         relaxedIntercept = nil
     }
@@ -1418,9 +1426,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         stopSearching()
-        positionBeforeWeighing = game
-        cursorBeforeWeighing = cursor
-        weighBegan = ContinuousClock.now
+        standpoint = Standpoint(
+            game: game, cursor: cursor, hints: hintLayer, relaxedIntercept: relaxedIntercept
+        )
         game = played
         cursor = game.plies.count
         analysis = nil
@@ -1446,24 +1454,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let weighed = await engine.weigh(played, from: position, progress: noteProgress)
         guard !Task.isCancelled else { return }
         if let weighed { interceptTable = (position.state.fen, weighed.before) }
-        // What to put back when the move does not stand: the game as it was being read, whole,
-        // and the eye where it was. `position` is only the position it was played from, which is
-        // the whole game when the move was played at the end of it — and a prefix of it otherwise.
-        let gameBefore = positionBeforeWeighing ?? position
-        let ruling = Ruling(
-            weighed, san: san, played: played, before: gameBefore,
-            cursor: cursorBeforeWeighing ?? gameBefore.plies.count,
-            lines: lines, relaxedIntercept: relaxedIntercept, hints: hintLayer
-        )
+        // What to put back when the move does not stand is the 原局 `weigh` kept: the game as it
+        // was being read, whole, and the eye where it was. `position` is only the position the
+        // move was played from, which is a prefix of that game when it was played from an earlier
+        // Ply. A session that was suspended meanwhile has put the 原局 back itself.
+        guard let standpoint else { return }
+        let ruling = Ruling(weighed, san: san, played: played, from: standpoint, lines: lines)
         // The move comes off the board, and it is given its beat to be seen there first — while
         // the session still counts as weighing, so a second tap cannot land on a board that is
         // halfway through taking one back.
         if ruling.takesTheMoveBack { await holdTheMoveOnTheBoard() }
         guard !Task.isCancelled else { return }
         isWeighing = false
-        positionBeforeWeighing = nil
-        cursorBeforeWeighing = nil
-        weighBegan = nil
+        self.standpoint = nil
         weighing = nil
         land(ruling, played: played, engine: engine)
     }
@@ -1478,8 +1481,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .unjudged:
             retune()
         case .stands(let change):
-            hintLayer = 0
-            relaxedIntercept = nil
+            closeTheLadder()
             if let change { measuredMove = (game.uciMoves, game.state.fen, change) }
             save()
             retune()
@@ -1567,6 +1569,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // position — whoever moved.
         analysis = nil
         absorbRefusals(atPly: cursor - 1)
+        landedUnjudged = (game.uciMoves, game.state.fen)
         refused = nil
         save()
         retune()
@@ -1960,13 +1963,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         punishment?.skip()
         weighing?.cancel()
         weighing = nil
-        if let positionBeforeWeighing {
-            game = positionBeforeWeighing
-            cursor = cursorBeforeWeighing ?? game.plies.count
+        // A move nobody finished weighing is put back the way a ruling puts it back: the 原局,
+        // whole, with nothing written (docs/adr/0035). The same code the ruling runs, so the two
+        // cannot drift.
+        if let standpoint {
+            let ruling = Ruling.unjudged(standpoint)
+            game = ruling.game
+            cursor = ruling.cursor
         }
-        positionBeforeWeighing = nil
-        cursorBeforeWeighing = nil
-        weighBegan = nil
+        standpoint = nil
         isWeighing = false
         stopSearching()
         closeReply()

@@ -22,7 +22,7 @@ import Testing
             mover: .white, before: before, after: .centipawns(30), depth: 20, move: "e2e4"
         ))
         let ruling = Ruling(
-            weighed, san: "e4", played: played, before: start, cursor: 0,
+            weighed, san: "e4", played: played, from: Standpoint(game: start, cursor: 0),
             lines: JudgementLines(intercept: 10, record: 5, enqueue: 5)
         )
         #expect(ruling.game.plies[0].judgement?.best == true)
@@ -35,7 +35,7 @@ import Testing
         let appliedD4 = d4.apply(uci: "d2d4")
         try #require(appliedD4)
         let other = Ruling(
-            second, san: "d4", played: d4, before: start, cursor: 0,
+            second, san: "d4", played: d4, from: Standpoint(game: start, cursor: 0),
             lines: JudgementLines(intercept: 10, record: 5, enqueue: 5)
         )
         #expect(other.game.plies[0].judgement?.best == false)

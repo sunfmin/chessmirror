@@ -36,6 +36,44 @@ public struct MoveChange: Hashable, Sendable {
     }
 }
 
+/// 原局: the game as it was being read when a move was played, kept while the move is weighed
+/// (docs/adr/0035, 0037). The whole game and not only the position the move was played from —
+/// which is a prefix of it when the move was played from an earlier Ply — with the eye where it
+/// stood, the rungs of the hint ladder open there and the line it had been relaxed to, and when
+/// the move landed on the board.
+///
+/// One value, because it answers one question that used to be answered in three places: what to
+/// put back. A refused move puts the 原局 back, a weighing nobody finished puts it back
+/// (`Ruling.unjudged`), and a session leaving the screen mid-weighing puts it back — and that
+/// last one had a copy of the rule of its own, with nothing to hold it to the ruling's.
+public struct Standpoint: Hashable, Sendable {
+    public let game: Game
+    /// Where the eye stood in `game` when the move was played.
+    public let cursor: Int
+    /// How far the hint ladder was open at that position, written on the move if it stands
+    /// (docs/adr/0031).
+    public let hints: Int
+    /// The line the ladder had been climbed to, if it had: the move stands at that line and is
+    /// written as a 试招 the player did not find.
+    public let relaxedIntercept: Double?
+    /// When the move landed on the board, for the beat it is given there before being taken back.
+    public let began: ContinuousClock.Instant
+
+    public init(
+        game: Game, cursor: Int, hints: Int = 0, relaxedIntercept: Double? = nil,
+        began: ContinuousClock.Instant = .now
+    ) {
+        self.game = game
+        self.cursor = cursor
+        self.hints = hints
+        self.relaxedIntercept = relaxedIntercept
+        self.began = began
+    }
+
+    /// How long the move has been on the board.
+    public var shown: Duration { ContinuousClock.now - began }
+}
+
 /// What 正着 rules about a move once it has been weighed, and what the game looks like afterwards
 /// (docs/adr/0027, 0037).
 ///
@@ -65,6 +103,18 @@ public struct Ruling: Hashable, Sendable {
     /// Where the eye goes: the end of the move that stands, or back where it was.
     public let cursor: Int
 
+    private init(verdict: Verdict, game: Game, cursor: Int) {
+        self.verdict = verdict
+        self.game = game
+        self.cursor = cursor
+    }
+
+    /// Nobody looked — the search was cancelled, the engine had nothing to say, or the session
+    /// left the screen — so the move comes off and the 原局 is put back with nothing written.
+    public static func unjudged(_ standpoint: Standpoint) -> Ruling {
+        Ruling(verdict: .unjudged, game: standpoint.game, cursor: standpoint.cursor)
+    }
+
     /// Whether a 掉幅 is one 正着 stops for, at the line as it stands — the relaxed one if the hint
     /// ladder was climbed to it. Never when 正着 is off.
     public static func intercepts(_ drop: Double, lines: JudgementLines, relaxedIntercept: Double? = nil) -> Bool {
@@ -77,51 +127,49 @@ public struct Ruling: Hashable, Sendable {
         return true
     }
 
-    /// 正着's ruling on a move played in the game.
+    /// 把关's ruling on a move played in the game.
     ///
-    /// - `played` is the game with the move on the end of it, as the board showed it while it was
-    ///   weighed. `before` is the game as it was being read when the move was played — the whole
-    ///   game, not just the position the move was played from — and `cursor` is where the eye
-    ///   stood in it. A move played from an earlier Ply is judged from there, and a refusal puts the
-    ///   reader back where they were rather than at the end of a game they were not looking at.
-    /// - `hints` is how far the hint ladder was open, written on the move that stands
-    ///   (docs/adr/0031); `relaxedIntercept` is the line it was let through at, if the ladder was
-    ///   climbed to one, which makes the move itself a 试招 the player did not find.
+    /// `played` is the game with the move on the end of it, as the board showed it while it was
+    /// weighed; `standpoint` is the 原局 it was played from. A move played from an earlier Ply is
+    /// judged from there, and a refusal puts the reader back where they stood rather than at the
+    /// end of a game they were not looking at. The hint ladder's rungs and the line it was
+    /// relaxed to come with the 原局: the rungs are written on a move that stands (docs/adr/0031),
+    /// and a move let through at a relaxed line is itself a 试招 the player did not find.
     public init(
-        _ weighed: Weighing?, san: String, played: Game, before: Game, cursor cursorBefore: Int,
-        lines: JudgementLines, relaxedIntercept: Double? = nil, hints: Int = 0
+        _ weighed: Weighing?, san: String, played: Game, from standpoint: Standpoint,
+        lines: JudgementLines
     ) {
         guard let weighed else {
-            verdict = .unjudged
-            game = before
-            cursor = cursorBefore
+            self = .unjudged(standpoint)
             return
         }
-        if Self.intercepts(weighed.drop, lines: lines, relaxedIntercept: relaxedIntercept) {
+        if Self.intercepts(weighed.drop, lines: lines, relaxedIntercept: standpoint.relaxedIntercept) {
             // Written down at the position it happened at, which is where the eye was standing
             // (docs/adr/0037) — with the 应招 it earned, picked up from the search that judged it
             // (docs/adr/0034), because the position the move made is off the board from here on.
-            var restored = before
+            var restored = standpoint.game
             restored.recordTried(
                 .init(san: san, drop: weighed.drop, depth: weighed.depth, line: weighed.reply),
-                atPly: cursorBefore
+                atPly: standpoint.cursor
             )
-            verdict = .refused(Refusal(san: san, drop: weighed.drop))
-            game = restored
-            cursor = cursorBefore
+            self.init(
+                verdict: .refused(Refusal(san: san, drop: weighed.drop)),
+                game: restored, cursor: standpoint.cursor
+            )
             return
         }
         var standing = played
         standing.letStand(
             atPly: played.plies.count - 1, san: san, drop: weighed.drop, score: weighed.after,
-            depth: weighed.depth, lines: lines, relaxedIntercept: relaxedIntercept, hints: hints,
-            best: weighed.isBest
+            depth: weighed.depth, lines: lines, relaxedIntercept: standpoint.relaxedIntercept,
+            hints: standpoint.hints, best: weighed.isBest
         )
-        verdict = .stands(
-            MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
+        self.init(
+            verdict: .stands(
+                MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
+            ),
+            game: standing, cursor: standing.plies.count
         )
-        game = standing
-        cursor = standing.plies.count
     }
 
     /// The ruling on a drill's one attempt, which the drill has already judged and written down
@@ -139,18 +187,17 @@ public struct Ruling: Hashable, Sendable {
             restored.recordTried(
                 .init(san: verdict.played, drop: verdict.drop, line: verdict.reply), atPly: 0
             )
-            self.verdict = .refused(Refusal(san: verdict.played, drop: verdict.drop))
-            self.game = restored
-            cursor = 0
+            self.init(
+                verdict: .refused(Refusal(san: verdict.played, drop: verdict.drop)),
+                game: restored, cursor: 0
+            )
             return
         }
         var change: MoveChange?
         if let startingScore, let after = game.plies.first?.judgement?.score {
             change = MoveChange(before: startingScore, after: after)
         }
-        self.verdict = .stands(change)
-        self.game = game
-        cursor = game.plies.count
+        self.init(verdict: .stands(change), game: game, cursor: game.plies.count)
     }
 }
 

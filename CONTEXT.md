@@ -123,6 +123,14 @@ A move the player played and 把关 took back. It never happened in the game, an
 what the 错题 is made of.
 _Avoid_: 变着, 悔棋
 
+**原局 (Standpoint)**:
+The game as it was being read when a move was played, and where the eye stood in it, kept while
+the move is weighed. What is put back when the move does not stand — refused, or nobody finished
+weighing it, or the player left mid-weighing — whole, with the eye where it was. The whole game,
+not only the position the move was played from: a move played from an earlier position must not
+swallow the line being read.
+_Avoid_: 原位, 之前的局面, snapshot
+
 **应招 (Reply)**:
 The Line a 试招 earned — the opponent's strongest answer and the few moves after it. Worked out
 by the search that refused the move, kept beside it, and shown only when the 试招 is pressed.
