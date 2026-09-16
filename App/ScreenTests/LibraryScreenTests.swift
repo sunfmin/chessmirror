@@ -73,8 +73,8 @@ struct LibraryScreenScreenshots {
     }
 
     /// The 正着榜 above the games (docs/adr/0038): a row per rung that has been stood at, each
-    /// with its longest 连正, its longest 正着数 and how many moves stood there in all.
-    @Test("the ladder shows a row per rung, with the bests and the total")
+    /// with its longest 连正.
+    @Test("the ladder shows a row per rung, with its longest run")
     func theLadderAboveTheGames() async throws {
         let tempDir = tempDir()
         defer { try? FileManager.default.removeItem(at: tempDir) }
@@ -113,9 +113,9 @@ struct LibraryScreenScreenshots {
         #expect(rendered.says("1800"))
         #expect(rendered.says("满力"))
         #expect(rendered.says("最长连正 2"), "1800's run, ended by the 试招")
-        #expect(rendered.says("最长正着数 3"))
-        #expect(rendered.says("共 3 步"))
         #expect(rendered.says("最长连正 3"), "满力's three, unbroken")
+        #expect(!rendered.says("正着数"))
+        #expect(!rendered.says("共 3 步"), "no count of everything that stood")
     }
 
     /// A best is the way to the game it was made in: pressing it opens that game.
@@ -146,7 +146,7 @@ struct LibraryScreenScreenshots {
             await ScreenImage.settle()
             let words = ScreenImage.words(in: window)
             #expect(words.contains { $0.contains("Stockfish 18 · 2200") }, "the game, at its rung")
-            #expect(words.contains { $0.contains("正着 3") }, "with its three moves that stood")
+            #expect(words.contains { $0.contains("连正 3") }, "with its run of three")
         }) {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))

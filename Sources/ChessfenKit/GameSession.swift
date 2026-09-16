@@ -1068,7 +1068,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let tally = noSlips
         return Strip(
             voice: standing,
-            tally: isTilling || tally.distance > 0 ? tally : nil,
+            tally: isTilling || tally.longestRun > 0 ? tally : nil,
             depth: hasTillingFeedback && phase != .exercising && finish == nil
                 ? (searchProgress?.depth ?? 0) : nil,
             bar: bar

@@ -136,9 +136,8 @@ It shapes the opponent and nothing else: 细判 weighs every move at full streng
 棋力, so a 掉幅 means the same thing at every rung.
 _Avoid_: 难度, 级别, 等级, 档位
 
-**正着数 (Distance)**:
-In one game, the player's own moves that stood while 正着 was on. Moves played with 正着 off
-are not counted, and moves against a human count all the same.
+**正着数 (Distance)**: _retired._ It counted every move that stood while 正着 was on, which
+with 正着 on was the length of the game — a number the record already shows. Only 连正 is read.
 
 **连正 (Run)**:
 An unbroken run of the player's moves that stood, with no 试招 between them. Two are read: the
@@ -146,8 +145,8 @@ run since the last 试招, and the game's longest. Only a 试招 ends a run; swi
 pauses it.
 
 **正着榜 (Ladder)**:
-Per 棋力, the longest 连正, the longest 正着数, and every move that stood at that 棋力 across all
-games, each best pointing at the game it happened in. Read out of the games themselves. A game
+Per 棋力, the longest 连正 across all games, pointing at the game it happened in. Read out of
+the games themselves. A game
 can change 棋力 as it goes, and each stretch is credited to the 棋力 it was played at; a stretch
 against a human is credited to none.
 

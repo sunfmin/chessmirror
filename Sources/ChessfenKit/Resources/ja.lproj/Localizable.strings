@@ -426,9 +426,7 @@
 
 "strength" = "棋力";
 "strength.full" = "全力";
-"till.tally" = "正着 %d · 連続 %d";
+"till.tally" = "連続 %d";
 "ladder" = "ミスなし番付";
 "ladder.run" = "最長連続";
-"ladder.distance" = "最長正着数";
-"ladder.stood" = "計 %d 手";
 "standing.best" = "最善手";

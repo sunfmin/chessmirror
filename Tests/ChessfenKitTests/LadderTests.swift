@@ -4,7 +4,8 @@ import Testing
 
 /// Contract: the 正着榜 is read out of the games (docs/adr/0038). Every move that stood under 正着
 /// is credited to the rung the engine was on when it was played; a 连正 is a run at one rung,
-/// ended by a 试招 or by a change of rung; a stretch at no rung is credited nowhere.
+/// ended by a 试招 or by a change of rung; a stretch at no rung is credited nowhere. Only the
+/// longest run is kept per rung: a count of everything that stood was the length of the game.
 @Suite struct LadderTests {
     private static let under = Game.Ply.Judgement(
         drop: 1, score: .centipawns(20), depth: 20, intercept: 5
@@ -29,11 +30,9 @@ import Testing
         let climbed = try Self.climbed()
         let credits = Ladder.credits(in: climbed, by: [.white])
         let at1400 = try #require(credits.first(where: { $0.strength == Strength.elo(1400) }))
-        #expect(at1400.distance == 2)
         #expect(at1400.longestRun == 2)
         let at1800 = try #require(credits.first(where: { $0.strength == Strength.elo(1800) }))
-        #expect(at1800.distance == 3, "3. Bc4, 4. c3 and 5. d4 — the last by the rung before it")
-        #expect(at1800.longestRun == 2, "the 试招 before 4. c3 ended the run 3. Bc4 began")
+        #expect(at1800.longestRun == 2, "4. c3 and 5. d4 — the 试招 before 4. c3 ended the run 3. Bc4 began, and d4 is at the rung before it")
         #expect(credits.count == 2)
     }
 
@@ -42,7 +41,7 @@ import Testing
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         for ply in [0, 2, 4, 6, 8] { game.setJudgement(Self.under, atPly: ply) }
         #expect(Ladder.credits(in: game, by: [.white]).isEmpty)
-        #expect(game.noSlips(by: [.white]).distance == 5, "though the row still counts them")
+        #expect(game.noSlips(by: [.white]).longestRun == 5, "though the row still counts them")
     }
 
     @Test("满力 is a rung of its own, and moves played with 正着 off stand under nothing")
@@ -54,10 +53,10 @@ import Testing
         )
         for ply in [1, 3, 5, 7] { game.setStrength(.full, atPly: ply) }
         let credits = Ladder.credits(in: game, by: [.white])
-        #expect(credits == [Ladder.Credit(strength: .full, distance: 1, longestRun: 1)])
+        #expect(credits == [Ladder.Credit(strength: .full, longestRun: 1)])
     }
 
-    @Test("the ladder keeps each rung's best, with the game it was made in, and sums the rest")
+    @Test("the ladder keeps each rung's longest run, with the game it was made in")
     func theLadderKeepsBests() throws {
         let climb = URL(filePath: "/games/climb.pgn")
         let long = URL(filePath: "/games/long.pgn")
@@ -65,16 +64,14 @@ import Testing
         let ladder = Ladder.sum([
             (game: climb, credits: Ladder.credits(in: climbed, by: [.white])),
             (game: long, credits: [
-                Ladder.Credit(strength: .elo(1800), distance: 9, longestRun: 1),
-                Ladder.Credit(strength: .full, distance: 4, longestRun: 4),
+                Ladder.Credit(strength: .elo(1800), longestRun: 1),
+                Ladder.Credit(strength: .full, longestRun: 4),
             ]),
         ])
         #expect(ladder.rows.map(\.strength) == [.elo(1400), .elo(1800), .full], "ladder order")
         let at1800 = try #require(ladder[.elo(1800)])
-        #expect(at1800.longestRun == Ladder.Best(value: 2, game: climb))
-        #expect(at1800.longestDistance == Ladder.Best(value: 9, game: long))
-        #expect(at1800.stood == 12)
-        #expect(ladder[.elo(1400)]?.stood == 2)
+        #expect(at1800.longestRun == Ladder.Best(value: 2, game: climb), "the climb's two beat the long game's one")
+        #expect(ladder[.elo(1400)]?.longestRun == Ladder.Best(value: 2, game: climb))
         #expect(ladder[.full]?.longestRun == Ladder.Best(value: 4, game: long))
         #expect(ladder[.elo(2800)] == nil, "no rung nobody has stood at")
         #expect(Ladder.derive(from: [GameLibrary.Entry]()).isEmpty)
@@ -97,7 +94,7 @@ import Testing
         let credits = Ladder.credits(in: entry)
         let at1800 = credits.first(where: { $0.strength == Strength.elo(1800) })
         let at1400 = credits.first(where: { $0.strength == Strength.elo(1400) })
-        #expect(at1800?.distance == 3)
+        #expect(at1800?.longestRun == 2)
         #expect(at1400?.longestRun == 2)
     }
 
@@ -123,11 +120,11 @@ import Testing
         )
         index.update(from: [entry])
         #expect(index.walkedLastTime == 1)
-        #expect(index.ladder[.elo(1800)]?.longestDistance == .init(value: 3, game: entry.url))
+        #expect(index.ladder[.elo(1800)]?.longestRun == .init(value: 2, game: entry.url))
 
         index.update(from: [entry])
         #expect(index.walkedLastTime == 0, "nothing changed, nothing walked")
-        #expect(index.ladder[.elo(1800)]?.stood == 3, "and the ladder is still there")
+        #expect(index.ladder[.elo(1800)]?.longestRun.value == 2, "and the ladder is still there")
 
         index.update(from: [])
         #expect(index.ladder.isEmpty, "a game deleted leaves with its credits")

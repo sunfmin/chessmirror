@@ -451,9 +451,7 @@
 
 "strength" = "Força";
 "strength.full" = "Força total";
-"till.tally" = "%d certos · sequência %d";
+"till.tally" = "Sequência %d";
 "ladder" = "Escada sem erros";
 "ladder.run" = "Maior sequência";
-"ladder.distance" = "Maior distância";
-"ladder.stood" = "%d no total";
 "standing.best" = "Melhor lance";

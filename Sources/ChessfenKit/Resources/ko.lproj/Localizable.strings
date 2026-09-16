@@ -426,9 +426,7 @@
 
 "strength" = "기력";
 "strength.full" = "전력";
-"till.tally" = "정착 %d · 연속 %d";
+"till.tally" = "연속 %d";
 "ladder" = "실수 없는 순위표";
 "ladder.run" = "최장 연속";
-"ladder.distance" = "최장 정착수";
-"ladder.stood" = "총 %d수";
 "standing.best" = "최선의 수";

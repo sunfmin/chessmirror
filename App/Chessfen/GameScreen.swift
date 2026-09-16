@@ -312,12 +312,12 @@ struct GameScreen: View {
                 // 正着数 and 连正, read off the game rather than counted (CONTEXT.md). On the
                 // row that names 正着 and on no row of its own.
                 if let tally = strip.tally {
-                    Text(localized("till.tally", tally.distance, tally.run))
+                    Text(localized("till.tally", tally.run))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                         .fixedSize(horizontal: true, vertical: false)
                         .contentTransition(.numericText())
-                        .accessibilityLabel(localized("till.tally", tally.distance, tally.run))
+                        .accessibilityLabel(localized("till.tally", tally.run))
                 }
                 Spacer(minLength: 8)
                 if engine.unavailableReason != nil, !viewed.isOver {

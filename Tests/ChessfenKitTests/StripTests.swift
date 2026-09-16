@@ -67,7 +67,7 @@ struct StripTests {
         #expect(session.strip.tally == nil)
 
         session.setTilling(true)
-        #expect(session.strip.tally == Game.NoSlips(distance: 0, run: 0, longestRun: 0), "on, with nothing yet")
+        #expect(session.strip.tally == Game.NoSlips(run: 0, longestRun: 0), "on, with nothing yet")
 
         session.setTilling(false)
         #expect(session.strip.tally == nil, "off again with nothing stood, and the row is as it was")
@@ -76,6 +76,6 @@ struct StripTests {
         stood.setJudgement(.init(drop: 1, score: .centipawns(20), depth: 20, intercept: 5), atPly: 0)
         let after = GameSession.fresh(stood)
         defer { after.suspend() }
-        #expect(after.strip.tally?.distance == 1, "off, but a move stood: the tally stays")
+        #expect(after.strip.tally?.longestRun == 1, "off, but a move stood: the tally stays")
     }
 }

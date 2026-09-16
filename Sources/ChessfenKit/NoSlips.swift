@@ -2,10 +2,10 @@ import Foundation
 
 extension Game {
     /// One of the player's own moves as 正着 reads it: whether it stood, whether a 试招 came
-    /// before it, and the 棋力 it was played against (CONTEXT.md: 正着数, 连正, 正着榜).
+    /// before it, and the 棋力 it was played against (CONTEXT.md: 连正, 正着榜).
     ///
-    /// The one walk under both readers of 正着. The row under the board counts these into 正着数
-    /// and 连正, and the 正着榜 credits them to rungs; each keeps its own sum, and what a move *is*
+    /// The one walk under both readers of 正着. The row under the board counts these into a 连正
+    /// and the 正着榜 credits them to rungs; each keeps its own sum, and what a move *is*
     /// — stood or not, after a slip or not — is decided here and nowhere else. It was decided in
     /// both, and the two had already begun to disagree about a refusal waiting at the end.
     public struct OwnMove: Hashable, Sendable {
@@ -52,43 +52,40 @@ extension Game {
         return moves
     }
 
-    /// 正着数 and 连正, read out of one game (CONTEXT.md).
+    /// 连正, read out of one game (CONTEXT.md).
     ///
     /// **Read, never counted on the side.** A move that stood under 正着 is one carrying a
     /// judgement with the 拦截线 it stood under (`Ply.Judgement.intercept`), and a 试招 is written
     /// where it happened (docs/adr/0037) — so a reopened game shows the same figures as when it
     /// was left, and a session that kept its own tally was one more place for it to be wrong.
+    ///
+    /// Only the run. A count of every move that stood (正着数, retired) was the length of the game
+    /// whenever 正着 was on, which is a number the record already shows.
     public struct NoSlips: Hashable, Sendable {
-        /// 正着数: the player's own moves that stood while 正着 was on. Moves played with 正着
-        /// off are not counted, and moves against a human count all the same.
-        public let distance: Int
         /// 连正: the run of the player's moves that stood since the last 试招. Only a 试招 ends
         /// it; switching 正着 off pauses it.
         public let run: Int
         /// The game's longest 连正.
         public let longestRun: Int
 
-        public init(distance: Int, run: Int, longestRun: Int) {
-            self.distance = distance
+        public init(run: Int, longestRun: Int) {
             self.run = run
             self.longestRun = longestRun
         }
 
-        public static let none = NoSlips(distance: 0, run: 0, longestRun: 0)
+        public static let none = NoSlips(run: 0, longestRun: 0)
     }
 
     /// The 正着 figures of this game for the sides in `mine`.
     public func noSlips(by mine: Set<PieceColour>) -> NoSlips {
-        var distance = 0
         var run = 0
         var longest = 0
         for move in ownMoves(by: mine) {
             if move.afterSlip { run = 0 }
             guard move.stood else { continue }
-            distance += 1
             run += 1
             longest = max(longest, run)
         }
-        return NoSlips(distance: distance, run: run, longestRun: longest)
+        return NoSlips(run: run, longestRun: longest)
     }
 }

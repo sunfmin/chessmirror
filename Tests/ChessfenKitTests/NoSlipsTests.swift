@@ -3,9 +3,9 @@ import Testing
 
 @testable import ChessfenKit
 
-/// Contract: 正着数 and 连正 come out of the game as the glossary defines them — the moves that
-/// stood under 正着, and the run of them since the last 试招 — with 正着 off pausing the run and
-/// nothing but a 试招 ending it (CONTEXT.md).
+/// Contract: 连正 comes out of the game as the glossary defines it — the run of the player's moves
+/// that stood under 正着 since the last 试招 — with 正着 off pausing the run and nothing but a 试招
+/// ending it (CONTEXT.md).
 @MainActor
 @Suite struct NoSlipsTests {
     private static let under = Game.Ply.Judgement(
@@ -21,7 +21,7 @@ import Testing
         ))
     }
 
-    @Test func distanceRunAndLongestRunAreReadAsTheGlossaryDefinesThem() throws {
+    @Test func runAndLongestRunAreReadAsTheGlossaryDefinesThem() throws {
         var game = try italian()
         game.setJudgement(Self.under, atPly: 0)
         // Nf3 stood after Nh3 was taken back: a 试招 ends the run, and the move that then stood
@@ -34,8 +34,7 @@ import Testing
         game.setJudgement(Self.under, atPly: 8)
 
         let read = game.noSlips(by: [.white])
-        #expect(read.distance == 4, "e4, Nf3, Bc4, d4 stood under 正着; c3 did not")
-        #expect(read.run == 3, "Nf3, Bc4 and d4 since Nh3 was taken back")
+        #expect(read.run == 3, "Nf3, Bc4 and d4 since Nh3 was taken back; c3 did not stand under 正着")
         #expect(read.longestRun == 3)
         #expect(game.noSlips(by: [.black]) == .none, "Black's moves were never judged")
     }
@@ -67,21 +66,21 @@ import Testing
         )
 
         // Both readers agree with the walk, and with each other, about the refusal at the end.
-        #expect(game.noSlips(by: [.white]) == .init(distance: 2, run: 0, longestRun: 1))
+        #expect(game.noSlips(by: [.white]) == .init(run: 0, longestRun: 1))
         let credits = Ladder.credits(in: game, by: [.white])
-        #expect(credits.map(\.distance).reduce(0, +) == 2)
+        #expect(credits.count == 2, "a run of one at each rung")
         #expect(credits.first { $0.strength == .elo(1800) }?.longestRun == 1)
         #expect(game.ownMoves(by: [.black]).map(\.ply) == [2, 4, 6, 8], "Black's moves, and no refusal of Black's")
     }
 
-    @Test func aRefusalWaitingAtTheEndZeroesTheRunAndLeavesTheDistance() throws {
+    @Test func aRefusalWaitingAtTheEndZeroesTheRun() throws {
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
         game.setJudgement(Self.under, atPly: 0)
-        #expect(game.noSlips(by: [.white]) == .init(distance: 1, run: 1, longestRun: 1))
+        #expect(game.noSlips(by: [.white]) == .init(run: 1, longestRun: 1))
 
         // Stopped at the position after e5, with no move played there yet (docs/adr/0037).
         game.recordTried(.init(san: "Ke2", drop: 30), atPly: 2)
-        #expect(game.noSlips(by: [.white]) == .init(distance: 1, run: 0, longestRun: 1))
+        #expect(game.noSlips(by: [.white]) == .init(run: 0, longestRun: 1))
         #expect(game.noSlips(by: [.black]) == .none, "the refusal was White's, not Black's")
 
         // The next move that stands takes the refusal with it and starts a run of one.
@@ -89,7 +88,7 @@ import Testing
         #expect(stood)
         game.absorbPendingTried(atPly: 2)
         game.setJudgement(Self.under, atPly: 2)
-        #expect(game.noSlips(by: [.white]) == .init(distance: 2, run: 1, longestRun: 1))
+        #expect(game.noSlips(by: [.white]) == .init(run: 1, longestRun: 1))
     }
 
     @Test func switchingNoSlipsOffPausesTheRunRatherThanResettingIt() throws {
@@ -97,9 +96,7 @@ import Testing
         game.setJudgement(Self.under, atPly: 0)
         game.setJudgement(Self.measured, atPly: 2)
         game.setJudgement(Self.under, atPly: 4)
-        #expect(game.noSlips(by: [.white]) == .init(distance: 2, run: 2, longestRun: 2))
-        // And a move nobody weighed at all, which is what a move with the badge off is.
-        #expect(game.noSlips(by: [.white]).distance == 2)
+        #expect(game.noSlips(by: [.white]) == .init(run: 2, longestRun: 2))
     }
 
     @Test func movesAgainstAHumanCountAllTheSame() throws {
@@ -107,8 +104,8 @@ import Testing
         game.setJudgement(Self.under, atPly: 0)
         game.setJudgement(Self.under, atPly: 1)
         game.setJudgement(Self.under, atPly: 2)
-        #expect(game.noSlips(by: [.white, .black]) == .init(distance: 3, run: 3, longestRun: 3))
-        #expect(game.noSlips(by: [.white]) == .init(distance: 2, run: 2, longestRun: 2))
+        #expect(game.noSlips(by: [.white, .black]) == .init(run: 3, longestRun: 3))
+        #expect(game.noSlips(by: [.white]) == .init(run: 2, longestRun: 2))
     }
 
     @Test func theFiguresSurviveTheFile() throws {
@@ -124,8 +121,8 @@ import Testing
         #expect(read.plies[4].judgement?.intercept == nil, "a measured move stays a measured move")
     }
 
-    /// The session's own reading: a refusal leaves the run at nought and the distance where it
-    /// was, and the next move that stands is a run of one.
+    /// The session's own reading: a refusal leaves the run at nought, and the next move that
+    /// stands is a run of one.
     @Test func theSessionReadsTheFiguresOffItsGame() async throws {
         let start = try #require(Game(startFEN: PGN.standardStartFEN))
         let afterF3 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3"]))
@@ -144,16 +141,16 @@ import Testing
         session.play(try #require(start.state.move(matching: "f2f3")))
         await session.waitForJudgement()
         #expect(session.refused?.san == "f3")
-        #expect(session.noSlips == .init(distance: 0, run: 0, longestRun: 0))
+        #expect(session.noSlips == .init(run: 0, longestRun: 0))
 
         session.play(try #require(start.state.move(matching: "e2e4")))
         await session.waitForJudgement()
         #expect(session.game.uciMoves == ["e2e4"])
-        #expect(session.noSlips == .init(distance: 1, run: 1, longestRun: 1))
+        #expect(session.noSlips == .init(run: 1, longestRun: 1))
         #expect(session.game.plies[0].judgement?.intercept == 10)
 
         // With 正着 off, the figures stand as they were.
         session.setTilling(false)
-        #expect(session.noSlips.distance == 1)
+        #expect(session.noSlips.longestRun == 1)
     }
 }

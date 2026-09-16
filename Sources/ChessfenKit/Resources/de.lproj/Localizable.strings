@@ -450,9 +450,7 @@
 
 "strength" = "Stärke";
 "strength.full" = "Volle Stärke";
-"till.tally" = "%d gestanden · Serie %d";
+"till.tally" = "Serie %d";
 "ladder" = "Bestenliste ohne Patzer";
 "ladder.run" = "Längste Serie";
-"ladder.distance" = "Längste Strecke";
-"ladder.stood" = "%d insgesamt";
 "standing.best" = "Bester Zug";

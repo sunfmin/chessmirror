@@ -869,7 +869,7 @@ struct GameScreenScreenshots {
     // ------------------------------------------------------------ 正着数 · 连正
 
     /// The Italian with 正着 on: White's four moves all stood, and a 试招 at 3. Bc4 broke the run,
-    /// so the row says 「正着 4 · 连正 2」 (docs/adr/0038).
+    /// so the row says 「连正 2」 (docs/adr/0038).
     private static func tallied() throws -> GameSession {
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: italian))
         let stood = Game.Ply.Judgement(drop: 1, score: .centipawns(20), depth: 20, intercept: 5)
@@ -880,16 +880,17 @@ struct GameScreenScreenshots {
         return session
     }
 
-    /// 正着数 and 连正 sit on the 正着 row, next to the switch, so the two numbers a 正着 game is
-    /// about are in view while it is being played.
-    @Test("the 正着 row counts the moves that stood and the run they are on")
+    /// 连正 sits on the 正着 row, next to the switch, so the number a 正着 game is about is in
+    /// view while it is being played.
+    @Test("the 正着 row counts the run the player is on")
     func theTallyOnTheRow() async throws {
         let session = try Self.tallied()
         let rendered = await ScreenImage.write("game-tally") {
             screen(session, engine: ScriptedEngine([]))
         }
-        #expect(session.noSlips == .init(distance: 4, run: 2, longestRun: 2))
-        #expect(rendered.says("正着 4 · 连正 2"))
+        #expect(session.noSlips == .init(run: 2, longestRun: 2))
+        #expect(rendered.says("连正 2"))
+        #expect(!rendered.says("正着 4"), "and no count of everything that stood")
     }
 
     @Test("the tally, in English", .speaking(.english))
@@ -898,7 +899,7 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-tally-english") {
             screen(session, engine: ScriptedEngine([]))
         }
-        #expect(rendered.says("4 stood · run 2"))
+        #expect(rendered.says("Run 2"))
     }
 
     /// Nothing to count, nothing said: a game with the switch off and no move that stood keeps
