@@ -156,3 +156,9 @@ The app's own engine, at its own depth, deciding what a move actually cost. **Th
 allowed to call something a 错题.** One act, wherever it is asked for: 正着 refusing a move as
 it lands, a drill judging an attempt and the 惩罚 exercise checking a reply all weigh a move the
 same way, at the same budget, and a checkmate or a draw is settled without asking the engine.
+
+**判定 (Ruling)**:
+What follows from a 细判: whether the move stands, and what is written down either way. A move
+that stands carries its judgement and the 试招 refused before it; a move that is refused is
+written where it happened and the game is put back as it was being read; a move nobody could
+judge is put back with nothing written. One reading, shared by 正着 and a drill's attempt.
