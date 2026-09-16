@@ -1,7 +1,7 @@
 /// A Game: where it started and what has been played. Everything else — the current
 /// Position, whose turn it is, what is legal, whether it is over — is derived from those
-/// two facts on demand, so undo is dropping an element
-/// (docs/adr/0003).
+/// two facts on demand, so undo is dropping an element and a 分支 is a slice
+/// (docs/adr/0003, 0043).
 public struct Game: Hashable, Sendable {
     /// One move as played, kept with the SAN it was written as. SAN is stored rather than
     /// recomputed because it depends on the position the move was made in, and that
@@ -36,12 +36,24 @@ public struct Game: Hashable, Sendable {
         /// The moves 正着 refused before this one was allowed to stand, in the order they were
         /// played (docs/adr/0027).
         ///
-        /// A comment on the move that stands rather than a variation, because that is what they
-        /// are: a game is a list now, and a rolled-back move is a thing that happened at this
-        /// position rather than another game that might have been played (docs/adr/0028). Their
-        /// cost was measured when they were refused and is written down with them — nothing
-        /// recomputes it later, because the position they were refused in is gone.
+        /// A comment on the move that stands rather than a 分支, because that is what they are:
+        /// a rolled-back move is a thing that happened at this position rather than another line
+        /// that might have been played (docs/adr/0028). Their cost was measured when they were
+        /// refused and is written down with them — nothing recomputes it later, because the
+        /// position they were refused in is gone.
         public var tried: [Tried] = []
+        /// The lines played from this Ply's own starting position instead of this Ply — each one
+        /// an alternative to *this* move and everything that followed it (docs/adr/0043).
+        ///
+        /// A 分支 is how a line that was played and then played over stops being lost. Step back
+        /// to move ten of an imported game, play something else, and the thirty moves that were
+        /// there move in here rather than into the bin; PGN has written them in brackets since
+        /// 1994 and this is the same thing.
+        public var variations: [[Ply]] = []
+        /// Whether this Ply belongs to the 树干 — the line the game arrived as, imported or played
+        /// out — rather than a line tried from an earlier Ply. The record colours the two
+        /// differently, so a 树枝 cannot be mistaken for the game.
+        public var isTrunk: Bool = true
         /// How many rungs of the hint ladder were open when the move that stands was played
         /// (docs/adr/0031). Zero is "unaided", which is the ordinary case.
         public var hints: Int = 0
@@ -123,6 +135,8 @@ public struct Game: Hashable, Sendable {
             hints: Int = 0,
             judgement: Judgement? = nil,
             strength: Strength? = nil,
+            variations: [[Ply]] = [],
+            isTrunk: Bool = true,
         ) {
             self.uci = uci
             self.san = san
@@ -133,6 +147,8 @@ public struct Game: Hashable, Sendable {
             self.hints = hints
             self.judgement = judgement
             self.strength = strength
+            self.variations = variations
+            self.isTrunk = isTrunk
         }
 
         /// How many Ply of a Review's Line are kept.
@@ -145,7 +161,7 @@ public struct Game: Hashable, Sendable {
         /// Takes over everything that is *said about* a move rather than being the move.
         ///
         /// Replaying a line recomputes `uci` and `san` and loses all of this, so anything that
-        /// replays — `rewound(to:)` — puts it back through here. One list
+        /// replays — `rewound(to:)`, stepping into a 分支 — puts it back through here. One list
         /// in one place, because the way this goes wrong is a field being added and only two of
         /// the three call sites remembering it.
         mutating func takeAnnotations(from other: Self) {
@@ -156,6 +172,8 @@ public struct Game: Hashable, Sendable {
             hints = other.hints
             judgement = other.judgement
             strength = other.strength
+            variations = other.variations
+            isTrunk = other.isTrunk
         }
     }
 
@@ -284,7 +302,9 @@ public struct Game: Hashable, Sendable {
         let san = SAN.text(for: move, in: state)
         guard let next = Rules.probe(startFEN: startFEN, moves: uciMoves + [move.uci])
         else { return false }
-        plies.append(Ply(uci: move.uci, san: san))
+        // A move carried on from a 树枝 is on that 树枝: the 树干 is one path from the opening,
+        // and nothing appended past a fork can rejoin it (docs/adr/0043).
+        plies.append(Ply(uci: move.uci, san: san, isTrunk: plies.last?.isTrunk ?? true))
         state = next
         return true
     }
@@ -302,30 +322,169 @@ public struct Game: Hashable, Sendable {
         return apply(move)
     }
 
-    /// Plays a move from the position after `ply` moves, dropping whatever used to follow.
+    /// Plays a move from the position after `ply` moves, keeping whatever used to be played from
+    /// there as a 分支.
     ///
     /// This is what browsing back and playing something else does. Three cases, and the third is
     /// the interesting one: past the end is not a thing, playing the move that is already there
-    /// just carries on down the line that exists, and anything else **replaces** the rest.
-    ///
-    /// Replaces, where it used to branch. A Game was a tree and is a list now (docs/adr/0028): the
-    /// only two things that ever wrote a branch were a Drill's answer and a 五步计划, both gone,
-    /// and what is left is somebody taking a move back and playing another — which is one game and
-    /// not two. 正着's rolled-back moves are kept as comments, and a list of those is still a list.
+    /// just carries on down the line that exists, and anything else **branches**: the line that
+    /// was there moves in beside the new move, whole, and can be stepped back into
+    /// (docs/adr/0043). It used to replace the rest (docs/adr/0028), which on an imported game
+    /// meant that trying one idea from move ten wrote over the thirty moves somebody played.
     @discardableResult
     public mutating func play(_ move: Move, atPly ply: Int) -> Bool {
         guard (0...plies.count).contains(ply) else { return false }
         if ply == plies.count { return apply(move) }
         if plies[ply].uci == move.uci { return true }
 
-        guard var replayed = rewound(to: ply), replayed.apply(move) else { return false }
-        plies = replayed.plies
-        state = replayed.state
-        // The positions past here are gone, and a refusal at a position that no longer exists
-        // in the game is a refusal at nothing. The ones at `ply` itself stay: this move was
-        // played from that position, and it is the move's to take (docs/adr/0037).
-        pendingTried.removeAll { $0.ply > ply }
+        guard var branch = rewound(to: ply), branch.apply(move) else { return false }
+
+        // The line being left behind, with everything that hung off it, becomes an alternative
+        // to the move now standing in its place — and the refusals made along it go with it.
+        var abandoned = Array(plies[ply...])
+        carryRefusals(into: &abandoned, from: ply)
+        var replacement = branch.plies[ply]
+        replacement.isTrunk = false
+        replacement.variations = [abandoned]
+        // Alternatives already recorded at this point are alternatives to the same position, so
+        // they belong to the new move too rather than to the line that just left.
+        replacement.variations.append(contentsOf: abandoned[0].variations)
+        replacement.variations[0][0].variations = []
+
+        plies = Array(plies[..<ply]) + [replacement]
+        state = branch.state
         return true
+    }
+
+    /// The same, for a move named by its UCI — what a ruling has in hand once the move has been
+    /// weighed (docs/adr/0035).
+    @discardableResult
+    public mutating func play(uci: String, atPly ply: Int) -> Bool {
+        guard let move = rewound(to: ply)?.state.move(matching: uci) else { return false }
+        return play(move, atPly: ply)
+    }
+
+    /// Moves the refusals made past `ply` onto the line that is leaving the trunk, so a 错题
+    /// made on that line is still written on it when it comes back (docs/adr/0037, 0043).
+    ///
+    /// A refusal at a position along the line rides onto the move that stands there — the same
+    /// door it takes when the player carries on down the line — and the refusals at `ply` itself
+    /// stay: the new move was played from that position, and they are its to take. A refusal at
+    /// the end of the line has no move to ride on and no position on the trunk any more; it is
+    /// the one thing this loses, and it is written to the file as long as the line is the game.
+    private mutating func carryRefusals(into line: inout [Ply], from ply: Int) {
+        for pending in pendingTried where pending.ply > ply {
+            let index = pending.ply - ply
+            guard line.indices.contains(index) else { continue }
+            line[index].tried = pending.tries + line[index].tried
+        }
+        pendingTried.removeAll { $0.ply > ply }
+    }
+
+    /// Records a line as an alternative to the move at `ply`. Used when reading a PGN, where the
+    /// brackets arrive after the move they belong to. Whether the line is 树干 or 树枝 is the
+    /// line's own to say (`setBranch`): a file is read with the line on the board first, and that
+    /// line is not always the trunk.
+    public mutating func addVariation(_ variation: [Ply], atPly ply: Int) {
+        guard plies.indices.contains(ply), !variation.isEmpty else { return }
+        plies[ply].variations.append(variation)
+    }
+
+    /// The lines that were played from the same position as the move at `ply`.
+    public func variations(atPly ply: Int) -> [[Ply]] {
+        plies.indices.contains(ply) ? plies[ply].variations : []
+    }
+
+    /// One of the moves that can be played from the position at `ply`, including the one
+    /// currently standing there. The 树干 is numbered first, then the 树枝, so a swipe that
+    /// cycles them does not renumber the tree.
+    public struct Sibling: Hashable, Sendable {
+        /// 1-based, trunk first.
+        public let number: Int
+        /// Nil when this sibling is the Ply currently in the Game's line.
+        public let variationIndex: Int?
+        public let san: String
+        public let isTrunk: Bool
+    }
+
+    public func siblings(atPly ply: Int) -> [Sibling] {
+        guard plies.indices.contains(ply) else { return [] }
+        var items: [(variationIndex: Int?, head: Ply)] = [(nil, plies[ply])]
+        for (index, line) in plies[ply].variations.enumerated() {
+            guard let head = line.first else { continue }
+            items.append((index, head))
+        }
+        items.sort { a, b in
+            if a.head.isTrunk != b.head.isTrunk { return a.head.isTrunk && !b.head.isTrunk }
+            if a.head.san != b.head.san { return a.head.san < b.head.san }
+            return (a.variationIndex ?? -1) < (b.variationIndex ?? -1)
+        }
+        return items.enumerated().map { offset, item in
+            Sibling(
+                number: offset + 1,
+                variationIndex: item.variationIndex,
+                san: item.head.san,
+                isTrunk: item.head.isTrunk
+            )
+        }
+    }
+
+    /// Takes a 分支 as the line to carry on with, and puts the line it replaces where it came
+    /// from. Stepping into a branch, in other words.
+    @discardableResult
+    public mutating func promoteVariation(_ index: Int, atPly ply: Int) -> Bool {
+        guard plies.indices.contains(ply) else { return false }
+        let alternatives = plies[ply].variations
+        guard alternatives.indices.contains(index) else { return false }
+
+        var chosen = alternatives[index]
+        var abandoned = Array(plies[ply...])
+        abandoned[0].variations = []
+        carryRefusals(into: &abandoned, from: ply)
+
+        var rest = alternatives
+        rest.remove(at: index)
+        chosen[0].variations = [abandoned] + rest
+
+        guard let head = rewound(to: ply) else { return false }
+        var rebuilt = head
+        for step in chosen {
+            guard rebuilt.apply(uci: step.uci) else { return false }
+        }
+        // Replay dropped everything that was said *about* these moves, so it goes back on. The
+        // Review Depth carries across untouched: it says what Depth the Scores that exist were
+        // computed at, and a promoted line's Plies either carry Scores from the same pass or
+        // carry none — in which case `reviewScore` is nil and nothing about them is judged.
+        for (offset, step) in chosen.enumerated() {
+            rebuilt.plies[ply + offset].takeAnnotations(from: step)
+        }
+        rebuilt.pendingTried = pendingTried
+        self = rebuilt
+        return true
+    }
+
+    /// Whether any position in the Game has more than one line played from it.
+    public var hasBranches: Bool {
+        plies.contains { !$0.variations.isEmpty }
+    }
+
+    /// Where a PGN's `[%branch]` lands: the Ply just read is a 树枝, and so is everything that
+    /// follows it on its line (docs/adr/0043). A file is read with the line on the board as the
+    /// mainline, and that is not always the 树干.
+    mutating func setBranch(atPly ply: Int) {
+        guard plies.indices.contains(ply) else { return }
+        for index in ply..<plies.count {
+            plies[index].isTrunk = false
+        }
+    }
+
+    /// Where a PGN's `[%trunk]` lands: the bracketed line whose head was just read is the 树干,
+    /// from that Ply on (docs/adr/0043).
+    mutating func setTrunk(atPly ply: Int) {
+        guard plies.indices.contains(ply) else { return }
+        for index in ply..<plies.count {
+            plies[index].isTrunk = true
+        }
     }
 
     @discardableResult
@@ -432,11 +591,28 @@ public struct Game: Hashable, Sendable {
         "\(moveNumber(ofPly: ply))\(mover(ofPly: ply) == .white ? "." : "…")"
     }
 
-    /// One half of a scoresheet row: the move, and the Ply it stands at — which is the cursor
-    /// that puts it on the board.
+    /// One half of a scoresheet row: the move, the Ply it stands at — which is the cursor that
+    /// puts it on the board — and where it sits in the tree: 树干 or a numbered 树枝, and how
+    /// many lines fork from the position it was played from (docs/adr/0043).
     public struct Half: Hashable, Sendable {
         public let ply: Int
         public let san: String
+        public let isTrunk: Bool
+        /// This move's number among the lines played from its position, 树干 first.
+        public let branchNumber: Int
+        /// How many lines were played from its position; one for a position nobody forked at.
+        public let siblingCount: Int
+
+        public init(ply: Int, san: String, isTrunk: Bool = true, branchNumber: Int = 1, siblingCount: Int = 1) {
+            self.ply = ply
+            self.san = san
+            self.isTrunk = isTrunk
+            self.branchNumber = branchNumber
+            self.siblingCount = siblingCount
+        }
+
+        /// Whether the position this move was played from has more than one line out of it.
+        public var isFork: Bool { siblingCount > 1 }
     }
 
     /// One move number and its two halves — the way a scoresheet is ruled, and the unit a
@@ -454,7 +630,12 @@ public struct Game: Hashable, Sendable {
     public var scoresheet: [ScoresheetRow] {
         var rows: [ScoresheetRow] = []
         for (index, ply) in plies.enumerated() {
-            let half = Half(ply: index + 1, san: ply.san)
+            let siblings = siblings(atPly: index)
+            let half = Half(
+                ply: index + 1, san: ply.san, isTrunk: ply.isTrunk,
+                branchNumber: siblings.first { $0.variationIndex == nil }?.number ?? 1,
+                siblingCount: siblings.count
+            )
             let number = moveNumber(ofPly: index + 1)
             if mover(ofPly: index + 1) == .white {
                 rows.append(ScoresheetRow(number: number, white: half, black: nil))

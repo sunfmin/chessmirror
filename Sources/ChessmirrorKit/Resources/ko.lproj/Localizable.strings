@@ -243,6 +243,11 @@
 "record.curve" = "점수 곡선";
 "record.ply" = "%d수째";
 "record.jump" = "이 수로 돌아가기";
+"record.branch" = "위아래로 밀어 변화수 전환";
+"record.fork" = "변화수 전환";
+"record.fork.hint" = "탭하면 다음 변화수로";
+"record.trunk" = "본선 %1$d/%2$d";
+"record.twig" = "변화수 %1$d/%2$d";
 "record.opening" = "시작";
 "record.slipMark" = "여기서 잘못 두었다, %d%% 를 잃는다";
 
