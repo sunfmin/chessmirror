@@ -45,7 +45,7 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     #expect(game.plies[0].hints == 1)
 }
 
-@Test func replacingALineDropsTheRefusalsAtPositionsThatAreGone() throws {
+@Test func branchingALineTakesTheRefusalsPastTheForkWithIt() throws {
     var game = try #require(
         Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"])
     )
@@ -57,12 +57,14 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     #expect(carriedOn)
     #expect(game.pendingTried.map(\.ply) == [1, 3])
 
-    // Playing something else from Ply 1 replaces what followed: the position at Ply 3 no longer
-    // exists, and the refusal at Ply 1 stays for the new move to take.
-    let replaced = game.play(try #require(game.rewound(to: 1)?.state.move(matching: "d7d5")), atPly: 1)
-    #expect(replaced)
+    // Playing something else from Ply 1 branches: the position at Ply 3 is on the line that
+    // left, and the refusal made there rides on the move that stood there (docs/adr/0043). The
+    // refusal at Ply 1 stays for the new move to take.
+    let branched = game.play(try #require(game.rewound(to: 1)?.state.move(matching: "d7d5")), atPly: 1)
+    #expect(branched)
     #expect(game.uciMoves == ["e2e4", "d7d5"])
     #expect(game.pendingTried.map(\.ply) == [1])
+    #expect(game.variations(atPly: 1).first?[2].tried.map(\.san) == ["Qh5"])
 }
 
 @Test func undoingAMoveDropsTheRefusalsPastTheEnd() throws {

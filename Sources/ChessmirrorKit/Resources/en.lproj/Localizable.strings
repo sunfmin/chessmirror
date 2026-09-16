@@ -302,6 +302,11 @@
 "record.curve" = "Evaluation curve";
 "record.ply" = "Ply %d";
 "record.jump" = "Go back to this move";
+"record.branch" = "Swipe up or down to switch lines";
+"record.fork" = "Switch line";
+"record.fork.hint" = "Tap for the next line";
+"record.trunk" = "main line %1$d of %2$d";
+"record.twig" = "branch %1$d of %2$d";
 "record.opening" = "Opening";
 "record.slipMark" = "Went wrong from here, cost %d%%";
 

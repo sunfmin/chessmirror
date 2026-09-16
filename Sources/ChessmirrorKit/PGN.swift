@@ -248,11 +248,15 @@ public struct PGN: Hashable, Sendable {
     /// which is where PGN has always put them, and why a game written here opens in anything
     /// else with its branches intact.
     private static func tokens(
-        for plies: [Game.Ply], from moveNumber: Int, sideToMove: PieceColour
+        for plies: [Game.Ply], from moveNumber: Int, sideToMove: PieceColour,
+        afterTrunk: Bool = true, isVariation: Bool = false
     ) -> [String] {
         var written: [String] = []
         var moveNumber = moveNumber
         var sideToMove = sideToMove
+        // Whether the Ply before the one being written was 树干 — the first Ply of a line
+        // follows the Ply the line branches from, which is what the caller says.
+        var afterTrunk = afterTrunk
 
         for (index, ply) in plies.enumerated() {
             if sideToMove == .white {
@@ -297,9 +301,33 @@ public struct PGN: Hashable, Sendable {
             if ply.hints > 0 {
                 comment.append("[%hint \(ply.hints)]")
             }
+            // Which line is the 树干 (docs/adr/0043). The line a file is written as is the 树干
+            // and a bracketed line is a 树枝 unless the file says otherwise, and it says so only
+            // where that default is wrong: `[%trunk]` on the head of a bracketed line that is
+            // the 树干, `[%branch]` on the Ply where the written line leaves it. Everything after
+            // either inherits, and a reader that knows only the mainline reads a marker it does
+            // not know as nothing, the same as every other comment here.
+            if isVariation, index == 0 {
+                if ply.isTrunk { comment.append("[%trunk]") }
+            } else if !ply.isTrunk, afterTrunk {
+                comment.append("[%branch]")
+            }
             if !comment.isEmpty {
                 written.append("{" + comment.joined(separator: " ") + "}")
             }
+            for variation in ply.variations {
+                // A 分支 stands in for this move, so it is numbered as this move — and it
+                // follows the same Ply this move does.
+                var inner = tokens(
+                    for: variation, from: moveNumber, sideToMove: sideToMove,
+                    afterTrunk: afterTrunk, isVariation: true
+                )
+                guard !inner.isEmpty else { continue }
+                inner[0] = "(" + inner[0]
+                inner[inner.count - 1] += ")"
+                written.append(contentsOf: inner)
+            }
+            afterTrunk = ply.isTrunk
             if sideToMove == .black { moveNumber += 1 }
             sideToMove = sideToMove.opposite
         }
@@ -380,56 +408,98 @@ public struct PGN: Hashable, Sendable {
         let reviewDepth = (tags.first { $0.name == "ReviewDepth" }?.value).flatMap { Int($0) }
         let isReviewed = reviewDepth != nil
         game.setReviewDepth(reviewDepth)
-        // Brackets are skipped whole. PGN has written alternatives in parentheses since 1994 and
-        // files in the wild are full of them — this app does not write one any more (docs/adr/0028)
-        // and has nowhere to put one it reads, so the mainline is read out and the asides are
-        // stepped over. Counted rather than flagged, because they nest.
-        var insideVariation = 0
+        // One frame per open bracket (docs/adr/0043). Moves always go to the innermost one,
+        // which is what makes a 分支 inside a 分支 work without any special handling: it is the
+        // same rule applied one level further in. A frame goes `dead` when something in it will
+        // not read, and a dead frame is dropped whole at its closing bracket: a 分支 is an aside,
+        // and files in the wild carry asides that are not moves at all — refusing to open a game
+        // over one would lose the game to save the footnote.
+        var frames: [(game: Game, branchPoint: Int, dead: Bool)] = [(game, -1, false)]
 
         // Evaluations arrive in comments *after* the move they belong to.
         for token in scanner.readMovetext() {
-            if insideVariation > 0 {
-                switch token {
-                case .variationStart: insideVariation += 1
-                case .variationEnd: insideVariation -= 1
-                default: break
-                }
-                continue
-            }
+            let last = frames.count - 1
             switch token {
             case .move(let san):
-                guard game.apply(san: san) else {
-                    throw ParseError.illegalMove(san, afterPlies: game.plies.count)
+                guard !frames[last].dead else { continue }
+                // The first move of a bracketed line is a 树枝 unless the file says `[%trunk]`
+                // after it; the line the file is written as is the 树干 unless it says
+                // `[%branch]` (docs/adr/0043).
+                let head = last > 0 && frames[last].game.plies.count == frames[last].branchPoint
+                guard frames[last].game.apply(san: san) else {
+                    guard last > 0 else {
+                        throw ParseError.illegalMove(san, afterPlies: frames[last].game.plies.count)
+                    }
+                    frames[last].dead = true
+                    continue
                 }
+                if head { frames[last].game.setBranch(atPly: frames[last].branchPoint) }
             case .evaluation(let score):
+                guard !frames[last].dead else { continue }
                 // A ply index of -1 is a comment standing before the first move, which is
                 // the starting position's Score.
-                game.setEvaluation(score, atPly: game.plies.count - 1, reviewed: isReviewed)
+                frames[last].game.setEvaluation(
+                    score, atPly: frames[last].game.plies.count - 1, reviewed: isReviewed
+                )
             case .tried(let attempt):
-                game.addTried(attempt, atPly: game.plies.count - 1)
+                guard !frames[last].dead else { continue }
+                frames[last].game.addTried(attempt, atPly: frames[last].game.plies.count - 1)
             case .pending(let ply, let attempt):
-                // The position is the token's own, because nothing else in the file names it.
-                var tries = game.pendingTried.first { $0.ply == ply }?.tries ?? []
+                // The position is the token's own, because nothing else in the file names it —
+                // and it names a position on the line the file is written as, whichever bracket
+                // the comment happens to sit in.
+                var tries = frames[0].game.pendingTried.first { $0.ply == ply }?.tries ?? []
                 tries.append(attempt)
-                game.setPendingTried(tries, atPly: ply)
+                frames[0].game.setPendingTried(tries, atPly: ply)
             case .hint(let rungs):
-                game.setHints(rungs, atPly: game.plies.count - 1)
+                guard !frames[last].dead else { continue }
+                frames[last].game.setHints(rungs, atPly: frames[last].game.plies.count - 1)
             case .judgement(let judgement):
-                game.setJudgement(judgement, atPly: game.plies.count - 1)
+                guard !frames[last].dead else { continue }
+                frames[last].game.setJudgement(judgement, atPly: frames[last].game.plies.count - 1)
             case .strength(let strength):
-                game.setStrength(strength, atPly: game.plies.count - 1)
+                guard !frames[last].dead else { continue }
+                frames[last].game.setStrength(strength, atPly: frames[last].game.plies.count - 1)
             case .line(let line):
+                guard !frames[last].dead else { continue }
                 // A Line standing before the first move belongs to the starting position and has
                 // nowhere to go: what reads it is a move's own consequences, and there is no move.
-                game.setLine(line, atPly: game.plies.count - 1, reviewed: isReviewed)
+                frames[last].game.setLine(
+                    line, atPly: frames[last].game.plies.count - 1, reviewed: isReviewed
+                )
+            case .branch:
+                guard !frames[last].dead else { continue }
+                frames[last].game.setBranch(atPly: frames[last].game.plies.count - 1)
+            case .trunk:
+                guard !frames[last].dead else { continue }
+                frames[last].game.setTrunk(atPly: frames[last].game.plies.count - 1)
             case .variationStart:
-                insideVariation = 1
+                // A 分支 is an alternative to the move just read, so it starts from the position
+                // that move was played in.
+                let branchPoint = frames[last].game.plies.count - 1
+                guard !frames[last].dead, branchPoint >= 0,
+                    let rewound = frames[last].game.rewound(to: branchPoint)
+                else {
+                    // Brackets before any move have nothing to be an alternative to. Read them
+                    // into a frame that gets thrown away rather than refusing the file.
+                    frames.append((frames[last].game, -1, true))
+                    continue
+                }
+                frames.append((rewound, branchPoint, false))
             case .variationEnd:
-                // A stray closing bracket. Nothing opened, so nothing closes: files in the wild
-                // carry worse than this, and losing a game to save a footnote is the wrong trade.
-                continue
+                // A stray closing bracket closes nothing: files in the wild carry worse than
+                // this, and losing a game to save a footnote is the wrong trade.
+                guard frames.count > 1 else { continue }
+                let frame = frames.removeLast()
+                guard !frame.dead, frame.branchPoint >= 0,
+                    frame.game.plies.count > frame.branchPoint
+                else { continue }
+                frames[frames.count - 1].game.addVariation(
+                    Array(frame.game.plies[frame.branchPoint...]), atPly: frame.branchPoint
+                )
             }
         }
+        game = frames[0].game
 
         // A file written before 棋力 existed says who the engine was only in the roster, and says
         // nothing per move. Its engine moves were at 满力 — that was the only opponent there was
@@ -482,6 +552,10 @@ private struct Scanner {
         case hint(Int)
         case judgement(Game.Ply.Judgement)
         case strength(Strength)
+        /// `[%branch]`: the move just read leaves the 树干; `[%trunk]`: the bracketed line just
+        /// opened is the 树干 (docs/adr/0043).
+        case branch
+        case trunk
         case variationStart
         case variationEnd
     }
@@ -533,6 +607,8 @@ private struct Scanner {
                 if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
                 if let judgement = Self.judgement(in: comment) { tokens.append(.judgement(judgement)) }
                 if let strength = Self.strength(in: comment) { tokens.append(.strength(strength)) }
+                if comment.contains("[%branch]") { tokens.append(.branch) }
+                if comment.contains("[%trunk]") { tokens.append(.trunk) }
             case ";":
                 _ = read(while: { !$0.isNewline })
             case "(":

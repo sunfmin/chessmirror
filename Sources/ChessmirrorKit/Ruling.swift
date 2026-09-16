@@ -106,10 +106,12 @@ public struct Ruling: Hashable, Sendable {
 
     /// 把关's ruling on a move played in the game.
     ///
-    /// `played` is the game with the move on the end of it, as the board showed it while it was
-    /// weighed; `standpoint` is the 原局 it was played from. A move played from an earlier Ply is
-    /// judged from there, and a refusal puts the reader back where they stood rather than at the
-    /// end of a game they were not looking at.
+    /// `played` is the position the move was played from with the move on the end of it — what
+    /// the engine weighed; `standpoint` is the 原局 it was played from. A move played from an
+    /// earlier Ply is judged from there, and a refusal puts the reader back where they stood
+    /// rather than at the end of a game they were not looking at. A move that stands there lands
+    /// in the 原局 itself, so what followed the old move is kept beside it as a 分支 rather than
+    /// written over (docs/adr/0043).
     public init(
         _ weighed: Weighing?, san: String, played: Game, from standpoint: Standpoint,
         lines: JudgementLines
@@ -130,16 +132,24 @@ public struct Ruling: Hashable, Sendable {
             self.init(verdict: .refused(tried), game: restored, cursor: standpoint.cursor)
             return
         }
-        var standing = played
+        // Into the 原局, at the position the eye stood on: the same act as a move played with
+        // 把关 off, which branches where a line was already there. `played` is only the prefix
+        // the engine saw, and landing it would drop the rest of the game.
+        var standing = standpoint.game
+        let ply = standpoint.cursor
+        guard let landed = played.plies.last, standing.play(uci: landed.uci, atPly: ply) else {
+            self = .unjudged(standpoint)
+            return
+        }
         standing.letStand(
-            atPly: played.plies.count - 1, drop: weighed.drop, score: weighed.after,
+            atPly: ply, drop: weighed.drop, score: weighed.after,
             depth: weighed.depth, lines: lines, best: weighed.isBest
         )
         self.init(
             verdict: .stands(
                 MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
             ),
-            game: standing, cursor: standing.plies.count
+            game: standing, cursor: ply + 1
         )
     }
 
