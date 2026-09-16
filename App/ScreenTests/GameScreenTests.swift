@@ -1,9 +1,9 @@
-import ChessfenKit
+import ChessmirrorKit
 import SwiftUI
 import Testing
 
-@testable import Chessfen
-import ChessfenKitTesting
+@testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// The game screen, photographed.
 ///
@@ -196,7 +196,7 @@ struct GameScreenScreenshots {
     func reopenedGame() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let entry = GameLibrary.Entry(
-            url: URL(filePath: "/games/chessfen-2026-08-12-190000.pgn"),
+            url: URL(filePath: "/games/chessmirror-2026-08-12-190000.pgn"),
             pgn: PGN(game: game, tags: [PGN.Tag("White", "手动"), PGN.Tag("Black", "引擎")]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )
@@ -1007,7 +1007,7 @@ struct GameScreenScreenshots {
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         for ply in [1, 3, 5, 7] { game.setStrength(.elo(2000), atPly: ply) }
         let entry = GameLibrary.Entry(
-            url: URL(filePath: "/games/chessfen-2026-08-12-190000.pgn"),
+            url: URL(filePath: "/games/chessmirror-2026-08-12-190000.pgn"),
             pgn: PGN(game: game, tags: [PGN.Tag("White", "手动"), PGN.Tag("Black", "Stockfish 18")]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )
@@ -1028,8 +1028,8 @@ struct GameScreenScreenshots {
         #expect(setting.strength == .full, "nothing picked yet")
         setting.strength = .elo(2200)
         defer { setting.strength = .full }
-        #expect(UserDefaults.standard.string(forKey: "chessfen.strength") == "2200")
-        #expect(NSUbiquitousKeyValueStore.default.string(forKey: "chessfen.strength") == "2200")
+        #expect(UserDefaults.standard.string(forKey: "chessmirror.strength") == "2200")
+        #expect(NSUbiquitousKeyValueStore.default.string(forKey: "chessmirror.strength") == "2200")
     }
 
     // ------------------------------------------------------------------- glue

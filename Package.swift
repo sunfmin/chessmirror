@@ -36,17 +36,17 @@ let stockfishDefines: [CXXSetting] = [
 ]
 
 let package = Package(
-    name: "chessfen",
+    name: "chessmirror",
     // The language the words were written in first. Every other one falls back to it, and a
     // package with localized resources has to name one (docs/adr/0019).
     defaultLocalization: "zh-Hans",
     platforms: [.iOS("26.0"), .macOS("26.0")],
     products: [
-        .library(name: "ChessfenKit", targets: ["ChessfenKit"]),
+        .library(name: "ChessmirrorKit", targets: ["ChessmirrorKit"]),
         // The fakes at the kit's seams, for any test bundle that drives the real code above them:
         // the package's own tests and the app's screen tests both.
-        .library(name: "ChessfenKitTesting", targets: ["ChessfenKitTesting"]),
-        .executable(name: "chessfen-cli", targets: ["chessfen-cli"]),
+        .library(name: "ChessmirrorKitTesting", targets: ["ChessmirrorKitTesting"]),
+        .executable(name: "chessmirror-cli", targets: ["chessmirror-cli"]),
     ],
     targets: [
         .target(
@@ -59,7 +59,7 @@ let package = Package(
             cxxSettings: stockfishDefines
         ),
         .target(
-            name: "ChessfenKit",
+            name: "ChessmirrorKit",
             dependencies: ["CStockfish"],
             // Eight folders of words, one per language, and every word the app says comes out of
             // them — the screens' as much as the package's own (docs/adr/0019). A folder rather
@@ -67,13 +67,13 @@ let package = Package(
             // compiling it, so a catalog would work in Xcode and say nothing from the terminal.
             resources: [.process("Resources")]
         ),
-        .executableTarget(name: "chessfen-cli", dependencies: ["ChessfenKit"]),
-        .target(name: "ChessfenKitTesting", dependencies: ["ChessfenKit"]),
+        .executableTarget(name: "chessmirror-cli", dependencies: ["ChessmirrorKit"]),
+        .target(name: "ChessmirrorKitTesting", dependencies: ["ChessmirrorKit"]),
         .testTarget(
-            name: "ChessfenKitTests",
+            name: "ChessmirrorKitTests",
             // CStockfish directly, for the seam tests: they feed synthetic info frames to
             // the depth grouper, and a frame is the bridge's own struct.
-            dependencies: ["ChessfenKit", "ChessfenKitTesting", "CStockfish"],
+            dependencies: ["ChessmirrorKit", "ChessmirrorKitTesting", "CStockfish"],
             // Real pictures of real boards, the same ones the app reads: a different
             // piece set, inline coordinates, a highlighted square. Nothing rendered
             // here can stand in for them. The whole folder rather than the three files

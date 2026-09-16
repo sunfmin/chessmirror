@@ -2,7 +2,7 @@
 # A pbxproj is a merge conflict waiting to happen and says nothing a reader wants to
 # read; this says the same thing in twenty lines. Run `xcodegen generate` in ios/App
 # after changing it, or after a fresh clone.
-name: Chessfen
+name: Chessmirror
 options:
   bundleIdPrefix: com.sunfmin
   deploymentTarget:
@@ -10,29 +10,29 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: true
   # The language the app was written in, and the one every other falls back to. The eight it
-  # speaks are the eight `Chessfen/*.lproj` folders below — the words themselves live in the
+  # speaks are the eight `Chessmirror/*.lproj` folders below — the words themselves live in the
   # package (docs/adr/0019); what is here is only what the system reads out of the bundle
   # before the app has run: the name under the icon and the two permission sentences.
   developmentLanguage: zh-Hans
 
 packages:
-  ChessfenKit:
+  ChessmirrorKit:
     path: ..
 
 targets:
-  Chessfen:
+  Chessmirror:
     type: application
     platform: iOS
     sources:
-      - path: Chessfen
+      - path: Chessmirror
       # A folder reference, so both nets land in the bundle as files the engine can be
       # given a path to. They are 112 MiB of the app's size and the reason it can play
       # chess on a plane.
       - path: ../Resources/Nets
         type: folder
     dependencies:
-      - package: ChessfenKit
-        product: ChessfenKit
+      - package: ChessmirrorKit
+        product: ChessmirrorKit
       # Embedded, which is how an app gets into other apps' share sheets.
       - target: ShareExtension
     # A shared scheme, so `xcodebuild test` finds the screenshots from a terminal rather than
@@ -41,7 +41,7 @@ targets:
       testTargets:
         - ScreenTests
     info:
-      path: Chessfen/Info.plist
+      path: Chessmirror/Info.plist
       properties:
         CFBundleDisplayName: 棋镜
         # XcodeGen's own defaults for these two are the literals `1.0` and `1`, so the build
@@ -74,14 +74,14 @@ targets:
         # A shortcut, not the handoff: the picture is in the app group either way
         # (docs/adr/0033).
         CFBundleURLTypes:
-          - CFBundleURLName: com.sunfmin.chessfen
+          - CFBundleURLName: com.sunfmin.chessmirror
             CFBundleURLSchemes:
-              - chessfen
+              - chessmirror
         # What makes the container a folder in the Files app rather than a hidden one. iOS reads
         # this once, when it first sets the container up, so changing the name here only takes
         # on a device that has never run the app — or after CFBundleVersion goes up.
         NSUbiquitousContainers:
-          iCloud.com.sunfmin.chessfen:
+          iCloud.com.sunfmin.chessmirror:
             NSUbiquitousContainerIsDocumentScopePublic: true
             NSUbiquitousContainerName: 棋镜
             NSUbiquitousContainerSupportedFolderLevels: Any
@@ -89,24 +89,24 @@ targets:
     # app's shape is described. The container is named once, and `GameFolder` asks for "the
     # first container this app is entitled to" rather than naming it a second time.
     entitlements:
-      path: Chessfen/Chessfen.entitlements
+      path: Chessmirror/Chessmirror.entitlements
       properties:
         com.apple.developer.icloud-services:
           - CloudDocuments
         com.apple.developer.icloud-container-identifiers:
-          - iCloud.com.sunfmin.chessfen
+          - iCloud.com.sunfmin.chessmirror
         com.apple.developer.ubiquity-container-identifiers:
-          - iCloud.com.sunfmin.chessfen
+          - iCloud.com.sunfmin.chessmirror
         # The settings that travel — one small key-value store, keyed to this app.
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
         # The one folder the share extension and the app can both see. Named here and in
         # `SharedInbox.groupIdentifier`, which is the only other place it is spelled.
         com.apple.security.application-groups:
-          - group.com.sunfmin.chessfen
+          - group.com.sunfmin.chessmirror
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen
-        # Drawn by `swift run chessfen-cli icon <path>` from the same knight the app puts on
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessmirror
+        # Drawn by `swift run chessmirror-cli icon <path>` from the same knight the app puts on
         # the board, so the icon can be rebuilt rather than only replaced.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0"
@@ -133,10 +133,10 @@ targets:
       - path: ShareExtension
       # The app's colours, so the sheet is recognisably this app rather than a system grey
       # panel. The one file it borrows; everything else it needs is in the kit.
-      - path: Chessfen/Palette.swift
+      - path: Chessmirror/Palette.swift
     dependencies:
-      - package: ChessfenKit
-        product: ChessfenKit
+      - package: ChessmirrorKit
+        product: ChessmirrorKit
     info:
       path: ShareExtension/Info.plist
       properties:
@@ -153,10 +153,10 @@ targets:
       path: ShareExtension/ShareExtension.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.sunfmin.chessfen
+          - group.com.sunfmin.chessmirror
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen.share
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessmirror.share
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "2"
         DEVELOPMENT_TEAM: HL27PWAKDF
@@ -168,23 +168,23 @@ targets:
 
   # The screens, drawn into PNGs by the real app code and checked for what they must show.
   # Hosted by the app rather than standing alone, because what it renders is the app's own
-  # views and it reaches them with `@testable import Chessfen`.
+  # views and it reaches them with `@testable import Chessmirror`.
   ScreenTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - path: ScreenTests
     dependencies:
-      - target: Chessfen
+      - target: Chessmirror
       # The kit's own fakes, so the screen tests drive the same scripted engine the kit tests do.
-      - package: ChessfenKit
-        product: ChessfenKitTesting
+      - package: ChessmirrorKit
+        product: ChessmirrorKitTesting
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen.screentests
+        PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessmirror.screentests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "6.0"
         SWIFT_APPROACHABLE_CONCURRENCY: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Chessfen.app/Chessfen
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Chessmirror.app/Chessmirror
         BUNDLE_LOADER: $(TEST_HOST)

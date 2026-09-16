@@ -1,10 +1,10 @@
-import ChessfenKit
+import ChessmirrorKit
 import Foundation
 import SwiftUI
 import Testing
 
-@testable import Chessfen
-import ChessfenKitTesting
+@testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// The first screen, photographed: the ways a board gets into this app.
 ///
@@ -48,7 +48,7 @@ struct LibraryScreenScreenshots {
 
     private func tempDir() -> URL {
         URL(filePath: NSTemporaryDirectory())
-            .appending(path: "chessfen-library-\(UUID().uuidString)", directoryHint: .isDirectory)
+            .appending(path: "chessmirror-library-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
     /// An empty library. What it has to show is every door a picture can come through — the
@@ -253,7 +253,7 @@ struct LibraryScreenScreenshots {
 struct BookScreenshots {
     private func tempDir() -> URL {
         URL(filePath: NSTemporaryDirectory())
-            .appending(path: "chessfen-book-\(UUID().uuidString)", directoryHint: .isDirectory)
+            .appending(path: "chessmirror-book-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
     /// Two games on disk that reach the same position by different move orders, and throw it

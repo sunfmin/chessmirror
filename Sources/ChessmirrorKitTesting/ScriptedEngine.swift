@@ -1,0 +1,94 @@
+import ChessmirrorKit
+import Synchronization
+
+/// An engine that reports what it was told to report.
+///
+/// The seam is the search and nothing above it (see `Engine`): a screen driven by this one runs
+/// the real `retune`, the real `record`, the real Score written against the real ply — what is
+/// faked is only the one thing in the app that cannot be asked twice for the same answer.
+///
+/// One fake, in a library both test bundles import. There used to be two copies — the kit's and
+/// the screen tests' — because a test bundle cannot import another, and the two had drifted:
+/// the screen tests' could not script a budget or say which positions it had been asked about.
+public final class ScriptedEngine: Engine {
+    public let positionSearches = PositionSearches()
+    /// The snapshots every search reports, in order, deepest last — a real search deepens, and a
+    /// screen that redraws on each snapshot should be made to do it.
+    private let snapshots: [Analysis]
+    /// Whether the search ever finishes. A search that ends is a search that has answered, which
+    /// is what an engine holding a Controller does; leaving it open is what being thought *about*
+    /// looks like.
+    private let isEndless: Bool
+    private let paused = Mutex(false)
+    /// Every search that has been asked for, and the clock it was given.
+    ///
+    /// How many there have been matters because the real engine answers a second request by
+    /// throwing the first one away, which looks the same from a screen and not at all the same
+    /// from a phone. What each was given matters because time is the only dial the app has: a
+    /// budget is the whole of how hard the engine was asked to play (docs/adr/0009).
+    private let asked = Mutex<[SearchBudget]>([])
+    private let askedLines = Mutex<[Int]>([])
+    /// The 棋力 each search was bound to. What a test of the bound asserts on, because which
+    /// move a bound engine plays is a seeded random (docs/adr/0038).
+    private let askedStrengths = Mutex<[Strength]>([])
+    public var strengths: [Strength] { askedStrengths.withLock { $0 } }
+    private let askedPositions = Mutex<[String]>([])
+    public var positions: [String] { askedPositions.withLock { $0 } }
+
+    /// Every search asked for so far, in order, each with the clock it was given.
+    public var budgets: [SearchBudget] { asked.withLock { $0 } }
+
+    /// The candidate-line count each of those searches was asked for.
+    public var lines: [Int] { askedLines.withLock { $0 } }
+
+    public var searchCount: Int { budgets.count }
+
+    /// An opinion per position, keyed by FEN, for the searches that are *about* particular
+    /// positions rather than about deepening: a study asks three questions of three positions and
+    /// has to get three answers.
+    private let byPosition: [String: Analysis]
+    private let byBudget: [SearchBudget: [Analysis]]
+    private let controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)?
+
+    public init(
+        _ snapshots: [Analysis], isEndless: Bool = false, byPosition: [String: Analysis] = [:],
+        byBudget: [SearchBudget: [Analysis]] = [:],
+        controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)? = nil
+    ) {
+        self.snapshots = snapshots
+        self.isEndless = isEndless
+        self.byPosition = byPosition
+        self.byBudget = byBudget
+        self.controlled = controlled
+    }
+
+    public var isPaused: Bool { paused.withLock { $0 } }
+    public func pause() { paused.withLock { $0 = true } }
+    public func resume() { paused.withLock { $0 = false } }
+
+    public func analyse(
+        _ game: Game, budget: SearchBudget, lines: Int, strength: Strength
+    ) -> AsyncStream<Analysis> {
+        asked.withLock { $0.append(budget) }
+        askedLines.withLock { $0.append(lines) }
+        askedStrengths.withLock { $0.append(strength) }
+        askedPositions.withLock { $0.append(game.state.fen) }
+        if let stream = controlled?(game, budget) { return stream }
+        let scripted = byBudget[budget] ?? byPosition[game.state.fen].map { [$0] } ?? snapshots
+        let reachedDepth: Bool
+        if case .timeOrDepth = budget {
+            reachedDepth = true
+        } else if case .depth(let target) = budget {
+            reachedDepth = scripted.contains { $0.depth >= target }
+        } else {
+            reachedDepth = false
+        }
+        let isEndless = byPosition[game.state.fen] == nil && self.isEndless && !reachedDepth
+        return AsyncStream { continuation in
+            for snapshot in scripted { continuation.yield(snapshot) }
+            // An endless search never finishes on its own: it ends when the stream goes away,
+            // which is the one way the real engine ends one too.
+            if !isEndless { continuation.finish() }
+        }
+    }
+}

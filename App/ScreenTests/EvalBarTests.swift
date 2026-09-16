@@ -1,10 +1,10 @@
-import ChessfenKit
+import ChessmirrorKit
 import SwiftUI
 import Testing
 import UIKit
 
-@testable import Chessfen
-import ChessfenKitTesting
+@testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// The advantage bar, from both ways up.
 ///

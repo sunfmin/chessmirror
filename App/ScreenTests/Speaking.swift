@@ -1,4 +1,4 @@
-import ChessfenKit
+import ChessmirrorKit
 import Testing
 
 /// A suite whose assertions are about words: it names the language they are in.

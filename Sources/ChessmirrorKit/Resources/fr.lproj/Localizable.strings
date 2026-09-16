@@ -1,0 +1,467 @@
+/* Chessmirror — français. Traduit du zh-Hans, la langue d'origine. Mêmes clés, même ordre.
+   Les clés « .one » sont le singulier, que le français prend aussi à zéro. */
+
+"colour.white" = "Blancs";
+"colour.black" = "Noirs";
+
+"piece.pawn" = "Pion";
+"piece.knight" = "Cavalier";
+"piece.bishop" = "Fou";
+"piece.rook" = "Tour";
+"piece.queen" = "Dame";
+"piece.king" = "Roi";
+
+"controller.hand" = "À la main";
+"controller.engine" = "Moteur";
+
+"outcome.ongoing" = "En cours";
+"outcome.checkmate" = "Échec et mat";
+"outcome.stalemate" = "Pat";
+"outcome.fiftyMove" = "Nulle par la règle des cinquante coups";
+"outcome.threefold" = "Nulle par triple répétition";
+"outcome.insufficientMaterial" = "Nulle — matériel insuffisant";
+
+"origin.fresh" = "Posée";
+"origin.recognised" = "Photographiée";
+"origin.imported" = "Importée";
+
+"quality.blunder" = "Gaffe";
+"quality.mistake" = "Erreur";
+"quality.inaccuracy" = "Imprécision";
+"quality.fine" = "Correct";
+
+"verb.take" = "Prendre";
+"verb.trade" = "Échanger";
+"verb.attack" = "Attaquer";
+"verb.defend" = "Défendre";
+"verb.flee" = "Fuir";
+"verb.block" = "Bloquer";
+"verb.hold" = "Occuper";
+"intent.unclear" = "Je ne sais pas";
+
+
+"list.separator" = ", ";
+"clause.separator" = " ; ";
+"sentence.end" = ".";
+
+"game.toMove" = "Aux %@ de jouer";
+"game.checkmated" = "%@ : échec et mat";
+"board.shaky" = "%d cases cerclées d'orange restent douteuses";
+"board.shaky.one" = "%d case cerclée d'orange reste douteuse";
+
+"fen.malformed" = "Cette position est illisible";
+"fen.badPieceCharacter" = "Une pièce n'est pas reconnue";
+"fen.badRankWidth" = "Une rangée n'a pas 8 cases";
+"fen.badRankCount" = "Il n'y a pas 8 rangées";
+"fen.tooManyPieces" = "Trop de pièces";
+"fen.tooManyPawns" = "Trop de pions";
+"fen.missingKing" = "Il manque un roi — un par camp";
+"fen.extraKing" = "Trop de rois — un seul par camp";
+"fen.pawnOnBackRank" = "Un pion ne peut pas être sur la première ni la huitième rangée";
+"fen.badSideToMove" = "Le trait n'est pas indiqué";
+"fen.badCastling" = "Les droits de roque sont faux";
+"fen.castlingWithoutRook" = "Le roque est annoncé, mais la tour n'est pas dans son coin";
+"fen.castlingWithoutKing" = "Le roque est annoncé, mais le roi n'est pas à sa case";
+"fen.badEnPassant" = "La case de prise en passant est fausse";
+"fen.badClock" = "Le compte des coups est faux";
+"fen.sideNotToMoveInCheck" = "Le camp qui n'a pas le trait est en échec, ce qui est impossible";
+
+"engine.networkMissing" = "Le fichier du réseau de neurones est introuvable : le moteur ne peut pas démarrer.";
+"engine.networkTooSmall" = "Le fichier du réseau est incomplet : le moteur ne peut pas démarrer.";
+"engine.allocationFailed" = "Mémoire insuffisante : le moteur ne peut pas démarrer.";
+"engine.unknown" = "Le moteur n'a pas démarré.";
+
+"intake.unreadable.title" = "Image illisible";
+"intake.unreadable.message" = "Cette image ne s'ouvre pas.";
+"intake.noBoard.title" = "Aucun échiquier trouvé";
+"intake.noBoard.message" = "Il n'y a pas d'échiquier sur cette image. Cadrez-le plus large, ou photographiez-le de face.";
+
+"library.entry.downloading" = "Téléchargement depuis iCloud…";
+"library.entry.unreadable" = "Illisible";
+"library.entry.moves" = "%d coups";
+"library.entry.moves.one" = "%d coup";
+"library.entry.unfinished" = "Inachevée";
+"library.entry.branches.one" = "%d variante";
+
+"check.take.notHere" = "ce coup ne prend rien en %@";
+"check.take.won" = "prendre en %@ a gagné du matériel";
+"check.take.notWorth" = "l'échange en %@ ne paie pas : la reprise ne coûte rien à l'adversaire";
+"check.trade.notHere" = "ce coup n'échange rien en %@";
+"check.trade.losing" = "l'échange en %@ perd du matériel";
+"check.trade.affordable" = "l'échange en %@ est acceptable";
+"check.attack.noPiece" = "il n'y a aucune pièce adverse en %@";
+"check.attack.noNewThreat" = "ce coup n'ajoute aucun attaquant sur %@";
+"check.attack.defended" = "l'adversaire tient %1$@ : %2$d attaquants, %3$d défenseurs";
+"check.attack.held" = "la pièce en %@ est attaquée et ne peut pas être tenue";
+"check.defend.held" = "les défenseurs de %1$@ passent de %2$d à %3$d";
+"check.defend.unchanged" = "%1$@ n'a pas gagné de défenseur — toujours %2$d";
+"check.flee.noAttacker" = "il n'y avait aucune pièce adverse en %@ au départ";
+"check.flee.notHanging" = "%1$@ ne pendait pas : %2$d attaquants, %3$d défenseurs";
+"check.flee.stillTaken" = "en %@ elle est prise tout autant";
+"check.flee.held" = "elle a fui %2$@ en quittant %1$@";
+"check.block.notThere" = "ce coup ne va pas en %@";
+"check.block.nothing" = "aller en %@ ne bloque rien";
+"check.block.held" = "bloquer en %1$@ enlève ce coup de %2$@";
+"check.hold.notYours" = "%1$@ n'est pas encore à vous : %2$d contre %3$d";
+"check.hold.held" = "la lutte pour %1$@ passe de %2$d à %3$d — elle est à vous";
+"check.hold.unchanged" = "%@ était déjà à vous ; ce coup n'a rien changé";
+
+"import.notALink.title" = "Ce n'est pas un lien";
+"import.notALink.message" = "Il faut une adresse web, par exemple un lien vers une étude lichess publique.";
+"import.privateStudy.title" = "Cette étude est privée";
+"import.privateStudy.message" = "Elle n'est pas publique, donc impossible à télécharger. Seules les études publiques peuvent être importées.";
+"import.privateGame.title" = "Cette partie est privée";
+"import.privateGame.message" = "lichess indique que cette partie n'est pas publique : impossible de la télécharger.";
+"import.missingGame.title" = "Partie introuvable";
+"import.missingGame.message" = "lichess n'a pas cette partie — le lien est peut-être faux, ou la partie a été supprimée.";
+"import.unknownPlayer.title" = "Utilisateur inconnu";
+"import.unknownPlayer.message" = "lichess ne connaît pas ce nom d'utilisateur. La casse n'a pas d'importance, l'orthographe si.";
+"import.notAPlayer.title" = "Ce n'est pas un nom d'utilisateur";
+"import.notAPlayer.message" = "Entrez un nom d'utilisateur lichess, comme DrNykterstein.";
+"import.notPGN.title" = "Ce n'est pas une partie";
+"import.notPGN.message" = "Ce que ce lien télécharge n'est pas un fichier PGN.";
+"import.noReadableGames.title" = "Aucune partie lisible";
+"import.noReadableGames.message" = "Rien de ce qui a été téléchargé n'a pu être lu.";
+"import.http.title" = "Échec du téléchargement";
+"import.http.message" = "Le serveur a répondu HTTP %d.";
+"import.network.title" = "Pas de connexion";
+"import.network.message" = "Le réseau a échoué pendant le téléchargement : %@";
+"import.network.notHTTP" = "réponse non HTTP";
+
+"import.done" = "%d parties importées";
+"import.done.one" = "%d partie importée";
+"import.done.skipped" = "%d déjà présentes ignorées";
+"import.done.skipped.one" = "%d déjà présente ignorée";
+"import.done.unreadable" = "%d autres illisibles";
+"import.done.unreadable.one" = "%d autre illisible";
+"import.name.players" = "%1$@ contre %2$@";
+"import.name.chapter" = "Chapitre %d";
+
+"ok" = "OK";
+"cancel" = "Annuler";
+"done" = "Terminé";
+"retry" = "Réessayer";
+"rename" = "Renommer";
+"delete" = "Supprimer";
+"board" = "Échiquier";
+
+"app.name" = "Chessmirror";
+"app.mark" = "棋镜";
+
+"standing.bar" = "Barre d'évaluation";
+"standing.unknown" = "Inconnu";
+"standing.won" = "%@ gagnent";
+"standing.drawn" = "Nulle";
+
+"camera.denied" = "Photographier un échiquier demande l'appareil photo. Activez-le dans Réglages – Chessmirror.";
+"camera.missing" = "Aucun appareil photo disponible sur cet appareil. Choisissez plutôt une image dans vos albums ou vos fichiers.";
+"camera.lens.macro" = "Macro";
+"camera.lens.standard" = "Standard";
+
+"library.engineStarting" = "Moteur en démarrage";
+"library.tagline" = "Photographiez l'échiquier, et continuez la partie.";
+"library.photograph" = "Photographier";
+"library.fromAlbum" = "Depuis les albums";
+"library.paste" = "Coller une capture";
+"library.fromFiles" = "Depuis les fichiers";
+"library.fromStart" = "Partir de la position initiale";
+"library.games" = "Parties";
+"library.empty" = "Jouez un coup et la partie s'inscrira ici.";
+"library.recognising" = "Lecture de l'échiquier";
+"library.noPicture" = "Image inaccessible";
+"library.noClipboard.title" = "Aucune image dans le presse-papiers";
+"library.noClipboard.message" = "Prenez une capture d'écran et revenez.";
+
+"collection.games.one" = "%d partie";
+"collection.sorted.one" = "%d partie · par nom";
+
+"game.name.title" = "Nommer cette partie";
+"game.name.field" = "Nom";
+"game.name.explained" = "Un recueil est trié par nom : « Exercice 002 » se rangera là où vous l'attendez. Laissez vide pour utiliser l'heure d'enregistrement.";
+
+"habits.clean.one" = "%d partie comptée, aucun vieux réflexe trouvé.";
+"habits.counted.one" = "%d partie comptée.";
+"habits.excluded.one" = "%1$d autre partie %2$@, non comptée.";
+"habits.times.one" = "%d fois";
+
+"edit.title" = "Corriger les pièces";
+"edit.seePhoto" = "Voir la photo";
+"edit.advanced.show" = "Roque et prise en passant";
+"edit.advanced.hide" = "Masquer roque et prise en passant";
+"edit.copyFEN" = "Copier la FEN";
+"edit.reset" = "Position initiale";
+"edit.clear" = "Vider l'échiquier";
+"edit.photo" = "Photo";
+"edit.photo.off" = "Sans";
+"edit.photo.under" = "En dessous";
+"edit.photo.alone" = "Photo seule";
+"edit.peek" = "Maintenir";
+"edit.hint.photo" = "C'est la photo elle-même ; toucher ne change rien";
+"edit.hint.pick" = "Choisissez d'abord une pièce, puis touchez une case";
+"edit.hint.erase" = "Touchez une case pour enlever la pièce";
+"edit.hint.place" = "Touchez pour poser ; retouchez la même case pour enlever";
+"edit.castling" = "Roque";
+"edit.castling.K" = "Blancs O-O";
+"edit.castling.Q" = "Blancs O-O-O";
+"edit.castling.k" = "Noirs O-O";
+"edit.castling.q" = "Noirs O-O-O";
+"edit.enPassant" = "Prise en passant";
+"edit.none" = "Aucune";
+"edit.useThis" = "Utiliser cette position";
+"edit.startGame" = "Commencer une partie";
+
+"import.title" = "Importer des parties";
+"import.door.link" = "Lien";
+"import.door.player" = "Parties récentes";
+"import.door.link.explained" = "Collez un lien — une étude lichess, ou une seule partie — et chaque partie qu'il contient devient une partie de la liste.";
+"import.door.player.explained" = "Entrez un nom d'utilisateur lichess pour récupérer ses dernières parties. À faire avant de monter dans l'avion.";
+"import.field.link" = "Lien PGN";
+"import.field.player" = "Nom d'utilisateur lichess";
+"import.howMany" = "Combien";
+"import.fetch" = "Récupérer";
+"import.fetching" = "Téléchargement…";
+"import.writing" = "Écriture…";
+"import.plan.games" = "%d parties";
+"import.plan.games.one" = "%d partie";
+"import.more.one" = "%d autre…";
+"import.unreadable" = "%d parties illisibles seront ignorées.";
+"import.unreadable.one" = "%d partie illisible sera ignorée.";
+"import.apply.one" = "Importer %d partie";
+"import.again" = "Importer autre chose";
+
+"game.undo" = "Reprendre le coup";
+"game.depth" = "Profondeur %d";
+"game.rescore" = "Renoter la partie";
+"game.sound" = "Son";
+"game.exportPGN" = "Exporter le PGN";
+"game.restart.explained" = "Changer le trait recommence une partie ; celle-ci reste dans vos archives";
+"game.whiteFirst" = "Les Blancs commencent";
+"game.blackFirst" = "Les Noirs commencent";
+"game.more" = "Plus ; les %@ commencent";
+"game.promotion" = "Promouvoir en quoi ?";
+"game.noEngine" = "Sans moteur";
+"game.toPlay" = "Au trait";
+"game.inCheck" = "En échec";
+"game.moveNow" = "Joue maintenant";
+"game.letEngine" = "Fais jouer";
+"game.letEngine.hint" = "Maintenez pour une recherche plus profonde ; relâchez et il joue";
+"game.willPlay" = "Jouera %@";
+"game.suggests" = "Essayez %@";
+"game.hold.deeper" = "Plus vous maintenez, plus il cherche loin";
+"game.hold.progress" = "%1$.1f s · prof. %2$d";
+"game.settings.expand" = "Ouvrir les réglages des %@";
+"game.settings.collapse" = "Fermer les réglages des %@";
+"game.who" = "Joué par";
+"game.perMove" = "Par coup";
+"game.flip" = "Retourner l'échiquier";
+
+"record.previous" = "Coup précédent";
+"record.next" = "Coup suivant";
+"record.latest" = "Revenir au dernier";
+"record.curve" = "Courbe d'évaluation";
+"record.ply" = "Demi-coup %d";
+"record.jump" = "Revenir à ce coup";
+"record.opening" = "Départ";
+"record.slipMark" = "Mauvais coup depuis ici, coûte %d%%";
+
+"about" = "À propos";
+"about.what" = "Photographiez un échiquier, lisez la position, continuez la partie. La reconnaissance et le moteur tournent sur cet appareil ; les parties sont enregistrées dans votre propre iCloud. Rien n'est téléchargé, sauf quand vous importez une partie depuis un lien.";
+"about.language" = "Langue";
+"about.language.system" = "Suivre le téléphone";
+"about.language.explained" = "Toute l'app change d'un coup, et le choix vous suit sur vos autres appareils. Les parties enregistrées ne changent pas.";
+"about.version" = "Version";
+"about.engine" = "Moteur";
+"about.engineStatus" = "État du moteur";
+"about.ready" = "Prêt";
+"about.starting" = "Démarrage";
+"about.storage" = "Stockage";
+"about.storedIn" = "Parties conservées dans";
+"about.iCloud" = "iCloud Drive";
+"about.thisDevice" = "Cet appareil";
+"about.storage.cloud" = "Chaque partie est un fichier PGN dans le dossier « Chessmirror » d'iCloud Drive, que l'app Fichiers peut ouvrir, copier ou supprimer directement. Les modifications se synchronisent avec vos autres appareils connectés au même compte Apple.";
+"about.storage.local" = "Chaque partie est un fichier PGN, et pour l'instant elles ne sont que sur cet appareil. Activez Réglages → Compte Apple → iCloud Drive et les parties déjà là passeront dans iCloud, synchronisées avec vos autres appareils.";
+"about.licence" = "Licence";
+"about.source" = "Code source";
+"about.licence.explained" = "Cette app embarque Stockfish, publié sous licence GNU GPL v3 ; l'app entière est donc elle aussi en GPL v3 : vous pouvez l'utiliser, l'étudier, la modifier et la redistribuer librement, à condition de transmettre le code source et la même licence avec elle. Le texte complet de la licence est dans le fichier LICENSE du dépôt.\n\nLes graphiques des pièces viennent du jeu Cburnett de python-chess (CC BY-SA 3.0).";
+
+/* ------------------------------------------------------------ partagé */
+"share.reading" = "Réception de l'image";
+"share.kept.title" = "Bien reçue";
+"share.kept.message" = "Ouvrez 棋镜, la position y est.";
+"share.open" = "Ouvrir 棋镜";
+
+/* ------------------------------------------------------------ le compte */
+"settle.took" = "On vous a offert %d%% et vous l'avez pris.";
+"settle.missed" = "On vous a offert %1$d%%, vous en gardez %2$d%%, vous en laissez %3$d%%.";
+
+/* ------------------------------------------------------------ les seuils */
+"lines" = "Seuils";
+"lines.record" = "La noter";
+"lines.enqueue" = "La travailler";
+"lines.explained" = "Ce qu'un coup doit céder pour compter. Au-delà du premier il est noté dans la partie ; au-delà du second il prend aussi du temps de travail, donc celui-ci doit être plus haut. Près de l'égalité, un pion vaut à peu près 10%.";
+
+/* ------------------------------------------------------------ le carnet */
+"book" = "Erreurs";
+"book.empty" = "Rien encore. Les positions que vous ratez arrivent toutes seules.";
+"book.fell" = "Vous êtes tombé %d fois sur cette position";
+"book.played" = "%1$d fois %2$@";
+"book.lastTime" = "la dernière fois %@";
+"book.cost" = "coûte %d%%";
+"book.times" = "%d fois";
+"book.remove" = "La retirer du carnet";
+"book.encounters" = "Fois";
+"ago.days" = "il y a %d jours";
+"ago.hours" = "il y a %d heures";
+"ago.justNow" = "à l'instant";
+"book.items" = "%d positions";
+"book.yourMove" = "vous avez joué";
+"book.better" = "il fallait jouer";
+"book.items.one" = "%d position";
+"book.fell.one" = "Vous êtes tombé %d fois dans cette position";
+"book.times.one" = "%d fois";
+"ago.days.one" = "il y a %d jour";
+"ago.hours.one" = "il y a %d heure";
+
+/* ------------------------------------------------------------ one drill */
+"drill" = "S'entraîner";
+"drill.prompt" = "À vous de jouer";
+"drill.judging" = "Calcul de ce que ça a coûté";
+"drill.passed" = "%1$@. Ça tient.";
+"drill.failed" = "%1$@. Ça concède %2$d%%.";
+"drill.failed.wanted" = "%1$@. Ça concède %2$d%%. Il fallait jouer %3$@.";
+"drill.move" = "%1$@ — %2$@";
+"drill.held" = "Ça tient";
+"drill.dropped" = "Ça lâche";
+"drill.keepPlaying" = "Continuer la partie";
+"drill.leave" = "Quitter";
+"drill.next" = "Suivante";
+"drill.seconds" = "%d secondes";
+"drill.seconds.one" = "%d seconde";
+"drill.noEngine" = "Le moteur n'est pas encore prêt, ce coup ne peut pas être jugé.";
+
+/* ---------------------------------------------------------------- the day */
+"daily" = "Aujourd'hui";
+"daily.left" = "%d restantes";
+"daily.left.one" = "%d restante";
+"daily.done" = "Terminé pour aujourd'hui";
+"daily.none" = "Rien à travailler aujourd'hui";
+"till.start" = "Commencer sans faute";
+"till.name" = "Sans faute";
+"till.practice" = "Pratique";
+"till.intercept" = "Seuil de refus";
+"till.off" = "Désactivé";
+"till.judging" = "Calcul en cours";
+"till.refused" = "%@ coûte %d%%. Réessayez.";
+"till.hint" = "Indice %d";
+"till.reveal" = "Révéler la réponse";
+"till.relax" = "Assouplir à %d%%";
+"till.shot" = "Il y a une possibilité tactique.";
+"till.quiet" = "Aucune tactique confirmée. Améliorez votre position.";
+"till.notFound" = "Non trouvée";
+"punish.toggle" = "Trouver la réponse adverse";
+"punish.prompt" = "Jouez pour l’adversaire et trouvez sa meilleure réponse.";
+"punish.again" = "Il existe une meilleure réponse. Réessayez.";
+"punish.skip" = "Passer";
+"punish.answer" = "Votre adversaire peut jouer %@.";
+"import.status.new" = "Non importée";
+"import.status.pending" = "En attente · ouvrir pour réessayer";
+"import.status.scoring" = "Évaluation en cours";
+"import.status.ready" = "%d erreurs ajoutées";
+"mate.ours" = "Vous avez mat en %d";
+"mate.theirs" = "L’adversaire a mat en %d";
+"mate.colour" = "%@ a mat en %d";
+"mate.noLine" = "Le moteur annonce mat en %d sans donner de coups.";
+"mate.you" = "Vous";
+"mate.opponent" = "L’adversaire";
+"mate.opens" = "%@ commence par %@";
+"mate.unavoidable" = "%@ ne peut pas éviter le mat";
+"mate.bestTry" = "le meilleur essai est %@";
+"mate.onlyReply" = "%@ n’a qu’une réponse";
+"mate.allForced" = "%@ n’a qu’une réponse à chaque étape";
+"mate.someForced" = "%@ a %d réponses forcées dans la variante";
+"mate.ends" = "%@ fait mat";
+"mate.shortLine" = "la variante s’arrête après %d demi-coups, avant le mat";
+"mate.white" = "Les Blancs";
+"mate.black" = "Les Noirs";
+"search.reached" = "Atteint";
+"search.depth" = "Profondeur";
+"search.starting" = "Démarrage";
+"search.again" = "Analyser encore 10 secondes";
+"intent.goal.attack" = "Attaquer";
+"intent.goal.defend" = "Défendre";
+"intent.goal.trade" = "Échanger";
+"intent.goal.hold" = "Occuper";
+"intent.sequence" = "%@ ; %@ puis %@";
+"intent.later" = "%@ puis %@";
+"intent.laterGoal" = "%@ puis %@ : %@";
+"intent.ahead" = "dans %d demi-coups, %@";
+"tactic.mate" = "%@ fait mat";
+"tactic.piece" = "pièce";
+"tactic.hanging" = "%1$@ prend la pièce %3$@ non défendue en %2$@";
+"tactic.capture" = "%1$@ prend la pièce %3$@ en %2$@ avec gain";
+"tactic.target" = "%2$@ en %1$@";
+"tactic.and" = " et ";
+"tactic.fork" = "%@ attaque à la fois %@";
+"screen.opinion" = "Avis du moteur";
+"screen.on" = "Activé";
+"screen.stopFinder" = "Arrêter la recherche";
+"screen.find" = "Chercher une tactique";
+"screen.finder" = "Recherche tactique";
+"screen.finderIdle" = "Pas encore analysé. Chercher une tactique vérifie tactiques et mats.";
+"screen.hideArrows" = "Masquer les flèches";
+"screen.showArrows" = "Dessiner sur l’échiquier";
+"screen.arrowLimit" = "Seuls les %d premiers demi-coups sont dessinés pour rester lisibles.";
+"screen.arrowsExplained" = "Les flèches utilisent la variante existante, sans jouer ni relancer l’analyse.";
+"screen.finished" = "La partie est terminée ; aucun coup suivant.";
+"screen.noMate" = "Aucun mat forcé proche trouvé pour les deux camps.";
+"screen.mateIdle" = "Cette carte analyse 10 secondes et signale tout mat trouvé.";
+"screen.spokenMove" = "Demi-coup %d %@";
+"screen.mate" = "Mat";
+"screen.tactics" = "Tactiques";
+"screen.mateSubtitle" = "Un mat forcé peut être proche";
+"screen.tacticsSubtitle" = "Un coup permet-il de gagner du matériel ?";
+"finder.checking" = "Recherche de tactiques";
+"finder.ours" = "Vous avez une tactique";
+"finder.theirs" = "L’adversaire a une tactique";
+"finder.none" = "Pas de tactique sur ce coup";
+"import.trackSide" = "Quel camp suivre dans le carnet d’erreurs ?";
+"discovery.checking" = "Vérification…";
+"discovery.none" = "Rien de trouvé";
+"discovery.view" = "Voir";
+"discovery.mateFound" = "Mat trouvé";
+"discovery.tacticFound" = "Occasion tactique trouvée";
+"board.faceToFace" = "Face à face";
+"till.returned" = "Reprise";
+"book.recorded" = "%d ajoutés au carnet d’erreurs";
+"standing.change" = "Variation de probabilité pour ce coup %@";
+"tried.reply" = "La réponse qu’il provoque";
+"tried.reply.hint" = "Voir la réponse que ce coup provoque";
+"tried.reply.none" = "Ce coup ne laisse aucune réponse à montrer.";
+"tried.rejudge" = "Calculer jusqu’à la profondeur %d";
+"tried.rejudge.hint" = "Juger ce coup plus en profondeur pour que son coût soit fiable";
+"slips.next" = "Erreur suivante";
+"slips.next.hint" = "Aller au coup fautif suivant";
+"slips.hint" = "Y aller et rejouer ce coup";
+"slips.here" = "%d positions ratées";
+"slips.wrong" = "%d coups fautifs";
+"library.wrong" = "%d fautes";
+"record.now" = "Maintenant";
+
+"strength" = "Force";
+"strength.full" = "Pleine force";
+"till.tally" = "Série %d";
+"ladder" = "Palmarès des séries";
+"ladder.run" = "Plus longue série";
+"standing.best" = "Meilleur coup";
+"record.best" = "meilleur";
+"search" = "Recherche du moteur";
+"search.time" = "Temps";
+"search.depth" = "Profondeur";
+"search.stop" = "S'arrêter à";
+"search.stop.either" = "Le premier atteint";
+"search.stop.time" = "Le temps seul";
+"search.stop.depth" = "La profondeur seule";
+"search.seconds" = "%d s";
+"search.plies" = "profondeur %d";
+"search.limit.either" = "%1$d s / profondeur %2$d";
+"search.explained" = "Combien de temps et à quelle profondeur le moteur examine chaque position. Juger un coup, le coup du moteur lui-même et un indice sont cette même recherche, pour qu'un coût veuille dire la même chose partout. Un nouveau jugement va 8 plus profond et dispose de 6 fois le temps.";

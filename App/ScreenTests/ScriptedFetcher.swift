@@ -1,7 +1,7 @@
-import ChessfenKit
+import ChessmirrorKit
 import Foundation
 import Synchronization
-import ChessfenKitTesting
+import ChessmirrorKitTesting
 
 /// A fetcher that returns what it was told to return — the local copy of the kit tests' one,
 /// because this bundle cannot see the kit's test fixtures (`ScriptedEngine` is doubled the

@@ -1,4 +1,4 @@
-#include "include/chessfen_bridge.h"
+#include "include/chessmirror_bridge.h"
 
 #include <cctype>
 #include <cstdio>
