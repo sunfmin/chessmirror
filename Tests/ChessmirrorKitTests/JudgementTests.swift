@@ -48,7 +48,7 @@ func theLinesHaveDefaults() {
     #expect(lines.record == 5, "where 正着 stops you is where the book starts")
     #expect(lines.enqueue == 5, "and what is written down is worth the practice time")
 
-    #expect(!lines.intercepts(50), "nothing is intercepted while it is off")
+    #expect(!Ruling.intercepts(50, lines: lines), "nothing is intercepted while it is off")
     #expect(lines.records(5))
     #expect(!lines.records(4.9))
     #expect(lines.enqueues(5))
@@ -64,13 +64,13 @@ func theLinesHaveDefaults() {
 @Test("each line moves on its own")
 func theLinesAreSeparate() {
     var lines = JudgementLines(intercept: 30, record: 5, enqueue: 25)
-    #expect(lines.intercepts(30))
-    #expect(!lines.intercepts(29))
+    #expect(Ruling.intercepts(30, lines: lines))
+    #expect(!Ruling.intercepts(29, lines: lines))
     #expect(lines.records(5), "a lower record line writes down more, and intercepts no more")
     #expect(!lines.enqueues(24))
 
     lines.intercept = nil
-    #expect(!lines.intercepts(99), "and switching 正着 off changes neither of the others")
+    #expect(!Ruling.intercepts(99, lines: lines), "and switching 把关 off changes neither of the others")
     #expect(lines.records(5))
     #expect(lines.enqueues(25))
 }
@@ -79,9 +79,9 @@ func theLinesAreSeparate() {
 func theInterceptDialIsContinuous() {
     #expect(JudgementLines.defaultIntercept == 5)
     #expect(JudgementLines.interceptRange == 0...100)
-    #expect(!JudgementLines(intercept: 0).intercepts(0))
-    #expect(JudgementLines(intercept: 0).intercepts(0.1))
-    #expect(JudgementLines(intercept: 5).intercepts(5))
+    #expect(!Ruling.intercepts(0, lines: JudgementLines(intercept: 0)))
+    #expect(Ruling.intercepts(0.1, lines: JudgementLines(intercept: 0)))
+    #expect(Ruling.intercepts(5, lines: JudgementLines(intercept: 5)))
 }
 
 // -------------------------------------------------------------- the settlement

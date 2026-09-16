@@ -1,18 +1,8 @@
 import Foundation
 
-/// A move that was played and taken back, and what it gave away.
-public struct Refusal: Hashable, Sendable {
-    public let san: String
-    /// Percentage points of win probability, from the mover's own side.
-    public let drop: Double
-
-    public init(san: String, drop: Double) {
-        self.san = san
-        self.drop = drop
-    }
-
-    /// 「Qh4 掉 23%，退回去重走。」 — what went wrong and nothing about what to do instead.
-    /// The hint ladder is a separate thing somebody has to ask for (docs/adr/0031).
+extension Game.Ply.Tried {
+    /// 「Qh4 掉 23%，退回去重走。」 — what went wrong and nothing about what to do instead
+    /// (docs/adr/0031). The sentence the strip says about a 试招 the moment it is taken back.
     public var sentence: String {
         localized("till.refused", san, Drop.points(drop))
     }
@@ -78,8 +68,8 @@ public struct Ruling: Hashable, Sendable {
     public enum Verdict: Hashable, Sendable {
         /// The move stands. The change it made to the position, when both ends were measured.
         case stands(MoveChange?)
-        /// The move was taken back, and this is the sentence about it.
-        case refused(Refusal)
+        /// The move was taken back: the 试招 as it was written down where it happened.
+        case refused(Game.Ply.Tried)
         /// Nobody looked: the search was cancelled or the engine had nothing to say. Not a move
         /// that cost nothing — the move is put back and nothing is said.
         case unjudged
@@ -132,15 +122,12 @@ public struct Ruling: Hashable, Sendable {
             // Written down at the position it happened at, which is where the eye was standing
             // (docs/adr/0037) — with the 应招 it earned, picked up from the search that judged it
             // (docs/adr/0034), because the position the move made is off the board from here on.
+            let tried = Game.Ply.Tried(
+                san: san, drop: weighed.drop, depth: weighed.depth, line: weighed.reply
+            )
             var restored = standpoint.game
-            restored.recordTried(
-                .init(san: san, drop: weighed.drop, depth: weighed.depth, line: weighed.reply),
-                atPly: standpoint.cursor
-            )
-            self.init(
-                verdict: .refused(Refusal(san: san, drop: weighed.drop)),
-                game: restored, cursor: standpoint.cursor
-            )
+            restored.recordTried(tried, atPly: standpoint.cursor)
+            self.init(verdict: .refused(tried), game: restored, cursor: standpoint.cursor)
             return
         }
         var standing = played
@@ -165,14 +152,10 @@ public struct Ruling: Hashable, Sendable {
     /// written down but never counted among the moves that stood (docs/adr/0038).
     init(_ verdict: DrillVerdict, in game: Game, startingScore: Score?, lines: JudgementLines) {
         if Self.intercepts(verdict.drop, lines: lines) {
+            let tried = Game.Ply.Tried(san: verdict.played, drop: verdict.drop, line: verdict.reply)
             var restored = game.rewound(to: 0) ?? game
-            restored.recordTried(
-                .init(san: verdict.played, drop: verdict.drop, line: verdict.reply), atPly: 0
-            )
-            self.init(
-                verdict: .refused(Refusal(san: verdict.played, drop: verdict.drop)),
-                game: restored, cursor: 0
-            )
+            restored.recordTried(tried, atPly: 0)
+            self.init(verdict: .refused(tried), game: restored, cursor: 0)
             return
         }
         var change: MoveChange?

@@ -21,6 +21,45 @@ extension Game {
         public let move: Ply?
         /// What the Review wanted here, when a Line was kept. Nil rather than guessed.
         public let wanted: String?
+
+        /// One wrong move made at this position: a 试招 把关 took back, or the move that stood
+        /// when it stood too expensively. The one shape under a 错招's list and a 错题's
+        /// 遭遇 — the two readers keep their own gates over it (docs/adr/0036), and this is
+        /// what a gate lets through.
+        public struct Wrong: Hashable, Sendable {
+            public let san: String
+            /// What it cost, in percentage points of win probability (docs/adr/0027).
+            public let drop: Double
+            /// True when this is one 把关 took back, rather than the move that stood.
+            public let wasTried: Bool
+            /// Which of the 试招 at this position, in the order they were refused; nil for the
+            /// move that stood.
+            public let attempt: Int?
+            /// A 试招 the player did not find for themselves.
+            public let notFound: Bool
+
+            public init(san: String, drop: Double, wasTried: Bool, attempt: Int? = nil, notFound: Bool = false) {
+                self.san = san
+                self.drop = drop
+                self.wasTried = wasTried
+                self.attempt = attempt
+                self.notFound = notFound
+            }
+        }
+
+        /// Everything wrong that happened here, in the order it happened: the 试招 the 记录线
+        /// writes down, and then the move that stood if `stood` names what it cost and that
+        /// is over the line too. Which cost a stood move is read by — the `[%judged]` 把关
+        /// wrote, or a Review's number alone — is the reader's question, and is handed in.
+        public func wrong(recordedBy lines: JudgementLines, stood: Double?) -> [Wrong] {
+            var wrong = tried.enumerated()
+                .filter { lines.records($0.element.drop) }
+                .map { Wrong(san: $0.element.san, drop: $0.element.drop, wasTried: true, attempt: $0.offset, notFound: $0.element.notFound) }
+            if let move, let stood, lines.records(stood) {
+                wrong.append(Wrong(san: move.san, drop: stood, wasTried: false))
+            }
+            return wrong
+        }
     }
 
     /// Every position one of `mine` moved at, in the order the game reached them — the moves

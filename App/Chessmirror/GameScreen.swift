@@ -94,7 +94,7 @@ struct GameScreen: View {
         guard !hasDealt else { return }
         hasDealt = true
         card = opensOn
-        if !session.isTilling { arrive(at: card) }
+        if session.dealsCards { arrive(at: card) }
     }
 
     var body: some View {
@@ -119,7 +119,7 @@ struct GameScreen: View {
                 }
                 .chromeType()
 
-                if !session.isTilling, !findings.isEmpty { deck }
+                if session.dealsCards, !findings.isEmpty { deck }
               }
               .frame(width: proxy.size.width)
               }
@@ -137,7 +137,7 @@ struct GameScreen: View {
             showsTacticLine = false
         }
         .onChange(of: session.thinking) { _, now in
-            guard now == nil, !session.isTilling else { return }
+            guard now == nil, session.dealsCards else { return }
             session.adviseForCard()
         }
         // The card stands on the glass. The home indicator is a mark on top of it, not a
@@ -279,8 +279,8 @@ struct GameScreen: View {
                 tillingSwitch
                     .fixedSize(horizontal: true, vertical: false)
                 // How far the game has gone without a slip, and how far since the last one:
-                // 正着数 and 连正, read off the game rather than counted (CONTEXT.md). On the
-                // row that names 正着 and on no row of its own.
+                // 连正, read off the game rather than counted (CONTEXT.md). On the row that
+                // names 把关 and on no row of its own.
                 if let tally = strip.tally {
                     Text(localized("till.tally", tally.run))
                         .font(.caption.monospacedDigit())
@@ -1487,7 +1487,7 @@ struct GameScreen: View {
     /// so the board is only ever drawing the one card in front of you and never the leftovers of
     /// three you swiped past (docs/adr/0025).
     ///
-    /// A swipe therefore spends a Stint where the card reads a Line — 杀招, 战术, 要害, 五步 —
+    /// A swipe therefore spends a Stint where the card reads a Line — 杀招, 战术, 五步 —
     /// the first time this position is asked about, even during Practice. What that search found
     /// is kept, so paging to another card of the same Ply does not wind the clock again.
     private func turn(to now: Card, from was: Card) {
@@ -1727,7 +1727,7 @@ struct GameScreen: View {
             // A 应招 beats all of them while it is being read: it is the one line somebody has
             // just asked for, and the board can only carry one at a time.
             plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 }
-                ?? (card == .tactics && revealed.contains(.tactics) && showsTacticLine && !session.isTilling
+                ?? (card == .tactics && revealed.contains(.tactics) && showsTacticLine && session.dealsCards
                     ? session.tacticArrows : mateArrows),
             isInteractive: session.isHandTurn,
             onTap: tap

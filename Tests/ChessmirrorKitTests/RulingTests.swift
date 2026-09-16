@@ -62,7 +62,7 @@ struct RulingTests {
                             from: Standpoint(game: before, cursor: 2),
                             lines: JudgementLines(intercept: 5))
 
-        #expect(ruling.verdict == .refused(Refusal(san: "Bc4", drop: weighed.drop)))
+        #expect(ruling.verdict == .refused(.init(san: "Bc4", drop: weighed.drop, depth: weighed.depth, line: ["Nf6", "d3"])), "the refusal is the 试招 as written")
         #expect(ruling.takesTheMoveBack)
         #expect(ruling.cursor == 2)
         #expect(ruling.game.uciMoves == before.uciMoves, "the line being read is not swallowed")
@@ -123,7 +123,7 @@ struct RulingTests {
                                    drop: 30, passed: false, reply: ["d5"])
 
         let refused = Ruling(verdict, in: attempted, startingScore: .centipawns(30), lines: JudgementLines(intercept: 5))
-        #expect(refused.verdict == .refused(Refusal(san: "g4", drop: 30)))
+        #expect(refused.verdict == .refused(.init(san: "g4", drop: 30, line: ["d5"])))
         #expect(refused.cursor == 0)
         #expect(refused.game.plies.isEmpty, "back to the position alone")
         #expect(refused.game.pendingTries(atPly: 0) == [.init(san: "g4", drop: 30, line: ["d5"])])

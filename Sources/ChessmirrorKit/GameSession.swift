@@ -682,6 +682,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// app's settings: any position can be tilled, including one reached by playing on from a
     /// 错题 or read off a photograph.
     public var isTilling: Bool { lines.intercept != nil }
+    /// Whether the deck is dealt and a card may ask the engine: never under 把关. A card is an
+    /// opinion about the position in front of the player, and 把关 says nothing about what to
+    /// play (docs/adr/0031, 0040). The one rule, read here by the screen that deals and by the
+    /// session that answers, so the two cannot disagree about whether a card is on the table.
+    public var dealsCards: Bool { !isTilling }
     public var findsPunishment = false
     public private(set) var punishment: Punishment?
     public var activePunishment: Punishment? {
@@ -795,7 +800,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// The move 正着 has just taken back, for the screen to say one sentence about. Cleared by
     /// the next move, because it is about a board that is no longer there.
-    public private(set) var refused: Refusal?
+    public private(set) var refused: Game.Ply.Tried?
 
     private var weighing: Task<Void, Never>?
     /// The session's own measurement of the move just played, for the change badge.
@@ -836,7 +841,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// and coming back brings it back. Session state and nothing more: the refusals themselves
     /// are the Game's (`Game.pendingTried`, docs/adr/0037), read at the cursor, and a session
     /// that kept its own copy of them was one more place for them to be wrong.
-    private var refusalByPosition: [String: Refusal] = [:]
+    private var refusalByPosition: [String: Game.Ply.Tried] = [:]
     private var refusalPosition: String?
 
     private func restoreRefusalForViewedPosition() {
@@ -1392,7 +1397,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         ScoreCurve(scores: (0...game.plies.count).map { historyScore(atPly: $0) })
     }
 
-    /// 正着数 and 连正 for the sides the player is moving, read out of the game (CONTEXT.md).
+    /// 连正 for the sides the player is moving, read out of the game (CONTEXT.md).
     public var noSlips: Game.NoSlips { game.noSlips(by: mine) }
 
     /// The next 错招 from where the eye is: the one after it when it is standing on one, the
@@ -1628,14 +1633,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
 
     // ----------------------------------------------------------------- point at a square
-
-    private func applied(_ move: Move, to game: Game) throws -> Game {
-        var next = game
-        guard next.apply(move) else { throw StudyRefusal.illegalMove }
-        return next
-    }
-
-    private enum StudyRefusal: Error { case illegalMove }
 
     // -------------------------------------------------------- one move, asked for
 
@@ -1936,7 +1933,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// opinion kept for the card (docs/adr/0020, 0040) — and, since it is the same search, the
     /// badge's table filled from it too, so a card that took the search over owes the board nothing.
     private func advise(on position: Game, using engine: any Engine) {
-        guard !isTilling, !isWeighing else { return }
+        guard dealsCards, !isWeighing else { return }
         isAdviceSpent = false
         searchProgress = nil
         interceptTable = nil
@@ -1957,7 +1954,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Review in flight keep the engine — those are not advice, and a swipe must not take them
     /// off the clock.
     public func adviseForCard() {
-        guard !isTilling, !isWeighing else { return }
+        guard dealsCards, !isWeighing else { return }
         if let url, library?.reviewingURLs.contains(url) == true { return }
         guard let engine, !viewed.isOver, !engine.isPaused else { return }
         guard thinking == nil else { return }
