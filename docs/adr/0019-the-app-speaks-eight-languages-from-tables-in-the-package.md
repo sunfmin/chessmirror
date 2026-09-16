@@ -7,7 +7,7 @@ a screen is never half in symbols.
 
 ## The words live with the domain, not with the screens
 
-`Localizable.strings` sits in `ChessfenKit`, eight `Resources/<lang>.lproj` folders of
+`Localizable.strings` sits in `ChessmirrorKit`, eight `Resources/<lang>.lproj` folders of
 it, and not in the app target. The reason is that most of what has to be translated is
 not screen furniture — it is the vocabulary of the domain itself. 漏着, 说不清, "e4 is not
 a square a bishop can reach", "王旁边有王" — these are `MoveQuality`, `Intent`, `FENIssue`

@@ -1,9 +1,9 @@
-import ChessfenKit
+import ChessmirrorKit
 import Foundation
 import SwiftUI
 import Testing
 
-@testable import Chessfen
+@testable import Chessmirror
 
 /// The import sheet, photographed.
 ///
@@ -91,7 +91,7 @@ struct ImportScreenScreenshots {
 
     private func tempDir() -> URL {
         URL(filePath: NSTemporaryDirectory())
-            .appending(path: "chessfen-screens-\(UUID().uuidString)", directoryHint: .isDirectory)
+            .appending(path: "chessmirror-screens-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
     /// The empty sheet: where the link goes, and the one button.
