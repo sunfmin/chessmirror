@@ -25,18 +25,12 @@ import Foundation
             self.isDownloading = isDownloading
         }
 
-        /// Whether this game came off a picture. Written into the PGN when it was saved, so
-        /// it survives a relaunch and reads correctly in the list.
-        public var origin: GameOrigin {
-            GameOrigin(rawValue: pgn?.tag(GameOrigin.tagName) ?? "") ?? .fresh
-        }
+        /// Where this game came from, as the file says (`PGN.origin`). A file that will not
+        /// parse is a fresh one for the list's purposes.
+        public var origin: GameOrigin { pgn?.origin ?? .fresh }
 
-        /// What this game is called, if anybody has said. Its own tag rather than `Event`: PGN
-        /// has no tag for the name of a single game, and the precedent for adding one is
-        /// `Source` — a reader that does not know it ignores it.
-        public var name: String? {
-            pgn?.tag(GameLibrary.nameTag).flatMap { $0.isEmpty ? nil : $0 }
-        }
+        /// What this game is called, if anybody has said (`PGN.name`).
+        public var name: String? { pgn?.name }
 
         /// The name to show, which is the given one or one made from when the game was saved. Never
         /// a shared placeholder: rows that all read "未命名" cannot be told apart or sorted.

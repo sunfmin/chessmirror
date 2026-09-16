@@ -219,17 +219,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         self.url = url
         self.tags = tags
         self.cursor = min(max(0, viewing ?? game.plies.count), game.plies.count)
+        // The file's word on the 拦截线 wins over the caller's: 把关 is a thing one game is
+        // played under, and a reopened game comes back under the line it was saved under.
+        let file = PGN(game: game, tags: tags)
         self.lines = lines
-        if let value = tags.first(where: { $0.name == "Intercept" }).flatMap({ Double($0.value) }),
-            value.isFinite, JudgementLines.interceptRange.contains(value) {
-            self.lines.intercept = value
-        }
-        preferredIntercept = lines.intercept
-        if preferredIntercept == nil,
-           let value = tags.first(where: { $0.name == "InterceptPreference" }).flatMap({ Double($0.value) }),
-           value.isFinite, JudgementLines.interceptRange.contains(value) {
-            preferredIntercept = value
-        }
+        if let intercept = file.intercept { self.lines.intercept = intercept }
+        preferredIntercept = self.lines.intercept ?? file.interceptPreference
     }
 
     // ------------------------------------------------------------------ ways in
@@ -416,6 +411,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard !isOccupied else { return }
         guard controllers[colour] != controller else { return }
         controllers[colour] = controller
+        // A seat is a fact of the record: the file says who played which side, and the row
+        // under the board reads whose moves are whose off that same file (`mine`).
+        save()
         // Changing who moves for the side already on the clock has to take effect now, not
         // next move — that is what the switch is for.
         retune()
@@ -498,13 +496,17 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var mateNews: MateNews? {
         guard !viewed.isOver else { return nil }
         guard let source = analysis ?? probedAnalysis else { return nil }
-        return MateNews.read(source, in: viewed, hands: handColours)
+        return MateNews.read(source, in: viewed, hands: mine)
     }
 
-    /// The colours a person is playing. Both, one, or — the engine against itself — neither.
-    private var handColours: Set<PieceColour> {
-        Set([PieceColour.white, .black].filter { controller(for: $0) == .hand })
-    }
+    /// The colours the player is playing: both, one, or — the engine against itself — neither.
+    ///
+    /// Read off the file this session would write (`PGN.handColours`), which is what the 错题本
+    /// and the 连正榜 read off the file it did write: the row under the board and the ladder
+    /// count the same moves because they ask the same question of the same record. For a game
+    /// played here that is the seats; for an imported game it is the side the import tracked,
+    /// whatever seat the player is reading it from.
+    public var mine: Set<PieceColour> { pgn.handColours }
 
     // ------------------------------------------------------------- the reading
 
@@ -1331,13 +1333,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // counts. A refusal changes the game; moving the record line changes the answer.
         let key = "\(game.uciMoves.joined(separator: " "))|\(lines.record)|\(lines.enqueue)"
         if let storedSlips, storedSlips.key == key { return storedSlips.slips }
-        let slips = game.slips(by: handColours, lines: lines)
+        let slips = game.slips(by: mine, lines: lines)
         storedSlips = (key, slips)
         return slips
     }
 
     /// 正着数 and 连正 for the sides the player is moving, read out of the game (CONTEXT.md).
-    public var noSlips: Game.NoSlips { game.noSlips(by: handColours) }
+    public var noSlips: Game.NoSlips { game.noSlips(by: mine) }
 
     /// The next 错招 from where the eye is: the one after it when it is standing on one, the
     /// first at or after it otherwise. Nil at the end of the game.
@@ -2029,29 +2031,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     // --------------------------------------------------------------- storage
 
+    /// The file this game is: the Game and the facts about it, each in its tag (`PGN`). This
+    /// session names no tag; what it holds is the facts.
     public var pgn: PGN {
-        var written = PGN(game: game, tags: tags)
-        // Event carries the app's name, which is what PGN's "which set of games is this" tag is
-        // worth saying now that there are no collections (docs/adr/0028). Written unconditionally:
-        // an Event an import brought in names somebody else's tournament, and the file this app
-        // writes is this app's.
-        written.setTag("Event", to: "Chessfen")
-        if origin != .imported {
-            written.setTag("White", to: controller(for: .white).playerName)
-            written.setTag("Black", to: controller(for: .black).playerName)
-            // The standard Elo tags, for other tools, when the whole game was at one rung; a game
-            // that changed rung says so per move and nowhere else (docs/adr/0038).
-            written.setTag("WhiteElo", to: game.constantElo(of: .white).map(String.init))
-            written.setTag("BlackElo", to: game.constantElo(of: .black).map(String.init))
-        }
-        written.setTag("Result", to: game.resultToken)
-        written.setTag("Intercept", to: lines.intercept.map(String.init(describing:)))
-        written.setTag("InterceptPreference", to: isTilling ? nil : preferredIntercept.map(String.init(describing:)))
-        written.setTag(GameOrigin.tagName, to: origin.tagValue)
-        if written.tag("Date") == nil {
-            written.tags.append(PGN.dateTag())
-        }
-        return written
+        PGN(
+            game: game, seats: controllers, origin: origin, lines: lines,
+            preferredIntercept: preferredIntercept, carrying: tags
+        )
     }
 
     /// Writes after every move. A game is a few kilobytes of text, so there is no reason for

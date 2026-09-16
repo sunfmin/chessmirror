@@ -672,13 +672,13 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
             return PGNImport.identity(of: pgn, named: entry.name ?? entry.title) == chapter.identity
         }) {
             guard let side, var pgn = existing.pgn else { return existing }
-            pgn.setTag("TrackedSide", to: side == .white ? "white" : "black")
+            pgn.track(side)
             guard library.write(pgn, to: existing.url) else { return nil }
             return GameLibrary.Entry(url: existing.url, pgn: pgn, modified: Date())
         }
         var pgn = chapter.pgn
-        if let side { pgn.setTag("TrackedSide", to: side == .white ? "white" : "black") }
-        pgn.setTag(GameLibrary.nameTag, to: chapter.name)
+        if let side { pgn.track(side) }
+        pgn.setName(chapter.name)
         pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
         let url = library.newURL()
         guard library.write(pgn, to: url) else { return nil }
