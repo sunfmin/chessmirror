@@ -340,6 +340,16 @@ struct GameScreen: View {
                             .foregroundStyle(Palette.alarm)
                             .contentTransition(.opacity)
                             .accessibilityLabel(refusal.sentence)
+                    case .best:
+                        // The word, and for VoiceOver the number it stands for as well.
+                        Text(localized("standing.best"))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Palette.analysis)
+                            .contentTransition(.opacity)
+                            .accessibilityLabel(
+                                localized("standing.best") + localized("clause.separator")
+                                    + localized("standing.change", Standing.changeLabel(0))
+                            )
                     case .change(let value):
                         let label = Standing.changeLabel(value)
                         Text(label)

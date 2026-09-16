@@ -825,6 +825,47 @@ struct GameScreenScreenshots {
         #expect(rendered.says(localized("tried.rejudge", 28)), "the button is there to be waited on")
     }
 
+    // ---------------------------------------------------------------- 最佳
+
+    /// The engine's own first choice, played by the hand: the strip says the word, not `+0.0%`.
+    private static func bestMovePlayed() throws -> (GameSession, ScriptedEngine) {
+        let start = try #require(Game(startFEN: PGN.standardStartFEN))
+        let played = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+        let engine = ScriptedEngine([], byPosition: [
+            start.state.fen: Analysis(depth: 20, lines: [
+                .init(score: .centipawns(30), uciMoves: ["e2e4", "e7e5"], san: ["e4", "e5"]),
+                .init(score: .centipawns(20), uciMoves: ["d2d4"], san: ["d4"]),
+            ]),
+            played.state.fen: Analysis(depth: 20, lines: [
+                .init(score: .centipawns(-40), uciMoves: ["e7e5"], san: ["e5"]),
+            ]),
+        ])
+        let session = GameSession.fresh(played, engine: engine)
+        session.showPositionFeedback()
+        return (session, engine)
+    }
+
+    @Test("the strip says 最佳 for the engine's own first choice")
+    func theStripSaysBest() async throws {
+        let (session, engine) = try Self.bestMovePlayed()
+        defer { session.suspend() }
+        await session.measureLatestMoveChange()
+        #expect(session.standing == .best)
+        let rendered = await ScreenImage.write("game-best-move") { screen(session, engine: engine) }
+        #expect(rendered.says("最佳"))
+        #expect(!rendered.words.contains("+0.0%"), "the word, not the number")
+        #expect(rendered.says("本步胜率变化 +0.0%"), "VoiceOver still gets the number")
+    }
+
+    @Test("the strip says Best move, in English", .speaking(.english))
+    func theStripSaysBestInEnglish() async throws {
+        let (session, engine) = try Self.bestMovePlayed()
+        defer { session.suspend() }
+        await session.measureLatestMoveChange()
+        let rendered = await ScreenImage.write("game-best-move-english") { screen(session, engine: engine) }
+        #expect(rendered.says("Best move"))
+    }
+
     // ------------------------------------------------------------ 正着数 · 连正
 
     /// The Italian with 正着 on: White's four moves all stood, and a 试招 at 3. Bc4 broke the run,

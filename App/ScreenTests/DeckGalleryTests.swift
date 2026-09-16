@@ -45,7 +45,8 @@ struct DeckGallery {
         let start = try #require(Game(startFEN: PGN.standardStartFEN))
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
         let engine = ScriptedEngine([], byPosition: [
-            start.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])]),
+            // The engine wanted d4: e4 is the player's own, weighed from both positions.
+            start.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["d2d4"], san: ["d4"])]),
             game.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(score), uciMoves: [], san: [])])
         ])
         let session = GameSession.fresh(game, engine: engine)
@@ -184,7 +185,7 @@ struct DeckGallery {
         #expect(!rendered.says("1. e4"))
         #expect(rendered.says("−25%"))
         #expect(!rendered.says("−0%"))
-        #expect(rendered.says(localized("standing.change", "+0.0%")))
+        #expect(rendered.says(localized("standing.best")), "e4 was the engine's own first choice")
         #expect(rendered.says(localized("standing.bar")))
         #expect(!rendered.says("提示 1"))
         #expect(!rendered.says("提示 2"))
@@ -195,9 +196,10 @@ struct DeckGallery {
     @Test func pressingAReturnedMoveShowsTheReplyItEarned() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let afterD4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
+        // d4 is in the engine's own lines, so its 应招 is the rest of that Line (`Weighing`).
         let engine = ScriptedEngine([Analysis(depth: 20, lines: [
             Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"]),
-            Line(score: .centipawns(-300), uciMoves: ["d2d4"], san: ["d4"])
+            Line(score: .centipawns(-300), uciMoves: ["d2d4", "d7d5", "g1f3"], san: ["d4", "d5", "Nf3"])
         ])], byPosition: [afterD4.state.fen: Analysis(depth: 20, lines: [
             Line(score: .centipawns(-300), uciMoves: ["d7d5", "g1f3"], san: ["d5", "Nf3"])
         ])])

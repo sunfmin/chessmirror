@@ -502,3 +502,4 @@
 "ladder.distance" = "Longest distance";
 "ladder.stood" = "%d stood in all";
 "ladder.stood.one" = "%d stood in all";
+"standing.best" = "Best move";

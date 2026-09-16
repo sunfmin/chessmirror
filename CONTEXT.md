@@ -21,6 +21,12 @@ How much 胜率 a move gave away, measured against the best move available in th
 Never positive: the best move costs nothing, and every other move costs something.
 _Avoid_: 损失, 误差, delta
 
+**最佳 (Best move)**:
+The move the engine itself would have played from that position: its first choice, by the
+search that judged the move. A fact about which move it was, read off that search, never a 掉幅
+that rounded to zero — two equally good moves are both 0.0%, and only one of them is 最佳.
+_Avoid_: 最好, 好棋, 0%
+
 **收下 (Take-up)**:
 When the opponent's last move gave 胜率 away, how much of that gift the player's reply kept.
 The one place a positive number is honest, and it is settled only after the move is played.

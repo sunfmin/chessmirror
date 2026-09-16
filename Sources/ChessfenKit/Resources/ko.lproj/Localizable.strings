@@ -431,3 +431,4 @@
 "ladder.run" = "최장 연속";
 "ladder.distance" = "최장 정착수";
 "ladder.stood" = "총 %d수";
+"standing.best" = "최선의 수";

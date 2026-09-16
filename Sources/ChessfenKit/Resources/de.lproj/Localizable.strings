@@ -455,3 +455,4 @@
 "ladder.run" = "Längste Serie";
 "ladder.distance" = "Längste Strecke";
 "ladder.stood" = "%d insgesamt";
+"standing.best" = "Bester Zug";

@@ -223,8 +223,9 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
     let after = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
     let gate = AsyncStream<Analysis>.makeStream()
     let requested = AsyncStream<Void>.makeStream()
+    // The engine wants d4: e4 is the player's own, and the position it makes is searched.
     let engine = ScriptedEngine([Analysis(depth: 20, lines: [
-        .init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+        .init(score: .centipawns(0), uciMoves: ["d2d4"], san: ["d4"])
     ])], byPosition: [after.state.fen: Analysis(depth: 20, lines: [
         .init(score: .centipawns(score), uciMoves: ["e7e5"], san: ["e5"])
     ])], controlled: { game, budget in
@@ -279,8 +280,9 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let applied = after.apply(uci: "e2e4")
     #expect(applied)
     let reply = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    // The engine wants d4: e4 is the player's own, weighed from both positions.
     let engine = ScriptedEngine([], byPosition: [
-        start.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])]),
+        start.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["d2d4"], san: ["d4"])]),
         after.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(score), uciMoves: [], san: [])]),
         reply.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(2 * score), uciMoves: [], san: [])])
     ])
@@ -575,8 +577,10 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     #expect(book.mistakes.first?.encounters.first?.notFound == true)
 }
 
+/// A passing move the prepared search already has a Line for is judged from that Line, at once:
+/// its own Score, at the prepared depth, with no search of the position it made (`Weighing`).
 @MainActor
-@Test func preparedPassingMoveStillJudgesTheResultingPosition() async throws {
+@Test func preparedPassingMoveIsJudgedFromThePreparedSearch() async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let engine = ScriptedEngine([Analysis(depth: 20, lines: [
         Line(score: .centipawns(20), uciMoves: ["e2e4"], san: ["e4"]),
@@ -596,8 +600,9 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     await session.waitForJudgement()
     #expect(!session.isWeighing)
     #expect(session.game.plies.first?.judgement?.depth == 20)
+    #expect(session.game.plies.first?.judgement?.score == .centipawns(10), "its own Line's Score")
+    #expect(session.game.plies.first?.judgement?.drop == MoveQuality.drop(move: .white, before: .centipawns(20), after: .centipawns(10)))
     #expect(engine.budgets.allSatisfy { $0 == PositionSearches.budget })
-    #expect(engine.positions.contains(session.game.state.fen), "the resulting position gets its own search")
     print("Prepared passing move committed in \(elapsed)")
 }
 

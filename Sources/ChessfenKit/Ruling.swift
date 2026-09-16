@@ -22,10 +22,13 @@ public struct Refusal: Hashable, Sendable {
 public struct MoveChange: Hashable, Sendable {
     public let before: Score
     public let after: Score
+    /// 最佳: the move was the engine's own first choice, by the search that weighed it.
+    public let isBest: Bool
 
-    public init(before: Score, after: Score) {
+    public init(before: Score, after: Score, isBest: Bool = false) {
         self.before = before
         self.after = after
+        self.isBest = isBest
     }
 
     public func percent(for colour: PieceColour) -> Double {
@@ -113,7 +116,9 @@ public struct Ruling: Hashable, Sendable {
             atPly: played.plies.count - 1, san: san, drop: weighed.drop, score: weighed.after,
             depth: weighed.depth, lines: lines, relaxedIntercept: relaxedIntercept, hints: hints
         )
-        verdict = .stands(MoveChange(before: weighed.scoreBefore, after: weighed.after))
+        verdict = .stands(
+            MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
+        )
         game = standing
         cursor = standing.plies.count
     }

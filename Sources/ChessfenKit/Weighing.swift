@@ -35,10 +35,15 @@ public struct Weighing: Hashable, Sendable {
     /// 掉幅: percentage points of win probability the move gave away, from the mover's own side.
     /// Negative for a move that improved on what the engine had.
     public let drop: Double
+    /// The move weighed, in UCI. Nil for a Weighing made without one, which cannot be 最佳.
+    public let move: String?
 
     /// Nil when the search of the position played from had no line in it, which is a position
     /// nobody has looked at rather than a move that cost nothing (`MoveQuality.drop`).
-    public init?(mover: PieceColour, before: Analysis, after: Score, depth: Int, reply: [String] = []) {
+    public init?(
+        mover: PieceColour, before: Analysis, after: Score, depth: Int, reply: [String] = [],
+        move: String? = nil
+    ) {
         guard let drop = MoveQuality.drop(move: mover, before: before.best?.score, after: after) else {
             return nil
         }
@@ -48,6 +53,13 @@ public struct Weighing: Hashable, Sendable {
         self.depth = depth
         self.reply = Array(reply.prefix(Reply.limit))
         self.drop = drop
+        self.move = move
+    }
+
+    /// 最佳: the move is the engine's own first choice from the position it was played from. Read
+    /// off the search that judged it, so it is exact rather than a number that rounded to zero.
+    public var isBest: Bool {
+        move != nil && move == before.bestMove
     }
 
     /// The Score of the position the move was played from. Never missing: a Weighing is only
@@ -96,9 +108,20 @@ extension Engine {
             before = snapshot
         }
         guard !Task.isCancelled, let before else { return nil }
+        let move = played.plies.last?.uci
         var after = played.state.outcomeScore
         var depth = before.depth
         var reply: [String] = []
+        // A move the first search already has a Line for is judged from that Line: the Score,
+        // the depth and the 应招 all come from the one search, which is the only way the two ends
+        // of a 掉幅 are ever at one depth (docs/adr/0016). The engine's own first choice therefore
+        // costs exactly nothing — a second search of the position it made would be a deeper look
+        // at the same subtree, and the tens of centipawns the two disagree by read as a mistake
+        // the engine made against itself, more than a 拦截线 apart in a sharp position.
+        if after == nil, let move, let line = before.lines.first(where: { $0.bestMove == move }) {
+            after = line.score
+            reply = Array(line.san.dropFirst())
+        }
         if after == nil {
             for await snapshot in analysePosition(played) {
                 guard !Task.isCancelled else { return nil }
@@ -110,7 +133,8 @@ extension Engine {
         }
         guard !Task.isCancelled, let after else { return nil }
         return Weighing(
-            mover: position.state.sideToMove, before: before, after: after, depth: depth, reply: reply
+            mover: position.state.sideToMove, before: before, after: after, depth: depth,
+            reply: reply, move: move
         )
     }
 }

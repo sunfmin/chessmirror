@@ -1048,6 +1048,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if isWeighing { return .weighing }
         if let refused { return .refused(refused) }
         if let change = moveChange {
+            if change.isBest { return .best }
             let value = change.percent(for: feedbackColour)
             return .change((value * 10).rounded() / 10)
         }
@@ -1096,7 +1097,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let weighed = await engine.weigh(after, from: before)
         guard !Task.isCancelled, !isWeighing, let weighed,
               game.uciMoves == after.uciMoves, game.startFEN == after.startFEN else { return }
-        measuredMove = (after.uciMoves, after.state.fen, MoveChange(before: weighed.scoreBefore, after: weighed.after))
+        measuredMove = (
+            after.uciMoves, after.state.fen,
+            MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
+        )
     }
 
     /// Explicit legacy migration only; never started automatically by the game screen.

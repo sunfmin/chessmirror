@@ -476,3 +476,4 @@
 "ladder.run" = "最长连正";
 "ladder.distance" = "最长正着数";
 "ladder.stood" = "共 %d 步";
+"standing.best" = "最佳";

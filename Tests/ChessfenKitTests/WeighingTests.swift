@@ -20,10 +20,12 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
     return after
 }
 
+/// A move the first search had no Line for — here Nf3, where the engine listed e4 and d4 — is
+/// weighed from the searches of both positions.
 @MainActor
 @Test func aMoveIsWeighedFromTheSearchesOfBothPositions() async throws {
     let before = try opening()
-    let after = try playing("e2e4", in: before)
+    let after = try playing("g1f3", in: before)
     let first = Analysis(depth: 18, lines: [line(30, "e2e4", "e4"), line(25, "d2d4", "d4")])
     let second = Analysis(depth: 20, lines: [line(20, "e7e5", "e5", more: ["Nf3", "Nc6"])])
     let engine = ScriptedEngine([], byPosition: [before.state.fen: first, after.state.fen: second])
@@ -44,10 +46,10 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
 @MainActor
 @Test func aBlackMoveIsReadFromBlacksSide() async throws {
     let before = try opening(["e2e4"])
-    let after = try playing("e7e5", in: before)
+    let after = try playing("d7d5", in: before)
     let engine = ScriptedEngine([], byPosition: [
         before.state.fen: Analysis(depth: 20, lines: [line(30, "e7e5", "e5")]),
-        after.state.fen: Analysis(depth: 20, lines: [line(80, "g1f3", "Nf3")]),
+        after.state.fen: Analysis(depth: 20, lines: [line(80, "e4d5", "exd5")]),
     ])
 
     let weighed = try #require(await engine.weigh(after, from: before))
@@ -94,7 +96,7 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
 @MainActor
 @Test func theReplyIsCutToWhatABoardCarries() async throws {
     let before = try opening()
-    let after = try playing("e2e4", in: before)
+    let after = try playing("g1f3", in: before)
     let long = ["e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O"]
     let engine = ScriptedEngine([], byPosition: [
         before.state.fen: Analysis(depth: 20, lines: [line(30, "e2e4", "e4")]),
@@ -110,7 +112,7 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
 @MainActor
 @Test func progressHearsBothSearchesInTheOrderTheyRan() async throws {
     let before = try opening()
-    let after = try playing("e2e4", in: before)
+    let after = try playing("g1f3", in: before)
     let first = Analysis(depth: 18, lines: [line(30, "e2e4", "e4")])
     let second = Analysis(depth: 20, lines: [line(20, "e7e5", "e5")])
     let engine = ScriptedEngine([], byPosition: [before.state.fen: first, after.state.fen: second])
@@ -136,7 +138,7 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
 @MainActor
 @Test func aSecondSearchThatSaysNothingIsNotAJudgementEither() async throws {
     let before = try opening()
-    let after = try playing("e2e4", in: before)
+    let after = try playing("g1f3", in: before)
     // An opinion on the position played from, and silence on the one the move made: the two
     // ends of a comparison are both needed, and half of one is not a cheaper answer.
     let engine = ScriptedEngine([], byPosition: [
@@ -174,4 +176,44 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
     let stalemate = try #require(Game(startFEN: "7k/5Q2/6K1/8/8/8/8/8 b - - 0 1"))
     #expect(stalemate.state.outcomeScore == .centipawns(0))
     #expect(try opening().state.outcomeScore == nil)
+}
+
+/// A move the first search has a Line for is weighed from that Line — Score, depth and 应招 all
+/// from the one search (docs/adr/0016) — and the engine's own first choice is 最佳, costing
+/// exactly nothing. Only a move outside the Lines needs the position it made searched.
+@MainActor
+@Test func aMoveInTheEnginesOwnLinesIsWeighedFromThatSearch() async throws {
+    let before = try opening()
+    let first = Analysis(depth: 18, lines: [
+        line(30, "e2e4", "e4", more: ["e5", "Nf3"]), line(20, "d2d4", "d4", more: ["d5"]),
+    ])
+    let e4 = try playing("e2e4", in: before)
+    let d4 = try playing("d2d4", in: before)
+    let h4 = try playing("h2h4", in: before)
+    let second = Analysis(depth: 20, lines: [line(-10, "e7e5", "e5", more: ["Nf3"])])
+    let engine = ScriptedEngine([], byPosition: [
+        before.state.fen: first, e4.state.fen: second, d4.state.fen: second, h4.state.fen: second,
+    ])
+
+    let best = try #require(await engine.weigh(e4, from: before))
+    #expect(best.isBest)
+    #expect(best.drop == 0)
+    #expect(best.after == .centipawns(30))
+    #expect(best.depth == 18, "the first search's depth: nothing else was searched")
+    #expect(best.reply == ["e5", "Nf3"], "the 应招 is the rest of its own Line")
+    #expect(best.move == "e2e4")
+
+    let secondBest = try #require(await engine.weigh(d4, from: before))
+    #expect(!secondBest.isBest)
+    #expect(secondBest.after == .centipawns(20), "its own Line's Score, from the same search")
+    #expect(secondBest.reply == ["d5"])
+    #expect(engine.positions.filter { $0 == e4.state.fen || $0 == d4.state.fen }.isEmpty,
+        "neither position the moves made was searched")
+
+    let outside = try #require(await engine.weigh(h4, from: before))
+    #expect(!outside.isBest)
+    #expect(outside.after == .centipawns(-10), "a move the search had no Line for is searched")
+    #expect(outside.depth == 20)
+    #expect(outside.reply == ["e5", "Nf3"])
+    #expect(engine.positions.contains(h4.state.fen))
 }
