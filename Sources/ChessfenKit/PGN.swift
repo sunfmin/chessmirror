@@ -124,22 +124,28 @@ public struct PGN: Hashable, Sendable {
             ) + pendingComments + [game.resultToken]
     }
 
-    /// The 试招 at the position the game stands on, when no move has carried them yet.
+    /// The 试招 no move has carried yet, with the position each belongs to.
     ///
     /// Before the result token and not after it, which is not a matter of taste: the reader stops
-    /// at the result, so a comment written past it is a comment nothing will ever read. `%pending`
-    /// rather than `%tried` because the two mean different positions — a `%tried` rides on a move
-    /// and belongs to the position *before* it, and one of these belongs to the position the
-    /// movetext ends on (docs/adr/0037).
+    /// at the result, so a comment written past it is a comment nothing will ever read.
+    ///
+    /// `%pending <plies> …` rather than `%tried`, because a `%tried` rides on a move and belongs to
+    /// the position *before* it, and one of these belongs to a position nothing else in the file
+    /// names. The Ply count is that name: the reader needs it, because a refusal the player walked
+    /// away from can be anywhere in the game, not only at the end of it (docs/adr/0037).
     private var pendingComments: [String] {
         guard !game.pendingTried.isEmpty else { return [] }
-        let body = game.pendingTried.map { Self.attempt($0, named: "pending") }.joined(separator: " ")
+        let body = game.pendingTried
+            .flatMap { pending in
+                pending.tries.map { Self.attempt($0, named: "pending", at: pending.ply) }
+            }
+            .joined(separator: " ")
         return ["{\(body)}"]
     }
 
-    /// One refused move, as a token — a 试招 or the 试招 at the end of the movetext, which differ
-    /// in the name and in nothing else.
-    private static func attempt(_ attempt: Game.Ply.Tried, named name: String) -> String {
+    /// One refused move, as a token — a 试招, or one at a position no move has carried yet, which
+    /// differs in the name and in carrying the position with it.
+    private static func attempt(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
         var body = "\(attempt.san) \(percent(attempt.drop))"
         if attempt.notFound { body += " notfound" }
         // The 应招 follows a bar (docs/adr/0034). A bar and not a word, because what comes after it
@@ -148,7 +154,7 @@ public struct PGN: Hashable, Sendable {
         if !attempt.line.isEmpty {
             body += " | " + attempt.line.joined(separator: " ")
         }
-        return "[%\(name) \(body)]"
+        return "[%\(name) \(ply.map { "\($0) " } ?? "")\(body)]"
     }
 
     /// One line of moves, with its Variations in brackets after the moves they replace —
@@ -304,10 +310,11 @@ public struct PGN: Hashable, Sendable {
                 game.setEvaluation(score, atPly: game.plies.count - 1, reviewed: isReviewed)
             case .tried(let attempt):
                 game.addTried(attempt, atPly: game.plies.count - 1)
-            case .pending(let attempt):
-                // At the end of the movetext by construction: these are the refusals at the
-                // position the game stopped on, and the position is the game's own.
-                game.setPendingTried(game.pendingTried + [attempt])
+            case .pending(let ply, let attempt):
+                // The position is the token's own, because nothing else in the file names it.
+                var tries = game.pendingTried.first { $0.ply == ply }?.tries ?? []
+                tries.append(attempt)
+                game.setPendingTried(tries, atPly: ply)
             case .hint(let rungs):
                 game.setHints(rungs, atPly: game.plies.count - 1)
             case .judgement(let judgement):
@@ -345,7 +352,7 @@ private struct Scanner {
         case evaluation(Score)
         case line([String])
         case tried(Game.Ply.Tried)
-        case pending(Game.Ply.Tried)
+        case pending(Int, Game.Ply.Tried)
         case hint(Int)
         case judgement(Game.Ply.Judgement)
         case variationStart
@@ -395,7 +402,7 @@ private struct Scanner {
                 if let score = Self.evaluation(in: comment) { tokens.append(.evaluation(score)) }
                 if let line = Self.line(in: comment) { tokens.append(.line(line)) }
                 tokens.append(contentsOf: Self.tried(in: comment).map { .tried($0) })
-                if let pending = Self.pending(in: comment).first { tokens.append(.pending(pending)) }
+                tokens.append(contentsOf: Self.pending(in: comment).map { .pending($0.ply, $0.tried) })
                 if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
                 if let judgement = Self.judgement(in: comment) { tokens.append(.judgement(judgement)) }
             case ";":
@@ -434,19 +441,32 @@ private struct Scanner {
     /// position 耕棋 stopped somebody at three times has three of them. The 应招 rides after a bar
     /// in the same token, so the two can never be read apart from each other (docs/adr/0034).
     private static func tried(in comment: String) -> [Game.Ply.Tried] {
-        attempts(of: "tried", in: comment)
+        attempts(of: "tried", in: comment).map(\.tried)
     }
 
-    /// The 试招 at the position the movetext ends on (docs/adr/0037). The same grammar as a `tried`
-    /// token — one move, what it cost, and the 应招 it earned — under the name that says the
-    /// refusals belong to the position the game stopped at rather than to a move after them.
-    private static func pending(in comment: String) -> [Game.Ply.Tried] {
-        attempts(of: "pending", in: comment)
+    /// The 试招 at a position nothing has carried yet (docs/adr/0037). One move, what it cost and
+    /// the 应招 it earned — the same grammar as a `tried` token — led by the Ply count that names
+    /// the position it happened at.
+    private static func pending(in comment: String) -> [(ply: Int, tried: Game.Ply.Tried)] {
+        attempts(of: "pending", in: comment, at: true).compactMap { body in
+            guard let ply = body.ply else { return nil }
+            return (ply, body.tried)
+        }
     }
 
-    private static func attempts(of name: String, in comment: String) -> [Game.Ply.Tried] {
+    private static func attempts(
+        of name: String, in comment: String, at hasPly: Bool = false
+    ) -> [(ply: Int?, tried: Game.Ply.Tried)] {
         bodies(of: name, in: comment).compactMap { body in
-            let halves = body.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+            var rest = Substring(body)
+            var ply: Int?
+            if hasPly {
+                let head = rest.prefix { $0 != " " }
+                guard let value = Int(head), value >= 0 else { return nil }
+                ply = value
+                rest = rest.dropFirst(head.count)
+            }
+            let halves = rest.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
             let parts = halves[0].split(separator: " ")
             guard let san = parts.first,
                 parts.count == 2 || (parts.count == 3 && parts[2] == "notfound"),
@@ -455,8 +475,9 @@ private struct Scanner {
                 drop.isFinite, (0...100).contains(drop)
             else { return nil }
             let line = halves.count > 1 ? halves[1].split(separator: " ").map(String.init) : []
-            return Game.Ply.Tried(
-                san: String(san), drop: drop, notFound: parts.count == 3, line: line
+            return (
+                ply,
+                Game.Ply.Tried(san: String(san), drop: drop, notFound: parts.count == 3, line: line)
             )
         }
     }

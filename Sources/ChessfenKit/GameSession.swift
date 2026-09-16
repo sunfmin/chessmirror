@@ -45,7 +45,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public private(set) var practice: Drill?
 
     public private(set) var game: Game {
-        didSet { storedViewed = nil }
+        didSet {
+            storedViewed = nil
+            // The 错题 list is walked out of the Game, and a refusal is written into it without
+            // touching a single move — so a cache keyed on the moves alone would go on saying the
+            // game had nothing wrong in it while the row under the board showed otherwise.
+            storedSlips = nil
+        }
     }
     public var orientation: Orientation
     /// Which ply the player is looking at: 0 is the starting position, `plies.count` the
@@ -740,7 +746,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let pending = helpByPosition[fen]
         // At the end of the game the refusals are the file's, which is how a refusal the player
         // walked away from is still on the board when they come back (docs/adr/0037).
-        triedHere = pending?.tried ?? (cursor == game.plies.count ? game.pendingTried : [])
+        triedHere = pending?.tried ?? (game.pendingTried.first { $0.ply == cursor }?.tries ?? [])
         hintLayer = pending?.layer ?? 0
         relaxedIntercept = pending?.relaxed
         refused = pending?.refusal
@@ -943,9 +949,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if !triedHere.isEmpty || hintLayer > 0 {
             game.setTried(triedHere, hints: hintLayer, atPly: ply)
         }
-        // The move that stands has taken the refusals with it, and the position they were made at
-        // is behind the game now.
-        game.setPendingTried([])
+        // The move that stands has taken the refusals with it: the position they were made at is
+        // the one this move was played from, which is `ply` here — the index of the move itself.
+        game.setPendingTried([], atPly: ply)
         triedHere = []
         hintLayer = 0
         relaxedIntercept = nil
@@ -1300,8 +1306,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // Written down here rather than when a move finally stands, because a player who is
         // refused and then walks away has played no such move — and the refusal used to go with
         // them: leaving the game forgot it, and opening it again showed nothing to practise
-        // (docs/adr/0037). No retune: the engine is not owed a reply to a move that came back.
-        game.setPendingTried(triedHere)
+        // (docs/adr/0037). At the position it happened at, which is where the eye was standing —
+        // a refusal is not always at the end of the game, because the player is free to play from
+        // anywhere in it. No retune: the engine is not owed a reply to a move that came back.
+        game.setPendingTried(triedHere, atPly: cursorBefore ?? game.plies.count)
         save()
         Sounds.current.play(.refused)
         if findsPunishment { punishment = Punishment(position: played, engine: engine) }

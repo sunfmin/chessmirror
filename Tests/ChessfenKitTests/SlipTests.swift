@@ -61,7 +61,7 @@ import Testing
     /// move — and when a move is played there and takes it, the same position, still.
     @Test func aTailRefusalBelongsToTheEndOfTheGame() throws {
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
-        game.setPendingTried([.init(san: "Qh4", drop: 30)])
+        game.setPendingTried([.init(san: "Qh4", drop: 30)], atPly: game.plies.count)
         let slips = game.slips(by: [.white], lines: .standard)
         #expect(slips.map(\.ply) == [2])
         #expect(slips[0].positionPly == 1, "the position after the only move")

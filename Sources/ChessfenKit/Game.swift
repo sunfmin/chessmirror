@@ -138,17 +138,32 @@ public struct Game: Hashable, Sendable {
     /// The position after every ply, recomputed whenever the Game changes.
     public private(set) var state: GameState
 
-    /// The 试招 made at the position this Game now stands on, when nothing has been played there
-    /// to carry them (docs/adr/0037).
+    /// The 试招 made at one position, which no move has been played there to carry yet.
     ///
-    /// A refused move is written as a comment on the move that finally stands, because that is
-    /// what it is: something that happened at this position before this move was found. A player
-    /// who is refused and then walks away has played no such move, and these are the refusals with
-    /// nowhere to go — kept at the end of the movetext until a move stands and takes them.
-    public private(set) var pendingTried: [Ply.Tried] = []
+    /// A refused move normally rides onto the move that finally stands — `[%tried]` on that move,
+    /// which is what it is: something that happened at the position *before* it. When no such move
+    /// is played, the position it did happen at has to be named some other way, and in a Game a
+    /// position is named by how many Plies have been played at it (docs/adr/0037).
+    public struct Pending: Hashable, Sendable {
+        /// Plies played at the position these were refused at. Zero is the opening.
+        public let ply: Int
+        public let tries: [Ply.Tried]
 
-    public mutating func setPendingTried(_ attempts: [Ply.Tried]) {
-        pendingTried = attempts
+        public init(ply: Int, tries: [Ply.Tried]) {
+            self.ply = ply
+            self.tries = tries
+        }
+    }
+
+    public private(set) var pendingTried: [Pending] = []
+
+    /// Records the refusals made at a position, replacing whatever was there: a position 耕棋
+    /// stopped the player at three times has three refusals, not six.
+    public mutating func setPendingTried(_ tries: [Ply.Tried], atPly ply: Int) {
+        pendingTried.removeAll { $0.ply == ply }
+        guard !tries.isEmpty, ply >= 0 else { return }
+        pendingTried.append(Pending(ply: ply, tries: tries))
+        pendingTried.sort { $0.ply < $1.ply }
     }
 
     /// The one Depth every `Ply.evaluation` in this Game was computed at, or nil for a Game

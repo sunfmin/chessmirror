@@ -68,6 +68,53 @@ import Testing
     #expect(session.moveChange != nil, "and the screen has a percentage to show")
 }
 
+/// Contract: a refusal is recorded where it happened, wherever in the game that is. Playing a
+/// wrong move from a position in the middle of a game and walking away used to lose it three
+/// times over: no mark on the record, no 错题 in the row, and nothing in the file — because the
+/// refusals were written as if they belonged to the end of the game.
+@MainActor
+@Test func aRefusalInTheMiddleOfAGameIsRecordedThere() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let played = try #require(
+        Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"])
+    )
+    let afterBad = try #require(
+        Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "f1c4"])
+    )
+    let engine = ScriptedEngine([], byPosition: [
+        // The position two Plies in, which is where the player will try the bad move from.
+        (try #require(played.rewound(to: 2))).state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(0), uciMoves: ["g1f3"], san: ["Nf3"])
+        ]),
+        afterBad.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(-400), uciMoves: ["g8f6"], san: ["Nf6"])
+        ]),
+    ])
+    let session = GameSession.fresh(played, engine: engine)
+    session.setIntercept(JudgementLines.defaultIntercept)
+    session.jump(toPly: 2)
+    await session.waitForPreparedInterception()
+    let twoPliesIn = try #require(played.rewound(to: 2))
+
+    session.play(try #require(twoPliesIn.state.move(matching: "f1c4")))
+    await session.waitForJudgement()
+    #expect(session.refused?.san == "Bc4")
+    #expect(session.game.uciMoves == played.uciMoves, "the game is untouched")
+    #expect(session.game.pendingTried.map(\.ply) == [2], "and the refusal belongs to Ply 2")
+    #expect(session.cursor == 2, "with the eye left where the move was played")
+
+    // The row under the board: a 错题 at that position, marked at that position.
+    let slip = try #require(session.slips.first)
+    #expect(slip.positionPly == 2)
+    #expect(slip.wrong.map(\.san) == ["Bc4"])
+
+    // And it is in the file, at the position rather than at the end of the movetext.
+    let read = try PGN(parsing: session.pgn.text).game
+    #expect(read.pendingTried.map(\.ply) == [2])
+    #expect(read.pendingTried.first?.tries.first?.san == "Bc4")
+    #expect(read.slips(by: [.white], lines: .standard).map(\.positionPly) == [2])
+}
+
 /// Contract: the real session prepares, refuses twice, toggles and revisits a position.
 /// All consumers must share one ten-second search per position, including the refused board.
 @MainActor
@@ -664,8 +711,8 @@ func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock(_ line:
 
     let reopened = try PGN(parsing: written).game
     #expect(reopened.plies.isEmpty, "nothing was played")
-    #expect(reopened.pendingTried.map(\.san) == ["d4"], "and the refusal is in the file")
-    #expect(reopened.pendingTried.first?.line == ["e5"], "with the 应招 it earned")
+    #expect(reopened.pendingTried.map(\.tries.first?.san) == ["d4"], "and the refusal is in the file")
+    #expect(reopened.pendingTried.first?.tries.first?.line == ["e5"], "with the 应招 it earned")
     #expect(
         reopened.slips(by: [.white], lines: .standard).map(\.ply) == [1],
         "so the row under the record has somewhere to take the player"

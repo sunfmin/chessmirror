@@ -1072,8 +1072,7 @@ struct GameScreen: View {
             .scrollIndicators(.hidden)
             if let next = session.nextSlip {
                 Button {
-                    selected = nil
-                    walkTo(slip: next)
+                    jumpTo(slip: next)
                 } label: {
                     Image(systemName: "arrow.right.to.line")
                         .font(.caption2)
@@ -1105,11 +1104,12 @@ struct GameScreen: View {
         let on = session.cursor == slip.positionPly
         let owed = slip.isWorthDrilling(session.lines)
         return Button {
-            selected = nil
-            walkTo(slip: slip)
+            jumpTo(slip: slip)
         } label: {
             HStack(spacing: 6) {
-                thumbnail(slip.position, side: 40)
+                // Sixty-four points, which is the size the 错题本 already uses for the same job:
+                // the board is the name of a position, and a name has to be legible.
+                thumbnail(slip.position, side: 64)
                     .overlay(
                         RoundedRectangle(cornerRadius: 4)
                             .stroke(
@@ -1132,7 +1132,7 @@ struct GameScreen: View {
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
                 }
-                .frame(minWidth: 34, alignment: .leading)
+                .frame(minWidth: 42, alignment: .leading)
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
@@ -1188,10 +1188,15 @@ struct GameScreen: View {
             : localized("record.ply", slip.ply)
     }
 
-    /// Takes the board to a 错题 by walking the record there, and leaves the eye on the position
-    /// the move was played from — the one to try again from.
-    private func walkTo(slip: Slip) {
-        Task { await session.walk(toPly: slip.positionPly) }
+    /// Takes the board to a 错题 and leaves the eye on the position the move was played from — the
+    /// one to try again from.
+    ///
+    /// Straight there, not walked there: the walk belongs to *opening* a game at a mistake, where
+    /// the arriving is the point. Pressing a tile is looking something up in a game already on the
+    /// screen, and a player who has picked a position out of a list has already said which one.
+    private func jumpTo(slip: Slip) {
+        selected = nil
+        session.jump(toPly: slip.positionPly)
     }
 
     /// History feedback is available in practice too. Unknown positions remain unknown;

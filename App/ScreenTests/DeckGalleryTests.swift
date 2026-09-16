@@ -407,7 +407,7 @@ struct DeckGallery {
         played.setTried([.init(san: "f3", drop: 24)], atPly: 0)
         played.setJudgement(.init(drop: 14, score: .centipawns(-40), depth: 20), atPly: 2)
         // Two wrong moves at the one position the game stopped on: a position is not a move.
-        played.setPendingTried([.init(san: "Qh4", drop: 30), .init(san: "f3", drop: 12)])
+        played.setPendingTried([.init(san: "Qh4", drop: 30), .init(san: "f3", drop: 12)], atPly: played.plies.count)
         let engine = ScriptedEngine([])
         let session = GameSession.fresh(played, engine: engine)
         defer { session.suspend() }

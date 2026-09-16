@@ -15,13 +15,19 @@ to write the refusal on, and `settle` said as much:
 Opening the game again showed a board with no trace of it — no mark on the record, nothing in the
 错招 list, nothing to practise — which is the one thing 耕棋 exists to prevent.
 
-So the refusals at the position the game is standing on are written down too, at the end of the
-movetext, and they survive being left:
+So the refusals at that position are written down too, and they survive being left:
 
 ```
-1. Nc3 {[%tried Qd2 -23%]} *        ← the refusals before Nc3 was found
-1. Nc3 {[%pending Qh4 -31%] [%pending f3 -12%]} *   ← the refusals at the position after it
+1. Nc3 {[%tried Qd2 -23%]} *                 ← the refusals before Nc3 was found
+1. e4 e5 2. Nf3 {[%pending 2 Qh4 -31%]} *    ← the refusals at the position two Plies in
 ```
+
+**A `%pending` token carries the position it belongs to** — how many Plies had been played there.
+The first cut left that out, which was only right for a refusal at the end of the game: playing a
+wrong move from an earlier position and walking away wrote the refusals as if they had happened
+where the game stopped, and read back they were nothing at all. A Game names a position by its Ply
+count because in a line that is all a position is, and the reader needs the name: the player is
+free to play from anywhere in the game, not only from the end of it.
 
 **`%pending` and not a trailing `%tried`, because the slot is taken.** A comment after a move
 already means "refused at the position *before* it", and a reader cannot tell a comment written
@@ -39,6 +45,10 @@ refusal belongs once there is a move to belong to. Before a move, they are the g
 
 ## Consequences
 
+- A refusal is written into the Game without touching a move, so the session's 错题 list cannot
+  be cached on the moves alone: it is invalidated whenever the Game changes. Keyed on the moves,
+  the row under the board went on saying the game had nothing wrong in it while the refusal was
+  happening in front of it.
 - Leaving a game right after a refusal writes the file, where it used to write nothing. A refusal
   is part of the game's record now, so a Game compares different when one has happened — the tests
   that asserted 「a refusal left the game untouched」 now assert that it left the *moves* untouched.

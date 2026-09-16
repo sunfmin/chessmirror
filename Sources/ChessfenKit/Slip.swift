@@ -121,20 +121,23 @@ extension Game {
         // Ply is the one past the last move, so the position they are walked to is the end of the
         // game — and when a move is played there and takes them, the same Ply is that move's
         // (docs/adr/0037).
-        let pending = pendingTried
-            .filter { lines.records($0.drop) }
-            .map { Slip.Wrong(san: $0.san, drop: $0.drop, wasTried: true) }
-        if !pending.isEmpty, let key = PositionKey(fen: walked.state.fen) {
+        for pending in pendingTried {
+            let wrong = pending.tries
+                .filter { lines.records($0.drop) }
+                .map { Slip.Wrong(san: $0.san, drop: $0.drop, wasTried: true) }
+            guard !wrong.isEmpty, let at = rewound(to: pending.ply),
+                let key = PositionKey(fen: at.state.fen)
+            else { continue }
             found.append(
                 Slip(
-                    ply: plies.count + 1,
+                    ply: pending.ply + 1,
                     position: key,
-                    wrong: pending.sorted { $0.drop > $1.drop },
-                    wanted: reviewLine(atPly: plies.count).first
+                    wrong: wrong.sorted { $0.drop > $1.drop },
+                    wanted: reviewLine(atPly: pending.ply).first
                 )
             )
         }
-        return found
+        return found.sorted { $0.ply < $1.ply }
     }
 }
 
