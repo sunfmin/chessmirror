@@ -37,10 +37,10 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
     #expect(weighed.before == first)
     #expect(weighed.scoreBefore == .centipawns(30))
     #expect(weighed.after == .centipawns(20))
-    #expect(weighed.depth == 20)
+    #expect(weighed.depth == 18, "the shallower of the two ends is the depth the comparison is worth")
     #expect(weighed.reply == ["e5", "Nf3", "Nc6"])
     #expect(weighed.drop == MoveQuality.drop(move: .white, before: .centipawns(30), after: .centipawns(20)))
-    #expect(weighed.judgement == .init(drop: weighed.drop, score: .centipawns(20), depth: 20))
+    #expect(weighed.judgement == .init(drop: weighed.drop, score: .centipawns(20), depth: 18))
     #expect(engine.positions == [before.state.fen, after.state.fen])
 }
 
@@ -118,10 +118,51 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
     let second = Analysis(depth: 20, lines: [line(20, "e7e5", "e5")])
     let engine = ScriptedEngine([], byPosition: [before.state.fen: first, after.state.fen: second])
 
-    var heard: [Analysis] = []
+    var heard: [Weighing.Progress] = []
     _ = await engine.weigh(after, from: before) { heard.append($0) }
 
-    #expect(heard == [first, second])
+    #expect(heard.map(\.snapshot) == [first, second])
+    #expect(heard.map(\.depth) == [18, 18], "the depth so far is the shallower end so far")
+}
+
+/// The one thing a 复判 varies is the budget: both ends are asked at it, and nothing else about
+/// the judgement changes (docs/adr/0041).
+@MainActor
+@Test func theBudgetIsAskedOfBothEnds() async throws {
+    let before = try opening()
+    let after = try playing("g1f3", in: before)
+    let engine = ScriptedEngine([], byPosition: [
+        before.state.fen: Analysis(depth: 28, lines: [line(30, "e2e4", "e4")]),
+        after.state.fen: Analysis(depth: 26, lines: [line(20, "e7e5", "e5")]),
+    ])
+
+    let weighed = try #require(await engine.weigh(after, from: before, budget: PositionSearches.deeper))
+
+    // The store answers a position nobody has looked at everyday-first, then deeper; the deeper
+    // ask is one per end, and the ends are the two positions of the move.
+    #expect(engine.budgets.filter { $0 == PositionSearches.deeper }.count == 2)
+    #expect(Array(NSOrderedSet(array: engine.positions)) as? [String] == [before.state.fen, after.state.fen])
+    #expect(weighed.depth == 26)
+    #expect(weighed.reply == ["e5"])
+}
+
+/// The shallower end is the depth whichever end it is: a deeper look at one side of a
+/// comparison is not a deeper comparison.
+@MainActor
+@Test func theDepthIsTheShallowerEndWhicheverEndItIs() async throws {
+    let before = try opening()
+    let after = try playing("g1f3", in: before)
+    let shallowFirst = ScriptedEngine([], byPosition: [
+        before.state.fen: Analysis(depth: 16, lines: [line(30, "e2e4", "e4")]),
+        after.state.fen: Analysis(depth: 24, lines: [line(20, "e7e5", "e5")]),
+    ])
+    let shallowSecond = ScriptedEngine([], byPosition: [
+        before.state.fen: Analysis(depth: 24, lines: [line(30, "e2e4", "e4")]),
+        after.state.fen: Analysis(depth: 16, lines: [line(20, "e7e5", "e5")]),
+    ])
+
+    #expect(try #require(await shallowFirst.weigh(after, from: before)).depth == 16)
+    #expect(try #require(await shallowSecond.weigh(after, from: before)).depth == 16)
 }
 
 @MainActor
@@ -214,7 +255,7 @@ private func playing(_ uci: String, in game: Game) throws -> Game {
     let outside = try #require(await engine.weigh(h4, from: before))
     #expect(!outside.isBest)
     #expect(outside.after == .centipawns(-10), "a move the search had no Line for is searched")
-    #expect(outside.depth == 20)
+    #expect(outside.depth == 18, "two ends, and the first is the shallower")
     #expect(outside.reply == ["e5", "Nf3"])
     #expect(engine.positions.contains(h4.state.fen))
 }

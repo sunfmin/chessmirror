@@ -986,32 +986,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         rejudging = Rejudging(index: index, tried: tried, depth: 0)
         rejudgeTask = Task { [weak self] in
             guard let self else { return }
-            var first: Analysis?
-            for await snapshot in engine.analysePosition(before, budget: PositionSearches.deeper) {
-                guard !Task.isCancelled else { return }
-                first = snapshot
-                rejudging?.depth = snapshot.depth
+            // The same 细判 as the one that refused the move, at the deeper budget: one act, so
+            // the depth the number is worth and the 应招 beside it are read by the one rule.
+            let weighed = await engine.weigh(played, from: before, budget: PositionSearches.deeper) {
+                rejudging?.depth = $0.depth
             }
-            guard !Task.isCancelled, let first else { return finishRejudge(nil, at: index) }
-            var after = played.state.outcomeScore
-            var depth = first.depth
-            var reply: [String] = []
-            if after == nil {
-                for await snapshot in engine.analysePosition(played, budget: PositionSearches.deeper) {
-                    guard !Task.isCancelled else { return }
-                    after = snapshot.best?.score
-                    reply = snapshot.best?.san ?? []
-                    depth = min(first.depth, snapshot.depth)
-                    rejudging?.depth = depth
-                }
-            }
-            guard !Task.isCancelled, let after,
-                let weighed = Weighing(
-                    mover: before.state.sideToMove, before: first, after: after, depth: depth, reply: reply
-                )
-            else { return finishRejudge(nil, at: index) }
+            guard !Task.isCancelled else { return }
             finishRejudge(
-                .init(san: tried.san, drop: weighed.drop, notFound: tried.notFound, depth: depth, line: weighed.reply),
+                weighed.map {
+                    .init(san: tried.san, drop: $0.drop, notFound: tried.notFound, depth: $0.depth, line: $0.reply)
+                },
                 at: index
             )
         }
@@ -1509,7 +1493,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // it, picked up from the same search that judged it (docs/adr/0034): the position the move
         // made is off the board the moment it is refused, so this is the last moment the Line can
         // be had without paying for a second search.
-        let weighed = await engine.weigh(played, from: position, progress: noteProgress)
+        let weighed = await engine.weigh(played, from: position) { noteProgress($0.snapshot) }
         guard !Task.isCancelled else { return }
         if let weighed { interceptTable = (position.state.fen, weighed.before) }
         // What to put back when the move does not stand is the 原局 `weigh` kept: the game as it
