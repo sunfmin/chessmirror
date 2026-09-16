@@ -693,9 +693,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
-    /// What has been refused at the position on the board, oldest first. Written onto the move
-    /// that finally stands and then cleared.
-    private var triedHere: [Game.Ply.Tried] = []
     private var weighing: Task<Void, Never>?
     func waitForJudgement() async { await weighing?.value }
     func waitForPreparedInterception() async { await searchTask?.value }
@@ -725,8 +722,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public static let interceptDepth = 20
     public private(set) var hintLayer = 0
     public private(set) var relaxedIntercept: Double?
+    /// Where the hint ladder stood, and what was last said about a refusal, at each position the
+    /// player has been asked at. Session state and nothing more: the refusals themselves are the
+    /// Game's (`Game.pendingTried`, docs/adr/0037), read at the cursor, and a session that kept
+    /// its own copy of them was one more place for them to be wrong.
     private struct PendingHelp {
-        var tried: [Game.Ply.Tried]
         var layer: Int
         var relaxed: Double?
         var refusal: Refusal?
@@ -739,14 +739,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard helpPosition != fen else { return }
         if let helpPosition {
             helpByPosition[helpPosition] = PendingHelp(
-                tried: triedHere, layer: hintLayer, relaxed: relaxedIntercept, refusal: refused
+                layer: hintLayer, relaxed: relaxedIntercept, refusal: refused
             )
         }
         helpPosition = fen
         let pending = helpByPosition[fen]
-        // At the end of the game the refusals are the file's, which is how a refusal the player
-        // walked away from is still on the board when they come back (docs/adr/0037).
-        triedHere = pending?.tried ?? (game.pendingTried.first { $0.ply == cursor }?.tries ?? [])
         hintLayer = pending?.layer ?? 0
         relaxedIntercept = pending?.relaxed
         refused = pending?.refusal
@@ -766,11 +763,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         return game.reviewScore(atPly: cursor)
     }
-    public var pendingAttempts: [Game.Ply.Tried] { triedHere }
+    /// The 试招 refused at the position on the board that no move has absorbed yet, oldest
+    /// first. Read out of the Game, which is where a refusal is written the moment it happens.
+    public var pendingAttempts: [Game.Ply.Tried] { game.pendingTries(atPly: cursor) }
 
-    /// Only the attempts relevant to the position/move being read, never a whole-game list.
+    /// Only the attempts relevant to the position/move being read, never a whole-game list:
+    /// what is still pending here, or else what the move that stands here took with it.
     public var visibleAttempts: [Game.Ply.Tried] {
-        if !triedHere.isEmpty { return triedHere }
+        let pending = pendingAttempts
+        if !pending.isEmpty { return pending }
         guard cursor > 0, game.plies.indices.contains(cursor - 1) else { return [] }
         return game.plies[cursor - 1].tried
     }
@@ -781,7 +782,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// belong to the position on the board, and the position on the board is where they were
     /// refused. Nil only for a game with nothing played in it yet.
     public var refusedPosition: Game? {
-        if !triedHere.isEmpty { return viewed }
+        if !pendingAttempts.isEmpty { return viewed }
         guard cursor > 0 else { return nil }
         return game.rewound(to: cursor - 1)
     }
@@ -914,16 +915,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if isTilling || hasTillingFeedback, let drop, let score {
             game.setJudgement(.init(drop: drop, score: score, depth: depth ?? interceptTable?.analysis.depth ?? 0), atPly: ply)
         }
+        // A move let through at a relaxed line is written down as a 试招 the player did not find,
+        // after the ones that were refused on the way to it.
+        var relaxed: [Game.Ply.Tried] = []
         if relaxedIntercept != nil, let drop, lines.records(drop) {
-            triedHere.append(.init(san: san, drop: drop, notFound: true))
+            relaxed = [.init(san: san, drop: drop, notFound: true)]
         }
-        if !triedHere.isEmpty || hintLayer > 0 {
-            game.setTried(triedHere, hints: hintLayer, atPly: ply)
-        }
-        // The move that stands has taken the refusals with it: the position they were made at is
+        // The move that stands takes the refusals with it: the position they were made at is
         // the one this move was played from, which is `ply` here — the index of the move itself.
-        game.setPendingTried([], atPly: ply)
-        triedHere = []
+        game.absorbPendingTried(atPly: ply, hints: hintLayer, adding: relaxed)
         hintLayer = 0
         relaxedIntercept = nil
     }
@@ -933,8 +933,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             let table = interceptTable, table.fen == game.state.fen,
             let uci = table.analysis.bestMove, let move = game.state.move(matching: uci)
         else { return }
-        // Mark the original failed attempt, rather than manufacturing another occurrence.
-        triedHere = triedHere.map { .init(san: $0.san, drop: $0.drop, notFound: true) }
+        // Mark the original failed attempts, rather than manufacturing another occurrence.
+        game.setPendingTried(
+            pendingAttempts.map { .init(san: $0.san, drop: $0.drop, notFound: true, line: $0.line) },
+            atPly: cursor
+        )
         commit(move, by: .asked)
     }
     private var interceptTable: (fen: String, analysis: Analysis)?
@@ -1236,7 +1239,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             retune()
             return
         }
-        triedHere.append(Game.Ply.Tried(san: san, drop: weighed.drop, line: weighed.reply))
         refused = Refusal(san: san, drop: weighed.drop)
         game = gameBefore
         cursor = cursorBefore ?? game.plies.count
@@ -1246,7 +1248,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // (docs/adr/0037). At the position it happened at, which is where the eye was standing —
         // a refusal is not always at the end of the game, because the player is free to play from
         // anywhere in it. No retune: the engine is not owed a reply to a move that came back.
-        game.setPendingTried(triedHere, atPly: cursorBefore ?? game.plies.count)
+        game.recordTried(Game.Ply.Tried(san: san, drop: weighed.drop, line: weighed.reply), atPly: cursor)
         save()
         Sounds.current.play(.refused)
         if findsPunishment { punishment = Punishment(position: played, engine: engine) }
@@ -1277,12 +1279,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 cursor = game.plies.count
                 isWeighing = false
                 if let verdict = practice.verdict, interceptsHere(verdict.drop) {
-                    triedHere.append(
-                        .init(san: verdict.played, drop: verdict.drop, line: verdict.reply)
-                    )
                     refused = Refusal(san: verdict.played, drop: verdict.drop)
                     if let start = game.rewound(to: 0) { game = start }
                     cursor = 0
+                    // The drill's refusal goes through the same door as 耕棋's: into the Game, at
+                    // the position it happened at (docs/adr/0037).
+                    game.recordTried(
+                        .init(san: verdict.played, drop: verdict.drop, line: verdict.reply), atPly: 0
+                    )
                     Sounds.current.play(.refused)
                     return
                 }

@@ -41,7 +41,10 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
         #expect(exercise.revealedMove == nil)
     }
     #expect(session.activePunishment == nil)
-    #expect(session.board == game)
+    // The board is back where the move was refused, with the moves as they were; what differs
+    // from the game as it started is the 试招 written into it there (docs/adr/0037).
+    #expect(session.board.uciMoves == game.uciMoves)
+    #expect(session.board.state == game.state)
     #expect(session.board.state.sideToMove == .white)
 
     session.setIntercept(nil)
@@ -129,7 +132,10 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     await exercise.waitForJudgement()
     #expect(exercise.isFinished)
     #expect(session.activePunishment == nil)
-    #expect(session.board == game)
+    // The board is back where the move was refused, with the moves as they were; what differs
+    // from the game as it started is the 试招 written into it there (docs/adr/0037).
+    #expect(session.board.uciMoves == game.uciMoves)
+    #expect(session.board.state == game.state)
     #expect(session.board.state.sideToMove == .white)
     session.play(try #require(game.state.move(matching: "e2e4")))
     await session.waitForJudgement()

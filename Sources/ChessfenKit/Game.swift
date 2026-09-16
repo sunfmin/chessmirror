@@ -166,6 +166,33 @@ public struct Game: Hashable, Sendable {
         pendingTried.sort { $0.ply < $1.ply }
     }
 
+    /// The 试招 refused at the position after `ply` moves that no move has absorbed, oldest
+    /// first. Empty for a position nobody has been stopped at.
+    public func pendingTries(atPly ply: Int) -> [Ply.Tried] {
+        pendingTried.first { $0.ply == ply }?.tries ?? []
+    }
+
+    /// Writes one more refusal down at the position it happened at, after the ones already
+    /// there (docs/adr/0037). The one door a refusal comes in by while no move stands to carry
+    /// it — 耕棋's and a drill's alike.
+    public mutating func recordTried(_ tried: Ply.Tried, atPly ply: Int) {
+        setPendingTried(pendingTries(atPly: ply) + [tried], atPly: ply)
+    }
+
+    /// The move at `ply` takes the refusals made at the position it was played from: they
+    /// become its `tried`, with `extra` after them, and the pending slot at that position is
+    /// emptied. A move that found nothing to take, with no ladder open, leaves whatever the move
+    /// already carried — playing the move that is already there is not a new move.
+    public mutating func absorbPendingTried(
+        atPly ply: Int, hints: Int = 0, adding extra: [Ply.Tried] = []
+    ) {
+        let taken = pendingTries(atPly: ply) + extra
+        if !taken.isEmpty || hints > 0 {
+            setTried(taken, hints: hints, atPly: ply)
+        }
+        setPendingTried([], atPly: ply)
+    }
+
     /// The one Depth every `Ply.evaluation` in this Game was computed at, or nil for a Game
     /// no Review has been over.
     ///
@@ -262,6 +289,10 @@ public struct Game: Hashable, Sendable {
         guard var replayed = rewound(to: ply), replayed.apply(move) else { return false }
         plies = replayed.plies
         state = replayed.state
+        // The positions past here are gone, and a refusal at a position that no longer exists
+        // in the game is a refusal at nothing. The ones at `ply` itself stay: this move was
+        // played from that position, and it is the move's to take (docs/adr/0037).
+        pendingTried.removeAll { $0.ply > ply }
         return true
     }
 
@@ -273,6 +304,7 @@ public struct Game: Hashable, Sendable {
         else { return false }
         plies = shortened
         state = previous
+        pendingTried.removeAll { $0.ply > plies.count }
         return true
     }
 
@@ -292,6 +324,10 @@ public struct Game: Hashable, Sendable {
         }
         game.reviewDepth = reviewDepth
         game.startEvaluation = startEvaluation
+        // The refusals made at positions along the way are still at those positions: a game cut
+        // short at Ply 2 was stopped at Ply 2 as surely as the whole game was, and the move
+        // played from there is the one that takes them (docs/adr/0037).
+        game.pendingTried = pendingTried.filter { $0.ply <= ply }
         return game
     }
 
