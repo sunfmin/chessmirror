@@ -1777,9 +1777,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             if searchTask == nil { isAdviceSpent = true }
             return
         }
-        // The board may already be searching this position for the badge (`prepareInterception`).
-        // The card joins the same shared search rather than waiting for a second one: its
-        // subscription does both jobs, so nothing is lost by taking over.
+        // The board may already be searching this position for the badge (`prepareInterception`),
+        // or a probe may be. A card dealt while that runs is a card at rest: nothing is taken over,
+        // and the card asks again when the board is quiet. A card that asks once the shared search
+        // has finished is answered out of its cache without a second search (`PositionSearches`).
+        if searchTask != nil { return }
         stopSearching()
         advise(on: viewed, using: engine)
     }

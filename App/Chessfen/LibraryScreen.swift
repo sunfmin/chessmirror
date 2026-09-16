@@ -194,6 +194,16 @@ struct LibraryScreen: View {
             takeWhatWasShared()
         }
         .onOpenURL { _ in takeWhatWasShared() }
+        // The 错题本 is derived, so it is brought up to date whenever the games change or a line
+        // moves — and costs nothing when neither has, because the index walks only what is new
+        // (docs/adr/0028). `initial` covers the launch, where the library is already listed. On
+        // the first screen rather than at the app's root, where a screen test can hold it to it.
+        .onChange(of: library.entries, initial: true) { _, entries in
+            index.update(from: entries, lines: judgement.lines)
+        }
+        .onChange(of: judgement.lines) { _, lines in
+            index.update(from: library.entries, lines: lines)
+        }
     }
 
     // ------------------------------------------------------------------ parts

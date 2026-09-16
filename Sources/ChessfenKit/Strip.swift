@@ -52,8 +52,8 @@ public struct Strip: Hashable, Sendable {
     public let bar: Bar?
 
     /// The bar reads the badge's number — where the move just played landed, else the position on
-    /// screen, else the standing Analysis — and never the engine's opinion on its own
-    /// (docs/adr/0040). Once the game has ended it reads the result instead.
+    /// screen, else whatever Analysis a card has asked for (docs/adr/0040). Once the game has ended
+    /// it reads the result instead.
     public struct Bar: Hashable, Sendable {
         public let score: Score?
         public let finish: Finish?

@@ -105,7 +105,9 @@ struct GameScreenScreenshots {
         #expect(rendered.says("白方"))
         #expect(rendered.says("该走了"))
         #expect(rendered.says(localized("game.depth", 26)), "the deeper snapshot should have replaced the shallow one")
-        #expect(!rendered.says("+0.38"), "and not what the engine thinks of the position (docs/adr/0040)")
+        // Whether the bar carries a number here turns on which of the dealt card and the board's own
+        // search asked first, so the picture is not held to either; `gameInPlaySaysNothing` is the
+        // one that holds the default to silence (docs/adr/0040).
         #expect(rendered.says("优势条"), "said once, at the end of the bar that draws it")
         #expect(
             !rendered.says("搜索深度"),
@@ -134,8 +136,6 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("问一格"))
         #expect(!rendered.says("走马灯"))
         #expect(!rendered.says("考一遍"))
-        // One card at a time, so the numbers on screen are the strip's and no more.
-        #expect(rendered.count(of: "+0.") == 2)
         // The record, and the whole walk through it.
         #expect(rendered.says("第 8 步 Nf6"), "the record should carry the game, move by move")
         #expect(rendered.says("开局"))

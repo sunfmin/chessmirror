@@ -34,7 +34,7 @@ struct ImportScreenScreenshots {
             #expect(ScreenImage.activate("\(side.label) · \(player)", in: window))
             await ScreenImage.settle()
         }) {
-            ImportSheet(session: session, onOpen: { opened = $0 }).environment(library)
+            ImportSheet(session: session, onOpen: { opened = $0 }).environment(library).environment(book(in: directory))
         }
         let entry = try #require(opened)
         let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
@@ -83,6 +83,12 @@ struct ImportScreenScreenshots {
         return GameLibrary(folder: GameFolder(url: tempDir))
     }
 
+    /// The 错题本 the sheet reads a chapter's status against, over a log of its own so nothing
+    /// here touches the player's real one.
+    private func book(in tempDir: URL) -> MistakeIndex {
+        MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "practice.jsonl")))
+    }
+
     private func tempDir() -> URL {
         URL(filePath: NSTemporaryDirectory())
             .appending(path: "chessfen-screens-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -95,7 +101,7 @@ struct ImportScreenScreenshots {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let rendered = await ScreenImage.write("import-sheet-idle") {
-            ImportSheet().environment(library(in: tempDir))
+            ImportSheet().environment(library(in: tempDir)).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("导入棋局"))
@@ -122,7 +128,7 @@ struct ImportScreenScreenshots {
         await session.run("https://lichess.org/study/HgiqcIqW.pgn")
 
         let rendered = await ScreenImage.write("import-sheet-ready") {
-            ImportSheet(session: session).environment(library(in: tempDir))
+            ImportSheet(session: session).environment(library(in: tempDir)).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("2 局"))
@@ -151,7 +157,7 @@ struct ImportScreenScreenshots {
         _ = session.apply(into: library)
 
         let rendered = await ScreenImage.write("import-sheet-done") {
-            ImportSheet(session: session).environment(library)
+            ImportSheet(session: session).environment(library).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("导入了 2 局"))
@@ -207,6 +213,7 @@ struct ImportScreenScreenshots {
         let rendered = await ScreenImage.write("import-sheet-recent") {
             ImportSheet(session: session, initialDoor: .player, initialPlayer: "sunfmin")
                 .environment(library(in: tempDir))
+                .environment(book(in: tempDir))
         }
 
         #expect(rendered.says("2 局"), "how many came down")
@@ -233,7 +240,7 @@ struct ImportScreenScreenshots {
         await session.run("https://lichess.org/hf3Zpe5R/black")
 
         let rendered = await ScreenImage.write("import-sheet-missing") {
-            ImportSheet(session: session).environment(library(in: tempDir))
+            ImportSheet(session: session).environment(library(in: tempDir)).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("找不到这局棋"))

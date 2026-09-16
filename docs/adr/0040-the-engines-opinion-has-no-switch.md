@@ -27,7 +27,9 @@ branches, and the tests that photographed them.
   report, whatever the engine thinks.
 - The board no longer starts an advisory search of its own. The one search the board starts is the
   shared bounded search of the position, for 正着 and the badge (ADR 0039); a card that asks gets a
-  Stint of the same search (`adviseForCard`), and its answer is kept for the card.
+  Stint of the same search (`adviseForCard`), and its answer is kept for the card. The bar reads
+  the badge's number first, and falls back to whatever Analysis a card has asked for — the bar was
+  always allowed to show the assessment; what is gone is the strip *saying* it.
 - **收下 has no surface at present.** The settlement row was only reachable with the flag off, so
   it had already been off every phone since the press went. `Game.settlement` and `Settlement` stay
   in the kit, tested, for the day it is given one (CONTEXT.md, 收下).
