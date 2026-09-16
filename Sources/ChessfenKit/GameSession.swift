@@ -942,6 +942,26 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return .quiet
     }
 
+    /// The strip under the board, whole (`Strip`, docs/adr/0020): the voice, the tally, the depth
+    /// to account for and the bar, each from the facts this session already holds.
+    public var strip: Strip {
+        let finish = viewed.finish
+        let bar: Strip.Bar?
+        if hasTillingFeedback {
+            bar = Strip.Bar(score: feedbackScore, finish: finish)
+        } else {
+            bar = finish.map { Strip.Bar(score: nil, finish: $0) }
+        }
+        let tally = noSlips
+        return Strip(
+            voice: standing,
+            tally: isTilling || tally.distance > 0 ? tally : nil,
+            depth: hasTillingFeedback && phase != .exercising && finish == nil
+                ? (searchProgress?.depth ?? 0) : nil,
+            bar: bar
+        )
+    }
+
     private var isLatestMoveMeasured: Bool {
         measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen
     }

@@ -320,11 +320,9 @@ struct EvalBar: View {
     /// Somebody who has just been mated is not level.
     var finish: Finish?
 
-    /// How a game ended, as far as a bar is concerned.
-    enum Finish: Hashable {
-        case won(PieceColour)
-        case drawn
-    }
+    /// How a game ended, as far as a bar is concerned: the kit's, which is where the game knows
+    /// how it ended and how much of a bar that is (`Game.finish`).
+    typealias Finish = ChessfenKit.Finish
 
     var body: some View {
         let white = finish?.whiteShare ?? advantageFraction(score)
@@ -368,14 +366,6 @@ struct EvalBar: View {
 }
 
 extension EvalBar.Finish {
-    /// How much of the bar White holds at the end: all of it, none of it, or a bar that is neither.
-    var whiteShare: Double {
-        switch self {
-        case .won(let colour): colour == .white ? 1 : 0
-        case .drawn: 0.5
-        }
-    }
-
     var label: String {
         switch self {
         case .won(let colour): localized("standing.won", colour.label)

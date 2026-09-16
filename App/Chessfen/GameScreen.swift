@@ -299,16 +299,19 @@ struct GameScreen: View {
     /// Temporary explanations get their own space instead of squeezing either label into two
     /// lines. Interception can be switched off without hiding the position's assessment.
     private var standing: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        // What the strip says, shows and accounts for is the session's to decide, as one value
+        // (`Strip`); this draws it. The one thing the session cannot know is *why* it has no
+        // engine — that is the host's fact — and with no engine there is nothing else it could
+        // be saying, short of a game that is over.
+        let strip = session.strip
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 12) {
                 tillingSwitch
                     .fixedSize(horizontal: true, vertical: false)
                 // How far the game has gone without a slip, and how far since the last one:
                 // 正着数 and 连正, read off the game rather than counted (CONTEXT.md). On the
-                // row that names 正着 and on no row of its own, for as long as 正着 is on or has
-                // left something standing.
-                if session.isTilling || session.noSlips.distance > 0 {
-                    let tally = session.noSlips
+                // row that names 正着 and on no row of its own.
+                if let tally = strip.tally {
                     Text(localized("till.tally", tally.distance, tally.run))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
@@ -317,14 +320,10 @@ struct GameScreen: View {
                         .accessibilityLabel(localized("till.tally", tally.distance, tally.run))
                 }
                 Spacer(minLength: 8)
-                // What the strip says is the session's to decide, by one priority (`Standing`);
-                // this draws whichever voice it is handed. The one thing the session cannot know
-                // is *why* it has no engine — that is the host's fact — and with no engine there
-                // is nothing else it could be saying, short of a game that is over.
                 if engine.unavailableReason != nil, !viewed.isOver {
                     Text(localized("game.noEngine")).font(.caption).foregroundStyle(Palette.alarm)
                 } else {
-                    switch session.standing {
+                    switch strip.voice {
                     case .finished(let line):
                         Text(line)
                             .font(.caption.weight(.medium))
@@ -352,10 +351,9 @@ struct GameScreen: View {
                         EmptyView()
                     }
                 }
-                // The search has to account for itself (docs/adr/0020): how deep it has got, for
-                // as long as there is a position of the game's to search.
-                if session.hasTillingFeedback, session.phase != .exercising, !viewed.isOver {
-                    Text(localized("game.depth", session.searchProgress?.depth ?? 0))
+                // The search has to account for itself (docs/adr/0020).
+                if let depth = strip.depth {
+                    Text(localized("game.depth", depth))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -363,13 +361,8 @@ struct GameScreen: View {
             .lineLimit(1)
             .minimumScaleFactor(0.85)
 
-            // The bar reads the badge's number, never the engine's opinion of the position
-            // (docs/adr/0040); a finished game reads its result whatever the badge is doing.
-            if session.hasTillingFeedback {
-                EvalBar(score: session.feedbackScore,
-                        orientation: session.orientation, finish: finish)
-            } else if finish != nil {
-                EvalBar(score: nil, orientation: session.orientation, finish: finish)
+            if let bar = strip.bar {
+                EvalBar(score: bar.score, orientation: session.orientation, finish: bar.finish)
             }
 
         }
@@ -1812,19 +1805,6 @@ struct GameScreen: View {
     private var candidateMoves: [Move] {
         guard let selected, session.isHandTurn else { return [] }
         return session.board.state.moves(from: selected)
-    }
-
-    /// How the game on screen ended, if it has.
-    ///
-    /// A finished game has no Score: there is nothing left to search, so the engine says nothing and
-    /// the bar would sit exactly half and half — the same picture it shows for a position nobody has
-    /// looked at yet, and the opposite of the truth when someone has just been mated.
-    private var finish: EvalBar.Finish? {
-        switch viewed.state.outcome {
-        case .ongoing: nil
-        case .checkmate: .won(viewed.state.sideToMove.opposite)
-        default: .drawn
-        }
     }
 
     /// The colour whose pieces stand at the top of the board, and so the colour whose controls
