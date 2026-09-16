@@ -4,7 +4,7 @@ A 试招's 掉幅 comes from two bounded searches — the position it was played
 made — each stopping at ten seconds or depth twenty, whichever comes first ([ADR 0020](0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md),
 [ADR 0039](0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md)). On a phone
 the two ends often stop at different depths, and a tactical position can stop well short of twenty,
-so the number on the 已退回 chip is sometimes a number nobody should trust. [ADR 0034](0034-a-tried-move-keeps-the-reply-it-earned.md)
+so the number on the 已退回 chip is sometimes a number nobody should trust. [ADR 0034](0034-a-refused-move-keeps-the-reply-it-earned.md)
 said nothing needs to run again once a move is judged; this reopens that for one act.
 
 **The player can ask for a 复判 of one 试招 from its chip (CONTEXT.md, 复判): both ends are searched
