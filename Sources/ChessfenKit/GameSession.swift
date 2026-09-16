@@ -65,6 +65,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             tactic = nil
             isProbingTactics = false
             probedAnalysis = nil
+            // And a 应招 being read was being read at *this* position: the board moving on is
+            // the question being put away (docs/adr/0034).
+            closeReply()
         }
     }
     /// The Game rebuilt where the cursor stands, kept until either the Game or the cursor
@@ -813,6 +816,89 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let result = await engine.positionResult(played)
         guard !Task.isCancelled else { return [] }
         return Array((result?.best?.san ?? []).prefix(Reply.limit))
+    }
+
+    /// A 应招 being read on the strip: which 试招, the line it makes, and how far the board can
+    /// draw it (docs/adr/0034).
+    ///
+    /// The screen used to keep this as four pieces of view state — which chip is on, the answer,
+    /// whether it was still being asked for, and the task asking — and derive the line, the
+    /// arrows and the chips from them on every draw. A reading is one value: opened by a tap,
+    /// filled in when the answer arrives, and closed by the next tap or by the board moving on.
+    public struct ReplyReading: Equatable, Sendable {
+        /// One numbered step of the line, as the chips under the board say it.
+        public struct Step: Hashable, Sendable {
+            public let step: Int
+            public let san: String
+            public let isYours: Bool
+        }
+
+        /// Which of `visibleAttempts` is open.
+        public let index: Int
+        public let tried: Game.Ply.Tried
+        /// The position the 试招 was refused in, which the arrows are walked from.
+        public let position: Game
+        /// The 试招 followed by its 应招. Empty until there is an answer: one arrow for a move
+        /// that was taken back is a picture of the mistake with the lesson left out.
+        public internal(set) var line: [String]
+        /// Whether the answer is still being asked for.
+        public internal(set) var isAsking: Bool
+
+        /// The line as numbered arrows from the position the move was refused in.
+        public var arrows: [MoveArrow] { Reply.arrows(in: position, playing: line) }
+
+        /// The arrows as chips, numbered the same way. Read off the arrows rather than off the
+        /// line, so the two cannot disagree about how far the walk got or whose move a step is.
+        public var steps: [Step] {
+            arrows.compactMap { arrow in
+                guard line.indices.contains(arrow.step - 1) else { return nil }
+                return Step(step: arrow.step, san: line[arrow.step - 1], isYours: arrow.isYours)
+            }
+        }
+    }
+
+    /// The 应招 open on the strip, if one is (`readReply(at:)`).
+    public private(set) var replyReading: ReplyReading?
+    private var replyTask: Task<Void, Never>?
+
+    /// Reads the 应招 of a 试招 on the strip, or puts it away again if it is the one open.
+    ///
+    /// A move that carries its answer is read at once; one refused before replies were written
+    /// down asks the shared bounded search and is filled in when the answer comes. Shut while a
+    /// 惩罚 exercise is open: that exercise is the same answer with the finding left to the
+    /// player, and a reading that would hand it over is the exercise not being one.
+    public func readReply(at index: Int) {
+        if replyReading?.index == index {
+            closeReply()
+            return
+        }
+        guard activePunishment == nil, visibleAttempts.indices.contains(index),
+            let position = refusedPosition
+        else { return }
+        closeReply()
+        let tried = visibleAttempts[index]
+        let hasAnswer = !tried.line.isEmpty
+        replyReading = ReplyReading(
+            index: index, tried: tried, position: position,
+            line: hasAnswer ? Reply.moves(of: tried) : [], isAsking: !hasAnswer
+        )
+        guard !hasAnswer else { return }
+        replyTask = Task { [weak self] in
+            guard let self else { return }
+            let answer = await reply(for: tried)
+            guard !Task.isCancelled, replyReading?.index == index, replyReading?.tried == tried
+            else { return }
+            replyReading?.isAsking = false
+            replyReading?.line = answer.isEmpty ? [] : Reply.moves(of: tried, reply: answer)
+        }
+    }
+
+    /// Puts the 应招 away. A question asked once is not a layer left on: the board goes back to
+    /// the position and says nothing about what the player might have tried.
+    public func closeReply() {
+        replyTask?.cancel()
+        replyTask = nil
+        replyReading = nil
     }
 
     public var isFaceToFace = false
@@ -1844,6 +1930,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         weighBegan = nil
         isWeighing = false
         stopSearching()
+        closeReply()
         thinking = nil
         // A pass that outlived the screen would come back having written Scores nobody watched
         // arrive, at a Depth chosen by a screen that has gone.
