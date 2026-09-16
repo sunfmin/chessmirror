@@ -162,3 +162,10 @@ What follows from a 细判: whether the move stands, and what is written down ei
 that stands carries its judgement and the 试招 refused before it; a move that is refused is
 written where it happened and the game is put back as it was being read; a move nobody could
 judge is put back with nothing written. One reading, shared by 正着 and a drill's attempt.
+
+**复判 (Re-judge)**:
+Judging a 试招 again, deeper: both ends of the move — the position it was played from and the
+position it made — searched to the same deeper level, and its 掉幅 and 应招 rewritten from that.
+Asked for by the player, one move at a time, never run on its own. It does not change the fact
+that the move was taken back; that happened, and stays written where it happened.
+_Avoid_: 再算, 深算, 重新分析

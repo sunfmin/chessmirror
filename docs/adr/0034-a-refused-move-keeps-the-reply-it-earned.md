@@ -1,5 +1,10 @@
 # A 试招 keeps the 应招 it earned, and shows it only when pressed
 
+> Amended by [ADR 0041](0041-a-tried-move-can-be-judged-again-deeper.md): a 试招 *can* be
+> searched again — once, deeper, when the player asks for a 复判 from its chip — and its 应招
+> is rewritten along with its 掉幅. The rule that stands is the one below: the 应招 shown is
+> the one the search that judged the move had in hand, and nothing runs on its own.
+
 耕棋 refuses a move and says nothing about what to play instead. That silence is deliberate
 ([ADR 0031](0031-the-player-no-longer-declares-a-reason.md)): the roll-back *is* the lesson, and
 the hint ladder is a separate thing somebody has to climb. But it left the player with no way to
