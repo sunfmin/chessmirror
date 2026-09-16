@@ -25,6 +25,10 @@ import Foundation
     /// nothing, which is the whole point of the cache and the thing a test can hold it to.
     public private(set) var walkedLastTime = 0
 
+    /// The 正着榜 (docs/adr/0038). Derived from the same walk as the book, and cached with it:
+    /// a game's credits are read once, under its file and date, and summed on every rebuild.
+    public private(set) var ladder = Ladder(rows: [])
+
     /// Today's queue (docs/adr/0030). Derived like everything else here — from the book and the
     /// practice log — and recomputed whenever either could have changed.
     public private(set) var daily = Daily(cards: [])
@@ -35,7 +39,15 @@ import Foundation
     private var lines: JudgementLines
     /// One game's findings, under the file it came from and the date it carried when they were
     /// taken. A file that has been written since is a different game and is walked again.
-    private var cached: [URL: (modified: Date, found: [(PositionKey, Encounter)])] = [:]
+    private var cached: [URL: Walked] = [:]
+
+    /// What one walk of one game turned up: its Encounters for the book, its credits for the
+    /// ladder.
+    private struct Walked {
+        let modified: Date
+        let found: [(PositionKey, Encounter)]
+        let credits: [Ladder.Credit]
+    }
 
     public init(log: PracticeLog = .standard, lines: JudgementLines = .standard) {
         self.log = log
@@ -53,15 +65,17 @@ import Foundation
             cached = [:]
         }
         var walked = 0
-        var fresh: [URL: (modified: Date, found: [(PositionKey, Encounter)])] = [:]
+        var fresh: [URL: Walked] = [:]
         for entry in entries {
             if let known = cached[entry.url], known.modified == entry.modified {
                 fresh[entry.url] = known
                 continue
             }
             walked += 1
-            fresh[entry.url] = (
-                entry.modified, MistakeBook.encounters(in: entry, lines: self.lines)
+            fresh[entry.url] = Walked(
+                modified: entry.modified,
+                found: MistakeBook.encounters(in: entry, lines: self.lines),
+                credits: Ladder.credits(in: entry)
             )
         }
         cached = fresh
@@ -112,6 +126,7 @@ import Foundation
         book = MistakeBook(
             mistakes: byPosition.map { Mistake(position: $0.key, encounters: $0.value) }
         )
+        ladder = Ladder.sum(cached.map { (game: $0.key, credits: $0.value.credits) })
         daily = Daily.forToday(
             book: book, attempts: PracticeLog.attempts(in: entries), lines: lines, now: now
         )

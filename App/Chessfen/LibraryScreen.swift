@@ -57,6 +57,7 @@ struct LibraryScreen: View {
                     entries
                     dailyDoor
                     bookDoor
+                    ladderBoard
                     games
                 }
                 .padding(.horizontal, 16)
@@ -390,6 +391,63 @@ struct LibraryScreen: View {
             .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
+    }
+
+    /// The 正着榜 (docs/adr/0038): one row per rung the player has stood a move at, the two bests
+    /// on each row opening the game they were made in. Nothing at all until something has stood,
+    /// because an empty ladder is not a thing to look at.
+    @ViewBuilder private var ladderBoard: some View {
+        let ladder = index.ladder
+        if !ladder.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(localized("ladder")).eyebrow().padding(.top, 6)
+                VStack(spacing: 0) {
+                    ForEach(ladder.rows) { row in
+                        rung(row)
+                        if row.id != ladder.rows.last?.id {
+                            Divider().padding(.leading, 18)
+                        }
+                    }
+                }
+                .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+            }
+        }
+    }
+
+    private func rung(_ row: Ladder.Row) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Text(row.strength.label)
+                .font(.subheadline.weight(.medium).monospacedDigit())
+                .foregroundStyle(Palette.ink)
+            Spacer(minLength: 0)
+            best(localized("ladder.run"), row.longestRun)
+            best(localized("ladder.distance"), row.longestDistance)
+            Text(localized("ladder.stood", plural: row.stood))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(Palette.inkSoft)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 11)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(row.strength.label)
+    }
+
+    /// A best on the ladder, and the way to the game it was made in.
+    @ViewBuilder private func best(_ title: String, _ best: Ladder.Best?) -> some View {
+        if let best {
+            Button {
+                if let entry = library.entries.first(where: { $0.url == best.game }) { open(entry) }
+            } label: {
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("\(best.value)")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Palette.ink)
+                    Text(title).font(.caption2).foregroundStyle(Palette.inkSoft)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(title) \(best.value)")
+        }
     }
 
     /// The games, as one flat list.

@@ -72,6 +72,79 @@ struct LibraryScreenScreenshots {
         #expect(rendered.says("走出第一步，这局就会记在这里"), "an empty library says so")
     }
 
+    /// The 正着榜 above the games (docs/adr/0038): a row per rung that has been stood at, each
+    /// with its longest 连正, its longest 正着数 and how many moves stood there in all.
+    @Test("the ladder shows a row per rung, with the bests and the total")
+    func theLadderAboveTheGames() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = library(in: tempDir)
+        let stood = Game.Ply.Judgement(drop: 1, score: .centipawns(20), depth: 20, intercept: 5)
+        let italian = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5", "c2c3", "g8f6", "d2d4"]
+        // One game climbing from 1400 to 1800 with a 试招 before 4. c3, one played at 满力.
+        var climb = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: italian))
+        for ply in [0, 2, 4, 6, 8] { climb.setJudgement(stood, atPly: ply) }
+        for ply in [1, 3] { climb.setStrength(.elo(1400), atPly: ply) }
+        for ply in [5, 7] { climb.setStrength(.elo(1800), atPly: ply) }
+        climb.setTried([.init(san: "Nh3", drop: 12)], atPly: 6)
+        var full = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: italian))
+        for ply in [0, 2, 4] { full.setJudgement(stood, atPly: ply) }
+        for ply in [1, 3, 5, 7] { full.setStrength(.full, atPly: ply) }
+        let tags = [
+            PGN.Tag("White", Controller.hand.playerName),
+            PGN.Tag("Black", Controller.engine.playerName),
+        ]
+        #expect(library.write(PGN(game: climb, tags: tags), to: tempDir.appending(path: "climb.pgn")))
+        #expect(library.write(PGN(game: full, tags: tags), to: tempDir.appending(path: "full.pgn")))
+        let index = MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl")))
+        index.update(from: library.entries)
+        #expect(index.ladder.rows.map(\.strength) == [.elo(1400), .elo(1800), .full])
+
+        let rendered = await ScreenImage.write("library-ladder") {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+        }
+
+        #expect(rendered.says("正着榜"))
+        #expect(rendered.says("1400"))
+        #expect(rendered.says("1800"))
+        #expect(rendered.says("满力"))
+        #expect(rendered.says("最长连正 2"), "1800's run, ended by the 试招")
+        #expect(rendered.says("最长正着数 3"))
+        #expect(rendered.says("共 3 步"))
+        #expect(rendered.says("最长连正 3"), "满力's three, unbroken")
+    }
+
+    /// Nothing has stood at any rung: no ladder, and nothing saying there is none — the games
+    /// are what this screen is about.
+    @Test("a library with nothing stood shows no ladder")
+    func noLadderBeforeAnythingStood() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = library(in: tempDir)
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+        let tags = [
+            PGN.Tag("White", Controller.hand.playerName),
+            PGN.Tag("Black", Controller.engine.playerName),
+        ]
+        #expect(library.write(PGN(game: game, tags: tags), to: tempDir.appending(path: "one.pgn")))
+        let index = MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl")))
+        index.update(from: library.entries)
+
+        let rendered = await ScreenImage.write("library-no-ladder") {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+        }
+        #expect(index.ladder.isEmpty)
+        #expect(!rendered.says("正着榜"))
+    }
+
     /// The two standing lines, where a person can move them (docs/adr/0027). The third is
     /// 正着's and belongs to a game, so it is not on this sheet.
     @Test("the settings sheet offers the record and drill lines, defaulting to 5 and 5")
