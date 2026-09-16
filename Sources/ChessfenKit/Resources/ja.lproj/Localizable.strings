@@ -408,7 +408,6 @@
 "discovery.tacticFound" = "戦術のチャンスを発見";
 "board.faceToFace" = "対面";
 "till.returned" = "差し戻し";
-"search.limit" = "10秒 / 深さ20";
 "book.recorded" = "間違い帳に %d 件追加しました";
 "standing.change" = "この手の勝率変化 %@";
 "tried.reply" = "相手の応手";
@@ -431,3 +430,14 @@
 "ladder.run" = "最長連続";
 "standing.best" = "最善手";
 "record.best" = "最善";
+"search" = "エンジンの探索";
+"search.time" = "時間";
+"search.depth" = "深さ";
+"search.stop" = "打ち切りの条件";
+"search.stop.either" = "先に達した方";
+"search.stop.time" = "時間だけ";
+"search.stop.depth" = "深さだけ";
+"search.seconds" = "%d秒";
+"search.plies" = "深さ%d";
+"search.limit.either" = "%1$d秒 / 深さ%2$d";
+"search.explained" = "エンジンが各局面をどれだけの時間、どれだけの深さまで読むか。判定、エンジン自身の一手、ヒントはすべてこの一回の探索なので、損失はどこで測っても同じ意味になります。再判定はこれより8深く、時間は6倍まで使います。";

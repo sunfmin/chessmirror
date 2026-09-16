@@ -129,7 +129,7 @@ struct DeckGallery {
             #expect(after.contains(localized("till.intercept")))
             #expect(window.rootViewController?.presentedViewController == nil)
             if engineOpponent {
-                #expect(after.contains(localized("search.limit")))
+                #expect(after.contains(SearchLimit.standard.label))
             }
             #expect(ScreenImage.activate(localized("punish.toggle"), in: window))
             await ScreenImage.settle()

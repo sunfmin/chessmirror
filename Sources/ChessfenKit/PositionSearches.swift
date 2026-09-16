@@ -1,25 +1,35 @@
 import Foundation
+import Synchronization
 
-/// Live consumers share one search per position, ending at ten seconds or depth twenty.
-/// A view leaving detaches its listener, not the shared work. Finished results survive
-/// navigation and, on device, relaunch, including results below depth twenty.
+/// Live consumers share one search per position, ending at the 搜索预算 — ten seconds or depth
+/// twenty unless the player set otherwise. A view leaving detaches its listener, not the shared
+/// work. Finished results survive navigation and, on device, relaunch, including results short
+/// of the depth.
 ///
 /// **The store keeps the deepest result it knows** (docs/adr/0041). A 复判 asks for a position
-/// deeper — `deeper`, depth 28 within a minute — and when that finishes it replaces the everyday
+/// deeper — `deeper`, eight plies past the budget in six times the time — and when that finishes it replaces the everyday
 /// entry, so the badge, the finder and the next 细判 there read the deeper answer without
 /// searching. A deeper search nobody is waiting for any more is cancelled and writes nothing:
 /// what it reached is in the engine's hash table, not in here, and the next ask continues from it.
 public actor PositionSearches {
-    /// The Depth a position search stops at, whichever end of the budget arrives first. Named
-    /// because it is the depth every live answer is worth — judgement, the finder, the engine's
-    /// own move and a move a thumb asked for are all this one search — and a caller standing in
-    /// for a finished one has no business restating it.
-    public static let depth = 20
-    public static let budget: SearchBudget = .timeOrDepth(.seconds(10), depth)
-    /// What a 复判 takes both ends of a 试招 to: the same deeper level for each, and a minute at
-    /// most for each, so the search stays bounded and the pause gate treats it like any other.
-    public static let deeperDepth = 28
-    public static let deeper: SearchBudget = .timeOrDepth(.seconds(60), deeperDepth)
+    /// The 搜索预算 every live search runs on (CONTEXT.md): one for the whole process, because
+    /// it is a fact about the app and not about any one store or session — judgement, the
+    /// finder, the engine's own move and a move a thumb asked for are all this one search, and a
+    /// caller standing in for a finished one has no business restating it. The standard budget
+    /// until the app sets the one the player chose.
+    public static var limit: SearchLimit {
+        get { limits.withLock { $0 } }
+        set { limits.withLock { $0 = newValue } }
+    }
+    private static let limits = Mutex(SearchLimit.standard)
+
+    /// The Depth the budget names: where a search stops when the depth is what stops it.
+    public static var depth: Int { limit.depth }
+    public static var budget: SearchBudget { limit.budget }
+    /// What a 复判 takes both ends of a 试招 to: the same deeper level for each, bounded the same
+    /// way, so the search stays bounded and the pause gate treats it like any other.
+    public static var deeperDepth: Int { limit.deeper.depth }
+    public static var deeper: SearchBudget { limit.deeper.budget }
 
     private struct Listener {
         let continuation: AsyncStream<Analysis>.Continuation

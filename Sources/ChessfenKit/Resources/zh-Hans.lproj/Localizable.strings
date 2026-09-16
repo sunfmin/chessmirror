@@ -455,7 +455,6 @@
 "standing.change" = "本步胜率变化 %@";
 "board.faceToFace" = "面对面";
 "till.returned" = "已退回";
-"search.limit" = "10 秒 / 20 层";
 "tried.reply" = "对手的应招";
 "tried.reply.hint" = "看这一步招来的应招";
 "tried.reply.none" = "这一步没有应招可看。";
@@ -476,3 +475,14 @@
 "ladder.run" = "最长连正";
 "standing.best" = "最佳";
 "record.best" = "最佳";
+"search" = "引擎搜索";
+"search.time" = "时间";
+"search.depth" = "深度";
+"search.stop" = "以哪个为准";
+"search.stop.either" = "先到为准";
+"search.stop.time" = "只看时间";
+"search.stop.depth" = "只看深度";
+"search.seconds" = "%d 秒";
+"search.plies" = "%d 层";
+"search.limit.either" = "%1$d 秒 / %2$d 层";
+"search.explained" = "引擎看每个局面用多久、看多深。细判、引擎自己走子、提示，全都是这一次搜索，所以掉幅在哪里都是同一个意思。复判在此之上再深 8 层、时间放宽到 6 倍。";

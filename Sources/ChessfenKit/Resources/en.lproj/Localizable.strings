@@ -480,7 +480,6 @@
 "standing.change" = "Win chance change this move %@";
 "board.faceToFace" = "Face to face";
 "till.returned" = "Returned";
-"search.limit" = "10 s / depth 20";
 "tried.reply" = "The reply it earns";
 "tried.reply.hint" = "Show the reply this move earns";
 "tried.reply.none" = "This move leaves no reply to show.";
@@ -501,3 +500,14 @@
 "ladder.run" = "Longest run";
 "standing.best" = "Best move";
 "record.best" = "best";
+"search" = "Engine search";
+"search.time" = "Time";
+"search.depth" = "Depth";
+"search.stop" = "Stop at";
+"search.stop.either" = "Whichever comes first";
+"search.stop.time" = "Time only";
+"search.stop.depth" = "Depth only";
+"search.seconds" = "%d s";
+"search.plies" = "depth %d";
+"search.limit.either" = "%1$d s / depth %2$d";
+"search.explained" = "How long and how deep the engine looks at each position. Judging a move, the engine's own move and a hint are all this one search, so a cost means the same thing wherever it was measured. A re-judge goes 8 deeper and allows 6 times the time.";

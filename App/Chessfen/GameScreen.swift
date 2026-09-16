@@ -526,9 +526,9 @@ struct GameScreen: View {
                     // is a fact about the opponent the way the clock is, and it changes mid-game
                     // the way a Controller does.
                     rungMenu
-                    // What the engine gets over a move: the budget every live position search
+                    // What the engine gets over a move: the 搜索预算 every live position search
                     // gets, said so nobody waits for a clock that does not exist (docs/adr/0039).
-                    Text(localized("search.limit"))
+                    Text(SearchSetting.shared.limit.label)
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
                 } else {
@@ -736,7 +736,7 @@ struct GameScreen: View {
                 HStack(spacing: 8) {
                     Text(localized("game.perMove")).foregroundStyle(Palette.inkSoft)
                     Spacer()
-                    Text(localized("search.limit")).foregroundStyle(Palette.ink)
+                    Text(SearchSetting.shared.limit.label).foregroundStyle(Palette.ink)
                 }
                 .padding(.vertical, 5)
             }

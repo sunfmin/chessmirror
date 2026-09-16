@@ -433,7 +433,6 @@
 "discovery.tacticFound" = "Occasion tactique trouvée";
 "board.faceToFace" = "Face à face";
 "till.returned" = "Reprise";
-"search.limit" = "10 s / profondeur 20";
 "book.recorded" = "%d ajoutés au carnet d’erreurs";
 "standing.change" = "Variation de probabilité pour ce coup %@";
 "tried.reply" = "La réponse qu’il provoque";
@@ -456,3 +455,14 @@
 "ladder.run" = "Plus longue série";
 "standing.best" = "Meilleur coup";
 "record.best" = "meilleur";
+"search" = "Recherche du moteur";
+"search.time" = "Temps";
+"search.depth" = "Profondeur";
+"search.stop" = "S'arrêter à";
+"search.stop.either" = "Le premier atteint";
+"search.stop.time" = "Le temps seul";
+"search.stop.depth" = "La profondeur seule";
+"search.seconds" = "%d s";
+"search.plies" = "profondeur %d";
+"search.limit.either" = "%1$d s / profondeur %2$d";
+"search.explained" = "Combien de temps et à quelle profondeur le moteur examine chaque position. Juger un coup, le coup du moteur lui-même et un indice sont cette même recherche, pour qu'un coût veuille dire la même chose partout. Un nouveau jugement va 8 plus profond et dispose de 6 fois le temps.";

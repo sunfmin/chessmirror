@@ -208,6 +208,30 @@ struct LibraryScreenScreenshots {
         #expect(rendered.count(of: "5%") >= 2, "both lines read 5%")
     }
 
+    /// The 搜索预算, where a person can set it (CONTEXT.md): time, depth, and which end stops
+    /// the search, defaulting to ten seconds or depth twenty, whichever comes first.
+    @Test("the settings sheet offers the search budget, defaulting to 10 s / depth 20, either")
+    func theSearchBudgetIsOnTheSettingsSheet() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        #expect(SearchSetting.shared.limit == .standard)
+        #expect(PositionSearches.limit == .standard, "and the kit runs on it")
+
+        let rendered = await ScreenImage.write("about-search") {
+            AboutScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library(in: tempDir))
+        }
+
+        #expect(rendered.says("引擎搜索"))
+        #expect(rendered.says("时间"))
+        #expect(rendered.says("10 秒"))
+        #expect(rendered.says("深度"))
+        #expect(rendered.says("20 层"))
+        #expect(rendered.says("以哪个为准"))
+        #expect(rendered.says("先到为准"))
+    }
+
     /// The doors behind the chevron. They are a Menu, so nothing but the chevron is on the
     /// screen until it is opened — which is why the labels are checked here rather than in the
     /// picture above.

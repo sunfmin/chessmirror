@@ -151,7 +151,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("手动"))
         #expect(rendered.says("黑方"))
         #expect(rendered.says("Stockfish 18"), "the engine by name; its rung is on the same line")
-        #expect(rendered.says(localized("search.limit")), "the shared search limit stays visible")
+        #expect(rendered.says(SearchLimit.standard.label), "the shared search limit stays visible")
         #expect(
             !rendered.says("谁走"),
             "but the chips that change them stay folded once there are moves"
@@ -237,7 +237,7 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("+0.38"), "the engine's move is walked without its opinion being shown")
         #expect(rendered.says("白方"))
         #expect(rendered.says("Stockfish 18"), "the engine by name, on its own bar")
-        #expect(rendered.says(localized("search.limit")))
+        #expect(rendered.says(SearchLimit.standard.label))
         #expect(rendered.says("手动"), "and the side a person is holding says so too")
         #expect(
             !session.canPlayBestMove,
@@ -291,7 +291,7 @@ struct GameScreenScreenshots {
         // The current clock stays visible; alternative clocks stay in the folded settings.
         #expect(!rendered.says("每步"))
         #expect(!rendered.says("3 秒"))
-        #expect(rendered.says(localized("search.limit")))
+        #expect(rendered.says(SearchLimit.standard.label))
         #expect(!rendered.says("跟着我"))
         #expect(rendered.says("马上走"), "with the way to stop waiting for the move on the clock")
     }
@@ -969,6 +969,23 @@ struct GameScreenScreenshots {
         }
         #expect(atFull.says("Stockfish 18"))
         #expect(!atFull.says("Stockfish 18 ·"), "the name alone at 满力")
+    }
+
+    /// The bar says the 搜索预算 the setting names, not a fixed line (CONTEXT.md): with the time
+    /// alone counting, the time alone is said — and the kit's every live search runs on it.
+    @Test("the engine's bar says the budget the player set")
+    func theEngineBarSaysTheBudget() async throws {
+        SearchSetting.shared.limit = SearchLimit(seconds: 5, depth: 12, stop: .time)
+        defer { SearchSetting.shared.limit = .standard }
+        #expect(PositionSearches.budget == .time(.seconds(5)), "the kit runs on it")
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
+        let rendered = await ScreenImage.write("game-budget-time") {
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(rendered.says("5 秒"))
+        #expect(!rendered.says("12 层"), "the depth does not count, so it is not said")
+        #expect(!rendered.says(SearchLimit.standard.label))
     }
 
     /// Where a hand holds the side, there is no rung to show: a person is not at a 棋力.

@@ -433,7 +433,6 @@
 "discovery.tacticFound" = "Oportunidad táctica encontrada";
 "board.faceToFace" = "Cara a cara";
 "till.returned" = "Devuelta";
-"search.limit" = "10 s / nivel 20";
 "book.recorded" = "%d añadidos al cuaderno de errores";
 "standing.change" = "Cambio de probabilidad de esta jugada %@";
 "tried.reply" = "La respuesta que provoca";
@@ -456,3 +455,14 @@
 "ladder.run" = "Racha más larga";
 "standing.best" = "Mejor jugada";
 "record.best" = "mejor";
+"search" = "Búsqueda del motor";
+"search.time" = "Tiempo";
+"search.depth" = "Profundidad";
+"search.stop" = "Detenerse al";
+"search.stop.either" = "Lo que llegue primero";
+"search.stop.time" = "Solo el tiempo";
+"search.stop.depth" = "Solo la profundidad";
+"search.seconds" = "%d s";
+"search.plies" = "nivel %d";
+"search.limit.either" = "%1$d s / nivel %2$d";
+"search.explained" = "Cuánto tiempo y a qué profundidad mira el motor cada posición. Juzgar una jugada, la jugada del propio motor y una pista son esta misma búsqueda, así que un coste significa lo mismo donde sea que se mida. Un nuevo juicio va 8 niveles más hondo y admite 6 veces el tiempo.";

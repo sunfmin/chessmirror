@@ -169,6 +169,13 @@ allowed to call something a 错题.** One act, wherever it is asked for: 把关 
 it lands, a drill judging an attempt and the 惩罚 exercise checking a reply all weigh a move the
 same way, at the same budget, and a checkmate or a draw is settled without asking the engine.
 
+**搜索预算 (Search budget)**:
+How long and how deep the engine looks at one position, and which of the two ends it: the first
+to arrive, the time alone, or the depth alone. One for the whole app, set by the player: 细判, the
+engine's own move and a hint are all the same search, so a 掉幅 means the same thing wherever it
+was measured. A 复判 goes past it by a fixed rule, never by a second budget.
+_Avoid_: 难度 (that is 棋力), 思考时间 or 层数 on their own, 引擎设置
+
 **判定 (Ruling)**:
 What follows from a 细判: whether the move stands, and what is written down either way. A move
 that stands carries its judgement and the 试招 refused before it; a move that is refused is

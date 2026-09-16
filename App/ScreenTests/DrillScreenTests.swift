@@ -105,7 +105,7 @@ struct DrillScreenshots {
             #expect(ScreenImage.activate(localized("game.flip"), in: window))
             #expect(ScreenImage.activate(localized("game.settings.expand", PieceColour.white.label), in: window))
             await ScreenImage.settle()
-            #expect(ScreenImage.words(in: window).contains(localized("search.limit")))
+            #expect(ScreenImage.words(in: window).contains(SearchLimit.standard.label))
             #expect(ScreenImage.activate(localized("game.settings.collapse", PieceColour.white.label), in: window))
         }) {
             NavigationStack {

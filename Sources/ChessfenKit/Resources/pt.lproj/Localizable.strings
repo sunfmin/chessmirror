@@ -433,7 +433,6 @@
 "discovery.tacticFound" = "Oportunidade tática encontrada";
 "board.faceToFace" = "Frente a frente";
 "till.returned" = "Devolvida";
-"search.limit" = "10 s / nível 20";
 "book.recorded" = "%d adicionados ao caderno de erros";
 "standing.change" = "Variação da chance nesta jogada %@";
 "tried.reply" = "A resposta que ele provoca";
@@ -456,3 +455,14 @@
 "ladder.run" = "Maior sequência";
 "standing.best" = "Melhor lance";
 "record.best" = "melhor";
+"search" = "Busca do motor";
+"search.time" = "Tempo";
+"search.depth" = "Profundidade";
+"search.stop" = "Parar em";
+"search.stop.either" = "O que chegar primeiro";
+"search.stop.time" = "Só o tempo";
+"search.stop.depth" = "Só a profundidade";
+"search.seconds" = "%d s";
+"search.plies" = "nível %d";
+"search.limit.either" = "%1$d s / nível %2$d";
+"search.explained" = "Quanto tempo e a que profundidade o motor olha cada posição. Julgar um lance, o lance do próprio motor e uma dica são esta mesma busca, para que um custo signifique o mesmo onde quer que seja medido. Um novo julgamento vai 8 níveis mais fundo e admite 6 vezes o tempo.";

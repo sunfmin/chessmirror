@@ -18,6 +18,8 @@ struct ChessfenApp: App {
     /// What language every word on every screen comes out in. Read before the first screen is
     /// built, so a person who chose one gets it on the launch screen rather than one frame later.
     @State private var language = LanguageSetting.shared
+    /// The 搜索预算, read here so that the kit has the player's budget before any search runs.
+    @State private var search = SearchSetting.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {

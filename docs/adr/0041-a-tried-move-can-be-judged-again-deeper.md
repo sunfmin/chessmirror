@@ -42,3 +42,10 @@ Three things follow that a reader of the code will otherwise find surprising:
   reached stays in the shared store, so asking again costs almost nothing.
 - 应招 is replaced together with the number, once, when the search finishes: the line and the cost
   come out of one search, and showing a deeper number over a shallower line would split them.
+
+## Since then
+
+The everyday budget became the player's 搜索预算 (CONTEXT.md): time, depth, and which of the two
+stops the search. The deeper level is therefore relative rather than fixed — eight plies deeper and
+six times as long, stopped the same way — which at the standard budget is exactly the depth 28
+within a minute above. `PositionSearches.deeper` is still the one identity a 复判 search carries.

@@ -12,6 +12,7 @@ struct AboutScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable private var language = LanguageSetting.shared
     @Bindable private var judgement = JudgementSetting.shared
+    @Bindable private var search = SearchSetting.shared
 
     private static let source = URL(string: "https://github.com/sunfmin/chessfen")!
 
@@ -74,6 +75,40 @@ struct AboutScreen: View {
                     Text(localized("lines"))
                 } footer: {
                     Text(localized("lines.explained"))
+                }
+
+                // The 搜索预算: how long and how deep every live search goes, and which end stops
+                // it (CONTEXT.md). One budget for everything judged live, so a 掉幅 means the same
+                // thing wherever it was measured. The end that does not count is greyed rather
+                // than hidden: it keeps its number, and comes back when it counts again.
+                Section {
+                    Picker(selection: $search.seconds) {
+                        ForEach(SearchLimit.secondsChoices, id: \.self) { seconds in
+                            Text(localized("search.seconds", seconds)).tag(seconds)
+                        }
+                    } label: {
+                        Text(localized("search.time"))
+                    }
+                    .disabled(search.stop == .depth)
+                    Picker(selection: $search.depth) {
+                        ForEach(SearchLimit.depthChoices, id: \.self) { depth in
+                            Text(localized("search.plies", depth)).tag(depth)
+                        }
+                    } label: {
+                        Text(localized("search.depth"))
+                    }
+                    .disabled(search.stop == .time)
+                    Picker(selection: $search.stop) {
+                        ForEach(SearchLimit.Stop.allCases, id: \.self) { stop in
+                            Text(localized("search.stop.\(stop.rawValue)")).tag(stop)
+                        }
+                    } label: {
+                        Text(localized("search.stop"))
+                    }
+                } header: {
+                    Text(localized("search"))
+                } footer: {
+                    Text(localized("search.explained"))
                 }
 
                 Section(localized("about.version")) {
