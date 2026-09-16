@@ -29,6 +29,15 @@ import Foundation
     /// a game's credits are read once, under its file and date, and summed on every rebuild.
     public private(set) var ladder = Ladder(rows: [])
 
+    /// How many positions each game holds something wrong at, by the file it is in — the number
+    /// on a game's row in the library, and the number an imported chapter reports as ready.
+    ///
+    /// Counted by Ply and not by 遭遇: a position tried three times in one game is one place to
+    /// stop at, which is the same rule the game's own list uses (docs/adr/0036). Read from the
+    /// book rather than from the walk, so a position struck off is not counted against its game.
+    /// A game with nothing wrong in it is absent rather than zero.
+    public private(set) var wrongByGame: [URL: Int] = [:]
+
     /// Today's queue (docs/adr/0030). Derived like everything else here — from the book and the
     /// practice log — and recomputed whenever either could have changed.
     public private(set) var daily = Daily(cards: [])
@@ -126,6 +135,11 @@ import Foundation
         book = MistakeBook(
             mistakes: byPosition.map { Mistake(position: $0.key, encounters: $0.value) }
         )
+        var plies: [URL: Set<Int>] = [:]
+        for encounter in byPosition.values.joined() {
+            plies[encounter.game, default: []].insert(encounter.ply)
+        }
+        wrongByGame = plies.mapValues(\.count)
         ladder = Ladder.sum(cached.map { (game: $0.key, credits: $0.value.credits) })
         daily = Daily.forToday(
             book: book, attempts: PracticeLog.attempts(in: entries), lines: lines, now: now

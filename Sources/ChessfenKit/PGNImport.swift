@@ -23,6 +23,23 @@ public enum PGNImport {
             case .ready(let count): localized("import.status.ready", count)
             }
         }
+
+        /// Where an imported game stands: being scored, waiting for its Review, or ready — with
+        /// how many positions the 错题本 holds against it. The count is the book's own
+        /// (`MistakeIndex.wrongByGame`), so the number a chapter reports and the number on the
+        /// game's row in the library are one number, under the player's lines, less what has been
+        /// struck off. The library used to keep a second count of its own here, under the default
+        /// lines, and the two could disagree.
+        @MainActor
+        public init(_ entry: GameLibrary.Entry, in library: GameLibrary, book index: MistakeIndex) {
+            if library.reviewingURLs.contains(entry.url) {
+                self = .scoring
+            } else if entry.pgn?.game.isReviewed != true {
+                self = .awaitingReview
+            } else {
+                self = .ready(index.wrongByGame[entry.url] ?? 0)
+            }
+        }
     }
     // ---------------------------------------------------------------- errors
 
@@ -668,12 +685,14 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         return GameLibrary.Entry(url: url, pgn: pgn, modified: Date())
     }
 
-    public func status(of chapter: PGNImport.ImportChapter, in library: GameLibrary) -> PGNImport.Status {
+    public func status(
+        of chapter: PGNImport.ImportChapter, in library: GameLibrary, book index: MistakeIndex
+    ) -> PGNImport.Status {
         guard let entry = library.entries.first(where: { entry in
             guard let pgn = entry.pgn else { return false }
             return PGNImport.identity(of: pgn, named: entry.name ?? entry.title) == chapter.identity
         }) else { return .notImported }
-        return library.importStatus(entry)
+        return PGNImport.Status(entry, in: library, book: index)
     }
 
     /// Back to a blank slate, for the "再导入一个" that follows a done import.

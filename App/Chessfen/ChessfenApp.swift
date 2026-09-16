@@ -18,6 +18,9 @@ struct ChessfenApp: App {
     /// What language every word on every screen comes out in. Read before the first screen is
     /// built, so a person who chose one gets it on the launch screen rather than one frame later.
     @State private var language = LanguageSetting.shared
+    /// The player's two standing lines (docs/adr/0027), read here because the book is read
+    /// against them.
+    @State private var judgement = JudgementSetting.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -45,6 +48,18 @@ struct ChessfenApp: App {
                 // background for a fetch, say — where there is no change to hear about.
                 .onChange(of: scenePhase, initial: true) { _, phase in
                     engine.setActive(phase == .active)
+                }
+                // The 错题本 is derived, so it is brought up to date whenever the games change or
+                // a line moves — and costs nothing when neither has, because the index walks only
+                // what is new (docs/adr/0028). Wired where the library and the book are both made,
+                // rather than on the one screen that happened to be first: every screen reads
+                // the book, and none of them should have to remember to keep it current.
+                // `initial` covers the launch, where the library is already listed.
+                .onChange(of: library.entries, initial: true) { _, entries in
+                    book.update(from: entries, lines: judgement.lines)
+                }
+                .onChange(of: judgement.lines) { _, lines in
+                    book.update(from: library.entries, lines: lines)
                 }
         }
     }

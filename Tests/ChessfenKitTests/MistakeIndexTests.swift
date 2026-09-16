@@ -289,3 +289,61 @@ func aRebuiltIndexKeepsTheDueDates() throws {
     #expect(scheduled != nil)
     #expect(scheduled == again, "the date is computed, so there is nothing to lose")
 }
+
+// ------------------------------------------------------------------ per game
+
+/// Contract: the number on a game's row and the number an imported chapter reports are one
+/// reading of the book, by position rather than by 遭遇, less what has been struck off.
+@MainActor
+@Test("each game's wrong positions are read off the book, and struck-off ones are not counted")
+func wrongPositionsPerGameFollowTheBook() throws {
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let index = MistakeIndex(log: log)
+    let entries = try (1...3).map { try game(seed: $0, at: now) }
+    index.update(from: entries)
+
+    #expect(index.wrongByGame.count == 3)
+    #expect(entries.allSatisfy { index.wrongByGame[$0.url] == 1 }, "one 错题 per fixture game")
+
+    let struck = try #require(index.book.mistakes.first)
+    let itsGame = try #require(struck.encounters.first?.game)
+    index.dismiss(struck.position)
+    #expect(index.wrongByGame[itsGame] == nil, "struck off, so nothing wrong left in that game")
+    #expect(index.wrongByGame.count == 2)
+
+    index.restore(struck.position)
+    #expect(index.wrongByGame[itsGame] == 1)
+}
+
+@MainActor
+@Test("an imported game's status is the library's fact and the book's count")
+func importStatusReadsTheBook() throws {
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let library = GameLibrary(folder: GameFolder(url: directory))
+    let index = MistakeIndex(log: PracticeLog(url: directory.appending(path: "practice.jsonl")))
+
+    let reviewed = try game(seed: 7, at: now)
+    index.update(from: [reviewed])
+    #expect(PGNImport.Status(reviewed, in: library, book: index) == .ready(1))
+
+    let pending = GameLibrary.Entry(
+        url: URL(filePath: "/games/pending.pgn"),
+        pgn: PGN(game: try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"])), tags: []),
+        modified: now
+    )
+    #expect(PGNImport.Status(pending, in: library, book: index) == .awaitingReview)
+
+    let clean = GameLibrary.Entry(url: URL(filePath: "/games/clean.pgn"), pgn: reviewedButClean(), modified: now)
+    index.update(from: [reviewed, clean])
+    #expect(PGNImport.Status(clean, in: library, book: index) == .ready(0), "reviewed with nothing wrong is ready, at zero")
+}
+
+/// A reviewed game in which nobody gave anything away.
+private func reviewedButClean() -> PGN {
+    var game = Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"])!
+    game.applyReview([.centipawns(20), .centipawns(20)], startEvaluation: .centipawns(20), depth: 16)
+    return PGN(game: game, tags: [])
+}

@@ -34,6 +34,7 @@ struct ImportSheet: View {
     let onOpen: ((GameLibrary.Entry) -> Void)?
 
     @Environment(GameLibrary.self) private var library
+    @Environment(MistakeIndex.self) private var index
     @Environment(\.dismiss) private var dismiss
 
     @State private var input: String
@@ -195,13 +196,13 @@ struct ImportSheet: View {
                         HStack {
                             Text(chapter.name)
                             Spacer()
-                            Text(session.status(of: chapter, in: library).label)
+                            Text(session.status(of: chapter, in: library, book: index).label)
                                 .foregroundStyle(Palette.inkSoft)
                         }
                     }
                     .font(.footnote)
                     .accessibilityLabel(chapter.name)
-                    .accessibilityValue(session.status(of: chapter, in: library).label)
+                    .accessibilityValue(session.status(of: chapter, in: library, book: index).label)
                 }
                 if plan.unreadable > 0 {
                     Text(localized("import.unreadable", plural: plan.unreadable))

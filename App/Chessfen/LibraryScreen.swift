@@ -194,15 +194,6 @@ struct LibraryScreen: View {
             takeWhatWasShared()
         }
         .onOpenURL { _ in takeWhatWasShared() }
-        // The 错题本 is derived, so it is brought up to date whenever the games change or a line
-        // moves — and costs nothing when neither has, because the index walks only what is new
-        // (docs/adr/0028). `initial` covers the launch, where the library is already listed.
-        .onChange(of: library.entries, initial: true) { _, entries in
-            index.update(from: entries, lines: judgement.lines)
-        }
-        .onChange(of: judgement.lines) { _, lines in
-            index.update(from: library.entries, lines: lines)
-        }
     }
 
     // ------------------------------------------------------------------ parts
@@ -611,18 +602,6 @@ struct GameList: View {
         }
     }
 
-    /// How many positions each game holds something wrong at, by the file it is in.
-    ///
-    /// Counted by Ply and not by 遭遇: a position tried three times in one game is one place to
-    /// stop at, which is the same rule the game's own list uses (docs/adr/0036).
-    private var wrongByGame: [URL: Int] {
-        var plies: [URL: Set<Int>] = [:]
-        for encounter in index.book.mistakes.flatMap(\.encounters) {
-            plies[encounter.game, default: []].insert(encounter.ply)
-        }
-        return plies.mapValues(\.count)
-    }
-
     private func row(_ entry: GameLibrary.Entry) -> some View {
         Button {
             open(entry)
@@ -644,13 +623,13 @@ struct GameList: View {
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
                     if entry.origin == .imported {
-                        Text(library.importStatus(entry).label)
+                        Text(PGNImport.Status(entry, in: library, book: index).label)
                             .font(.caption)
                             .foregroundStyle(Palette.inkSoft)
                     }
                 }
                 Spacer(minLength: 0)
-                if let wrong = wrongByGame[entry.url], wrong > 0 {
+                if let wrong = index.wrongByGame[entry.url], wrong > 0 {
                     Text(localized("library.wrong", wrong))
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(Palette.alarm)

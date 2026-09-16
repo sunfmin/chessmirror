@@ -118,15 +118,6 @@ import Foundation
     public private(set) var reviewingURLs: Set<URL> = []
     private var importReviewChain: Task<Void, Never>?
     func waitForImportReviews() async { await importReviewChain?.value }
-    @ObservationIgnored private var importCounts: [URL: (entry: Entry, count: Int)] = [:]
-    public func importStatus(_ entry: Entry) -> PGNImport.Status {
-        if reviewingURLs.contains(entry.url) { return .scoring }
-        guard entry.pgn?.game.isReviewed == true else { return .awaitingReview }
-        if let cached = importCounts[entry.url], cached.entry == entry { return .ready(cached.count) }
-        let count = Set(MistakeBook.encounters(in: entry).map { $0.0 }).count
-        importCounts[entry.url] = (entry, count)
-        return .ready(count)
-    }
 
     public func reviewImported(_ entry: Entry, using engine: any Engine,
                                completed: @escaping @MainActor (PGN) -> Void = { _ in }) {

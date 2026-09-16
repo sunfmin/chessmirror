@@ -161,15 +161,16 @@ func selectingOneImportWritesOnlyThatGameAndOpeningStartsReview(engineArrivesLat
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: folder) }
     let library = GameLibrary(folder: GameFolder(url: folder))
+    let book = MistakeIndex(log: PracticeLog(url: folder.appending(path: "practice.jsonl")))
     let importer = ImportSession()
     let chapter = PGNImport.ImportChapter(id: 2, name: "Selected game",
                                          pgn: try PGN(parsing: "1. e4 e5 *"))
-    #expect(importer.status(of: chapter, in: library) == .notImported)
+    #expect(importer.status(of: chapter, in: library, book: book) == .notImported)
     let entry = try #require(importer.open(chapter, into: library))
     #expect(library.entries.count == 1)
     #expect(library.reviewingURLs.isEmpty)
     #expect(entry.pgn?.game.isReviewed == false)
-    #expect(importer.status(of: chapter, in: library) == .awaitingReview)
+    #expect(importer.status(of: chapter, in: library, book: book) == .awaitingReview)
     let engine = ScriptedEngine([Analysis(depth: 16, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
     ])])
@@ -185,7 +186,7 @@ func selectingOneImportWritesOnlyThatGameAndOpeningStartsReview(engineArrivesLat
     // Reappearing while a review is running must not queue another copy.
     session.attach(engine: engine, library: library)
     #expect(library.reviewingURLs.contains(entry.url))
-    #expect(importer.status(of: chapter, in: library) == .scoring)
+    #expect(importer.status(of: chapter, in: library, book: book) == .scoring)
     await library.waitForImportReviews()
     #expect(library.reviewingURLs.isEmpty)
     #expect(session.game.reviewDepth == 16)
@@ -193,7 +194,7 @@ func selectingOneImportWritesOnlyThatGameAndOpeningStartsReview(engineArrivesLat
     let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
     #expect(disk.game.reviewDepth == 16)
     #expect(disk.tag("ReviewSift") == "full-local")
-    #expect(importer.status(of: chapter, in: library) == .ready(0))
+    #expect(importer.status(of: chapter, in: library, book: book) == .ready(0))
     let again = try #require(importer.open(chapter, into: library))
     #expect(again.url == entry.url)
     #expect(library.entries.count == 1)
