@@ -391,7 +391,7 @@ struct GameScreen: View {
             HStack(spacing: 6) {
                 Text(tried.san).font(.notation)
                     .foregroundStyle(isOn ? Palette.parchment : Palette.ink)
-                Text(String(format: "−%.0f%%", tried.drop))
+                Text(Drop.figure(tried.drop))
                     .font(.caption.monospacedDigit().weight(.medium))
                     .foregroundStyle(isOn ? Palette.parchment : Palette.alarm)
             }
@@ -409,7 +409,7 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .disabled(session.activePunishment != nil)
         .accessibilityLabel(tried.san)
-        .accessibilityValue(String(format: "−%.0f%%", tried.drop))
+        .accessibilityValue(Drop.figure(tried.drop))
         .accessibilityHint(localized("tried.reply.hint"))
     }
 
@@ -1008,7 +1008,7 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "\(slipSpoken(slip))\(localized("clause.separator"))\(localized("book.cost", Int(slip.drop.rounded())))\(slip.wrong.count > 1 ? localized("clause.separator") + localized("slips.wrong", slip.wrong.count) : "")"
+            "\(slipSpoken(slip))\(localized("clause.separator"))\(Drop.cost(slip.drop))\(slip.wrong.count > 1 ? localized("clause.separator") + localized("slips.wrong", slip.wrong.count) : "")"
         )
         .accessibilityHint(localized("slips.hint"))
     }
@@ -1027,7 +1027,7 @@ struct GameScreen: View {
                 .foregroundStyle(Palette.alarm)
         }
         return line
-            + Text(" " + String(format: "−%.0f%%", slip.drop))
+            + Text(" " + Drop.figure(slip.drop))
             .font(.caption2.monospacedDigit())
             .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
     }
@@ -1166,7 +1166,7 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .id(0)
         .accessibilityLabel(
-            slip.map { "\(name)\(localized("clause.separator"))\(localized("book.cost", Int($0.drop.rounded())))" } ?? name
+            slip.map { "\(name)\(localized("clause.separator"))\(Drop.cost($0.drop))" } ?? name
         )
     }
 
@@ -1209,7 +1209,7 @@ struct GameScreen: View {
         // a mistake in it is worth saying out loud, because that is what the mark means.
         .accessibilityLabel(
             slip.map {
-                "\(cell.spoken)\(localized("clause.separator"))\(localized("book.cost", Int($0.drop.rounded())))"
+                "\(cell.spoken)\(localized("clause.separator"))\(Drop.cost($0.drop))"
             } ?? cell.spoken
         )
         .accessibilityHint(localized("record.jump"))

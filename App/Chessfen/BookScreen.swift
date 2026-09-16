@@ -63,7 +63,7 @@ struct BookRow: View {
                     .foregroundStyle(Palette.ink)
                     .multilineTextAlignment(.leading)
                 HStack(spacing: 6) {
-                    badge(localized("book.cost", Int(mistake.worstCost.rounded())), Palette.alarm)
+                    badge(Drop.cost(mistake.worstCost), Palette.alarm)
                     badge(localized("book.times", mistake.recurrence), Palette.analysis)
                     if mistake.encounters.contains(where: \.notFound) {
                         badge(localized("till.notFound"), Palette.alarm)
@@ -201,7 +201,7 @@ struct BookEntryScreen: View {
                     .foregroundStyle(Palette.inkSoft)
             }
             Spacer(minLength: 0)
-            Text(localized("book.cost", Int(encounter.cost.rounded())))
+            Text(Drop.cost(encounter.cost))
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Palette.alarm)
             // Only when there is a game to go to: a row that offers to open a file iCloud has

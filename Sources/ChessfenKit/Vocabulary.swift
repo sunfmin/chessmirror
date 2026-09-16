@@ -98,6 +98,24 @@ extension Game {
     }
 }
 
+/// 掉幅 — what a move cost, in percentage points of win probability from the mover's own side
+/// (docs/adr/0027) — said the one way the app says it everywhere.
+///
+/// Whole points, because tenths of a chance are not something a player feels, and the same
+/// rounding in a figure and in a sentence, so a tile and the words read out for it never
+/// disagree. It used to be spelled at every site: three format strings for the figure, and each
+/// sentence rounding for itself.
+public enum Drop {
+    /// The whole points a 掉幅 rounds to: the number every sentence about it takes.
+    public static func points(_ drop: Double) -> Int { Int(drop.rounded()) }
+
+    /// The figure on a chip or a tile: `−25%`.
+    public static func figure(_ drop: Double) -> String { "−\(points(drop))%" }
+
+    /// The cost as a clause — 「掉 25%」 — for a sentence about a position or a move.
+    public static func cost(_ drop: Double) -> String { localized("book.cost", points(drop)) }
+}
+
 extension Set where Element == Square {
     /// The one line the app says about squares the camera was not sure of — nil when it was sure
     /// of every square it read. The game screen and the editor used to each own this line, byte

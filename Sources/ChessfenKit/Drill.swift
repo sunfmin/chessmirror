@@ -44,7 +44,7 @@ public struct DrillVerdict: Hashable, Sendable {
     /// comparison with one move (docs/adr/0027).
     public var sentence: String {
         guard !passed else { return localized("drill.passed", Self.phrase(played, intent)) }
-        let cost = Int(drop.rounded())
+        let cost = Drop.points(drop)
         guard let wanted else {
             return localized("drill.failed", Self.phrase(played, intent), cost)
         }

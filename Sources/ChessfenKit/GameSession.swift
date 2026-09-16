@@ -692,7 +692,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         /// 「Qh4 掉 23%，退回去重走。」 — what went wrong and nothing about what to do instead.
         /// The hint ladder is a separate thing somebody has to ask for (docs/adr/0031).
         public var sentence: String {
-            localized("till.refused", san, Int(drop.rounded()))
+            localized("till.refused", san, Drop.points(drop))
         }
     }
 
