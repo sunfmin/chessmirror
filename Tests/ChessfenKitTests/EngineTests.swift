@@ -303,11 +303,12 @@ struct EngineTests {
 /// A convergence property rather than an exact move, as ADR 0009 asks of every test of the real
 /// engine: the pick is a seeded random, so one position may well get the best move — but six
 /// positions all getting it is what a bound that never took would look like.
-@Suite("Stockfish at a 棋力", .serialized)
-struct BoundEngineTests {
+/// In the same serialized suite as the rest, for the same reason: one engine is one search, and a
+/// bound search superseded by another suite's would answer with nothing.
+extension EngineTests {
     @Test("a bound engine chooses like a weaker player, and the next search is unbound")
     func aBoundEngineErrs() async throws {
-        let service = try #require(shared, "the NNUE weights are missing — see ios/README.md")
+        let service = try engine()
         let openings = [
             ["e2e4", "e7e5", "g1f3", "b8c6"], ["d2d4", "d7d5", "c2c4"],
             ["e2e4", "c7c5", "g1f3", "d7d6"], ["e2e4", "e7e6", "d2d4", "d7d5"],

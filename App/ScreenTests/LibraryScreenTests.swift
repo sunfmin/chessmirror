@@ -118,6 +118,45 @@ struct LibraryScreenScreenshots {
         #expect(rendered.says("最长连正 3"), "满力's three, unbroken")
     }
 
+    /// A best is the way to the game it was made in: pressing it opens that game.
+    @Test("pressing a best on the ladder opens the game it was made in")
+    func aBestOpensItsGame() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = library(in: tempDir)
+        let stood = Game.Ply.Judgement(drop: 1, score: .centipawns(20), depth: 20, intercept: 5)
+        var game = try #require(
+            Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4"])
+        )
+        for ply in [0, 2, 4] { game.setJudgement(stood, atPly: ply) }
+        for ply in [1, 3] { game.setStrength(.elo(2200), atPly: ply) }
+        let pgn = PGN(
+            game: game,
+            tags: [
+                PGN.Tag("White", Controller.hand.playerName),
+                PGN.Tag("Black", Controller.engine.playerName),
+            ]
+        )
+        #expect(library.write(pgn, to: tempDir.appending(path: "climb.pgn")))
+        let index = MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl")))
+        index.update(from: library.entries)
+
+        let rendered = await ScreenImage.write("library-ladder-opened", interact: { window in
+            #expect(ScreenImage.activate("最长连正 3", in: window))
+            await ScreenImage.settle()
+            let words = ScreenImage.words(in: window)
+            #expect(words.contains { $0.contains("Stockfish 18 · 2200") }, "the game, at its rung")
+            #expect(words.contains { $0.contains("正着 3") }, "with its three moves that stood")
+        }) {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+        }
+        #expect(rendered.says("Bc4"), "the record of the game that was opened")
+    }
+
     /// Nothing has stood at any rung: no ladder, and nothing saying there is none — the games
     /// are what this screen is about.
     @Test("a library with nothing stood shows no ladder")
