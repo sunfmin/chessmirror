@@ -44,10 +44,8 @@ public enum ImportReview {
         for ply in plan.positions {
             try Task.checkCancellation()
             guard let position = pgn.game.rewound(to: ply) else { throw Failure.incompleteSearch(ply) }
-            if position.state.outcome.isDraw {
-                scores[ply] = .centipawns(0)
-            } else if position.state.outcome == .checkmate {
-                scores[ply] = .mate(in: position.state.sideToMove == .white ? -1 : 1)
+            if let settled = position.state.outcomeScore {
+                scores[ply] = settled
             } else {
                 let snapshot = await engine.analyseInBackground(position, depth: depth)
                 try Task.checkCancellation()

@@ -131,4 +131,6 @@ properly. Never decides whether something is a 错题.
 
 **细判 (Judge)**:
 The app's own engine, at its own depth, deciding what a move actually cost. **The only thing
-allowed to call something a 错题.**
+allowed to call something a 错题.** One act, wherever it is asked for: 耕棋 refusing a move as
+it lands, a drill judging an attempt and the 惩罚 exercise checking a reply all weigh a move the
+same way, at the same budget, and a checkmate or a draw is settled without asking the engine.

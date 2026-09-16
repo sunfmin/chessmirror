@@ -27,29 +27,15 @@ import Foundation
         wasIncorrect = false
         task = Task { [weak self] in
             guard let self else { return }
-            let before = await score(position)
-            guard !Task.isCancelled else { return }
-            let result = await score(after)
+            // The reply is weighed exactly as the move it answers was (`Weighing`): the same two
+            // searches, the same scale, and nil for a search that said nothing.
+            let weighed = await engine.weigh(after, from: position)
             guard !Task.isCancelled else { return }
             isJudging = false
-            guard let drop = MoveQuality.drop(move: position.state.sideToMove, before: before, after: result)
-            else { return }
-            isFinished = drop <= Self.tolerance
+            guard let weighed else { return }
+            isFinished = weighed.drop <= Self.tolerance
             wasIncorrect = !isFinished
         }
-    }
-
-    private func score(_ game: Game) async -> Score? {
-        if game.state.outcome == .checkmate {
-            return .mate(in: game.state.sideToMove == .white ? -1 : 1)
-        }
-        if game.state.outcome.isDraw { return .centipawns(0) }
-        var result: Score?
-        for await snapshot in engine.analysePosition(game) {
-            guard !Task.isCancelled else { return nil }
-            if !snapshot.isPartial { result = snapshot.best?.score }
-        }
-        return result
     }
 
     public func skip() {
@@ -65,11 +51,7 @@ import Foundation
         isJudging = true
         task = Task { [weak self] in
             guard let self else { return }
-            var answer: String?
-            for await snapshot in engine.analysePosition(position) {
-                guard !Task.isCancelled else { return }
-                if !snapshot.isPartial { answer = snapshot.best?.san.first }
-            }
+            let answer = await engine.positionResult(position)?.best?.san.first
             guard !Task.isCancelled else { return }
             revealedMove = answer
             isJudging = false

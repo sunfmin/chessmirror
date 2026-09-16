@@ -170,8 +170,11 @@ public struct DrillVerdict: Hashable, Sendable {
         isJudging = false
     }
 
-    /// Reuses the two bounded position results and settles their difference. A move outside
-    /// the baseline's candidate lines still has a independently evaluated resulting position.
+    /// The same 细判 耕棋 gives a move as it lands (`Weighing`): a move outside the baseline's
+    /// candidate lines still has an independently evaluated resulting position, and the 应招 comes
+    /// out of the same search that settled the attempt (docs/adr/0034) — a drill's position is
+    /// taken back the moment it is refused, exactly as 耕棋's is, so this is the last moment the
+    /// answer to it can be had without a second search.
     private func judge(_ move: Move, san: String, before: Game, after: Game) async {
         defer {
             if !Task.isCancelled {
@@ -183,51 +186,21 @@ public struct DrillVerdict: Hashable, Sendable {
             }
         }
         guard let engine else { return }
-        var best: Line?
-        var beforeDepth = 0
-        for await analysis in engine.analysePosition(before) {
-            guard !Task.isCancelled else { return }
-            if !analysis.isPartial { best = analysis.best ?? best; beforeDepth = analysis.depth }
-        }
-        var afterScore: Score?
-        var afterDepth = beforeDepth
-        /// The 应招, out of the same search that settled the attempt (docs/adr/0034). A drill's
-        /// position is taken back the moment it is refused, exactly as 耕棋's is, so this is the
-        /// last moment the answer to it can be had without a second search.
-        var afterLine: [String] = []
-        if after.state.outcome == .checkmate {
-            afterScore = .mate(in: after.state.sideToMove == .white ? -1 : 1)
-        } else if after.state.outcome.isDraw {
-            afterScore = .centipawns(0)
-        } else {
-            for await analysis in engine.analysePosition(after) {
-                guard !Task.isCancelled else { return }
-                if !analysis.isPartial {
-                    afterScore = analysis.best?.score
-                    afterLine = analysis.best?.san ?? []
-                    afterDepth = analysis.depth
-                }
-            }
-        }
-        guard !Task.isCancelled else { return }
-        guard let drop = MoveQuality.drop(
-            move: before.state.sideToMove, before: best?.score, after: afterScore
-        ) else { return }
+        let weighed = await engine.weigh(after, from: before)
+        guard !Task.isCancelled, let weighed else { return }
 
-        let wanted = best.flatMap { before.reading(of: $0.san) }?.opening
-        startingScore = best?.score
-        if let afterScore {
-            game.setJudgement(.init(drop: drop, score: afterScore, depth: afterDepth), atPly: 0)
-        }
+        let wanted = weighed.before.best.flatMap { before.reading(of: $0.san) }?.opening
+        startingScore = weighed.scoreBefore
+        game.setJudgement(weighed.judgement, atPly: 0)
         settle(
             DrillVerdict(
                 played: san,
                 intent: Intent.read(move, in: before),
-                drop: drop,
-                passed: !lines.records(drop),
+                drop: weighed.drop,
+                passed: !lines.records(weighed.drop),
                 wanted: wanted?.san,
                 wantedIntent: wanted?.intent,
-                reply: Array(afterLine.prefix(Reply.limit))
+                reply: weighed.reply
             )
         )
     }

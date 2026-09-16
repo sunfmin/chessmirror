@@ -862,24 +862,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
               !(measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen), let engine,
               let before = game.rewound(to: game.plies.count - 1) else { return }
         let after = game
-        let baseline = await engine.positionResult(before)
-        guard !Task.isCancelled, let baseline,
-              !baseline.isPartial, let beforeScore = baseline.best?.score else { return }
-        let afterScore: Score?
-        if after.state.outcome == .checkmate {
-            afterScore = .mate(in: after.state.sideToMove == .white ? -1 : 1)
-        } else if after.state.outcome.isDraw {
-            afterScore = .centipawns(0)
-        } else {
-            let result = await engine.positionResult(after)
-            afterScore = result.flatMap {
-                !$0.isPartial ? $0.best?.score : nil
-            }
-        }
-        guard !Task.isCancelled, !isWeighing,
-              game.uciMoves == after.uciMoves, game.startFEN == after.startFEN,
-              let afterScore else { return }
-        measuredMove = (after.uciMoves, after.state.fen, MoveChange(before: beforeScore, after: afterScore))
+        let weighed = await engine.weigh(after, from: before)
+        guard !Task.isCancelled, !isWeighing, let weighed,
+              game.uciMoves == after.uciMoves, game.startFEN == after.startFEN else { return }
+        measuredMove = (after.uciMoves, after.state.fen, MoveChange(before: weighed.scoreBefore, after: weighed.after))
     }
 
     /// Explicit legacy migration only; never started automatically by the game screen.
@@ -892,28 +878,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                   controller(for: original.mover(ofPly: index + 1)) == .hand,
                   let before = original.rewound(to: index),
                   let after = original.rewound(to: index + 1) else { continue }
-            let baseline = await engine.positionResult(before)
+            let weighed = await engine.weigh(after, from: before)
             guard !Task.isCancelled else { return }
-            let result: Score?
-            var achievedDepth = baseline?.depth ?? 0
-            if after.state.outcome == .checkmate {
-                result = .mate(in: after.state.sideToMove == .white ? -1 : 1)
-            } else if after.state.outcome.isDraw {
-                result = .centipawns(0)
-            } else {
-                let evaluated = await engine.positionResult(after)
-                result = evaluated.flatMap { !$0.isPartial ? $0.best?.score : nil }
-                achievedDepth = evaluated?.depth ?? 0
-            }
-            guard !Task.isCancelled else { return }
-            guard let baseline, !baseline.isPartial,
-                  let result,
-                  let drop = MoveQuality.drop(move: before.state.sideToMove, before: baseline.best?.score, after: result)
-            else { continue }
+            guard let weighed else { continue }
             guard hasTillingFeedback, !isWeighing, activePunishment == nil else { return }
             guard game.uciMoves.prefix(index + 1).elementsEqual(original.uciMoves.prefix(index + 1)) else { return }
             if game.plies[index].judgement == nil {
-                game.setJudgement(.init(drop: drop, score: result, depth: achievedDepth), atPly: index)
+                game.setJudgement(weighed.judgement, atPly: index)
                 save()
             }
         }
@@ -1226,50 +1197,18 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// ten seconds or depth twenty publishes the assessment and releases the opponent.
     private func settle(_ move: Move, san: String, from position: Game, to played: Game) async {
         guard let engine else { return }
-        // Join even when an interim baseline exists: it may still be deepening.
-        do {
-            for await snapshot in engine.analysePosition(position) {
-                guard !Task.isCancelled else { return }
-                noteProgress(snapshot)
-                if !snapshot.isPartial {
-                    interceptTable = (position.state.fen, snapshot)
-                }
-            }
-        }
+        // The 细判 itself is one act shared with the drill and the exercise (`Weighing`); what is
+        // this session's is what to do with the answer. The 应招 the move earned comes back with
+        // it, picked up from the same search that judged it (docs/adr/0034): the position the move
+        // made is off the board the moment it is refused, so this is the last moment the Line can
+        // be had without paying for a second search.
+        let weighed = await engine.weigh(played, from: position, progress: noteProgress)
         guard !Task.isCancelled else { return }
-        var drop: Double?
-        var judgedScore: Score?
-        var judgedDepth = interceptTable?.analysis.depth ?? 0
-        /// The 应招 the move earned, picked up from the same search that judged it (docs/adr/0034).
-        /// The position the move made is off the board the moment it is refused, so this is the
-        /// last moment the Line can be had without paying for a second search.
-        var answer: [String] = []
-        if let table = interceptTable, table.fen == position.state.fen {
-            var after: Score?
-            if played.state.outcome == .checkmate {
-                after = .mate(in: played.state.sideToMove == .white ? -1 : 1)
-            } else if played.state.outcome.isDraw {
-                after = .centipawns(0)
-            } else {
-                for await snapshot in engine.analysePosition(played) {
-                    guard !Task.isCancelled else { return }
-                    noteProgress(snapshot)
-                    if !snapshot.isPartial {
-                        after = snapshot.best?.score
-                        answer = snapshot.best?.san ?? []
-                        judgedDepth = snapshot.depth
-                    }
-                }
-            }
-            drop = MoveQuality.drop(move: position.state.sideToMove,
-                                    before: table.analysis.best?.score, after: after)
-            judgedScore = after
-        }
-        guard !Task.isCancelled else { return }
+        if let weighed { interceptTable = (position.state.fen, weighed.before) }
         // The move comes off the board, and it is given its beat to be seen there first — while
         // the session still counts as weighing, so a second tap cannot land on a board that is
         // halfway through taking one back.
-        let takesItBack = drop.map(interceptsHere) ?? true
+        let takesItBack = weighed.map { interceptsHere($0.drop) } ?? true
         if takesItBack { await holdTheMoveOnTheBoard() }
         guard !Task.isCancelled else { return }
         isWeighing = false
@@ -1282,25 +1221,23 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         cursorBeforeWeighing = nil
         weighBegan = nil
         weighing = nil
-        guard let drop else {
+        guard let weighed else {
             game = gameBefore
             cursor = cursorBefore ?? game.plies.count
             retune()
             return
         }
-        guard interceptsHere(drop) else {
+        guard interceptsHere(weighed.drop) else {
             // It stands. Whatever was refused on the way here rides along with it, as a comment
             // on the move that was actually played (docs/adr/0028).
-            recordHelp(atPly: cursor - 1, san: san, drop: drop, score: judgedScore, depth: judgedDepth)
-            if let before = interceptTable?.analysis.best?.score, let after = judgedScore {
-                measuredMove = (game.uciMoves, game.state.fen, MoveChange(before: before, after: after))
-            }
+            recordHelp(atPly: cursor - 1, san: san, drop: weighed.drop, score: weighed.after, depth: weighed.depth)
+            measuredMove = (game.uciMoves, game.state.fen, MoveChange(before: weighed.scoreBefore, after: weighed.after))
             save()
             retune()
             return
         }
-        triedHere.append(Game.Ply.Tried(san: san, drop: drop, line: answer))
-        refused = Refusal(san: san, drop: drop)
+        triedHere.append(Game.Ply.Tried(san: san, drop: weighed.drop, line: weighed.reply))
+        refused = Refusal(san: san, drop: weighed.drop)
         game = gameBefore
         cursor = cursorBefore ?? game.plies.count
         // Written down here rather than when a move finally stands, because a player who is
