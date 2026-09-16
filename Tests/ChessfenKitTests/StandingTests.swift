@@ -68,8 +68,8 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     #expect(refusal.san == "f6")
 }
 
-/// The session badges the move itself: an engine move lands, and the change it made is there
-/// without any screen asking for it.
+/// The session badges the move itself: a move lands, and the change it made is there without any
+/// screen asking for it — read from the player's own side, in tenths.
 @MainActor
 @Test func theChangeIsReadFromThePlayersSideWithoutBeingAskedFor() async throws {
     let start = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -78,17 +78,16 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
         start.state.fen: analysis(0, "e2e4", "e4"),
         afterE4.state.fen: analysis(133, "e7e5", "e5"),
     ])
-    let session = GameSession.fresh(start, controllers: [.white: .engine, .black: .hand], engine: engine)
+    // Two hands, with Black facing the player: the bottom side supplies the perspective.
+    let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
+    session.orientation = .blackAtBottom
     session.showPositionFeedback()
-    session.setThinkingTime(.fixed(seconds: 1))
-    session.retune()
-    let deadline = ContinuousClock.now + .seconds(5)
-    while session.game.plies.isEmpty, ContinuousClock.now < deadline { await Task.yield() }
-    try #require(session.game.uciMoves == ["e2e4"], "the engine played")
+    session.play(try #require(start.state.move(matching: "e2e4")))
+    #expect(session.game.uciMoves == ["e2e4"])
     await session.waitForJudgement()
 
-    // The player is Black, so White's gain is the player's loss, in tenths.
+    // White's gain is the player's loss, in tenths.
     let expected = ((Score.centipawns(133).winPercent - 50) * -10).rounded() / 10
     #expect(session.standing == .change(expected))
     #expect(Standing.changeLabel(expected) == String(format: "%+.1f%%", expected))
