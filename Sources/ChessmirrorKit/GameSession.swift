@@ -312,9 +312,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public static func practising(
         _ drill: Drill, engine: (any Engine)? = nil, library: GameLibrary? = nil
     ) -> GameSession {
+        // The drill's 线 are the session's: the attempt is judged and ruled under one value, and
+        // the screen's toggle and the 错招 row read the same one.
         let session = fresh(drill.game, controllers: [
             drill.mover: .hand, drill.mover.opposite: .engine
-        ], engine: engine, library: library)
+        ], engine: engine, library: library, lines: drill.lines)
         session.practice = drill
         session.orientation = drill.mover == .white ? .whiteAtBottom : .blackAtBottom
         return session
@@ -1562,20 +1564,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 guard let self, !Task.isCancelled else { return }
                 isWeighing = false
                 weighing = nil
-                // The drill's attempt is ruled on the way 正着 rules a move, and its refusal goes
-                // through the same door: into the Game, at the position it happened at
+                // The drill rules its own attempt, under its own 线, and its refusal goes through
+                // the same door as 把关's: into the Game, at the position it happened at
                 // (docs/adr/0037). A drill that could not be judged is a move that stands unmeasured.
-                guard let verdict = practice.verdict, let engine else {
+                guard let ruling = practice.ruling, let engine else {
                     game = practice.game
                     cursor = game.plies.count
                     save()
                     retune()
                     return
                 }
-                let ruling = Ruling(
-                    verdict, in: practice.game, startingScore: practice.startingScore,
-                    lines: lines, relaxedIntercept: relaxedIntercept
-                )
                 land(ruling, played: practice.game, engine: engine)
             }
             return

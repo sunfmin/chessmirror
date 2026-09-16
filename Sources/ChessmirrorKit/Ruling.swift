@@ -172,17 +172,15 @@ public struct Ruling: Hashable, Sendable {
         )
     }
 
-    /// The ruling on a drill's one attempt, which the drill has already judged and written down
-    /// (`Drill`, docs/adr/0029). What is left to rule is whether 正着 takes it back: the game is the
-    /// drill's board with the attempt on it, and a refusal puts it back to the position alone.
+    /// The ruling on a drill's one attempt, made by the drill itself once it has judged and
+    /// written down the attempt (`Drill.ruling`, docs/adr/0029). What is left to rule is whether
+    /// 把关 takes it back: the game is the drill's board with the attempt on it, and a refusal puts
+    /// it back to the position alone.
     ///
     /// The judgement the drill wrote stays as it is, without a 拦截线 on it: a drill's attempt is
     /// written down but never counted among the moves that stood (docs/adr/0038).
-    public init(
-        _ verdict: DrillVerdict, in game: Game, startingScore: Score?,
-        lines: JudgementLines, relaxedIntercept: Double? = nil
-    ) {
-        if Self.intercepts(verdict.drop, lines: lines, relaxedIntercept: relaxedIntercept) {
+    init(_ verdict: DrillVerdict, in game: Game, startingScore: Score?, lines: JudgementLines) {
+        if Self.intercepts(verdict.drop, lines: lines) {
             var restored = game.rewound(to: 0) ?? game
             restored.recordTried(
                 .init(san: verdict.played, drop: verdict.drop, line: verdict.reply), atPly: 0
