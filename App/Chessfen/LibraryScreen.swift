@@ -506,16 +506,18 @@ struct LibraryScreen: View {
 
     private func start(_ game: Game?, tilling: Bool = false) {
         guard let game else { return }
-        let session = GameSession.playing(game, engine: engine.service, library: library)
+        let session = GameSession.playing(
+            game, engine: engine.service, library: library, strength: StrengthSetting.shared.strength
+        )
         session.lines = judgement.lines
         if tilling { session.setIntercept(JudgementLines.defaultIntercept) }
         path.append(.game(session))
     }
 
     private func open(_ entry: GameLibrary.Entry) {
-        guard let session = GameSession.opened(entry, engine: engine.service, library: library) else {
-            return
-        }
+        guard let session = GameSession.opened(
+            entry, engine: engine.service, library: library, strength: StrengthSetting.shared.strength
+        ) else { return }
         path.append(.game(session))
     }
 }

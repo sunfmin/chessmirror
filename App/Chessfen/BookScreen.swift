@@ -237,7 +237,10 @@ struct BookEntryScreen: View {
     /// position with no idea how it was reached.
     private func open(_ encounter: Encounter) {
         guard let entry = entry(for: encounter),
-            let session = GameSession.opened(entry, engine: engine.service, library: library)
+            let session = GameSession.opened(
+                entry, engine: engine.service, library: library,
+                strength: StrengthSetting.shared.strength
+            )
         else { return }
         session.walkOnArrival(toPly: encounter.arrivalPly)
         path.append(.game(session))

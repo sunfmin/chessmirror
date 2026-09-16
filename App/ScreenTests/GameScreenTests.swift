@@ -145,7 +145,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("白方"))
         #expect(rendered.says("手动"))
         #expect(rendered.says("黑方"))
-        #expect(rendered.says("引擎"))
+        #expect(rendered.says("Stockfish 18"), "the engine by name; its rung is on the same line")
         #expect(rendered.says(localized("search.limit")), "the shared search limit stays visible")
         #expect(
             !rendered.says("谁走"),
@@ -233,7 +233,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("马上走"))
         #expect(rendered.says("+0.38"))
         #expect(rendered.says("白方"))
-        #expect(rendered.says("引擎"))
+        #expect(rendered.says("Stockfish 18"), "the engine by name, on its own bar")
         #expect(rendered.says(localized("search.limit")))
         #expect(rendered.says("手动"), "and the side a person is holding says so too")
         #expect(
@@ -285,7 +285,7 @@ struct GameScreenScreenshots {
         #expect(session.thinkingTime == .fixed(seconds: 3), "three seconds a move until told else")
         #expect(rendered.says("白方"))
         #expect(rendered.says("黑方"))
-        #expect(rendered.says("引擎"))
+        #expect(rendered.says("Stockfish 18"))
         // The current clock stays visible; alternative clocks stay in the folded settings.
         #expect(!rendered.says("每步"))
         #expect(!rendered.says("3 秒"))
@@ -672,7 +672,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("第 8 步 Nf6"))
         #expect(rendered.says("该走了"))
         #expect(rendered.says("让引擎走"))
-        #expect(rendered.says("引擎"), "which still plays Black")
+        #expect(rendered.says("Stockfish 18"), "which still plays Black")
     }
 
     // ------------------------------------------------------------------- the study
@@ -760,6 +760,74 @@ struct GameScreenScreenshots {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
         #expect(!rendered.says("连正"))
+    }
+
+    // ---------------------------------------------------------------- 棋力
+
+    /// The rung on the engine's own bar (docs/adr/0038): 「Stockfish 18 · 1800」 at a rung, the
+    /// name alone at 满力, and for VoiceOver the word for what the number is.
+    @Test("the engine's bar names its rung, and only its name at 满力")
+    func theEngineBarNamesItsRung() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let bound = GameSession.fresh(
+            game, controllers: [.white: .hand, .black: .engine], strength: .elo(1800)
+        )
+        let rendered = await ScreenImage.write("game-rung-1800") {
+            screen(bound, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(rendered.says("Stockfish 18 · 1800"))
+        #expect(rendered.says("棋力"), "VoiceOver says what the number is")
+
+        let unbound = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
+        let atFull = await ScreenImage.write("game-rung-full") {
+            screen(unbound, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(atFull.says("Stockfish 18"))
+        #expect(!atFull.says("Stockfish 18 ·"), "the name alone at 满力")
+    }
+
+    /// Where a hand holds the side, there is no rung to show: a person is not at a 棋力.
+    @Test("a hand's bar has no rung")
+    func aHandHasNoRung() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let session = GameSession.fresh(game)
+        let rendered = await ScreenImage.write("game-rung-hands") {
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(!rendered.says("Stockfish 18"))
+        #expect(!rendered.says("棋力"))
+    }
+
+    /// A game the engine played at 2000 reopens at 2000, whatever rung the player has since
+    /// climbed to: the rung is the game's, written on its moves (docs/adr/0038).
+    @Test("a reopened game opens at the rung its engine moves were played at")
+    func reopenedGameKeepsItsRung() async throws {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        for ply in [1, 3, 5, 7] { game.setStrength(.elo(2000), atPly: ply) }
+        let entry = GameLibrary.Entry(
+            url: URL(filePath: "/games/chessfen-2026-08-12-190000.pgn"),
+            pgn: PGN(game: game, tags: [PGN.Tag("White", "手动"), PGN.Tag("Black", "Stockfish 18")]),
+            modified: Date(timeIntervalSince1970: 1_786_000_000)
+        )
+        let session = try #require(GameSession.opened(entry, strength: .elo(1400)))
+        #expect(session.strength == .elo(2000))
+
+        let rendered = await ScreenImage.write("game-reopened-rung") {
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(rendered.says("Stockfish 18 · 2000"))
+    }
+
+    /// The rung picked is the one the next game starts at, on this phone and on the next one; a
+    /// phone that has never picked starts at 满力.
+    @Test("the rung picked is remembered, and a fresh phone starts at 满力")
+    func theRungIsRemembered() {
+        let setting = StrengthSetting.shared
+        #expect(setting.strength == .full, "nothing picked yet")
+        setting.strength = .elo(2200)
+        defer { setting.strength = .full }
+        #expect(UserDefaults.standard.string(forKey: "chessfen.strength") == "2200")
+        #expect(NSUbiquitousKeyValueStore.default.string(forKey: "chessfen.strength") == "2200")
     }
 
     // ------------------------------------------------------------------- glue

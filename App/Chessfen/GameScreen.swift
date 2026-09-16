@@ -536,13 +536,20 @@ struct GameScreen: View {
                 Text(colour.label)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Palette.ink)
-                Text(session.controller(for: colour).label)
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                // The engine's clock, and only where it decides something: how long this side's
-                // next move takes. It is the only dial in the app (docs/adr/0009).
                 if session.controller(for: colour) == .engine {
+                    // The engine by name, with the rung it is on — 「Stockfish 18 · 1800」, or
+                    // the name alone at 满力 — and pressing it is how another rung is picked
+                    // (docs/adr/0038). On the bar rather than among the chips, because the rung
+                    // is a fact about the opponent the way the clock is, and it changes mid-game
+                    // the way a Controller does.
+                    rungMenu
+                    // The engine's clock, and only where it decides something: how long this
+                    // side's next move takes. The other dial on the opponent (docs/adr/0009).
                     Text(localized("search.limit"))
+                        .font(.caption)
+                        .foregroundStyle(Palette.inkSoft)
+                } else {
+                    Text(session.controller(for: colour).label)
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -666,6 +673,43 @@ struct GameScreen: View {
             return localized("game.hold.deeper")
         }
         return localized("game.hold.progress", progress.seconds, progress.depth)
+    }
+
+    /// The ladder, behind the engine's name on its own bar. The rung picked is the game's at once
+    /// — mid-move, if the engine is thinking — and the rung the next game starts at.
+    private var rungMenu: some View {
+        Menu {
+            ForEach(Strength.ladder, id: \.self) { rung in
+                Button {
+                    session.setStrength(rung)
+                    StrengthSetting.shared.strength = rung
+                } label: {
+                    if rung == session.strength {
+                        Label(rung.label, systemImage: "checkmark")
+                    } else {
+                        Text(rung.label)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(rungTitle)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .font(.caption)
+            .foregroundStyle(Palette.inkSoft)
+            .contentShape(Rectangle())
+        }
+        .disabled(session.isWeighing || session.activePunishment != nil)
+        .accessibilityLabel(localized("strength"))
+        .accessibilityValue(rungTitle)
+    }
+
+    /// 「Stockfish 18 · 1800」, or the name alone at 满力.
+    private var rungTitle: String {
+        let name = Controller.engine.playerName
+        return session.strength == .full ? name : "\(name) · \(session.strength.label)"
     }
 
     private func unfoldButton(_ colour: PieceColour) -> some View {
