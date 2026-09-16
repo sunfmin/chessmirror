@@ -406,7 +406,6 @@
 "screen.stopFinder" = "Suche stoppen";
 "screen.find" = "Taktik finden";
 "screen.finder" = "Taktiksuche";
-"screen.finderStopped" = "Suche gestoppt. Taktik finden prüft erneut Taktiken und Matt.";
 "screen.finderIdle" = "Noch nicht gesucht. Taktik finden prüft Taktiken und Matt.";
 "screen.hideArrows" = "Pfeile ausblenden";
 "screen.showArrows" = "Auf dem Brett zeigen";

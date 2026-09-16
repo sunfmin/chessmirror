@@ -121,6 +121,22 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// say 在算 rather than 「引擎还没算过」 while one of those is running.
     public var isSearching: Bool { searchTask != nil }
 
+    /// A card's Stint is in flight: something is searching, it is not the opponent's move being
+    /// walked, and the card has not already been answered. What a card's frame says 正在算 on.
+    public var isAdvising: Bool { thinking == nil && isSearching && !isAdviceSpent }
+
+    /// Depth already paid for: the running search's progress while there is one, and once it has
+    /// stopped the Depth of the Analysis in hand — a cache hit that dropped the Depth would look
+    /// like the engine had never run. Nil until either has got anywhere.
+    public var standingProgress: SearchProgress? {
+        if let searchProgress, searchProgress.depth > 0 { return searchProgress }
+        guard let analysis, analysis.depth > 0 else { return nil }
+        return SearchProgress(
+            depth: analysis.depth, selectiveDepth: analysis.selectiveDepth,
+            milliseconds: analysis.timeMilliseconds
+        )
+    }
+
     public struct SearchProgress: Hashable, Sendable {
         public var depth: Int
         public var selectiveDepth: Int
@@ -152,6 +168,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public private(set) var isFindingTactics = false
     /// The shot the finder currently names, if the last probe found one.
     public private(set) var tactic: Tactic?
+    /// Whether it was arriving at the finder's cards that turned the finder on, rather than a
+    /// person pressing its switch. Only what a swipe turned on does a swipe turn off again.
+    private var finderOpenedByArrival = false
+
+    /// The finder's line as numbered arrows on the position on screen, yours where the hand is
+    /// moving that colour. Empty when the finder has named nothing.
+    public var tacticArrows: [MoveArrow] {
+        guard let tactic else { return [] }
+        return MoveArrow.walk(tactic.line, from: viewed) { controller(for: $0) == .hand }
+    }
     /// True while the short search that confirms a Tactic is running.
     public private(set) var isProbingTactics = false
     /// The probe's own Analysis, kept only so a mate it happened to see can be reported.
@@ -440,6 +466,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard isFindingTactics != on else { return }
         isFindingTactics = on
         if !on {
+            finderOpenedByArrival = false
             tactic = nil
             isProbingTactics = false
             probedAnalysis = nil
@@ -463,6 +490,22 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         retune()
+    }
+
+    /// Arriving at 杀 or 战术: the swipe is the asking (docs/adr/0025), so the finder goes on if it
+    /// was not on already, and remembers that it was the arrival that did it.
+    public func arriveAtFinder() {
+        guard !isFindingTactics else { return }
+        setFindingTactics(true)
+        finderOpenedByArrival = isFindingTactics
+    }
+
+    /// Leaving the finder's cards puts back only what arriving turned on. A switch somebody
+    /// pressed by hand is theirs and stays as they left it — including on the strip, where it
+    /// goes on colouring the mate's dot for the rest of the game.
+    public func leaveFinder() {
+        guard finderOpenedByArrival else { return }
+        setFindingTactics(false)
     }
 
     /// What the strip under the board should say while the finder is on.
@@ -1335,6 +1378,20 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let slips = game.slips(by: mine, lines: lines)
         storedSlips = (key, slips)
         return slips
+    }
+
+    /// The 错招 by the *position* they were made at, which is what the record strip's cells are:
+    /// a cell's cursor is the position it takes the board to, so a mistake at Ply `n` is marked on
+    /// the cell at `n - 1` (docs/adr/0036). Zero is the opening cell.
+    public var slipByPosition: [Int: Slip] {
+        Dictionary(slips.map { ($0.positionPly, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// The record's Scores, one level per position, for the curve under the strip: the same
+    /// numbers `historyScore` gives one at a time, as one value with the rule for whether there
+    /// is a curve to draw.
+    public var curve: ScoreCurve {
+        ScoreCurve(scores: (0...game.plies.count).map { historyScore(atPly: $0) })
     }
 
     /// 正着数 and 连正 for the sides the player is moving, read out of the game (CONTEXT.md).

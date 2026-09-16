@@ -48,6 +48,13 @@ what it cost. The answer to 「这一局我哪儿走错了」, and what a game's
 walks to. Not a 错题: a 错题 is the position, and this is one game's account of reaching it.
 _Avoid_: 错误, 失误, 招法
 
+**分数曲线 (Score curve)**:
+The record's Scores as one shape: a level per position of a game, high where White is doing well,
+nil where nobody has scored it, drawn under the record strip once two positions are known
+(`ScoreCurve`). It is read off the record — the 细判 written on each move first, then the Review —
+and never off the live search. One Score is a number, not a shape.
+_Avoid_: 走势, 评估曲线
+
 **遭遇 (Occurrence)**:
 One time the player fell for a 错题 — when, in which game, which move they played, what it
 cost, where it came from. A 错题 owns a list of them.

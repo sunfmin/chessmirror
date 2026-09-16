@@ -407,7 +407,6 @@
 "screen.stopFinder" = "Parar busca";
 "screen.find" = "Buscar tática";
 "screen.finder" = "Buscador de táticas";
-"screen.finderStopped" = "Busca parada. Buscar tática verifica táticas e mates novamente.";
 "screen.finderIdle" = "Ainda não analisado. Buscar tática verifica táticas e mates.";
 "screen.hideArrows" = "Ocultar setas";
 "screen.showArrows" = "Desenhar no tabuleiro";

@@ -22,8 +22,7 @@ extension Array {
 /// inherit the screen's tint, so the colour is named here rather than left to `.accentColor`,
 /// which resolved to a blue belonging to nobody.
 struct EvalCurve: View {
-    let plies: Int
-    let score: (Int) -> Score?
+    let curve: ScoreCurve
 
     var body: some View {
         Canvas { context, size in draw(into: &context, size: size) }
@@ -31,18 +30,19 @@ struct EvalCurve: View {
     }
 
     private func draw(into context: inout GraphicsContext, size: CGSize) {
+        let plies = curve.plies
         guard plies > 0 else { return }
 
         // Only as far as the Review has actually got: a level carried across positions nobody has
         // scored yet would be a flat half-full pretending to be a finding.
-        let known = (0...plies).filter { score($0) != nil }
-        guard let first = known.first, known.count > 1, let last = known.last else { return }
+        let known = curve.known
+        guard let first = known.first, curve.isDrawable, let last = known.last else { return }
 
         let step = size.width / CGFloat(plies)
         func point(_ ply: Int) -> CGPoint {
             CGPoint(
                 x: CGFloat(ply) * step,
-                y: size.height * (1 - advantageFraction(score(ply)))
+                y: size.height * (1 - advantageFraction(curve.score(atPly: ply)))
             )
         }
 

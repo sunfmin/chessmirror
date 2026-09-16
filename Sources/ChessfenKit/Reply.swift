@@ -37,25 +37,8 @@ public enum Reply {
     /// than from which Controller a colour is on. In a reply the two sides are not "you" and "the
     /// engine" — they are the move that was wrong and the moves that make it wrong, and a game
     /// between two people still has to draw that.
-    ///
-    /// The walk stops at the first move that will not replay, which is what a line from a file
-    /// written by a different engine can be, and stops at the handful of arrows a board can carry.
     public static func arrows(in position: Game, playing moves: [String]) -> [MoveArrow] {
-        var walked = position
-        var arrows: [MoveArrow] = []
-        var mover: PieceColour?
-        for (index, san) in moves.prefix(MateNews.arrowLimit).enumerated() {
-            guard let move = SAN.move(for: san, in: walked.state) else { break }
-            let side = walked.state.sideToMove
-            if mover == nil { mover = side }
-            arrows.append(MoveArrow(
-                step: index + 1,
-                move: MoveSquares(from: move.from, to: move.to),
-                isYours: side == mover,
-                isPlayed: false
-            ))
-            guard walked.apply(move) else { break }
-        }
-        return arrows
+        let mover = position.state.sideToMove
+        return MoveArrow.walk(moves, from: position) { $0 == mover }
     }
 }

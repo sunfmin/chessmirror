@@ -12,6 +12,32 @@ public struct MoveArrow: Hashable, Sendable {
         self.isYours = isYours
         self.isPlayed = isPlayed
     }
+
+    /// A line in SAN as numbered arrows, replayed on a copy of the position it starts from: each
+    /// arrow has to be a legal move where it is drawn, and drawing it must not advance the game.
+    /// The walk stops at the first move that will not replay — which a line from a file written
+    /// by a different engine can be — and at the handful of arrows a board can carry.
+    ///
+    /// Whose an arrow is comes from the caller, per colour: a 应招 counts from whoever played the
+    /// refused move, the finder's line from which Controller a colour is on. The screen and the
+    /// reply used to walk the line in two copies of this loop that agreed only by inspection.
+    public static func walk(
+        _ moves: [String], from position: Game, isYours: (PieceColour) -> Bool
+    ) -> [MoveArrow] {
+        var walked = position
+        var arrows: [MoveArrow] = []
+        for (index, san) in moves.prefix(MateNews.arrowLimit).enumerated() {
+            guard let move = SAN.move(for: san, in: walked.state) else { break }
+            arrows.append(MoveArrow(
+                step: index + 1,
+                move: MoveSquares(from: move.from, to: move.to),
+                isYours: isYours(walked.state.sideToMove),
+                isPlayed: false
+            ))
+            guard walked.apply(move) else { break }
+        }
+        return arrows
+    }
 }
 
 /// A mate the engine can already see from the position on screen, whoever it belongs to
