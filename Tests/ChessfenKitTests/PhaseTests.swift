@@ -86,7 +86,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     defer { session.suspend() }
 
     session.play(try #require(game.state.move(matching: "e2e4")))
-    await Task.yield()
+    await session.waitForJudgement()
 
     #expect(session.phase == .thinking(.own))
     #expect(!session.isOccupied)

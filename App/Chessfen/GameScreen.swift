@@ -249,7 +249,6 @@ struct GameScreen: View {
             // wants is not the one that just ran. Retuned before the deal rather than after it, or
             // the Stint the deal just started would be cancelled a line later.
             session.attach(engine: engine.service, library: library)
-            session.showPositionFeedback()
             session.retune()
             deal()
         }

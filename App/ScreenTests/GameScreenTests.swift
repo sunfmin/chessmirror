@@ -874,7 +874,6 @@ struct GameScreenScreenshots {
             ]),
         ])
         let session = GameSession.fresh(played, engine: engine)
-        session.showPositionFeedback()
         return (session, engine)
     }
 

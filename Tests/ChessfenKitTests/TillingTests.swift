@@ -235,7 +235,6 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
         return gate.stream
     })
     let session = GameSession.fresh(start, controllers: [.white: .hand, .black: .engine], engine: engine)
-    session.showPositionFeedback()
     session.setTilling(enabled)
     defer { gate.continuation.finish(); session.suspend() }
     session.play(try #require(start.state.move(matching: "e2e4")))
@@ -287,7 +286,6 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
         reply.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(2 * score), uciMoves: [], san: [])])
     ])
     let session = GameSession.fresh(start, engine: engine)
-    session.showPositionFeedback()
     defer { session.suspend() }
     #expect(session.moveChange == nil)
     session.play(try #require(start.state.move(matching: "e2e4")))
@@ -329,7 +327,6 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     session.setIntercept(37)
     session.setTilling(false)
     #expect(!session.isTilling)
-    #expect(session.hasTillingFeedback)
     #expect(session.preferredIntercept == 37)
     #expect(session.game.uciMoves == game.uciMoves)
     let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
@@ -662,6 +659,8 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     let disabled = GameSession.fresh(game, engine: engine)
     defer { disabled.suspend() }
     disabled.play(blunder)
+    #expect(disabled.isWeighing, "every move is weighed; 把关 off only means it stands")
+    await disabled.waitForJudgement()
     #expect(!disabled.isWeighing)
     #expect(disabled.game.uciMoves.last == "g2g4")
     #expect(disabled.refused == nil)
@@ -719,4 +718,51 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
         reopened.slips(by: [.white], lines: .standard).map(\.ply) == [1],
         "so the row under the record has somewhere to take the player"
     )
+}
+
+/// Contract: one door for a move's judgement. A move that lands without a ruling — the engine's
+/// own — is weighed by the same 细判 that rules under 把关, and the record and the badge are
+/// written from that one Weighing: the same Score, the same 最佳. It used to be written from the
+/// before-table alone, with 最佳 always false, and the badge from a second weighing; the two
+/// disagreed about the engine's own first choice (CONTEXT.md, 细判, 最佳).
+@MainActor
+@Test func theEnginesOwnMoveIsJudgedByTheOneWeighingTheBadgeReads() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let afterE4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let afterE5 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(30), uciMoves: ["e2e4"], san: ["e4"]),
+        ]),
+        // The engine's own first choice from here is e5, and the line it has for it lands at 25.
+        afterE4.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(25), uciMoves: ["e7e5", "g1f3"], san: ["e5", "Nf3"]),
+            .init(score: .centipawns(45), uciMoves: ["c7c5"], san: ["c5"]),
+        ]),
+        afterE5.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(25), uciMoves: ["g1f3"], san: ["Nf3"]),
+        ]),
+    ])
+    let session = GameSession.fresh(start, controllers: [.white: .hand, .black: .engine], engine: engine)
+    defer { session.suspend() }
+
+    session.play(try #require(start.state.move(matching: "e2e4")))
+    await session.waitForJudgement()
+    await session.waitForPreparedInterception()
+    try #require(session.game.uciMoves == ["e2e4", "e7e5"], "the engine answered")
+    await session.waitForJudgement()
+
+    let judgement = try #require(session.game.plies[1].judgement)
+    let change = try #require(session.moveChange)
+    #expect(judgement.best, "the engine's own first choice is 最佳 on the record")
+    #expect(judgement.score == .centipawns(25))
+    #expect(judgement.intercept == nil, "it landed under no 拦截线")
+    #expect(change.isBest == judgement.best)
+    #expect(change.after == judgement.score)
+    #expect(session.historyScore(atPly: 2) == judgement.score)
+    #expect(session.standing == .best)
+
+    // The file says the same, and reading it back is the same judgement.
+    let read = try PGN(parsing: session.pgn.text)
+    #expect(read.game.plies[1].judgement == judgement)
 }

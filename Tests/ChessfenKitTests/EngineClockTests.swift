@@ -14,7 +14,6 @@ struct EngineClock {
         ])
         let session = GameSession.fresh(start, engine: engine)
         defer { session.suspend() }
-        session.showPositionFeedback()
         session.retune()
         await session.waitForPreparedInterception()
         #expect(engine.searchCount == 1)
@@ -52,7 +51,6 @@ struct EngineClock {
         })
         let session = GameSession.fresh(start, engine: engine)
         defer { gate.continuation.finish(); session.suspend() }
-        session.showPositionFeedback()
         session.retune()
         var requests = requested.stream.makeAsyncIterator()
         _ = await requests.next()
@@ -86,7 +84,6 @@ struct EngineClock {
         engine.pause()
         let session = GameSession.fresh(start, engine: engine)
         defer { session.suspend() }
-        session.showPositionFeedback()
         session.retune()
         await session.waitForPreparedInterception()
         #expect(engine.searchCount == 0)

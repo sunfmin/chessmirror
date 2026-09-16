@@ -110,7 +110,11 @@ struct RejudgeTests {
     }
 
     @Test func amoveOrTheEyeMovingOnCancelsItUnwritten() async throws {
-        let engine = ScriptedEngine([], controlled: { _, budget in
+        // Every everyday search answers, so a move played can be weighed and stand; only the
+        // deeper one hangs, which is the 复判 under test.
+        let engine = ScriptedEngine([Analysis(depth: 20, lines: [
+            .init(score: .centipawns(0), uciMoves: ["d2d4"], san: ["d4"])
+        ])], controlled: { _, budget in
             budget == PositionSearches.deeper ? AsyncStream { _ in } : nil
         })
         let game = try pendingG4()
@@ -130,6 +134,7 @@ struct RejudgeTests {
         await until { engine.searchCount == 2 }
         session.play(try #require(session.game.state.move(matching: "d2d4")))
         #expect(session.rejudging == nil, "a move was played")
+        await session.waitForJudgement()
         #expect(session.game.uciMoves == ["f2f3", "e7e5", "d2d4"])
         #expect(session.game.plies[2].tried.map(\.drop) == [40], "carried along as it was")
     }

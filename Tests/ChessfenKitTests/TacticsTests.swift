@@ -1,4 +1,4 @@
-import ChessfenKit
+@testable import ChessfenKit
 import Foundation
 import Testing
 
@@ -123,8 +123,8 @@ import Testing
         try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"]))
     }
 
-    @Test("with the finder off, practice still starts no search")
-    func finderOffStartsNothing() async throws {
+    @Test("with the finder off, a move is weighed and no shot is looked for")
+    func finderOffLooksForNothing() async throws {
         let engine = ScriptedEngine(
             [Analysis(depth: 10, lines: [Line(score: .centipawns(20), uciMoves: ["e2e4"], san: ["e4"])])]
         )
@@ -133,8 +133,12 @@ import Testing
         #expect(!session.isFindingTactics)
 
         session.play(try #require(session.viewed.state.move(matching: "e2e4")))
+        await session.waitForJudgement()
         await hop()
-        #expect(engine.searchCount == 0, "practice with the finder off asks nothing")
+        // The searches that ran are the shared position searches every move is weighed by
+        // (docs/adr/0039, 0040); the finder asked for none of its own.
+        #expect(engine.budgets.allSatisfy { $0 == PositionSearches.budget })
+        #expect(!session.isProbingTactics)
         #expect(session.tactic == nil)
     }
 
@@ -158,8 +162,11 @@ import Testing
         session.setFindingTactics(true)
         await hop()
 
-        #expect(engine.budgets == [PositionSearches.budget])
-        #expect(engine.lines == [2], "two lines: the shot, and the move it has to beat")
+        // The position on screen is searched once, shared by the finder, the badge and the
+        // board; the badge's weighing of the last move also searches the position before it.
+        #expect(engine.positions.filter { $0 == game.state.fen }.count == 1)
+        #expect(engine.budgets.allSatisfy { $0 == PositionSearches.budget })
+        #expect(engine.lines.allSatisfy { $0 == 2 }, "two lines: the shot, and the move it has to beat")
         #expect(session.tactic == nil, "a twelve-centipawn gap is not a Tactic")
         #expect(session.tacticPrompt == "这一步没有战术")
     }

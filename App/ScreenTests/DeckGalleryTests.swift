@@ -50,7 +50,6 @@ struct DeckGallery {
             game.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(score), uciMoves: [], san: [])])
         ])
         let session = GameSession.fresh(game, engine: engine)
-        session.showPositionFeedback()
         await session.measureLatestMoveChange()
         defer { session.suspend() }
         let value = String(format: "%+.1f%%", Score.centipawns(score).winPercent - 50)
