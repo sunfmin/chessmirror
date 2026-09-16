@@ -375,9 +375,12 @@
 "drill" = "Practise";
 "drill.prompt" = "Your move";
 "drill.judging" = "Working out what that cost";
-"drill.passed" = "%1$@ — %2$@. That holds.";
-"drill.failed" = "%1$@ — %2$@. That gives away %3$d%%.";
-"drill.failed.wanted" = "%1$@ — %2$@. That gives away %3$d%%. Better was %4$@ — %5$@.";
+"drill.passed" = "%1$@. That holds.";
+"drill.failed" = "%1$@. That gives away %2$d%%.";
+"drill.failed.wanted" = "%1$@. That gives away %2$d%%. Better was %3$@.";
+"drill.move" = "%1$@ — %2$@";
+"drill.held" = "It holds";
+"drill.dropped" = "It gave something away";
 "drill.keepPlaying" = "Play it out";
 "drill.leave" = "Leave";
 "drill.next" = "Next one";

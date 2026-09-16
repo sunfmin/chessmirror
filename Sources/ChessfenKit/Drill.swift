@@ -43,16 +43,29 @@ public struct DrillVerdict: Hashable, Sendable {
     /// arguing with a right answer, and 多解 is the whole reason the line is a drop rather than a
     /// comparison with one move (docs/adr/0027).
     public var sentence: String {
-        guard !passed else { return localized("drill.passed", played, intent.label) }
+        guard !passed else { return localized("drill.passed", Self.phrase(played, intent)) }
         let cost = Int(drop.rounded())
-        guard let wanted, let wantedIntent else {
-            return localized("drill.failed", played, intent.label, cost)
+        guard let wanted else {
+            return localized("drill.failed", Self.phrase(played, intent), cost)
         }
         // One key rather than two joined with a space: where the sentences meet is punctuation,
         // and punctuation between two sentences is not the same in eight languages.
         return localized(
-            "drill.failed.wanted", played, intent.label, cost, wanted, wantedIntent.label
+            "drill.failed.wanted", Self.phrase(played, intent), cost,
+            Self.phrase(wanted, wantedIntent)
         )
+    }
+
+    /// A move and what it is for — 「Bd3 护 e4」 — or the move on its own when nothing could be
+    /// read out of it.
+    ///
+    /// 「说不清」 is an honest answer to 为什么, and it is not the answer to *this* question. Printed
+    /// here it put a shrug in the middle of a verdict — 「Be3 说不清。这一手掉了 16% 胜率。该走 Bxc4
+    /// 说不清。」 — which reads as the app hedging about the one thing it is certain of. A move with
+    /// no reading is just a move.
+    private static func phrase(_ move: String, _ intent: Intent?) -> String {
+        guard let intent, intent != .unclear else { return move }
+        return localized("drill.move", move, intent.label)
     }
 }
 

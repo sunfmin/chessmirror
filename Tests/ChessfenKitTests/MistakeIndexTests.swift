@@ -161,7 +161,7 @@ func aMovedLineRewalksEverything() throws {
     index.update(from: entries)
     #expect(index.walkedLastTime == 10)
 
-    index.update(from: entries, lines: JudgementLines(record: 10, enqueue: 20))
+    index.update(from: entries, lines: .standard)
     #expect(index.walkedLastTime == 0, "the same lines are the same lines")
 
     index.update(from: entries, lines: JudgementLines(record: 40, enqueue: 50))

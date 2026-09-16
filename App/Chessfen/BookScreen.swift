@@ -47,12 +47,16 @@ struct BookScreen: View {
 ///
 /// The board is the title. A FEN is not a name a person recognises and neither is "Sicilian,
 /// Najdorf" — what they recognise is the picture they were looking at when they got it wrong.
+///
+/// Ninety-six points of it, which is twelve to a square: a title has to be readable at a glance,
+/// and at sixty-four the pieces on a phone were shapes you had to stop and work out. The sentence
+/// beside it still has half the row, and it is the thing that wraps.
 struct BookRow: View {
     let mistake: Mistake
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            thumbnail(mistake.position, side: 64)
+            thumbnail(mistake.position, side: 96)
             VStack(alignment: .leading, spacing: 5) {
                 Text(mistake.sentence())
                     .font(.footnote)
@@ -235,7 +239,11 @@ struct BookEntryScreen: View {
         guard let entry = entry(for: encounter),
             let session = GameSession.opened(entry, engine: engine.service, library: library)
         else { return }
-        session.walkOnArrival(toPly: encounter.ply)
+        // A move that stood opens on the position *after* it, with the blunder on the board — that
+        // is what reading a game wants (docs/adr/0036). A move 耕棋 took back never stood, so there
+        // is no position after it: the board it belongs to is the one it was played from, which is
+        // also the one to try again from.
+        session.walkOnArrival(toPly: encounter.attempt == nil ? encounter.ply : encounter.ply - 1)
         path.append(.game(session))
     }
 }

@@ -10,8 +10,10 @@ import Foundation
 ///   how much slack the coach cuts are two questions, and answering them with one knob makes it
 ///   impossible to say who improved (docs/adr/0009).
 /// - **记录线** is what gets written into the game as a mistake worth remembering.
-/// - **入列线** is what earns a place in the player's future practice time, and it sits above the
-///   记录线 because a mistake can be worth remembering without being worth drilling.
+/// - **入列线** is what earns a place in the player's future practice time. It never sits *below*
+///   the 记录线 — practice time is spent on things that were written down — and a player who wants
+///   a wide book and a narrow queue raises it, because a mistake can be worth remembering without
+///   being worth drilling.
 ///
 /// Percentage points of win probability, from the mover's own point of view.
 public struct JudgementLines: Hashable, Sendable, Codable {
@@ -22,13 +24,18 @@ public struct JudgementLines: Hashable, Sendable, Codable {
     /// Where a written-down move also earns practice time.
     public var enqueue: Double
 
-    public init(intercept: Double? = nil, record: Double = 10, enqueue: Double = 20) {
+    public init(intercept: Double? = nil, record: Double = 5, enqueue: Double = 5) {
         self.intercept = intercept
         self.record = record
         self.enqueue = enqueue
     }
 
-    /// 10 / 10 / 20, with 耕棋 off. The numbers a person who has never touched this gets.
+    /// 5 / 5, with 耕棋 off. The numbers a person who has never touched this gets.
+    ///
+    /// Both at five, which is where 耕棋 intercepts: what the coach stopped you for is worth
+    /// writing down, and what is worth writing down is worth practising. They are still two lines
+    /// and either moves on its own (docs/adr/0027) — a player who wants the book kept wider than
+    /// the queue raises one of them — but the pair a phone ships with agree.
     public static let standard = JudgementLines()
 
     public static let defaultIntercept = 5.0

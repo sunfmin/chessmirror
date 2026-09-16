@@ -113,8 +113,11 @@ func recurrenceBeatsCost() {
 @Test("a move under the 入列线 is in the book and never knocks")
 func onlyTheEnqueueLineTakesPracticeTime() {
     let book = MistakeBook(mistakes: [mistake(1, cost: 12), mistake(2, cost: 25)])
-    let daily = Daily.forToday(book: book, attempts: [], now: now, calendar: utc)
-    #expect(daily.all.count == 1, "12% is worth writing down and is not worth drilling")
+    let daily = Daily.forToday(
+        book: book, attempts: [], lines: JudgementLines(record: 10, enqueue: 20), now: now,
+        calendar: utc
+    )
+    #expect(daily.all.count == 1, "under a 20% 入列线, 12% is written down and not drilled")
     #expect(daily.cards.first?.position == position(2))
 }
 

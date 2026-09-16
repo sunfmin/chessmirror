@@ -106,6 +106,11 @@ struct LibraryScreen: View {
                         source: source,
                         path: $path
                     )
+                    // 下一题 swaps the top of the path for the next 错题, and a destination view
+                    // keeps its `@State` when only the value under it changes: the new question
+                    // arrived and the old `Drill` went on being the one on the screen, so the
+                    // button did nothing. The position is the question, so it is the identity.
+                    .id(mistake.position)
                 }
             }
             .overlay {

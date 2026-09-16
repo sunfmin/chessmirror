@@ -350,9 +350,12 @@
 "drill" = "练";
 "drill.prompt" = "该你走";
 "drill.judging" = "在算这一手值多少";
-"drill.passed" = "%1$@ %2$@。这一手站得住，过了。";
-"drill.failed" = "%1$@ %2$@。这一手掉了 %3$d%% 胜率。";
-"drill.failed.wanted" = "%1$@ %2$@。这一手掉了 %3$d%% 胜率。该走 %4$@ %5$@。";
+"drill.passed" = "%1$@。这一手站得住，过了。";
+"drill.failed" = "%1$@。这一手掉了 %2$d%% 胜率。";
+"drill.failed.wanted" = "%1$@。这一手掉了 %2$d%% 胜率。该走 %3$@。";
+"drill.move" = "%1$@ %2$@";
+"drill.held" = "过了";
+"drill.dropped" = "没过";
 "drill.keepPlaying" = "继续下";
 "drill.leave" = "退出";
 "drill.next" = "下一题";

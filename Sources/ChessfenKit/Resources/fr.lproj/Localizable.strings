@@ -329,9 +329,12 @@
 "drill" = "S'entraîner";
 "drill.prompt" = "À vous de jouer";
 "drill.judging" = "Calcul de ce que ça a coûté";
-"drill.passed" = "%1$@ — %2$@. Ça tient.";
-"drill.failed" = "%1$@ — %2$@. Ça concède %3$d%%.";
-"drill.failed.wanted" = "%1$@ — %2$@. Ça concède %3$d%%. Il fallait jouer %4$@ — %5$@.";
+"drill.passed" = "%1$@. Ça tient.";
+"drill.failed" = "%1$@. Ça concède %2$d%%.";
+"drill.failed.wanted" = "%1$@. Ça concède %2$d%%. Il fallait jouer %3$@.";
+"drill.move" = "%1$@ — %2$@";
+"drill.held" = "Ça tient";
+"drill.dropped" = "Ça lâche";
 "drill.keepPlaying" = "Continuer la partie";
 "drill.leave" = "Quitter";
 "drill.next" = "Suivante";

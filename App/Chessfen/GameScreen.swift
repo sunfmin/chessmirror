@@ -129,7 +129,10 @@ struct GameScreen: View {
                 board.frame(width: side, height: side)
                 standing.padding(.horizontal, 12).frame(width: side).padding(.vertical, 6).chromeType()
                 playerBar(bottomColour).chromeType()
-                if let practice = session.practice { practiceStatus(practice).chromeType() }
+                if let practice = session.practice {
+                    DrillVerdictRow(drill: practice, next: practiceNext, leave: { path.removeAll() })
+                        .chromeType()
+                }
                 VStack(spacing: 0) {
                     record
                     wrongMoves
@@ -308,31 +311,6 @@ struct GameScreen: View {
     }
 
     // ------------------------------------------------------------------ the standing
-
-    private func practiceStatus(_ practice: Drill) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
-                Text(localized(practice.isJudging ? "drill.judging" : practice.isSettled ? "drill" : "drill.prompt"))
-                    .foregroundStyle(Palette.inkSoft)
-                Spacer(minLength: 8)
-                Button(localized("drill.leave")) { path.removeAll() }
-                if practice.isSettled, let practiceNext {
-                    Button(localized("drill.next"), action: practiceNext)
-                }
-            }
-            if let verdict = practice.verdict {
-                Text(verdict.sentence)
-                    .foregroundStyle(verdict.passed ? Palette.analysis : Palette.alarm)
-            } else if practice.couldNotJudge {
-                Text(localized("drill.noEngine")).foregroundStyle(Palette.alarm)
-            }
-        }
-        .font(.caption)
-        .buttonStyle(.plain)
-        .tint(Palette.analysis)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
 
     /// Who is ahead, said once, along the foot of the board.
     ///

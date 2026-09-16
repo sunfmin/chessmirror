@@ -11,12 +11,19 @@ through your own iCloud Drive.
 - Confirm and correct pieces, side to move, and castling rights before playing.
 - Per-game controllers and engine thinking time. Mate and tactics findings appear only when
   available; tap a row to expand its answer. The board keeps the full screen width.
-- **错题本:** one position across many games, with encounter history and manual dismissal.
+- **错题本:** one position across many games, with encounter history and manual dismissal. A game
+  contributes both the moves it recorded and the refusals 耕棋 took back — including the ones no
+  move ever absorbed, which is how a session that ends on a refused move gets written down. Rows
+  are named by a 96pt board, and an encounter opens the game at its position.
 - **日课:** FSRS due dates derived from practice facts, ARTS daily ordering, and ten new positions
   per day by default. Unscheduled practice does not change due dates.
 - Practice uses the game screen's full-width board, side settings, advantage bar, history and
   explicit multi-move findings. The first move is judged at depth 20 and logged once; play on in
-  the same game, exit, or take the next question, without a separate Continue button.
+  the same game, exit, or take the next question, without a separate Continue button. The verdict
+  is one row: 过了 or 没过 in the colour it means, the explanation only when the move failed, and
+  one full-width button — 下一题, or 退出 at the end of the queue.
+- The two standing lines, 记录线 and 入列线, both default to 5%, which is where 耕棋 intercepts.
+  Either moves on its own in 关于 → 判决线.
 - **耕棋 / No Slips:** a 0–100% interception slider, defaulting to 5%, with a separate on/off switch.
   The board's No Slips label toggles interception directly and remembers the selected threshold.
   Feedback remains visible while off; answers are explicit multi-move reveals, never a single

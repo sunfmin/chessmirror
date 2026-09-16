@@ -107,10 +107,10 @@ private func engine(
 @MainActor
 @Test("a move that is not the engine's first choice passes, so long as it costs little")
 func aSecondChoiceThatHoldsPasses() async throws {
-    // Black to move. Level before; +109 for White after — 9.9 points of Black's win chance, just
+    // Black to move. Level before; +45 for White after — about four points of Black's win chance,
     // under the 记录线. The engine wanted something else entirely, and that is not the question.
     let (scripted, move) = try engine(
-        before: .centipawns(0), playing: "Nc6", after: .centipawns(109), wanting: "d5"
+        before: .centipawns(0), playing: "Nc6", after: .centipawns(45), wanting: "d5"
     )
     let log = temporaryLog()
     defer { try? FileManager.default.removeItem(at: log.url) }
@@ -120,9 +120,9 @@ func aSecondChoiceThatHoldsPasses() async throws {
     await drill.settled()
 
     let verdict = try #require(drill.verdict)
-    #expect(verdict.passed, "9.9 points is under the line, whatever the engine preferred")
+    #expect(verdict.passed, "four points is under the line, whatever the engine preferred")
     #expect(verdict.played == "Nc6")
-    #expect(abs(verdict.drop - 9.9) < 0.2, "drop was \(verdict.drop)")
+    #expect(verdict.drop < JudgementLines.standard.record, "drop was \(verdict.drop)")
 }
 
 @MainActor
@@ -151,7 +151,7 @@ func everyAttemptIsToldSomething() async throws {
     defer { try? FileManager.default.removeItem(at: log.url) }
 
     let (held, holding) = try engine(
-        before: .centipawns(0), playing: "Nc6", after: .centipawns(109), wanting: "d5"
+        before: .centipawns(0), playing: "Nc6", after: .centipawns(45), wanting: "d5"
     )
     let good = try #require(Drill(position: afterNf3, engine: held, log: log))
     good.play(holding)

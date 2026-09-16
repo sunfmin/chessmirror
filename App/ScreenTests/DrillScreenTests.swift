@@ -118,13 +118,13 @@ struct DrillScreenshots {
 
         #expect(rendered.says("该你走"))
         #expect(rendered.says(localized("standing.bar")))
-        #expect(rendered.says(localized("drill.leave")))
         #expect(rendered.says(localized("game.settings.expand", PieceColour.black.label)))
         let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
         #expect(pixels.fullWidthBoardRows > pixels.width / 2)
         #expect(!rendered.says("Nc6"), "the engine's move is not on the screen before the move")
         #expect(!rendered.says("掉"), "and neither is a number")
-        #expect(!rendered.says("下一题"), "the exits arrive with the verdict")
+        #expect(!rendered.says("下一题"), "the way on arrives with the verdict")
+        #expect(!rendered.says(localized("drill.leave")), "and so does the way out")
     }
 
     @Test("a failed attempt keeps its feedback on the shared, playable game screen")
@@ -145,6 +145,7 @@ struct DrillScreenshots {
             .environment(index(log))
         }
 
+        #expect(rendered.says(localized("drill.dropped")), "the answer, in one word and in colour")
         #expect(rendered.says("Qh4"))
         #expect(rendered.says("12%"), "what it cost, on the one scale")
         #expect(rendered.says("该走 Nc6"), "and what to have played")
@@ -160,7 +161,7 @@ struct DrillScreenshots {
     @Test("a move that holds is told so too, and is not argued with")
     func aPassIsAlsoToldSomething() async throws {
         let (drill, move, log) = try drill(
-            playing: "Nc6", before: 0, after: 109, wanting: "d5"
+            playing: "Nc6", before: 0, after: 45, wanting: "d5"
         )
         defer { try? FileManager.default.removeItem(at: log.url) }
         drill.play(try #require(move))
@@ -179,6 +180,7 @@ struct DrillScreenshots {
         // feedback, which is worth nothing measurable.
         #expect(rendered.says("过了"))
         #expect(!rendered.says("该走 d5"), "多解: a move that holds is not the wrong answer")
+        #expect(!rendered.says("站得住"), "the word 过了 is the whole verdict; a pass needs no paragraph")
         #expect(!rendered.says("继续下"))
     }
 }

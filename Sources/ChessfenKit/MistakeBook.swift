@@ -171,7 +171,10 @@ public struct MistakeBook: Sendable {
     ///   it, it is a game nobody has looked at.
     /// - **A move 耕棋 took back**, whose cost was measured when it was refused and written into
     ///   the file with it (docs/adr/0027). These need no Review, because the measurement already
-    ///   happened; a 耕棋 game therefore fills the book while it is being played.
+    ///   happened; a 耕棋 game therefore fills the book while it is being played. Whether the
+    ///   refusal rode onto the move that finally stood or is still waiting at the position it
+    ///   happened at (docs/adr/0037) makes no difference to the book: both are one occasion of
+    ///   getting one position wrong.
     ///
     /// Only the sides the player actually moved, either way: a game where the engine had Black is
     /// a game where Black's mistakes belong to Stockfish.
@@ -216,6 +219,33 @@ public struct MistakeBook: Sendable {
             let alreadyRecorded = move.tried.contains { $0.notFound && $0.san == move.san }
             if game.isReviewed, !alreadyRecorded, let cost = game.drop(atPly: ply) {
                 note(game.plies[ply - 1].san, cost)
+            }
+        }
+        // And the refusals no move has absorbed, which are written at the position they happened
+        // at rather than onto a move (docs/adr/0037). **The commonest 错题 there is**: the player
+        // reaches for something, 耕棋 takes it back, and they put the phone down — the game ends
+        // with the refusal as the last thing in it, and no move ever comes along to carry it. The
+        // book heard nothing about those, so the one position a session was actually stopped at
+        // was the one position it did not record.
+        for pending in game.pendingTried {
+            // The side to move at that position is the side that got it wrong, and it is named
+            // by the Ply a move played there would take.
+            guard mine.contains(game.mover(ofPly: pending.ply + 1)),
+                let at = game.rewound(to: pending.ply),
+                let key = PositionKey(fen: at.state.fen)
+            else { continue }
+            let wanted = game.reviewLine(atPly: pending.ply).first
+            for (index, attempt) in pending.tries.enumerated() where lines.records(attempt.drop) {
+                found.append(
+                    (
+                        key,
+                        Encounter(
+                            game: entry.url, ply: pending.ply + 1, when: entry.modified,
+                            played: attempt.san, wanted: wanted, cost: attempt.drop,
+                            origin: entry.origin, attempt: index, notFound: attempt.notFound
+                        )
+                    )
+                )
             }
         }
         return found

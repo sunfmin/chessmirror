@@ -305,9 +305,12 @@
 "drill" = "練習";
 "drill.prompt" = "あなたの手番";
 "drill.judging" = "この手の代償を計算中";
-"drill.passed" = "%1$@ %2$@。この手は持ちこたえた。";
-"drill.failed" = "%1$@ %2$@。勝率が %3$d%% 落ちた。";
-"drill.failed.wanted" = "%1$@ %2$@。勝率が %3$d%% 落ちた。正しくは %4$@ %5$@。";
+"drill.passed" = "%1$@。この手は持ちこたえた。";
+"drill.failed" = "%1$@。勝率が %2$d%% 落ちた。";
+"drill.failed.wanted" = "%1$@。勝率が %2$d%% 落ちた。正しくは %3$@。";
+"drill.move" = "%1$@ %2$@";
+"drill.held" = "持ちこたえた";
+"drill.dropped" = "落とした";
 "drill.keepPlaying" = "そのまま指す";
 "drill.leave" = "やめる";
 "drill.next" = "次の問題";

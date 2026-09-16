@@ -65,8 +65,10 @@ engine's strength is never the difficulty.
 The 掉幅 at which a move is written down at all.
 
 **入列线 (Enrol line)**:
-The 掉幅 at which a 错题 starts taking up the player's future practice time. Higher than the
-记录线: a mistake can be worth remembering without being worth drilling.
+The 掉幅 at which a 错题 starts taking up the player's future practice time. Never below the
+记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be
+worth remembering without being worth drilling. Both ship at five, which is where 耕棋 already
+stops the player — what the coach took back is worth writing down, and worth practising.
 
 ### 日课 — the day's practice
 

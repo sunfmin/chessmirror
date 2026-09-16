@@ -41,19 +41,24 @@ func tenPercentIsAboutAPawn() {
 
 // ------------------------------------------------------------------- the lines
 
-@Test("the three lines default to ten, ten and twenty, with 耕棋 off")
+@Test("the two standing lines default to five and five, with 耕棋 off")
 func theLinesHaveDefaults() {
     let lines = JudgementLines.standard
     #expect(lines.intercept == nil, "耕棋 is a thing you switch on, not a thing you are in")
-    #expect(lines.record == 10)
-    #expect(lines.enqueue == 20)
+    #expect(lines.record == 5, "where 耕棋 stops you is where the book starts")
+    #expect(lines.enqueue == 5, "and what is written down is worth the practice time")
 
     #expect(!lines.intercepts(50), "nothing is intercepted while it is off")
-    #expect(lines.records(10))
-    #expect(!lines.records(9.9))
-    #expect(lines.enqueues(20))
-    #expect(!lines.enqueues(19.9), "worth writing down, not worth practice time")
+    #expect(lines.records(5))
+    #expect(!lines.records(4.9))
+    #expect(lines.enqueues(5))
+    #expect(!lines.enqueues(4.9))
     #expect(!lines.records(nil), "an unreviewed move is not a move with nothing wrong with it")
+
+    // They are still two lines: a player who wants a wide book and a narrow queue moves one.
+    let wide = JudgementLines(record: 5, enqueue: 20)
+    #expect(wide.records(9.9))
+    #expect(!wide.enqueues(9.9), "worth writing down, not worth practice time")
 }
 
 @Test("each line moves on its own")

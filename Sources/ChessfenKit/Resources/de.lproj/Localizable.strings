@@ -329,9 +329,12 @@
 "drill" = "Üben";
 "drill.prompt" = "Du bist am Zug";
 "drill.judging" = "Wird berechnet, was das gekostet hat";
-"drill.passed" = "%1$@ — %2$@. Das hält.";
-"drill.failed" = "%1$@ — %2$@. Das gibt %3$d%% her.";
-"drill.failed.wanted" = "%1$@ — %2$@. Das gibt %3$d%% her. Besser war %4$@ — %5$@.";
+"drill.passed" = "%1$@. Das hält.";
+"drill.failed" = "%1$@. Das gibt %2$d%% her.";
+"drill.failed.wanted" = "%1$@. Das gibt %2$d%% her. Besser war %3$@.";
+"drill.move" = "%1$@ — %2$@";
+"drill.held" = "Das hält";
+"drill.dropped" = "Das gibt nach";
 "drill.keepPlaying" = "Weiterspielen";
 "drill.leave" = "Verlassen";
 "drill.next" = "Nächste";

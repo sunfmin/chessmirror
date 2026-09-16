@@ -110,11 +110,13 @@ func onlyRecordedMovesCount() throws {
         at: now,
         named: "quiet"
     )
-    // Black's e5 gives away 20 → 100, which is eight points: under the line.
-    #expect(MistakeBook.derive(from: [entry]).isEmpty)
+    // Black's e5 gives away 20 → 100, which is seven points: under a 10-point 记录线.
+    let relaxed = MistakeBook.derive(from: [entry], lines: JudgementLines(record: 10, enqueue: 20))
+    #expect(relaxed.isEmpty)
 
-    // The same game judged by somebody who wants everything written down.
-    let fussy = MistakeBook.derive(from: [entry], lines: JudgementLines(record: 5, enqueue: 20))
+    // The same game judged by somebody who wants everything written down — which is what the
+    // phone ships with, because it is where 耕棋 already stops you.
+    let fussy = MistakeBook.derive(from: [entry], lines: .standard)
     #expect(fussy.mistakes.count == 1)
 }
 
@@ -193,4 +195,81 @@ func recurrenceOutranksSeverity() {
     let once = Mistake(position: other, encounters: [encounter(40, -day)])
     #expect(often.isMorePressing(than: once))
     #expect(MistakeBook(mistakes: [once, often]).mistakes.first?.position == key)
+}
+
+// ------------------------------------------------- refusals nothing absorbed
+
+/// Contract: a 试招 that no move came along to carry is a 遭遇 like any other (docs/adr/0037).
+///
+/// The text is a game off the phone, unedited: 耕棋 refused Be3 at the position after twelve
+/// Plies, the player put the phone down, and the refusal was written where it happened — with no
+/// move to ride on. The book read every move in the file and nothing at the end of it, so the one
+/// position the session actually stopped at was the one position it did not record.
+@MainActor
+@Test("a refusal at the position a game stops on is a 遭遇")
+func aRefusalNothingAbsorbedEntersTheBook() throws {
+    let text = """
+        [Event "Chessfen"]
+        [Site "chessfen"]
+        [Date "2026.09.16"]
+        [Round "-"]
+        [White "手动"]
+        [Black "Stockfish 18"]
+        [Result "*"]
+        [Intercept "5.0"]
+        [Source "fresh"]
+
+        1. e4 {[%judged 20 0.0 0.33]} e5 2. Nf3 {[%judged 20 0.7345862071151075 0.23]}
+        Nc6 3. Bc4 {[%judged 20 0.36748842712031404 0.22]} Nf6 4. d3
+        {[%judged 20 0.0 0.30]} Bc5 5. O-O {[%judged 20 0.18350542345834242 0.30]} d6 6.
+        Re1 {[%judged 20 1.3781115723684891 0.16]} Be6
+        {[%pending 12 Be3 -16.064889506354888% | Bxc4 dxc4 Nxe4 Nbd2 Bxe3]} *
+        """
+    let pgn = try PGN(parsing: text)
+    #expect(pgn.game.plies.count == 12, "the refused move is not one of them")
+    #expect(!pgn.game.isReviewed, "and nobody has reviewed the game — this is a live 耕棋 file")
+
+    let entry = GameLibrary.Entry(
+        url: URL(filePath: "/games/be3.pgn"), pgn: pgn, modified: now
+    )
+    let book = MistakeBook.derive(from: [entry])
+    let mistake = try #require(book.mistakes.first, "the position Be3 was refused at")
+    #expect(book.mistakes.count == 1)
+    #expect(mistake.encounters.map(\.played) == ["Be3"])
+    #expect(mistake.worstCost > 16 && mistake.worstCost < 17)
+    #expect(mistake.lastSeen == now)
+    #expect(mistake.encounters.first?.wanted == nil, "no Review, so nothing is claimed about it")
+    // The position is the one the refused move was played from — White to move, twelve Plies in,
+    // which is the board that was on the screen when 耕棋 gave the move back.
+    #expect(mistake.position.sideToMove == .white)
+    let after = try #require(pgn.game.rewound(to: 12))
+    #expect(mistake.position == PositionKey(fen: after.state.fen))
+}
+
+/// And the same refusal keeps its name once a move is finally played there: the Ply it is filed
+/// under is the one that move takes, so it is the same 遭遇 rather than a second one.
+@MainActor
+@Test("an absorbed refusal and a pending one are the same occasion, not two")
+func aRefusalKeepsItsIdentityWhenAMoveAbsorbsIt() throws {
+    var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    game.setPendingTried([.init(san: "Nh3", drop: 30)], atPly: 2)
+    let waiting = GameLibrary.Entry(
+        url: URL(filePath: "/games/one.pgn"),
+        pgn: PGN(game: game, tags: [PGN.Tag("White", Controller.hand.playerName)]),
+        modified: now
+    )
+    let pending = try #require(MistakeBook.derive(from: [waiting]).mistakes.first)
+    #expect(pending.encounters.map(\.played) == ["Nh3"])
+
+    // The player comes back and plays something else from that position; the refusal rides onto
+    // the move, which is where a 试招 normally lives.
+    var carried = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"]))
+    carried.setTried([.init(san: "Nh3", drop: 30)], atPly: 2)
+    let absorbed = GameLibrary.Entry(
+        url: URL(filePath: "/games/one.pgn"),
+        pgn: PGN(game: carried, tags: [PGN.Tag("White", Controller.hand.playerName)]),
+        modified: now
+    )
+    let moved = try #require(MistakeBook.derive(from: [absorbed]).mistakes.first)
+    #expect(moved.encounters.map(\.id) == pending.encounters.map(\.id), "one occasion, not two")
 }

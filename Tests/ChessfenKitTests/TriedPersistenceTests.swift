@@ -41,14 +41,20 @@ import Testing
     #expect(reopened.game.plies[0].tried == attempts)
     #expect(reopened.game.plies[0].hints == 2)
     let entry = GameLibrary.Entry(url: url, pgn: reopened, modified: Date())
-    let book = MistakeBook.derive(from: [entry])
+    // Read against the older, wider pair of lines, because what this is holding is the *threshold*
+    // decision: 19.99 is over a 10% 记录线 and 9.99 is not, whatever the pair a phone ships with.
+    let lines = JudgementLines(record: 10, enqueue: 20)
+    let book = MistakeBook.derive(from: [entry], lines: lines)
     let mistake = try #require(book.mistakes.first)
     #expect(book.mistakes.count == 1)
     #expect(mistake.encounters.count == 2)
     #expect(Set(mistake.encounters.map(\.id)).count == 2)
     #expect(mistake.encounters.allSatisfy { $0.cost == 19.99 })
-    #expect(mistake.encounters.allSatisfy { !JudgementLines.standard.enqueues($0.cost) })
-    #expect(MistakeBook.derive(from: [entry]).mistakes == book.mistakes)
+    #expect(
+        mistake.encounters.allSatisfy { !lines.enqueues($0.cost) },
+        "under a 20% 入列线 this is written down without being owed"
+    )
+    #expect(MistakeBook.derive(from: [entry], lines: lines).mistakes == book.mistakes)
 }
 
 @Test func malformedTriedCommentsDoNotCreateEncounters() throws {

@@ -59,3 +59,13 @@ refusal belongs once there is a move to belong to. Before a move, they are the g
   walked away from still knows what it was asking for.
 - A game with no moves can have a 错招: a 试招 at the opening position that the player did not
   follow up. The walk over the Plies is written so that this is not an empty range.
+- **The 错题本 reads them too, and that was the hole this decision left open.** The book derived a
+  game's 遭遇 from the moves in it — `%tried` riding on a move, and a move that stood in a reviewed
+  game — so a refusal with no move to ride on was in the file, on the record strip and in the
+  game's own 错题 row, and nowhere in the book. That is the commonest way a session ends: 耕棋 takes
+  a move back and the player puts the phone down. The position they were actually stopped at was
+  the one position the book did not know about. It walks `pendingTried` now, filing each refusal
+  under the Ply a move played there would take — the same Ply it will have once a move absorbs it,
+  so the 遭遇 keeps its identity rather than turning into a second one.
+- A 遭遇 that is a refusal opens the game at the position it was played *from*, not one past it:
+  the move was taken back, so there is no position after it to show.

@@ -305,9 +305,12 @@
 "drill" = "연습";
 "drill.prompt" = "당신 차례";
 "drill.judging" = "이 수의 대가를 계산하는 중";
-"drill.passed" = "%1$@ %2$@. 이 수는 버팁니다.";
-"drill.failed" = "%1$@ %2$@. 승률을 %3$d%% 잃었습니다.";
-"drill.failed.wanted" = "%1$@ %2$@. 승률을 %3$d%% 잃었습니다. 바른 수는 %4$@ %5$@.";
+"drill.passed" = "%1$@. 이 수는 버팁니다.";
+"drill.failed" = "%1$@. 승률을 %2$d%% 잃었습니다.";
+"drill.failed.wanted" = "%1$@. 승률을 %2$d%% 잃었습니다. 바른 수는 %3$@.";
+"drill.move" = "%1$@ %2$@";
+"drill.held" = "버텼습니다";
+"drill.dropped" = "놓쳤습니다";
 "drill.keepPlaying" = "계속 두기";
 "drill.leave" = "나가기";
 "drill.next" = "다음 문제";
