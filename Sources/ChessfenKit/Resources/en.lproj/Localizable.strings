@@ -497,6 +497,6 @@
 "strength" = "Strength";
 "strength.full" = "Full strength";
 "till.tally" = "Run %d";
-"ladder" = "No Slips ladder";
+"ladder" = "Run ladder";
 "ladder.run" = "Longest run";
 "standing.best" = "Best move";

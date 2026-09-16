@@ -108,7 +108,7 @@ struct LibraryScreenScreenshots {
                 .environment(LanguageSetting.shared)
         }
 
-        #expect(rendered.says("正着榜"))
+        #expect(rendered.says("连正榜"))
         #expect(rendered.says("1400"))
         #expect(rendered.says("1800"))
         #expect(rendered.says("满力"))
@@ -181,7 +181,7 @@ struct LibraryScreenScreenshots {
                 .environment(LanguageSetting.shared)
         }
         #expect(index.ladder.isEmpty)
-        #expect(!rendered.says("正着榜"))
+        #expect(!rendered.says("连正榜"))
     }
 
     /// The two standing lines, where a person can move them (docs/adr/0027). The third is

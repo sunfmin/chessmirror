@@ -359,7 +359,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("白方胜"), "the bar reads the result rather than sitting half and half")
         #expect(rendered.says("1-0"), "and the number the screen has been showing resolves into it")
         #expect(
-            rendered.says("正着"),
+            rendered.says("把关"),
             "interception remains the page's single mode switch"
         )
         #expect(!rendered.says("和棋"))
@@ -384,7 +384,7 @@ struct GameScreenScreenshots {
 
         #expect(!rendered.says("练习"))
         #expect(
-            rendered.says("正着"),
+            rendered.says("把关"),
             "the page exposes interception, not a separate practice/advice mode"
         )
         #expect(rendered.says(localized("standing.bar")), "assessment is visible independently of answers")
@@ -624,7 +624,7 @@ struct GameScreenScreenshots {
         // And the screen accounts for the silence rather than wearing the face of a broken engine.
         #expect(!rendered.says("练习"))
         #expect(!rendered.says("引擎意见"))
-        #expect(rendered.says("正着"))
+        #expect(rendered.says("把关"))
         // The game itself is entirely unaffected: the moves, the clock, the engine as an opponent.
         #expect(rendered.says("第 8 步 Nf6"))
         #expect(rendered.says("该走了"))

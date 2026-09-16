@@ -452,6 +452,6 @@
 "strength" = "Fuerza";
 "strength.full" = "Toda la fuerza";
 "till.tally" = "Racha %d";
-"ladder" = "Escalera sin errores";
+"ladder" = "Escalera de rachas";
 "ladder.run" = "Racha más larga";
 "standing.best" = "Mejor jugada";

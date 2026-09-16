@@ -451,6 +451,6 @@
 "strength" = "Stärke";
 "strength.full" = "Volle Stärke";
 "till.tally" = "Serie %d";
-"ladder" = "Bestenliste ohne Patzer";
+"ladder" = "Serien-Bestenliste";
 "ladder.run" = "Längste Serie";
 "standing.best" = "Bester Zug";

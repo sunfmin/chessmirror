@@ -65,7 +65,7 @@ allowed to jump the queue.
 All three are a 掉幅, and they are separate on purpose.
 
 **拦截线 (Intercept line)**:
-The 掉幅 at which 正着 stops the player and takes the move back. The only dial 正着 has on the
+The 掉幅 at which 把关 stops the player and takes the move back. The only dial 把关 has on the
 judgement of a move — the engine's 棋力 shapes the opponent it plays, never what a move costs.
 
 **记录线 (Record line)**:
@@ -74,14 +74,14 @@ The 掉幅 at which a move is written down at all.
 **入列线 (Enrol line)**:
 The 掉幅 at which a 错题 starts taking up the player's future practice time. Never below the
 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be
-worth remembering without being worth drilling. Both ship at five, which is where 正着 already
+worth remembering without being worth drilling. Both ship at five, which is where 把关 already
 stops the player — what the coach took back is worth writing down, and worth practising.
 
 ### 日课 — the day's practice
 
 **练习 (Practice)**:
 Working through 日课 or revisiting a 错题. Not a synonym for hiding the engine's answer,
-and not the opposite of 正着: 正着 names whether wrong moves may stand during a game.
+and not the opposite of 把关: 把关 names whether wrong moves may stand during a game.
 
 **日课 (Daily)**:
 The 错题 due today, as one queue, in one order. **It cannot be filtered, sorted or split** —
@@ -103,16 +103,23 @@ how much help was asked for. Facts only: it records what happened and never what
 happen next.
 _Avoid_: 进度, 统计, 状态
 
-### 正着 — the game that will not let you slip
+### 把关 — the game that will not let you slip
 
-**正着 (No Slips)**:
+**把关 (No Slips)**:
 A game against the engine in which any move costing more than the 拦截线 is refused and taken
-back, with nothing said about what to play instead. Only sound moves stand, and a 正着 is what
-a move is once it has stood.
-_Avoid_: 耕棋 (retired, and the ploughing words with it), 训练模式, 挑战模式, hard mode
+back, with nothing said about what to play instead. Only sound moves stand. The switch and the
+door are named for what the app does — somebody is at the gate — because 正着, the word for the
+move, read as nonsense on a switch: 「正着 开」.
+_Avoid_: 正着 as the name of the mode, 耕棋 (retired, and the ploughing words with it), 训练模式,
+挑战模式, hard mode
+
+**正着 (Sound move)**:
+What a move is once it has stood under 把关. The word for the move, never for the mode; it
+survives in 连正, a run of them.
+_Avoid_: 好棋, 正确
 
 **试招 (Tried move)**:
-A move the player played and 正着 took back. It never happened in the game, and it is exactly
+A move the player played and 把关 took back. It never happened in the game, and it is exactly
 what the 错题 is made of.
 _Avoid_: 变着, 悔棋
 
@@ -136,15 +143,15 @@ It shapes the opponent and nothing else: 细判 weighs every move at full streng
 棋力, so a 掉幅 means the same thing at every rung.
 _Avoid_: 难度, 级别, 等级, 档位
 
-**正着数 (Distance)**: _retired._ It counted every move that stood while 正着 was on, which
-with 正着 on was the length of the game — a number the record already shows. Only 连正 is read.
+**正着数 (Distance)**: _retired._ It counted every move that stood while 把关 was on, which
+with 把关 on was the length of the game — a number the record already shows. Only 连正 is read.
 
 **连正 (Run)**:
 An unbroken run of the player's moves that stood, with no 试招 between them. Two are read: the
-run since the last 试招, and the game's longest. Only a 试招 ends a run; switching 正着 off
+run since the last 试招, and the game's longest. Only a 试招 ends a run; switching 把关 off
 pauses it.
 
-**正着榜 (Ladder)**:
+**连正榜 (Ladder)**:
 Per 棋力, the longest 连正 across all games, pointing at the game it happened in. Read out of
 the games themselves. A game
 can change 棋力 as it goes, and each stretch is credited to the 棋力 it was played at; a stretch
@@ -158,7 +165,7 @@ properly. Never decides whether something is a 错题.
 
 **细判 (Judge)**:
 The app's own engine, at its own depth, deciding what a move actually cost. **The only thing
-allowed to call something a 错题.** One act, wherever it is asked for: 正着 refusing a move as
+allowed to call something a 错题.** One act, wherever it is asked for: 把关 refusing a move as
 it lands, a drill judging an attempt and the 惩罚 exercise checking a reply all weigh a move the
 same way, at the same budget, and a checkmate or a draw is settled without asking the engine.
 
@@ -166,7 +173,7 @@ same way, at the same budget, and a checkmate or a draw is settled without askin
 What follows from a 细判: whether the move stands, and what is written down either way. A move
 that stands carries its judgement and the 试招 refused before it; a move that is refused is
 written where it happened and the game is put back as it was being read; a move nobody could
-judge is put back with nothing written. One reading, shared by 正着 and a drill's attempt.
+judge is put back with nothing written. One reading, shared by 把关 and a drill's attempt.
 
 **复判 (Re-judge)**:
 Judging a 试招 again, deeper: both ends of the move — the position it was played from and the

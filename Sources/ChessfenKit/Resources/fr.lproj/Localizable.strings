@@ -452,6 +452,6 @@
 "strength" = "Force";
 "strength.full" = "Pleine force";
 "till.tally" = "Série %d";
-"ladder" = "Palmarès sans faute";
+"ladder" = "Palmarès des séries";
 "ladder.run" = "Plus longue série";
 "standing.best" = "Meilleur coup";
