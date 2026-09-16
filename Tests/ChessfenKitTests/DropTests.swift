@@ -19,7 +19,7 @@ import Testing
     /// The sentences that say a cost take the same number the figure shows.
     @MainActor
     @Test func aRefusalSaysTheSamePointsItsChipShows() {
-        let refusal = GameSession.Refusal(san: "Qh4", drop: 22.5)
+        let refusal = Refusal(san: "Qh4", drop: 22.5)
         #expect(refusal.sentence == localized("till.refused", "Qh4", 23))
         #expect(Drop.figure(refusal.drop) == "−23%")
     }

@@ -14,7 +14,7 @@ public enum Standing: Hashable, Sendable {
     /// 正着 is working out what the move just played costs.
     case weighing
     /// A move has just been taken back, and this is the one sentence about it (docs/adr/0031).
-    case refused(GameSession.Refusal)
+    case refused(Refusal)
     /// The move just played, as the change it made to the player's chances: percentage points
     /// from the player's own side, already rounded to tenths.
     case change(Double)

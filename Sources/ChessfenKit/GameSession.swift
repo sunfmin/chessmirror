@@ -701,24 +701,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// the next move, because it is about a board that is no longer there.
     public private(set) var refused: Refusal?
 
-    /// A move that was played and taken back, and what it gave away.
-    public struct Refusal: Hashable, Sendable {
-        public let san: String
-        /// Percentage points of win probability, from the mover's own side.
-        public let drop: Double
-
-        public init(san: String, drop: Double) {
-            self.san = san
-            self.drop = drop
-        }
-
-        /// 「Qh4 掉 23%，退回去重走。」 — what went wrong and nothing about what to do instead.
-        /// The hint ladder is a separate thing somebody has to ask for (docs/adr/0031).
-        public var sentence: String {
-            localized("till.refused", san, Drop.points(drop))
-        }
-    }
-
     private var weighing: Task<Void, Never>?
     /// The session's own measurement of the move just played, for the change badge.
     private var measuring: Task<Void, Never>?
@@ -926,14 +908,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public var isFaceToFace = false
 
-    public struct MoveChange: Equatable, Sendable {
-        public let before: Score
-        public let after: Score
-
-        public func percent(for colour: PieceColour) -> Double {
-            (after.winPercent - before.winPercent) * (colour == .white ? 1 : -1)
-        }
-    }
     private var measuredMove: (moves: [String], fen: String, change: MoveChange)?
 
     /// Only a newly played move gets a change badge; navigating the record is not a move.
@@ -1046,32 +1020,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         relaxedIntercept = value
     }
 
-    private func interceptsHere(_ drop: Double) -> Bool {
-        drop > 0 && drop >= (relaxedIntercept ?? lines.intercept ?? .infinity)
-    }
-
-    private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil, score: Score? = nil, depth: Int? = nil) {
-        if isTilling || hasTillingFeedback, let drop, let score {
-            // With the 拦截线 it stood under when 正着 was on — the relaxed one if the ladder had
-            // been climbed to it — and none when 正着 was off, which is how 正着数 tells a move
-            // that stood from a move that was merely measured (CONTEXT.md, 正着数).
-            game.setJudgement(
-                .init(
-                    drop: drop, score: score, depth: depth ?? interceptTable?.analysis.depth ?? 0,
-                    intercept: isTilling ? (relaxedIntercept ?? lines.intercept) : nil
-                ),
-                atPly: ply
-            )
-        }
-        // A move let through at a relaxed line is written down as a 试招 the player did not find,
-        // after the ones that were refused on the way to it.
-        var relaxed: [Game.Ply.Tried] = []
-        if relaxedIntercept != nil, let drop, lines.records(drop) {
-            relaxed = [.init(san: san, drop: drop, notFound: true)]
-        }
-        // The move that stands takes the refusals with it: the position they were made at is
-        // the one this move was played from, which is `ply` here — the index of the move itself.
-        game.absorbPendingTried(atPly: ply, hints: hintLayer, adding: relaxed)
+    /// A move that landed without being weighed stands with whatever the prepared table had
+    /// measured about it — nothing, when the badge under the board is off — and takes the
+    /// refusals made where it was played from (`Game.letStand`).
+    private func recordHelp(atPly ply: Int, san: String, drop: Double?, score: Score?) {
+        let measured = isTilling || hasTillingFeedback
+        game.letStand(
+            atPly: ply, san: san, drop: measured ? drop : nil, score: score,
+            depth: interceptTable?.analysis.depth ?? 0,
+            lines: lines, relaxedIntercept: relaxedIntercept, hints: hintLayer
+        )
         hintLayer = 0
         relaxedIntercept = nil
     }
@@ -1362,50 +1320,52 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let weighed = await engine.weigh(played, from: position, progress: noteProgress)
         guard !Task.isCancelled else { return }
         if let weighed { interceptTable = (position.state.fen, weighed.before) }
-        // The move comes off the board, and it is given its beat to be seen there first — while
-        // the session still counts as weighing, so a second tap cannot land on a board that is
-        // halfway through taking one back.
-        let takesItBack = weighed.map { interceptsHere($0.drop) } ?? true
-        if takesItBack { await holdTheMoveOnTheBoard() }
-        guard !Task.isCancelled else { return }
-        isWeighing = false
         // What to put back when the move does not stand: the game as it was being read, whole,
         // and the eye where it was. `position` is only the position it was played from, which is
         // the whole game when the move was played at the end of it — and a prefix of it otherwise.
         let gameBefore = positionBeforeWeighing ?? position
-        let cursorBefore = cursorBeforeWeighing
+        let ruling = Ruling(
+            weighed, san: san, played: played, before: gameBefore,
+            cursor: cursorBeforeWeighing ?? gameBefore.plies.count,
+            lines: lines, relaxedIntercept: relaxedIntercept, hints: hintLayer
+        )
+        // The move comes off the board, and it is given its beat to be seen there first — while
+        // the session still counts as weighing, so a second tap cannot land on a board that is
+        // halfway through taking one back.
+        if ruling.takesTheMoveBack { await holdTheMoveOnTheBoard() }
+        guard !Task.isCancelled else { return }
+        isWeighing = false
         positionBeforeWeighing = nil
         cursorBeforeWeighing = nil
         weighBegan = nil
         weighing = nil
-        guard let weighed else {
-            game = gameBefore
-            cursor = cursorBefore ?? game.plies.count
+        land(ruling, played: played, engine: engine)
+    }
+
+    /// Puts a ruling into effect. The game and the eye go where it says; what is the session's
+    /// own is the rest — the noise, the save, the badge, the exercise, the next search. A refusal
+    /// gets no retune: the engine is not owed a reply to a move that came back.
+    private func land(_ ruling: Ruling, played: Game, engine: any Engine) {
+        game = ruling.game
+        cursor = ruling.cursor
+        switch ruling.verdict {
+        case .unjudged:
             retune()
-            return
-        }
-        guard interceptsHere(weighed.drop) else {
-            // It stands. Whatever was refused on the way here rides along with it, as a comment
-            // on the move that was actually played (docs/adr/0028).
-            recordHelp(atPly: cursor - 1, san: san, drop: weighed.drop, score: weighed.after, depth: weighed.depth)
-            measuredMove = (game.uciMoves, game.state.fen, MoveChange(before: weighed.scoreBefore, after: weighed.after))
+        case .stands(let change):
+            hintLayer = 0
+            relaxedIntercept = nil
+            if let change { measuredMove = (game.uciMoves, game.state.fen, change) }
             save()
             retune()
-            return
+        case .refused(let refusal):
+            // Written down by the ruling at the position it happened at, rather than when a move
+            // finally stands, because a player who is refused and then walks away has played no
+            // such move — and the refusal used to go with them (docs/adr/0037).
+            refused = refusal
+            save()
+            Sounds.current.play(.refused)
+            if findsPunishment { punishment = Punishment(position: played, engine: engine) }
         }
-        refused = Refusal(san: san, drop: weighed.drop)
-        game = gameBefore
-        cursor = cursorBefore ?? game.plies.count
-        // Written down here rather than when a move finally stands, because a player who is
-        // refused and then walks away has played no such move — and the refusal used to go with
-        // them: leaving the game forgot it, and opening it again showed nothing to practise
-        // (docs/adr/0037). At the position it happened at, which is where the eye was standing —
-        // a refusal is not always at the end of the game, because the player is free to play from
-        // anywhere in it. No retune: the engine is not owed a reply to a move that came back.
-        game.recordTried(Game.Ply.Tried(san: san, drop: weighed.drop, line: weighed.reply), atPly: cursor)
-        save()
-        Sounds.current.play(.refused)
-        if findsPunishment { punishment = Punishment(position: played, engine: engine) }
     }
 
     /// The one way a move lands: the write, the cursor, the noise, the save, the retune. The
@@ -1428,26 +1388,23 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             weighing = Task { [weak self] in
                 await practice.settled()
                 guard let self, !Task.isCancelled else { return }
-                game = practice.game
-                cursor = game.plies.count
                 isWeighing = false
-                if let verdict = practice.verdict, interceptsHere(verdict.drop) {
-                    refused = Refusal(san: verdict.played, drop: verdict.drop)
-                    if let start = game.rewound(to: 0) { game = start }
-                    cursor = 0
-                    // The drill's refusal goes through the same door as 正着's: into the Game, at
-                    // the position it happened at (docs/adr/0037).
-                    game.recordTried(
-                        .init(san: verdict.played, drop: verdict.drop, line: verdict.reply), atPly: 0
-                    )
-                    Sounds.current.play(.refused)
+                weighing = nil
+                // The drill's attempt is ruled on the way 正着 rules a move, and its refusal goes
+                // through the same door: into the Game, at the position it happened at
+                // (docs/adr/0037). A drill that could not be judged is a move that stands unmeasured.
+                guard let verdict = practice.verdict, let engine else {
+                    game = practice.game
+                    cursor = game.plies.count
+                    save()
+                    retune()
                     return
                 }
-                if let before = practice.startingScore, let after = game.plies.first?.judgement?.score {
-                    measuredMove = (game.uciMoves, game.state.fen, MoveChange(before: before, after: after))
-                }
-                save()
-                retune()
+                let ruling = Ruling(
+                    verdict, in: practice.game, startingScore: practice.startingScore,
+                    lines: lines, relaxedIntercept: relaxedIntercept
+                )
+                land(ruling, played: practice.game, engine: engine)
             }
             return
         }
