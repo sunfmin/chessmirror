@@ -380,11 +380,6 @@ struct DeckGallery {
         #expect(!rendered.says("\(PieceColour.white.label) · \(localized("game.toPlay"))"))
         #expect(session.game.uciMoves == game.uciMoves)
     }
-    /// Waits for something the session does on its own clock — a judgement, a take-back — which
-    /// arrives a search later and, for a refusal, after the beat the board is given to show the
-    /// move. A fixed number of hops is a guess at how long a search takes; this is the thing.
-    }
-
     /// Contract: a game says where the player went wrong in it, and walks the board back to each
     /// one — 「这一局我哪儿走错了」 asked as a question, rather than scrolled for (docs/adr/0036).
     @Test func aGameListsItsOwnWrongMovesAndWalksToThem() async throws {
