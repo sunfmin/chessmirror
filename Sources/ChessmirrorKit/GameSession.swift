@@ -426,6 +426,60 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         reviewImportIfReady()
     }
 
+    // ------------------------------------------------------------ the screen's comings and goings
+
+    @ObservationIgnored private var host: EngineHost?
+    @ObservationIgnored private var isOnScreen = false
+    @ObservationIgnored private var watch = 0
+
+    /// The screen this session is on has appeared, with the app's one engine host and the
+    /// library to save into. From here the session keeps its own searches in step with the host:
+    /// it takes the engine when it arrives, retunes when the app comes to the front and suspends
+    /// when it leaves. A screen calls this on every appearance and `disappear` on every
+    /// disappearance, and nothing else about when the engine should be doing what — the four
+    /// hooks a screen used to wire for that were an ordering contract kept in a comment.
+    ///
+    /// Retunes before it returns, so a card dealt right after this keeps the Stint it starts.
+    public func appear(on host: EngineHost, library: GameLibrary?) {
+        self.host = host
+        isOnScreen = true
+        attach(engine: host.service, library: library)
+        retune()
+        followHost()
+    }
+
+    /// The screen has gone: nothing searches for a board nobody is looking at.
+    public func disappear() {
+        isOnScreen = false
+        watch += 1
+        suspend()
+    }
+
+    /// One registration per change: Observation fires once and forgets, so each firing hops to
+    /// the main actor, reads what the host says now, and registers again. `watch` names the
+    /// registration, so a screen that came and went does not leave a stale chain following.
+    private func followHost() {
+        guard let host, isOnScreen else { return }
+        watch += 1
+        let registration = watch
+        withObservationTracking {
+            _ = host.isReady
+            _ = host.isActive
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, registration == watch, isOnScreen, let host = self.host else { return }
+                // The engine may have finished starting while the screen was up: take it, and
+                // the search this screen wants starts. The app leaving is a suspend, and coming
+                // back a fresh retune rather than a search left running underneath — the engine
+                // will not start one while the app is away, and a bounded one it held would
+                // otherwise slip past that gate (`EngineHost.isActive`).
+                if host.isReady, engine == nil { attach(engine: host.service, library: library) }
+                if host.isActive { retune() } else { suspend() }
+                followHost()
+            }
+        }
+    }
+
     /// The side about to move is the person's; the other side is the engine's.
     private func seatEngineOpponent() {
         setController(.engine, for: game.startingSideToMove.opposite)
@@ -746,9 +800,18 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     private var weighing: Task<Void, Never>?
     /// The session's own measurement of the move just played, for the change badge.
     private var measuring: Task<Void, Never>?
-    func waitForJudgement() async {
+    /// Waits until everything that is judging a move has said its piece: a move being weighed
+    /// and the badge measured after it, a 复判, a 应招 being fetched, an exercise checking a
+    /// reply. Not the position's own standing search — that is the engine looking, or playing,
+    /// and it is what a move played next interrupts. The one thing a screen or a test holds on
+    /// to instead of polling the session's state: a verdict arrives when the engine has answered
+    /// and not a moment sooner, and the state after this is the state the screen would draw.
+    public func settled() async {
         await weighing?.value
         await measuring?.value
+        await rejudgeTask?.value
+        await replyTask?.value
+        await punishment?.settled()
     }
     func waitForPreparedInterception() async { await searchTask?.value }
     /// The 原局 the move now being weighed was played from (`Standpoint`): what a refusal, a

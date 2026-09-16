@@ -233,42 +233,19 @@ struct GameScreen: View {
         .onAppear {
             guessUnfold()
             // The engine first, and then the deck: **dealing a card is an arrival**, and an arrival
-            // spends a Stint. Attached after the deal, the dealt card is the one card on the screen
-            // that cannot answer — 要害 is the default, so the state never changes, the swipe path
-            // that would have asked again never runs, and the first card sat on its 「会算 10 秒」
-            // line with the engine already there.
-            //
-            // Re-attached on every appearance: the engine may have finished starting while the
-            // library was on screen, and coming back from a Review means the search this screen
-            // wants is not the one that just ran. Retuned before the deal rather than after it, or
-            // the Stint the deal just started would be cancelled a line later.
-            session.attach(engine: engine.service, library: library)
-            session.retune()
+            // spends a Stint. The session retunes before it returns, so the Stint the deal starts
+            // is not cancelled a line later. From here the session follows the engine host itself —
+            // the engine arriving, the app leaving and coming back — and this screen wires nothing.
+            session.appear(on: engine, library: library)
             deal()
         }
-        .onDisappear { session.suspend() }
+        .onDisappear { session.disappear() }
         .onChange(of: isSoundOn) { _, isOn in Sounds.current.isSoundOn = isOn }
         // The setting travels between devices (docs/adr/0012), so it can change while this
         // screen is the one on show — and a toggle that disagrees with the sound is worse than
         // no toggle.
         .onReceive(NotificationCenter.default.publisher(for: NSUbiquitousKeyValueStore.didChangeExternallyNotification)) { _ in
             isSoundOn = Sounds.current.isSoundOn
-        }
-        .onChange(of: engine.isReady) { _, ready in
-            guard ready else { return }
-            session.attach(engine: engine.service, library: library)
-            session.retune()
-        }
-        // The Analysis this screen wants is unbounded, and the engine will not start one while
-        // the app is away — so leaving is a suspend and coming back is a fresh `retune`, not a
-        // search that was left running underneath. `EngineHost.isActive` rather than the scene
-        // phase, so there is one answer to when that is.
-        .onChange(of: engine.isActive) { _, active in
-            if active {
-                session.retune()
-            } else {
-                session.suspend()
-            }
         }
         .confirmationDialog(
             localized("game.promotion"), isPresented: .constant(promotion != nil),

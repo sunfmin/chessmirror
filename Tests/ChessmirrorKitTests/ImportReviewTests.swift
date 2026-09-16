@@ -24,7 +24,7 @@ import ChessmirrorKitTesting
     session.play(reply)
     #expect(session.game.plies.count == 2)
     // The reply is weighed before it stands — every move is — and with 把关 off it stands.
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.game.plies.count == 2)
     #expect(session.thinking == .own, "an already-enabled finder must not precede the next engine turn")
     deadline = ContinuousClock.now + .seconds(5)

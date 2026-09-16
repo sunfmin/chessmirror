@@ -52,7 +52,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     await session.waitForPreparedInterception()
 
     session.play(try #require(start.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
     guard case .change(let value) = session.standing else {
         Issue.record("a move that stood is said as the change it made, got \(session.standing)")
         return
@@ -61,7 +61,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     #expect(Standing.changeLabel(value).hasPrefix("+"))
 
     session.play(try #require(afterE4.state.move(matching: "f7f6")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.moveChange != nil, "the badge for e4 is still there underneath")
     guard case .refused(let refusal) = session.standing else {
         Issue.record("the refusal is what the strip says, got \(session.standing)")
@@ -86,7 +86,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     session.orientation = .blackAtBottom
     session.play(try #require(start.state.move(matching: "e2e4")))
     #expect(session.game.uciMoves == ["e2e4"])
-    await session.waitForJudgement()
+    await session.settled()
 
     // White's gain is the player's loss, in tenths.
     let expected = ((Score.centipawns(133).winPercent - 50) * -10).rounded() / 10
@@ -116,7 +116,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     await session.waitForPreparedInterception()
 
     session.play(try #require(start.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.standing == .best)
     #expect(session.game.plies.count == 1, "and 正着 never takes the engine's own move back")
     let judgement = try #require(session.game.plies[0].judgement)
@@ -130,7 +130,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     again.setIntercept(5)
     await again.waitForPreparedInterception()
     again.play(try #require(start.state.move(matching: "d2d4")))
-    await again.waitForJudgement()
+    await again.settled()
     let expected = ((Score.centipawns(30).winPercent - Score.centipawns(20).winPercent) * -10).rounded() / 10
     #expect(again.standing == .change(expected))
 }

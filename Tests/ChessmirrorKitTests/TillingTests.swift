@@ -29,7 +29,7 @@ import ChessmirrorKitTesting
     try #require(!session.isAtLatest, "the eye is on the first position, not the end")
 
     session.play(try #require(start.state.move(matching: "f2f3")))
-    await session.waitForJudgement()
+    await session.settled()
 
     #expect(session.refused?.san == "f3", "a move played in 正着 mode is weighed from anywhere")
     #expect(session.game.plies.map(\.san) == ["d4"], "and a refusal leaves the game it was reading alone")
@@ -60,7 +60,7 @@ import ChessmirrorKitTesting
     try #require(!session.isAtLatest)
 
     session.play(try #require(start.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
 
     #expect(session.refused == nil, "a move that costs a hair stands")
     #expect(session.game.plies.map(\.san) == ["e4"], "and it replaces what was there")
@@ -98,7 +98,7 @@ import ChessmirrorKitTesting
     let twoPliesIn = try #require(played.rewound(to: 2))
 
     session.play(try #require(twoPliesIn.state.move(matching: "f1c4")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.refused?.san == "Bc4")
     #expect(session.game.uciMoves == played.uciMoves, "the game is untouched")
     #expect(session.game.pendingTried.map(\.ply) == [2], "and the refusal belongs to Ply 2")
@@ -132,7 +132,7 @@ import ChessmirrorKitTesting
     await session.waitForPreparedInterception()
     for _ in 0..<2 {
         session.play(try #require(start.state.move(matching: "f2f3")))
-        await session.waitForJudgement()
+        await session.settled()
         // A refusal leaves the moves alone; what it writes down is the 试招 itself (docs/adr/0037).
         #expect(session.game.uciMoves == start.uciMoves)
         #expect(session.refused?.san == "f3")
@@ -169,7 +169,7 @@ import ChessmirrorKitTesting
     session.setIntercept(5)
     await session.waitForPreparedInterception()
     session.play(try #require(start.state.move(matching: "f2f3")))
-    await session.waitForJudgement()
+    await session.settled()
 
     let tried = try #require(session.pendingAttempts.first)
     #expect(tried.san == "f3")
@@ -257,7 +257,7 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
         .init(score: .centipawns(score), uciMoves: ["e7e5"], san: ["e5"])
     ]))
     gate.continuation.finish()
-    await session.waitForJudgement()
+    await session.settled()
     #expect(!session.isWeighing)
     if enabled && score < 0 {
         #expect(session.game.uciMoves == start.uciMoves)
@@ -290,7 +290,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     defer { session.suspend() }
     #expect(session.moveChange == nil)
     session.play(try #require(start.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
     await session.measureLatestMoveChange()
     let change = try #require(session.moveChange)
     #expect(change.before == .centipawns(0))
@@ -306,7 +306,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     #expect(session.moveChange == change)
     session.play(try #require(session.game.state.move(matching: "e7e5")))
     #expect(session.moveChange == nil, "the old badge must not describe a new move")
-    await session.waitForJudgement()
+    await session.settled()
     await session.measureLatestMoveChange()
     #expect(session.game.plies.count == 2)
     #expect(session.historyScore(atPly: 2) == .centipawns(2 * score))
@@ -365,7 +365,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     try #require(session.isWeighing, "the resulting position still needs its own depth-20 judgement")
     #expect(!session.isEngineTurn)
     #expect(session.game.uciMoves == ["e2e4"])
-    await session.waitForJudgement()
+    await session.settled()
     await session.waitForPreparedInterception()
     #expect(session.game.plies.count == 2)
     let judgement = try #require(session.game.plies[0].judgement)
@@ -421,7 +421,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     session.setIntercept(10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.game.uciMoves == game.uciMoves)
     #expect(session.game.uciMoves.isEmpty)
     #expect(session.refused == nil)
@@ -442,7 +442,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     await session.waitForPreparedInterception()
     let searches = engine.searchCount
     session.play(try #require(game.state.move(matching: "d8h4")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.game != game)
     #expect(session.game.state.outcome == .checkmate)
     #expect(session.game.plies.last?.san == "Qh4#")
@@ -467,7 +467,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
 
-    await session.waitForJudgement()
+    await session.settled()
     #expect(!session.isWeighing)
     #expect(session.refused?.san == "f3")
     #expect(session.game.uciMoves == game.uciMoves)
@@ -488,7 +488,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     defer { session.suspend() }
     session.setIntercept(10)
     session.play(try #require(session.game.state.move(matching: "f2f3")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.refused?.san == "f3")
 
     session.jumpToStart()
@@ -518,7 +518,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let elapsed = started.duration(to: .now)
     #expect(session.game.uciMoves == ["d2d4"])
     #expect(session.isWeighing)
-    await session.waitForJudgement()
+    await session.settled()
     #expect(!session.isWeighing)
     #expect(session.game.plies.first?.judgement?.depth == 20)
     #expect(session.game.plies.first?.judgement?.score == .centipawns(10), "its own Line's Score")
@@ -564,7 +564,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     session.play(blunder)
     #expect(session.isWeighing)
 
-    await session.waitForJudgement()
+    await session.settled()
     #expect(!session.isWeighing, "Stockfish must finish judging within 30 seconds")
     #expect(session.game.uciMoves == game.uciMoves, "the rejected move must restore the entire game")
     #expect(try #require(session.refused).san == "g4")
@@ -573,7 +573,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     // Switching interception off lets a retry stand, while preserving the earlier refusal.
     session.setIntercept(nil)
     session.play(try #require(game.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.game.uciMoves == ["f2f3", "e7e5", "e2e4"])
     let read = try PGN(parsing: session.pgn.text)
     #expect(read.game.plies.last?.tried.count == 1)
@@ -583,7 +583,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     defer { disabled.suspend() }
     disabled.play(blunder)
     #expect(disabled.isWeighing, "every move is weighed; 把关 off only means it stands")
-    await disabled.waitForJudgement()
+    await disabled.settled()
     #expect(!disabled.isWeighing)
     #expect(disabled.game.uciMoves.last == "g2g4")
     #expect(disabled.refused == nil)
@@ -628,7 +628,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     session.setIntercept(JudgementLines.defaultIntercept)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "d2d4")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.refused?.san == "d4")
     let written = session.pgn.text
     session.suspend()
@@ -670,10 +670,10 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     defer { session.suspend() }
 
     session.play(try #require(start.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
     await session.waitForPreparedInterception()
     try #require(session.game.uciMoves == ["e2e4", "e7e5"], "the engine answered")
-    await session.waitForJudgement()
+    await session.settled()
 
     let judgement = try #require(session.game.plies[1].judgement)
     let change = try #require(session.moveChange)

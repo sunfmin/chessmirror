@@ -29,7 +29,7 @@ import Testing
         let before = try #require(reference?.best?.score)
         let move = try #require(position.state.move(matching: pgn.game.plies[index].uci))
         session.play(move)
-        await session.waitForJudgement()
+        await session.settled()
         let refused = session.refused
         session.suspend()
         var after = position

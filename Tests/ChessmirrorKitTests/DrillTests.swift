@@ -84,7 +84,7 @@ private func engine(
     #expect(log.attempts().isEmpty)
     session.notePracticeHelp()
     session.play(try #require(session.game.state.move(matching: "b8c6")))
-    await session.waitForJudgement()
+    await session.settled()
     let verdict = try #require(drill.verdict)
     #expect(verdict.played == "Nc6")
     #expect(session.game.plies.first?.judgement?.depth == 20)
@@ -96,7 +96,7 @@ private func engine(
     let before = session.game.uciMoves
     let move = try #require(session.game.state.legalMoves.first)
     session.play(move)
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.game.uciMoves == before + [move.uci])
     #expect(log.attempts().count == 1, "continuing is not another attempt at the original question")
     let url = try #require(session.url)
@@ -165,7 +165,7 @@ func theDrillRulesItsOwnAttempt() async throws {
         #expect(session.lines == lines, "one value for the 线")
 
         session.play(move)
-        await session.waitForJudgement()
+        await session.settled()
 
         let ruling = try #require(drill.ruling)
         #expect(ruling.takesTheMoveBack == !stands, "at \(intercept)")
