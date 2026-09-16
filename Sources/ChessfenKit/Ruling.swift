@@ -114,7 +114,8 @@ public struct Ruling: Hashable, Sendable {
         var standing = played
         standing.letStand(
             atPly: played.plies.count - 1, san: san, drop: weighed.drop, score: weighed.after,
-            depth: weighed.depth, lines: lines, relaxedIntercept: relaxedIntercept, hints: hints
+            depth: weighed.depth, lines: lines, relaxedIntercept: relaxedIntercept, hints: hints,
+            best: weighed.isBest
         )
         verdict = .stands(
             MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
@@ -164,11 +165,14 @@ extension Game {
     /// a move that was merely measured (CONTEXT.md, 正着数).
     mutating func letStand(
         atPly ply: Int, san: String, drop: Double?, score: Score?, depth: Int,
-        lines: JudgementLines, relaxedIntercept: Double?, hints: Int
+        lines: JudgementLines, relaxedIntercept: Double?, hints: Int, best: Bool = false
     ) {
         if let drop, let score {
             setJudgement(
-                .init(drop: drop, score: score, depth: depth, intercept: relaxedIntercept ?? lines.intercept),
+                .init(
+                    drop: drop, score: score, depth: depth,
+                    intercept: relaxedIntercept ?? lines.intercept, best: best
+                ),
                 atPly: ply
             )
         }

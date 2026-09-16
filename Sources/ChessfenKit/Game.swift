@@ -63,15 +63,22 @@ public struct Game: Hashable, Sendable {
             /// that could have been taken back and were not — and a move nothing would have
             /// refused is not one of those (CONTEXT.md, 正着数).
             public let intercept: Double?
+            /// 最佳: the move was the engine's own first choice, by the search that judged it
+            /// (CONTEXT.md). Written down, because it is a fact about which move it was and not
+            /// one a 掉幅 of nought can stand in for: two equally good moves both cost nothing.
+            public let best: Bool
 
-            public init(drop: Double, score: Score, depth: Int, intercept: Double? = nil) {
+            public init(
+                drop: Double, score: Score, depth: Int, intercept: Double? = nil, best: Bool = false
+            ) {
                 self.drop = max(0, drop)
                 self.score = score
                 self.depth = depth
                 self.intercept = intercept
+                self.best = best
             }
 
-            /// Whether the move stood under 正着.
+            /// Whether the move stood under 把关.
             public var stoodUnderNoSlips: Bool { intercept != nil }
         }
 
@@ -490,6 +497,16 @@ public struct Game: Hashable, Sendable {
     public func cost(atPly ply: Int) -> Double? {
         guard ply > 0, plies.indices.contains(ply - 1) else { return nil }
         return plies[ply - 1].judgement?.drop ?? drop(atPly: ply)
+    }
+
+    /// 最佳: whether the move at `ply` was the engine's own first choice from the position it
+    /// was played from (CONTEXT.md). By the judgement that let it stand, which wrote the fact
+    /// down; or by the Review, whose Line from the position before names the move it wanted
+    /// there. Never by a cost that rounded to nought.
+    public func isBest(atPly ply: Int) -> Bool {
+        guard ply > 0, plies.indices.contains(ply - 1) else { return false }
+        if let judgement = plies[ply - 1].judgement { return judgement.best }
+        return reviewLine(atPly: ply - 1).first == plies[ply - 1].san
     }
 
     /// Whether any move in the Game has a cost to show. A record with nothing measured in it

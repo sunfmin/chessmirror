@@ -186,6 +186,7 @@ public struct PGN: Hashable, Sendable {
                 // reader that knows only the three-part form reads the three parts it knows.
                 var judged = "[%judged \(judgement.depth) \(judgement.drop) \(judgement.score.pgnText)"
                 if let intercept = judgement.intercept { judged += " under \(intercept)" }
+                if judgement.best { judged += " best" }
                 comment.append(judged + "]")
             }
             // The 棋力 the engine played this move at (docs/adr/0038). Only on the engine's own
@@ -542,10 +543,12 @@ private struct Scanner {
     }
 
     /// `[%judged 20 3.2 +0.35]`, or the same with ` under 10.0` after it for a move that stood
-    /// under 正着 at that 拦截线.
+    /// under 把关 at that 拦截线, and ` best` last for the engine's own first choice.
     private static func judgement(in comment: String) -> Game.Ply.Judgement? {
         guard let body = body(of: "judged", in: comment) else { return nil }
-        let parts = body.split(separator: " ")
+        var parts = body.split(separator: " ")
+        let best = parts.last == "best"
+        if best { parts.removeLast() }
         guard parts.count == 3 || (parts.count == 5 && parts[3] == "under"),
               let depth = Int(parts[0]), depth > 0,
               let drop = Double(parts[1]), drop.isFinite, drop >= 0,
@@ -555,7 +558,7 @@ private struct Scanner {
             guard let line = Double(parts[4]), line.isFinite, line >= 0 else { return nil }
             intercept = line
         }
-        return .init(drop: drop, score: score, depth: depth, intercept: intercept)
+        return .init(drop: drop, score: score, depth: depth, intercept: intercept, best: best)
     }
 
     /// `[%strength 1800]` or `[%strength full]` (docs/adr/0038).

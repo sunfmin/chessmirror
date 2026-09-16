@@ -500,3 +500,4 @@
 "ladder" = "Run ladder";
 "ladder.run" = "Longest run";
 "standing.best" = "Best move";
+"record.best" = "best";

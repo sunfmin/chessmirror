@@ -711,6 +711,39 @@ struct GameScreenScreenshots {
         #expect(rendered.says(localized("screen.spokenMove", 8, "Nf6") + sep + localized("book.cost", 0)), "the engine's moves are priced too")
     }
 
+    /// 最佳 on the record: the engine's own first choice says so under the move rather than 「0」
+    /// — by the judgement that let it stand, or by the Review's Line from the position before —
+    /// and a nought that is only a nought stays a 「0」.
+    @Test("the record says 最佳 under the engine's own choice, and 0 under another free move")
+    func bestOnTheRecord() async throws {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        game.applyReview(
+            [
+                .init(score: .centipawns(30), line: ["e5", "Nf3"]),
+                .init(score: .centipawns(30), line: ["d4", "exd4"]),
+                .init(score: .centipawns(30), line: ["Nc6"]),
+                .init(score: .centipawns(30), line: ["Bc4"]),
+                .init(score: .centipawns(30), line: ["Bc5"]),
+                .init(score: .centipawns(30), line: ["c3"]),
+                .init(score: .centipawns(30), line: ["Nf6"]),
+                .init(score: .centipawns(30), line: []),
+            ],
+            startEvaluation: .centipawns(30), depth: 16
+        )
+        // 1. e4 was let stand under 把关 as the engine's own choice: the judgement says so itself.
+        game.setJudgement(.init(drop: 0, score: .centipawns(30), depth: 20, intercept: 10, best: true), atPly: 0)
+        let session = GameSession.fresh(game)
+        let rendered = await ScreenImage.write("game-record-best") {
+            screen(session, engine: ScriptedEngine([]))
+        }
+        let sep = localized("clause.separator")
+        #expect(rendered.says(localized("screen.spokenMove", 1, "e4") + sep + localized("standing.best")), "by the judgement")
+        #expect(rendered.says(localized("screen.spokenMove", 2, "e5") + sep + localized("standing.best")), "by the Review's Line after e4")
+        #expect(rendered.says(localized("screen.spokenMove", 3, "Nf3") + sep + localized("book.cost", 0)), "free, but the Line wanted d4")
+        #expect(!rendered.says(localized("screen.spokenMove", 3, "Nf3") + sep + localized("standing.best")))
+        #expect(rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("standing.best")))
+    }
+
     // ------------------------------------------------------------------------- 复判
 
     /// f3 e5 with g4 refused at the position on the board, judged at `depth` with Qh4 as its 应招.

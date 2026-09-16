@@ -1202,9 +1202,13 @@ struct GameScreen: View {
 
     /// What a cell says out loud: its name, what the move cost if it has been measured, and —
     /// when the mark at its foot is there — that the player went wrong from this position.
-    private func spoken(_ name: String, cost: Double?, slip: Slip?) -> String {
+    private func spoken(_ name: String, cost: Double?, best: Bool = false, slip: Slip?) -> String {
         var clauses = [name]
-        if let cost { clauses.append(Drop.cost(max(0, cost))) }
+        if best {
+            clauses.append(localized("standing.best"))
+        } else if let cost {
+            clauses.append(Drop.cost(max(0, cost)))
+        }
         if let slip { clauses.append(localized("record.slipMark", Drop.points(slip.drop))) }
         return clauses.joined(separator: localized("clause.separator"))
     }
@@ -1234,12 +1238,13 @@ struct GameScreen: View {
     private func half(_ cell: Game.Half, _ slip: Slip?, costs: Bool) -> some View {
         let on = cell.ply == session.cursor
         let cost = costs ? session.game.cost(atPly: cell.ply) : nil
+        let best = costs && session.game.isBest(atPly: cell.ply)
         return Button { walk(to: cell.ply) } label: {
             VStack(spacing: 1) {
                 Text(cell.san)
                     .font(.footnote.weight(on ? .medium : .regular))
                     .foregroundStyle(on ? Palette.parchment : Palette.ink)
-                if costs { costCaption(cost, on: on) }
+                if costs { costCaption(cost, best: best, on: on) }
             }
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
@@ -1254,25 +1259,28 @@ struct GameScreen: View {
         // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver is a
         // move with no place in the game, and place is the whole of what this strip is for — and
         // what it cost, and a mistake made from here, are worth saying out loud too.
-        .accessibilityLabel(spoken(cell.spoken, cost: cost, slip: slip))
+        .accessibilityLabel(spoken(cell.spoken, cost: cost, best: best, slip: slip))
         .accessibilityHint(localized("record.jump"))
     }
 
-    /// The move's 掉幅 under it, in the app's one figure. A muted 「0」 for a move that cost
-    /// nothing — that is information: the move was right — and a blank of the same height under
-    /// a move nobody has measured, which is not the same thing as zero.
-    private func costCaption(_ cost: Double?, on: Bool) -> some View {
+    /// The move's 掉幅 under it, in the app's one figure. 「最佳」 for the engine's own first
+    /// choice, a muted 「0」 for another move that cost nothing — that is information: the move
+    /// was right — and a blank of the same height under a move nobody has measured, which is
+    /// not the same thing as zero.
+    private func costCaption(_ cost: Double?, best: Bool, on: Bool) -> some View {
         let points = cost.map { Drop.points(max(0, $0)) }
         let figure: String
         switch points {
         case nil: figure = " "
-        case 0: figure = "0"
+        case 0: figure = best ? localized("record.best") : "0"
         case let points?: figure = "−\(points)%"
         }
         let ink = on ? Palette.parchment : Palette.inkSoft
+        let colour: Color = best ? (on ? Palette.parchment : Palette.analysis)
+            : points == 0 ? ink.opacity(0.55) : ink
         return Text(verbatim: figure)
             .font(.caption2.monospacedDigit())
-            .foregroundStyle(points == 0 ? ink.opacity(0.55) : ink)
+            .foregroundStyle(colour)
     }
 
     /// The 错招 by the *position* they were made at, which is what the record strip's cells are:

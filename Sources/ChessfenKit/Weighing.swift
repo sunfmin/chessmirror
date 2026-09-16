@@ -68,7 +68,7 @@ public struct Weighing: Hashable, Sendable {
 
     /// What gets written onto the move if it is allowed to stand.
     public var judgement: Game.Ply.Judgement {
-        .init(drop: drop, score: after, depth: depth)
+        .init(drop: drop, score: after, depth: depth, best: isBest)
     }
 }
 

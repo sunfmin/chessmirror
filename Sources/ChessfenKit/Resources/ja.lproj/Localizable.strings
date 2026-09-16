@@ -430,3 +430,4 @@
 "ladder" = "連続番付";
 "ladder.run" = "最長連続";
 "standing.best" = "最善手";
+"record.best" = "最善";
