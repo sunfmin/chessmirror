@@ -7,8 +7,16 @@ one per half-move in one line, and a move that cost twenty points looks exactly 
 cost nothing until the eye is on it. Finding the ones worth re-practising meant scrolling and
 remembering.
 
-So a game now lists its own **错招**: one entry per Ply, oldest first, and each one carries the
-position that move was played **from**.
+So a game now lists its own **错题**: one entry per position, oldest first, and each one carries the
+board that was on the screen when the player got it wrong.
+
+**A position, not a move.** The first cut named each entry after the move that cost the most there
+and showed that name in a chip — and a move is the wrong thing to name a position by, because a
+position takes N wrong moves: three 试招 and then a fourth move, or the same 试招 twice (which is
+what the phone did). Half of those names are moves that were never played. An entry is described
+the way this app already describes a position — **by its picture** (`BookRow`: "the board is the
+title"), with the move number that tells two positions of one game apart, the cost that makes it
+worth stopping at, and `×N` for how many wrong moves were tried there.
 
 - **The record strip marks them.** A dot at the foot of the move: pale for what the 记录线 put in
   the file, the alarm colour for what the 入列线 says is still owed. It is an overlay, not a row, so
@@ -22,11 +30,10 @@ position that move was played **from**.
   错招 is there to be tried again, so it lands on the position where the move has to be found, which
   is where the drill starts too.
 
-**One entry per Ply, and the worst thing that happened at it.** A position where three 试招 were
-refused and a fourth move was finally played is one place in the game and one stop on the way
-through it; the strip of 已退回 attempts belongs to the *position* and stays where it is. The entry
-names the move that earned the cost — which for a 试招 is a move that never happened, exactly as the
-已退回 strip already names it.
+**One entry per position, whatever happened at it.** A position where three 试招 were refused and a
+fourth move was finally played is one place in the game and one stop on the way through it; the
+strip of 已退回 attempts belongs to the *position* and stays where it is, and it is where the moves
+are named.
 
 **Two weights, because the app has two lines** (ADR 0027) and they mean different things: written
 down is the 记录线, owed is the 入列线, and the second is what the 日课 would hand back
@@ -51,5 +58,16 @@ history is a question about that game.
   appears, the walk is the thing to share and the gate is the thing to keep.
 - The list is walked lazily and cached against the game and the two lines, because the record strip
   asks for it on every draw and walking it is a rules probe per Ply.
+- **One row, and it is the record row's twin**: full width, square corners, an alarm bar down its
+  leading edge and a hairline at each end. It was a rounded card inset from the page, which made it
+  a different kind of thing from every row around it; the words 「本局 N 处错题」 and 「已退回」 went
+  with it, to VoiceOver. The tile shows the position's board (forty points — at twenty-eight a
+  chessboard is a fingernail), the scoresheet number the cell above carries, the cost at the weight
+  its line gives it, and `×N`.
+- The registers share one rail and one frame, and the lower one is the upper one **at the position
+  on the board**: walking to a 错题 slides its 试招 out, and a position where nothing was refused
+  has none. The 惩罚 exercise is the last register — the only thing in the row that asks something
+  of the player — because a row that says what happened and then offers the next thing to do is one
+  subject, not three.
 - A game nobody got anything wrong in shows no row at all. A screen that has to say 「没有错招」 is a
   screen with a row it does not need.

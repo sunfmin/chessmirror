@@ -14,37 +14,48 @@ public struct Slip: Hashable, Sendable, Identifiable {
     /// The position it was played from, as a position and not a FEN — the same key the 错题本
     /// identifies a position by, so a 错招 here and a 错题 there can be recognised as one thing.
     public let position: PositionKey
-    /// The move that earned this cost, in SAN. A 试招 when 耕棋 took it back.
-    public let played: String
+    /// One wrong move made at this position: a 试招 耕棋 took back, or the move that stood when it
+    /// stood too expensively.
+    public struct Wrong: Hashable, Sendable {
+        public let san: String
+        /// What it cost, in percentage points of win probability (docs/adr/0027).
+        public let drop: Double
+        /// True when this is one 耕棋 took back, rather than the move that stood.
+        public let wasTried: Bool
+
+        public init(san: String, drop: Double, wasTried: Bool) {
+            self.san = san
+            self.drop = drop
+            self.wasTried = wasTried
+        }
+    }
+
+    /// Every wrong move the player made at this position, worst first.
+    ///
+    /// **A list, because a position is not a move.** The same player at the same position tries
+    /// what they try — three 试招 and then a fourth move, or the same 试招 twice — and every one of
+    /// them is a fact about *this position*. Naming the entry after one of them would name it
+    /// after a move that, half the time, never happened.
+    public let wrong: [Wrong]
     /// What the engine wanted instead, when a Line was kept. Nil rather than guessed.
     public let wanted: String?
-    /// What it cost, in percentage points of win probability (docs/adr/0027).
-    public let drop: Double
-    /// True when the move named above is one 耕棋 took back, rather than the one that stood.
-    ///
-    /// The label matters: 「f3 −20%」 beside a move that never happened is a different sentence
-    /// from the same numbers beside the move that did, and the 已退回 strip already says it.
-    public let wasTried: Bool
 
     /// A Ply is a place in a game and a game is played one Ply at a time, so the Ply is the
     /// identity. One move per Ply, however many 试招 were refused there on the way to it.
     public var id: Int { ply }
 
-    public init(
-        ply: Int,
-        position: PositionKey,
-        played: String,
-        wanted: String?,
-        drop: Double,
-        wasTried: Bool
-    ) {
+    public init(ply: Int, position: PositionKey, wrong: [Wrong], wanted: String?) {
         self.ply = ply
         self.position = position
-        self.played = played
+        self.wrong = wrong
         self.wanted = wanted
-        self.drop = drop
-        self.wasTried = wasTried
     }
+
+    /// The worst of them — the number this position is worth stopping for.
+    public var drop: Double { wrong.first?.drop ?? 0 }
+
+    /// Whether any of them was a move 耕棋 took back.
+    public var wasTried: Bool { wrong.contains { $0.wasTried } }
 
     /// The position this happened at, counted in Plies played — which is what the record strip's
     /// cells count, because a cell *is* a position: tapping the move at Ply `n` puts the board on
@@ -85,28 +96,24 @@ extension Game {
             let mover = mover(ofPly: ply)
             guard mine.contains(mover), let key = PositionKey(fen: fen) else { continue }
 
-            // The worst thing that happened at this Ply, whether it stood or not: the move to
-            // show, and the number that makes it a mistake worth finding.
-            var worst: (played: String, drop: Double, wasTried: Bool)?
-            func worse(than candidate: Double) -> Bool { worst.map { candidate > $0.drop } ?? true }
-            for attempt in plies[ply - 1].tried where lines.records(attempt.drop) {
-                if worse(than: attempt.drop) {
-                    worst = (attempt.san, attempt.drop, true)
-                }
-            }
+            // Everything wrong that happened here, whether it stood or not — the 试招 in the order
+            // they were refused, and the move that finally stood if it was too expensive too.
+            var wrong = plies[ply - 1].tried
+                .filter { lines.records($0.drop) }
+                .map { Slip.Wrong(san: $0.san, drop: $0.drop, wasTried: true) }
             let stood = plies[ply - 1].judgement?.drop ?? drop(atPly: ply)
-            if let stood, lines.records(stood), worse(than: stood) {
-                worst = (plies[ply - 1].san, stood, false)
+            if let stood, lines.records(stood) {
+                wrong.append(
+                    Slip.Wrong(san: plies[ply - 1].san, drop: stood, wasTried: false)
+                )
             }
-            guard let worst else { continue }
+            guard !wrong.isEmpty else { continue }
             found.append(
                 Slip(
                     ply: ply,
                     position: key,
-                    played: worst.played,
-                    wanted: reviewLine(atPly: ply - 1).first,
-                    drop: worst.drop,
-                    wasTried: worst.wasTried
+                    wrong: wrong.sorted { $0.drop > $1.drop },
+                    wanted: reviewLine(atPly: ply - 1).first
                 )
             )
         }
@@ -114,16 +121,16 @@ extension Game {
         // Ply is the one past the last move, so the position they are walked to is the end of the
         // game — and when a move is played there and takes them, the same Ply is that move's
         // (docs/adr/0037).
-        if let worst = pendingTried.worst(lines),
-            let key = PositionKey(fen: walked.state.fen) {
+        let pending = pendingTried
+            .filter { lines.records($0.drop) }
+            .map { Slip.Wrong(san: $0.san, drop: $0.drop, wasTried: true) }
+        if !pending.isEmpty, let key = PositionKey(fen: walked.state.fen) {
             found.append(
                 Slip(
                     ply: plies.count + 1,
                     position: key,
-                    played: worst.played,
-                    wanted: reviewLine(atPly: plies.count).first,
-                    drop: worst.drop,
-                    wasTried: true
+                    wrong: pending.sorted { $0.drop > $1.drop },
+                    wanted: reviewLine(atPly: plies.count).first
                 )
             )
         }
@@ -131,10 +138,3 @@ extension Game {
     }
 }
 
-extension Array where Element == Game.Ply.Tried {
-    /// The worst of these that is worth writing down at all, which is the one to show.
-    func worst(_ lines: JudgementLines) -> (played: String, drop: Double)? {
-        compactMap { lines.records($0.drop) ? ($0.san, $0.drop) : nil }
-            .max { $0.1 < $1.1 }
-    }
-}

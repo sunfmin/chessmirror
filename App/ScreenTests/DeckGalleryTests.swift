@@ -183,8 +183,8 @@ struct DeckGallery {
         #expect(rendered.says("d4"))
         #expect(!rendered.says("1. d4"))
         #expect(!rendered.says("1. e4"))
-        #expect(rendered.says("−25.1%"))
-        #expect(!rendered.says("−0.0%"))
+        #expect(rendered.says("−25%"))
+        #expect(!rendered.says("−0%"))
         #expect(rendered.says(localized("standing.change", "+0.0%")))
         #expect(rendered.says(localized("standing.bar")))
         #expect(!rendered.says("提示 1"))
@@ -406,7 +406,8 @@ struct DeckGallery {
         // from the board leaves behind (docs/adr/0037).
         played.setTried([.init(san: "f3", drop: 24)], atPly: 0)
         played.setJudgement(.init(drop: 14, score: .centipawns(-40), depth: 20), atPly: 2)
-        played.setPendingTried([.init(san: "Qh4", drop: 30)])
+        // Two wrong moves at the one position the game stopped on: a position is not a move.
+        played.setPendingTried([.init(san: "Qh4", drop: 30), .init(san: "f3", drop: 12)])
         let engine = ScriptedEngine([])
         let session = GameSession.fresh(played, engine: engine)
         defer { session.suspend() }
@@ -437,7 +438,15 @@ struct DeckGallery {
         #expect(rendered.says(marked(localized("screen.spokenMove", 2, "e5"), 14)))
         #expect(rendered.says(marked(localized("screen.spokenMove", 3, "Nf3"), 30)))
         #expect(!rendered.says(marked(localized("screen.spokenMove", 1, "e4"), 24)), "not the move itself")
-        #expect(rendered.says("Qh4"), "a refusal the game was left on is on the list too")
+        // The entry describes the position: where in the game, what it cost, and how many wrong
+        // moves were tried at it — and names none of them, because a move is one of N (docs/adr/0036).
+        let separator = localized("clause.separator")
+        #expect(
+            rendered.says(
+                "\(localized("record.now"))\(separator)\(localized("book.cost", 30))\(separator)\(localized("slips.wrong", 2))"
+            ),
+            "one position, two wrong moves tried at it"
+        )
         #expect(rendered.says("f3"), "the chip names the move the way the 已退回 strip does")
         #expect(rendered.says("Nf3"))
         #expect(!rendered.says("1. f3"), "compact: a 试招 is a move that never happened")

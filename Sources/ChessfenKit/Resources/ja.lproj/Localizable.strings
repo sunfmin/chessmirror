@@ -246,7 +246,6 @@
 "record.curve" = "評価の曲線";
 "record.ply" = "%d 手目";
 "record.jump" = "この手に戻る";
-"record.startHere" = "ここから指す";
 "record.opening" = "開始";
 
 "about" = "このアプリについて";
@@ -418,3 +417,6 @@
 "slips.next.hint" = "次の間違えた手へ進む";
 "slips.hint" = "その局面へ行って指し直す";
 "slips.here" = "この対局の %d 箇所";
+"slips.wrong" = "ミス %d 手";
+"library.wrong" = "ミス %d";
+"record.now" = "現在";

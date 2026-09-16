@@ -521,6 +521,9 @@ struct GameList: View {
     let open: (GameLibrary.Entry) -> Void
 
     @Environment(GameLibrary.self) private var library
+    /// The 错题本, read for one fact: how much there is to practise in a game. A game that has
+    /// something waiting in it should say so on the row rather than only once it is opened.
+    @Environment(MistakeIndex.self) private var index
 
     @State private var renaming: GameLibrary.Entry?
     @State private var nameDraft = ""
@@ -541,6 +544,18 @@ struct GameList: View {
         } message: {
             Text(localized("game.name.explained"))
         }
+    }
+
+    /// How many positions each game holds something wrong at, by the file it is in.
+    ///
+    /// Counted by Ply and not by 遭遇: a position tried three times in one game is one place to
+    /// stop at, which is the same rule the game's own list uses (docs/adr/0036).
+    private var wrongByGame: [URL: Int] {
+        var plies: [URL: Set<Int>] = [:]
+        for encounter in index.book.mistakes.flatMap(\.encounters) {
+            plies[encounter.game, default: []].insert(encounter.ply)
+        }
+        return plies.mapValues(\.count)
     }
 
     private func row(_ entry: GameLibrary.Entry) -> some View {
@@ -570,6 +585,14 @@ struct GameList: View {
                     }
                 }
                 Spacer(minLength: 0)
+                if let wrong = wrongByGame[entry.url], wrong > 0 {
+                    Text(localized("library.wrong", wrong))
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Palette.alarm)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Palette.alarm.opacity(0.12), in: Capsule())
+                }
                 Image(systemName: "chevron.right")
                     .font(.caption2)
                     .foregroundStyle(Palette.inkSoft)

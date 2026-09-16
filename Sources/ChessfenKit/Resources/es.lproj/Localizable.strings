@@ -265,7 +265,6 @@
 "record.curve" = "Curva de evaluación";
 "record.ply" = "Media jugada %d";
 "record.jump" = "Volver a esta jugada";
-"record.startHere" = "Jugar desde aquí";
 "record.opening" = "Inicio";
 
 "about" = "Acerca de";
@@ -444,3 +443,6 @@
 "slips.next.hint" = "Ir a la siguiente jugada equivocada";
 "slips.hint" = "Ir allí y volver a jugarla";
 "slips.here" = "%d posiciones falladas";
+"slips.wrong" = "%d jugadas erróneas";
+"library.wrong" = "%d fallos";
+"record.now" = "Ahora";

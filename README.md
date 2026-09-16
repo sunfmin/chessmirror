@@ -27,9 +27,11 @@ through your own iCloud Drive.
   Judgement, advantage, tactics and opponent replies share the result; device caches survive relaunch.
   Turning interception off disables rollback, not this assessment gate. Search uses at most two
   threads by default, and opening the game never launches an automatic historical scoring pass.
-- A game lists its own 错招 — one entry per Ply, marked on the record strip in two weights (written
-  down, and still owed) and walked to by a chip or by 下一处. It lands on the position the move was
-  played *from*, ready to be tried again.
+- A game lists its own 错题 — one entry per position, described by a small board and the move
+  number, marked across the foot of that position on the record strip in two weights (written down,
+  and still owed), and walked to by a tile or by 下一处. Under the positions, the 试招 tried where
+  the eye is standing, and then the opponent-reply exercise when it is on: one full-width row, the
+  record row's twin, and nothing rounded. The library row says how many a game holds.
 - The advantage bar remains visible. Refused attempts appear as a compact horizontal strip
   for the current move, with SAN and percentage cost, instead of a whole-game cost list.
   Pressing one shows the 应招 it earned — the opponent's answer and the few moves after it, as
@@ -37,7 +39,7 @@ through your own iCloud Drive.
   the move; older files are answered from the shared bounded position search.
   Judgements preserve their achieved depth in PGN. The history curve still includes the last move.
 - A face-to-face toolbar toggle rotates the top player's pieces for over-the-board play on a phone.
-- An optional opponent-reply exercise on a temporary board. Replies within two percentage
+- An optional opponent-reply exercise on a temporary board, asked for inside the game's 错题 row. Replies within two percentage
   points of the shared bounded evaluation pass; retry, Reveal, and Skip leave the real game intact.
 - Import a selected game and score every move locally at depth 16, asynchronously. Imported
   evaluations prioritize suspected mistakes but never exclude moves from the local pass.

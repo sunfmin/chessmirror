@@ -19,16 +19,18 @@ import Testing
         return game
     }
 
-    @Test func oneEntryPerPlyWithTheWorstThingThatHappenedThere() throws {
+    /// One entry per position, and every wrong move made at it — a position is not a move, and a
+    /// player at one position tries what they try.
+    @Test func oneEntryPerPositionWithEveryWrongMoveMadeThere() throws {
         let slips = try played().slips(by: [.white], lines: .standard)
         #expect(slips.map(\.ply) == [1, 3], "one stop per place in the game, and not Black's move")
         let first = try #require(slips.first)
-        #expect(first.played == "f3", "the worst of the two, in the move that earned it")
-        #expect(first.drop == 24)
-        #expect(first.wasTried, "and it is named as a 试招, because that move never happened")
+        #expect(first.wrong.map(\.san) == ["f3", "a3"], "both 试招, worst first")
+        #expect(first.wrong.allSatisfy { $0.wasTried })
+        #expect(first.drop == 24, "and the entry is worth stopping for the worst of them")
         let third = try #require(slips.last)
-        #expect(third.played == "Nf3")
-        #expect(!third.wasTried, "this one stood, and the [%judged] is where its cost came from")
+        #expect(third.wrong.map(\.san) == ["Nf3"])
+        #expect(!third.wrong[0].wasTried, "this one stood, and the [%judged] is where its cost came from")
     }
 
     /// The position carried is the one the move was played **from** — the one to try again from.

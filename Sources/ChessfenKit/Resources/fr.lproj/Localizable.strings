@@ -265,7 +265,6 @@
 "record.curve" = "Courbe d'évaluation";
 "record.ply" = "Demi-coup %d";
 "record.jump" = "Revenir à ce coup";
-"record.startHere" = "Jouer d'ici";
 "record.opening" = "Départ";
 
 "about" = "À propos";
@@ -444,3 +443,6 @@
 "slips.next.hint" = "Aller au coup fautif suivant";
 "slips.hint" = "Y aller et rejouer ce coup";
 "slips.here" = "%d positions ratées";
+"slips.wrong" = "%d coups fautifs";
+"library.wrong" = "%d fautes";
+"record.now" = "Maintenant";

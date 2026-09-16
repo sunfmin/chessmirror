@@ -174,7 +174,7 @@ struct GameScreenScreenshots {
         }
 
         #expect(session.unconfirmedSquares.count == 3, "the shaky squares stay ringed on the board")
-        #expect(rendered.says("从这里开始走"))
+        #expect(rendered.says(localized("record.opening")))
         // Settings stay folded even on a freshly recognised position.
         #expect(!rendered.says("谁走"))
         #expect(rendered.says(localized("game.settings.expand", PieceColour.white.label)))

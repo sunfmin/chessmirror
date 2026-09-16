@@ -132,11 +132,11 @@ struct GameScreen: View {
                 if let practice = session.practice { practiceStatus(practice).chromeType() }
                 VStack(spacing: 0) {
                     record
-                    slips
+                    wrongMoves
                     settlement
                 }
                 .chromeType()
-                if session.hasTillingFeedback { attemptFeedback }
+
                 if !session.isTilling, !findings.isEmpty { deck }
               }
               .frame(width: proxy.size.width)
@@ -405,46 +405,41 @@ struct GameScreen: View {
         .animation(.easeInOut(duration: 0.35), value: session.moveChange)
     }
 
-    private var attemptFeedback: some View {
-        let attempts = session.visibleAttempts
-        return VStack(alignment: .leading, spacing: 8) {
-            if let exercise = session.activePunishment {
-                Text(localized(exercise.wasIncorrect ? "punish.again" : "punish.prompt"))
-                if exercise.isJudging { ProgressView() }
-                HStack {
-                    Button(localized("till.reveal")) { exercise.reveal() }
-                    Button(localized("punish.skip")) { exercise.skip() }
+    /// One 试招: the move, and what it cost. Pressing it is how the player asks what the move was
+    /// asking for — the 应招 is nobody's business until somebody asks, which is the same rule every
+    /// other answer on this screen is under (docs/adr/0034, docs/adr/0031).
+    ///
+    /// Shut while a 惩罚 exercise is open. That exercise is the same answer with the finding left
+    /// to the player, and a chip that would hand it over is the exercise not being one.
+    private func attemptToken(_ tried: Game.Ply.Tried, index: Int) -> some View {
+        let isOn = revealedAttempt == index
+        return Button {
+            selected = nil
+            revealReply(at: index, of: tried)
+        } label: {
+            HStack(spacing: 6) {
+                Text(tried.san).font(.notation)
+                    .foregroundStyle(isOn ? Palette.parchment : Palette.ink)
+                Text(String(format: "−%.0f%%", tried.drop))
+                    .font(.caption.monospacedDigit().weight(.medium))
+                    .foregroundStyle(isOn ? Palette.parchment : Palette.alarm)
+            }
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(isOn ? Palette.analysis : Palette.chipRest, in: RoundedRectangle(cornerRadius: 6))
+            .overlay(alignment: .bottom) {
+                if !isOn {
+                    UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
+                        .fill(Palette.alarm.opacity(0.35)).frame(height: 2)
                 }
             }
-            if let answer = session.punishment?.revealedMove {
-                Text(localized("punish.answer", answer))
-            }
-            if !attempts.isEmpty {
-                HStack(spacing: 10) {
-                    Label(localized("till.returned"), systemImage: "arrow.uturn.backward")
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                        .fixedSize()
-                    ScrollView(.horizontal) {
-                        HStack(spacing: 6) {
-                            // Newest first, so the move just refused is the one under the thumb.
-                            ForEach(Array(attempts.reversed().enumerated()), id: \.offset) {
-                                offset, tried in
-                                attemptChip(tried, index: attempts.count - 1 - offset)
-                            }
-                        }
-                    }
-                    .scrollIndicators(.hidden)
-                }
-                .padding(.vertical, 8)
-                if session.activePunishment == nil, revealedAttempt != nil, let tried = revealedTried {
-                    replyRow(for: tried)
-                }
-            }
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
         }
-        .font(.footnote)
-        .padding(.horizontal, 13)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .buttonStyle(.plain)
+        .disabled(session.activePunishment != nil)
+        .accessibilityLabel(tried.san)
+        .accessibilityValue(String(format: "−%.0f%%", tried.drop))
+        .accessibilityHint(localized("tried.reply.hint"))
     }
 
     /// One 已退回 move. Pressing it is how the player asks what the move was asking for — the
@@ -992,86 +987,211 @@ struct GameScreen: View {
     ///
     /// Absent when there is nothing to say. A game nobody got anything wrong in has no row, and
     /// neither has a game that has not been measured at all.
-    @ViewBuilder private var slips: some View {
+    /// This game's 错题, and the 试招 tried at the position the eye is on — **one framed strip**,
+    /// because they are one subject seen at two scopes: where in this game the player went wrong,
+    /// and what they reached for when they got there (docs/adr/0036, docs/adr/0037).
+    ///
+    /// The frame is the app's own rail rather than a new idiom: an alarm edge down the left, which
+    /// is what the record's teal edge and a player bar's edge already say — 「this row is about
+    /// this」 — with the words kept for VoiceOver rather than spent on a phone's width. The two
+    /// registers share that edge and one corner radius, so they read as one object; the lower one
+    /// is not a second list but the upper one *at the position on the board*, so walking to a 错题
+    /// slides its moves out, and a position where nothing was refused has none to show.
+    @ViewBuilder private var wrongMoves: some View {
         let slips = session.slips
-        if !slips.isEmpty {
-            HStack(spacing: 10) {
-                Label(localized("slips.here", slips.count), systemImage: "exclamationmark.triangle")
-                .font(.caption)
-                .foregroundStyle(Palette.inkSoft)
-                .fixedSize()
-                ScrollView(.horizontal) {
-                    HStack(spacing: 6) {
-                        ForEach(slips) { slip in slipChip(slip) }
-                    }
+        let attempts = session.visibleAttempts
+        let exercise = session.activePunishment
+        let answered = session.punishment?.revealedMove
+        if !slips.isEmpty || !attempts.isEmpty || exercise != nil || answered != nil {
+            VStack(spacing: 0) {
+                if !slips.isEmpty { slipTiles(slips) }
+                if !slips.isEmpty, !attempts.isEmpty {
+                    Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.leading, 13)
                 }
-                .scrollIndicators(.hidden)
-                if let next = session.nextSlip {
-                    Button {
-                        selected = nil
-                        walkTo(slip: next)
-                    } label: {
-                        Image(systemName: "arrow.right.to.line")
-                            .font(.caption2)
-                            .foregroundStyle(Palette.analysis)
-                            .frame(width: 32, height: 30)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(localized("slips.next"))
-                    .accessibilityHint(localized("slips.next.hint"))
+                if !attempts.isEmpty { attemptTokens(attempts) }
+                // And the 应招, when one of those attempts has been asked about: the same frame,
+                // because it is the answer to the same question (docs/adr/0034).
+                if !attempts.isEmpty, session.activePunishment == nil,
+                    revealedAttempt != nil, let tried = revealedTried {
+                    Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.leading, 13)
+                    replyRow(for: tried)
+                        .padding(.leading, 13)
+                        .padding(.trailing, 8)
+                }
+                if exercise != nil || answered != nil {
+                    Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.leading, 13)
+                    punishRegister(exercise: exercise, answered: answered)
                 }
             }
-            .padding(.leading, 13)
-            .padding(.trailing, 8)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // The same shape as the rows above and below it — full width, square corners, a bar
+            // down the leading edge and a hairline at each end — because it is a row of the same
+            // page and not a card of its own. It is the record row's twin: that one is tinted teal
+            // and edged teal for the eye, this one alarm for the mistakes.
+            .background(Palette.alarm.opacity(0.06))
+            .overlay(alignment: .leading) { Rectangle().fill(Palette.alarm).frame(width: 3) }
             .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
             .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+            .animation(.snappy(duration: 0.22), value: attempts.count)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(localized("slips.here", slips.count))
         }
     }
 
-    /// One 错招: where in the game, what was played, what it cost.
-    private func slipChip(_ slip: Slip) -> some View {
+    /// The 惩罚 exercise, when one is open — the same subject one step further on: not what
+    /// happened here but what the position you are standing on has to answer. Last, because it is
+    /// the only thing in the strip that asks something of the player (docs/adr/0031, issue 38).
+    @ViewBuilder private func punishRegister(exercise: Punishment?, answered: String?) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let exercise {
+                Text(localized(exercise.wasIncorrect ? "punish.again" : "punish.prompt"))
+                if exercise.isJudging { ProgressView() }
+                HStack(spacing: 10) {
+                    Button(localized("till.reveal")) { exercise.reveal() }
+                    Button(localized("punish.skip")) { exercise.skip() }
+                }
+            }
+            if let answered { Text(localized("punish.answer", answered)) }
+        }
+        .font(.footnote)
+        .padding(.leading, 13)
+        .padding(.trailing, 8)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The positions this game has something wrong at, in the order they happen, with 下一处 to be
+    /// walked to the next one.
+    private func slipTiles(_ slips: [Slip]) -> some View {
+        HStack(spacing: 6) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 6) {
+                    ForEach(slips) { slip in slipTile(slip) }
+                }
+                .padding(.vertical, 4)
+            }
+            .scrollIndicators(.hidden)
+            if let next = session.nextSlip {
+                Button {
+                    selected = nil
+                    walkTo(slip: next)
+                } label: {
+                    Image(systemName: "arrow.right.to.line")
+                        .font(.caption2)
+                        .foregroundStyle(Palette.analysis)
+                        .frame(width: 34, height: 34)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localized("slips.next"))
+                .accessibilityHint(localized("slips.next.hint"))
+            }
+        }
+        .padding(.leading, 13)
+        .padding(.trailing, 8)
+    }
+
+    /// One 错题: the board that was on the screen, and the two figures that say whether to stop —
+    /// where in the game it is, and what it cost.
+    ///
+    /// **The picture is the name**, which is the answer this app already gave for the 错题本: a FEN
+    /// is not a name anybody recognises and neither is "Sicilian, Najdorf", and what a person
+    /// recognises is the board they were looking at when they got it wrong. The number is the
+    /// scoresheet's — the same figure the cell above carries — because that is the one thing that
+    /// separates two positions of the same game. The cost is full strength when the 入列线 says the
+    /// player still owes it and held back when it is only written down (docs/adr/0027), and `×N` is
+    /// the fact that one position takes N wrong moves — which is why the entry is not named after
+    /// one of them.
+    private func slipTile(_ slip: Slip) -> some View {
+        let on = session.cursor == slip.positionPly
         let owed = slip.isWorthDrilling(session.lines)
-        let on = session.cursor == slip.ply - 1
         return Button {
             selected = nil
             walkTo(slip: slip)
         } label: {
             HStack(spacing: 6) {
-                Text(slip.played)
-                    .font(.system(.caption, design: .serif).weight(.semibold))
-                    .foregroundStyle(on ? Palette.parchment : Palette.ink)
-                Text(String(format: "−%.0f%%", slip.drop))
-                    .font(.caption.monospacedDigit().weight(.medium))
-                    .foregroundStyle(on ? Palette.parchment : Palette.alarm)
-            }
-            .padding(.horizontal, 9).padding(.vertical, 6)
-            .background(on ? Palette.analysis : Palette.raised, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(alignment: .bottom) {
-                if !on {
-                    UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
-                        .fill(Palette.alarm.opacity(owed ? 0.55 : 0.2)).frame(height: 2)
+                thumbnail(slip.position, side: 40)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(
+                                on ? Palette.analysis : Palette.hairline,
+                                lineWidth: on ? 1.5 : 0.5
+                            )
+                    )
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 4) {
+                        Text(slipNumber(slip))
+                            .font(.caption2.monospacedDigit().weight(.medium))
+                            .foregroundStyle(Palette.ink)
+                        if slip.wrong.count > 1 {
+                            Text("×\(slip.wrong.count)")
+                                .font(.caption2.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(Palette.alarm)
+                        }
+                    }
+                    Text(String(format: "−%.0f%%", slip.drop))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
                 }
+                .frame(minWidth: 34, alignment: .leading)
             }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
             .contentShape(Rectangle())
-            .accessibilityElement(children: .combine)
         }
         .buttonStyle(.plain)
-        // Where it is, out loud: the chip is a move and a number, and which Ply of which game it
-        // belongs to is not something a small capsule can say.
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "\(localized("record.ply", slip.ply))\(localized("clause.separator"))\(slip.played)\(localized("clause.separator"))\(localized("book.cost", Int(slip.drop.rounded())))"
+            "\(slipSpoken(slip))\(localized("clause.separator"))\(localized("book.cost", Int(slip.drop.rounded())))\(slip.wrong.count > 1 ? localized("clause.separator") + localized("slips.wrong", slip.wrong.count) : "")"
         )
         .accessibilityHint(localized("slips.hint"))
     }
 
-    /// Takes the board to a 错招 by walking the record there, and leaves the eye on the position
+    /// The 试招 tried at the position on the board, newest first, under the positions they belong
+    /// to — the lower register of the same strip.
+    private func attemptTokens(_ attempts: [Game.Ply.Tried]) -> some View {
+        HStack(spacing: 8) {
+            // An ✕ and nothing else: these are the moves that were rejected, and the word 「已退回」
+            // is what VoiceOver reads out for the mark rather than sixty points of the row.
+            Image(systemName: "xmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Palette.alarm)
+                .frame(width: 18)
+                .accessibilityLabel(localized("till.returned"))
+            ScrollView(.horizontal) {
+                HStack(spacing: 6) {
+                    ForEach(Array(attempts.reversed().enumerated()), id: \.offset) { offset, tried in
+                        attemptToken(tried, index: attempts.count - 1 - offset)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .padding(.leading, 13)
+        .padding(.trailing, 8)
+        .padding(.vertical, 5)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    /// A position in the words a scoresheet gives it: the move number and whose move it is —
+    /// the same figure the cell above carries, so the eye can match a tile to the strip — or
+    /// 「现在」 for the position the game stops on, which is past the last move and has no number.
+    private func slipNumber(_ slip: Slip) -> String {
+        guard slip.ply <= session.game.plies.count else { return localized("record.now") }
+        let side = session.game.mover(ofPly: slip.ply) == .white ? "." : "…"
+        return "\(session.game.moveNumber(ofPly: slip.ply))\(side)"
+    }
+
+    /// The same place said out loud, in the number the record counts in.
+    private func slipSpoken(_ slip: Slip) -> String {
+        slip.ply > session.game.plies.count
+            ? localized("record.now")
+            : localized("record.ply", slip.ply)
+    }
+
+    /// Takes the board to a 错题 by walking the record there, and leaves the eye on the position
     /// the move was played from — the one to try again from.
     private func walkTo(slip: Slip) {
-        let ply = slip.ply - 1
-        Task { await session.walk(toPly: ply) }
+        Task { await session.walk(toPly: slip.positionPly) }
     }
 
     /// History feedback is available in practice too. Unknown positions remain unknown;
@@ -1134,8 +1254,9 @@ struct GameScreen: View {
     private var openingCell: some View {
         let slip = slipByPosition[0]
         let on = session.cursor == 0
-        // An empty game's cell says where to start rather than naming a place it has not been.
-        let name = localized(session.game.plies.isEmpty ? "record.startHere" : "record.opening")
+        // One name for one place. It used to say 「从这里开始走」 while the game had no moves in it,
+        // which is an instruction standing where every other cell in the strip names a place.
+        let name = localized("record.opening")
         return Button { walk(to: 0) } label: {
             Text(name)
                 .font(.caption)
@@ -1163,10 +1284,9 @@ struct GameScreen: View {
     /// the alarm colour is what the 入列线 says the player still owes.
     @ViewBuilder private func slipMark(_ slip: Slip?, on: Bool) -> some View {
         if let slip {
-            Circle()
-                .fill(slip.isWorthDrilling(session.lines) ? Palette.alarm : Palette.alarm.opacity(0.35))
-                .frame(width: 3.5, height: 3.5)
-                .offset(y: 1)
+            UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
+                .fill(Palette.alarm.opacity(slip.isWorthDrilling(session.lines) ? 1 : 0.5))
+                .frame(height: 3)
         }
     }
 

@@ -265,7 +265,6 @@
 "record.curve" = "Curva de avaliação";
 "record.ply" = "Meio-lance %d";
 "record.jump" = "Voltar a este lance";
-"record.startHere" = "Jogar a partir daqui";
 "record.opening" = "Início";
 
 "about" = "Acerca de";
@@ -444,3 +443,6 @@
 "slips.next.hint" = "Ir para o próximo lance errado";
 "slips.hint" = "Ir até lá e jogar de novo";
 "slips.here" = "%d posições erradas";
+"slips.wrong" = "%d lances errados";
+"library.wrong" = "%d erros";
+"record.now" = "Agora";

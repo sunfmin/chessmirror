@@ -265,7 +265,6 @@
 "record.curve" = "Bewertungskurve";
 "record.ply" = "Halbzug %d";
 "record.jump" = "Zu diesem Zug zurück";
-"record.startHere" = "Von hier spielen";
 "record.opening" = "Anfang";
 
 "about" = "Über";
@@ -443,3 +442,6 @@
 "slips.next.hint" = "Zum nächsten falschen Zug gehen";
 "slips.hint" = "Dorthin gehen und den Zug neu spielen";
 "slips.here" = "%d falsche Stellungen";
+"slips.wrong" = "%d falsche Züge";
+"library.wrong" = "%d falsch";
+"record.now" = "Jetzt";

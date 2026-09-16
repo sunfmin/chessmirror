@@ -246,7 +246,6 @@
 "record.curve" = "점수 곡선";
 "record.ply" = "%d수째";
 "record.jump" = "이 수로 돌아가기";
-"record.startHere" = "여기서부터 두기";
 "record.opening" = "시작";
 
 "about" = "정보";
@@ -418,3 +417,6 @@
 "slips.next.hint" = "다음 잘못 둔 수로 이동";
 "slips.hint" = "그 자리로 가서 다시 둡니다";
 "slips.here" = "이 대국 %d곳";
+"slips.wrong" = "잘못 둔 수 %d개";
+"library.wrong" = "실수 %d";
+"record.now" = "현재";

@@ -306,7 +306,6 @@
 "record.curve" = "Evaluation curve";
 "record.ply" = "Ply %d";
 "record.jump" = "Go back to this move";
-"record.startHere" = "Play from here";
 "record.opening" = "Opening";
 
 
@@ -489,3 +488,6 @@
 "slips.next.hint" = "Walk to the next wrong move";
 "slips.hint" = "Go there and play it again";
 "slips.here" = "%d positions you got wrong";
+"slips.wrong" = "%d wrong moves";
+"library.wrong" = "%d wrong";
+"record.now" = "Now";

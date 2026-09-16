@@ -286,7 +286,6 @@
 "record.curve" = "分数曲线";
 "record.ply" = "第 %d 步";
 "record.jump" = "回到这一步";
-"record.startHere" = "从这里开始走";
 "record.opening" = "开局";
 
 
@@ -463,3 +462,6 @@
 "slips.next.hint" = "走到下一处错招";
 "slips.hint" = "走过去，重新下这一步";
 "slips.here" = "本局 %d 处错题";
+"slips.wrong" = "%d 个错招";
+"library.wrong" = "%d 处错";
+"record.now" = "现在";
