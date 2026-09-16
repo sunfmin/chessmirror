@@ -469,6 +469,7 @@
 "slips.hint" = "走过去，重新下这一步";
 "slips.here" = "本局 %d 处错题";
 "slips.wrong" = "%d 个错招";
+"wrong.stood" = "走了的错招";
 "library.wrong" = "%d 处错";
 "record.now" = "现在";
 

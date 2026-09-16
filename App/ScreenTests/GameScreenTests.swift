@@ -873,6 +873,54 @@ struct GameScreenScreenshots {
         #expect(rendered.says(localized("tried.rejudge", 28)), "the button is there to be waited on")
     }
 
+    // ------------------------------------------------------------ 错招 that stood
+
+    /// An imported game has nothing 正着 refused in it: its 错招 are the moves that stood. Walked
+    /// to, the position lists the move as a chip under a mark that says it was played, and
+    /// pressing it reads the 应招 the Review kept — the same answer a refusal's chip gives
+    /// (docs/adr/0034, 0036).
+    @Test("a move that stood too expensively is a chip with a reply, at its own position")
+    func stoodWrongMoveReadsItsReply() async throws {
+        var game = try #require(
+            Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3"])
+        )
+        game.setJudgement(.init(drop: 14, score: .centipawns(-40), depth: 20), atPly: 2)
+        game.applyReview(
+            [
+                ReviewedPly(score: .centipawns(30), line: ["e5"]),
+                ReviewedPly(score: .centipawns(30), line: ["Nf3"]),
+                ReviewedPly(score: .centipawns(-40), line: ["Nc6", "Bb5"]),
+            ],
+            startEvaluation: .centipawns(30), depth: 20
+        )
+        let engine = ScriptedEngine([])
+        let session = GameSession.fresh(game, engine: engine)
+        defer { session.suspend() }
+        let slip = try #require(session.slips.first)
+        session.jump(toPly: slip.positionPly)
+        #expect(session.cursor == 2)
+
+        let rendered = await ScreenImage.write("game-stood-reply", interact: { window in
+            let before = ScreenImage.words(in: window)
+            #expect(before.contains { $0.contains(localized("wrong.stood")) }, "the row says the move was played")
+            #expect(!before.contains { $0.contains(localized("till.returned")) }, "nothing here was taken back")
+            #expect(!before.contains { $0.contains(localized("tried.reply")) }, "the answer waits to be asked for")
+            #expect(ScreenImage.activate("Nf3", in: window), "the move that stood must be pressable")
+            await ScreenImage.settle()
+            let after = ScreenImage.words(in: window)
+            #expect(after.contains { $0.contains(localized("tried.reply")) })
+            #expect(after.contains { $0.contains("Nc6") })
+            #expect(after.contains { $0.contains("Bb5") })
+            #expect(!after.contains { $0.contains(localized("tried.rejudge", 28)) }, "the game judged it; nothing deeper is offered")
+        }) {
+            screen(session, engine: engine)
+        }
+        #expect(rendered.says(localized("tried.reply")))
+        #expect(rendered.says("Nc6"))
+        #expect(rendered.says(localized("game.depth", 20)))
+        #expect(session.replyReading?.move.stood == true)
+    }
+
     // ---------------------------------------------------------------- 最佳
 
     /// The engine's own first choice, played by the hand: the strip says the word, not `+0.0%`.

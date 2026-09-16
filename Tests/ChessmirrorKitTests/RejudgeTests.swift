@@ -98,14 +98,14 @@ struct RejudgeTests {
         defer { session.suspend() }
         session.jumpToLatest()
         session.readReply(at: 0)
-        #expect(session.replyReading?.tried.depth == 20)
+        #expect(session.replyReading?.move.depth == 20)
 
         session.rejudge(at: 0)
-        #expect(session.replyReading?.tried.depth == 20, "unchanged until the number lands")
+        #expect(session.replyReading?.move.depth == 20, "unchanged until the number lands")
         await session.settled()
         let reading = try #require(session.replyReading)
-        #expect(reading.tried.depth == 28)
-        #expect(reading.tried.drop == expectedDrop)
+        #expect(reading.move.depth == 28)
+        #expect(reading.move.drop == expectedDrop)
         #expect(reading.line == ["g4", "Qh4"])
         #expect(!reading.isAsking)
     }

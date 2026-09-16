@@ -26,6 +26,11 @@ struct GameScreen: View {
     @Environment(GameLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Square?
+    /// Set by a tap on a cell of the record strip, for the one cursor change that tap causes:
+    /// the strip is not to move under the finger that is on it. A cell that was tapped was on
+    /// the screen already, and sliding it to the middle is the record jumping away from where
+    /// the eye just was. Every other way the cursor moves still centres.
+    @State private var isTappingStrip = false
     @State private var promotion: PromotionRequest?
     @State private var isSoundOn = Sounds.current.isSoundOn
     /// Which side's own controls are open. Nobody's, unless somebody said otherwise — and then
@@ -353,29 +358,35 @@ struct GameScreen: View {
         .animation(.easeInOut(duration: 0.35), value: session.moveChange)
     }
 
-    /// One 试招: the move, and what it cost. Pressing it is how the player asks what the move was
-    /// asking for — the 应招 is nobody's business until somebody asks, which is the same rule every
-    /// other answer on this screen is under (docs/adr/0034, docs/adr/0031).
+    /// One wrong move: the move, and what it cost. Pressing it is how the player asks what the
+    /// move was asking for — the 应招 is nobody's business until somebody asks, which is the same
+    /// rule every other answer on this screen is under (docs/adr/0034, docs/adr/0031).
+    ///
+    /// A 试招 wears the pale alarm rule at its foot that says 「已退回」; the move that stood wears
+    /// the alarm tint instead, because it was not taken back — it is the move in the record, and
+    /// this chip is the one place it can be asked about. Same chip otherwise: an imported game's
+    /// 错招 all stood, and they want the same answer a refusal's chip gives.
     ///
     /// Shut while a 惩罚 exercise is open. That exercise is the same answer with the finding left
     /// to the player, and a chip that would hand it over is the exercise not being one.
-    private func attemptToken(_ tried: Game.Ply.Tried, index: Int) -> some View {
+    private func wrongToken(_ wrong: GameSession.WrongMove, index: Int) -> some View {
         let isOn = session.replyReading?.index == index
+        let rest = wrong.stood ? AnyShapeStyle(Palette.alarm.opacity(0.12)) : AnyShapeStyle(Palette.chipRest)
         return Button {
             selected = nil
             session.readReply(at: index)
         } label: {
             HStack(spacing: 6) {
-                Text(tried.san).font(.notation)
+                Text(wrong.san).font(.notation)
                     .foregroundStyle(isOn ? Palette.parchment : Palette.ink)
-                Text(Drop.figure(tried.drop))
+                Text(Drop.figure(wrong.drop))
                     .font(.caption.monospacedDigit().weight(.medium))
                     .foregroundStyle(isOn ? Palette.parchment : Palette.alarm)
             }
             .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(isOn ? Palette.analysis : Palette.chipRest, in: RoundedRectangle(cornerRadius: 6))
+            .background(isOn ? AnyShapeStyle(Palette.analysis) : rest, in: RoundedRectangle(cornerRadius: 6))
             .overlay(alignment: .bottom) {
-                if !isOn {
+                if !isOn, !wrong.stood {
                     UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
                         .fill(Palette.alarm.opacity(0.35)).frame(height: 2)
                 }
@@ -385,8 +396,8 @@ struct GameScreen: View {
         }
         .buttonStyle(.plain)
         .disabled(session.activePunishment != nil)
-        .accessibilityLabel(tried.san)
-        .accessibilityValue(Drop.figure(tried.drop))
+        .accessibilityLabel(wrong.san)
+        .accessibilityValue(Drop.figure(wrong.drop))
         .accessibilityHint(localized("tried.reply.hint"))
     }
 
@@ -428,7 +439,7 @@ struct GameScreen: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.inkSoft)
         } else {
-            if let depth = reading.tried.depth {
+            if let depth = reading.move.depth {
                 Text(localized("game.depth", depth))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(Palette.inkSoft)
@@ -867,7 +878,7 @@ struct GameScreen: View {
     /// slides its moves out, and a position where nothing was refused has none to show.
     @ViewBuilder private var wrongMoves: some View {
         let slips = session.slips
-        let attempts = session.visibleAttempts
+        let attempts = session.visibleWrongs
         let exercise = session.activePunishment
         let answered = session.punishment?.revealedMove
         if !slips.isEmpty || !attempts.isEmpty || exercise != nil || answered != nil {
@@ -876,7 +887,7 @@ struct GameScreen: View {
                 if !slips.isEmpty, !attempts.isEmpty {
                     Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.leading, 13)
                 }
-                if !attempts.isEmpty { attemptTokens(attempts) }
+                if !attempts.isEmpty { wrongTokens(attempts) }
                 // And the 应招, when one of those attempts has been asked about: the same frame,
                 // because it is the answer to the same question (docs/adr/0034).
                 if !attempts.isEmpty, session.activePunishment == nil,
@@ -1031,21 +1042,24 @@ struct GameScreen: View {
             .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
     }
 
-    /// The 试招 tried at the position on the board, newest first, under the positions they belong
-    /// to — the lower register of the same strip.
-    private func attemptTokens(_ attempts: [Game.Ply.Tried]) -> some View {
-        HStack(spacing: 8) {
-            // An ✕ and nothing else: these are the moves that were rejected, and the word 「已退回」
-            // is what VoiceOver reads out for the mark rather than sixty points of the row.
-            Image(systemName: "xmark")
+    /// The wrong moves made at the position on the board, newest first, under the positions
+    /// they belong to — the lower register of the same strip.
+    private func wrongTokens(_ wrongs: [GameSession.WrongMove]) -> some View {
+        // Whether anything here was taken back. A row of refusals is led by an ✕; a row that is
+        // only the move that stood — an imported game's — by a mark that says it was played.
+        let returned = wrongs.contains { !$0.stood }
+        return HStack(spacing: 8) {
+            // A mark and nothing else: the word — 「已退回」 or 「走了的错招」 — is what VoiceOver reads
+            // out for it rather than sixty points of the row.
+            Image(systemName: returned ? "xmark" : "exclamationmark")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Palette.alarm)
                 .frame(width: 18)
-                .accessibilityLabel(localized("till.returned"))
+                .accessibilityLabel(localized(returned ? "till.returned" : "wrong.stood"))
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    ForEach(Array(attempts.reversed().enumerated()), id: \.offset) { offset, tried in
-                        attemptToken(tried, index: attempts.count - 1 - offset)
+                    ForEach(Array(wrongs.reversed().enumerated()), id: \.offset) { offset, wrong in
+                        wrongToken(wrong, index: wrongs.count - 1 - offset)
                     }
                 }
             }
@@ -1130,7 +1144,13 @@ struct GameScreen: View {
             .scrollIndicators(.hidden)
             // Where the eye is, kept in the middle of the strip as it moves — a record that
             // has scrolled off the position on the board is a record of somebody else's game.
+            // Not when the move was a tap on the strip itself: that cell is under the finger,
+            // and the record stays where the finger found it.
             .onChange(of: session.cursor, initial: true) { _, now in
+                if isTappingStrip {
+                    isTappingStrip = false
+                    return
+                }
                 withAnimation(.snappy(duration: 0.2)) { scroller.scrollTo(now, anchor: .center) }
             }
             .simultaneousGesture(forkSwipe)
@@ -1809,8 +1829,13 @@ struct GameScreen: View {
         session.step(by: delta)
     }
 
+    /// A tap on a cell of the record strip. The strip holds still for it (see `isTappingStrip`);
+    /// the flag is raised only when the cursor is actually going to move, so a tap on the cell
+    /// already on the cursor — which changes nothing — cannot leave it raised for the next arrow.
     private func walk(to cursor: Int) {
         selected = nil
+        guard session.canBrowse, cursor != session.cursor else { return }
+        isTappingStrip = true
         session.step(by: cursor - session.cursor)
     }
 

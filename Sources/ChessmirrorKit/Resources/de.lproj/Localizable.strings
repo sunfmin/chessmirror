@@ -448,6 +448,7 @@
 "slips.hint" = "Dorthin gehen und den Zug neu spielen";
 "slips.here" = "%d falsche Stellungen";
 "slips.wrong" = "%d falsche Züge";
+"wrong.stood" = "Der gespielte Fehlzug";
 "library.wrong" = "%d falsch";
 "record.now" = "Jetzt";
 

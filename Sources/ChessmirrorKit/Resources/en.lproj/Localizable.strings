@@ -494,6 +494,7 @@
 "slips.hint" = "Go there and play it again";
 "slips.here" = "%d positions you got wrong";
 "slips.wrong" = "%d wrong moves";
+"wrong.stood" = "The wrong move that was played";
 "library.wrong" = "%d wrong";
 "record.now" = "Now";
 

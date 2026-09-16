@@ -449,6 +449,7 @@
 "slips.hint" = "Ir até lá e jogar de novo";
 "slips.here" = "%d posições erradas";
 "slips.wrong" = "%d lances errados";
+"wrong.stood" = "O lance errado que foi jogado";
 "library.wrong" = "%d erros";
 "record.now" = "Agora";
 
