@@ -85,7 +85,8 @@ import Testing
     for _ in 0..<2 {
         session.play(try #require(start.state.move(matching: "f2f3")))
         await session.waitForJudgement()
-        #expect(session.game == start)
+        // A refusal leaves the moves alone; what it writes down is the 试招 itself (docs/adr/0037).
+        #expect(session.game.uciMoves == start.uciMoves)
         #expect(session.refused?.san == "f3")
     }
     #expect(session.pendingAttempts.count == 2)
@@ -212,7 +213,7 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
     await session.waitForJudgement()
     #expect(!session.isWeighing)
     if enabled && score < 0 {
-        #expect(session.game == start)
+        #expect(session.game.uciMoves == start.uciMoves)
         #expect(session.refused?.san == "e4")
         #expect(engine.budgets.allSatisfy { $0 == PositionSearches.budget })
     } else {
@@ -287,7 +288,7 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     #expect(session.isPractising == hidden)
     #expect(session.hasTillingFeedback)
     #expect(session.preferredIntercept == 37)
-    #expect(session.game == game)
+    #expect(session.game.uciMoves == game.uciMoves)
     #expect(session.thinkingTime == .fixed(seconds: 3))
     let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -375,7 +376,7 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
     await session.waitForJudgement()
-    #expect(session.game == game)
+    #expect(session.game.uciMoves == game.uciMoves)
     #expect(session.game.uciMoves.isEmpty)
     #expect(session.refused == nil)
     #expect(!session.pgn.text.contains("%tried"))
@@ -423,7 +424,7 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     await session.waitForJudgement()
     #expect(!session.isWeighing)
     #expect(session.refused?.san == "f3")
-    #expect(session.game == game)
+    #expect(session.game.uciMoves == game.uciMoves)
     #expect(engine.budgets.last == PositionSearches.budget)
     #expect(engine.budgets.count == 2)
 }
@@ -443,7 +444,7 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     session.jumpToLatest()
     #expect(session.hintLayer == 3)
     #expect(session.relaxedIntercept == 20)
-    #expect(session.game == game)
+    #expect(session.game.uciMoves == game.uciMoves)
 }
 
 @MainActor
@@ -464,9 +465,9 @@ func tillingToggleIsIndependentOfAdviceAndRemembersItsThreshold(_ hidden: Bool) 
     await session.waitForJudgement()
     #expect(!session.isWeighing)
     #expect(session.refused?.san == "d4")
-    #expect(session.game == game)
+    #expect(session.game.uciMoves == game.uciMoves)
     session.revealTillingMove()
-    #expect(session.game == game, "Reveal requires all three explicit hint requests")
+    #expect(session.game.uciMoves == game.uciMoves, "Reveal requires all three explicit hint requests")
     for _ in 0..<3 { session.requestHint() }
     session.revealTillingMove()
     await session.waitForJudgement()
@@ -596,7 +597,7 @@ func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock(_ line:
 
     await session.waitForJudgement()
     #expect(!session.isWeighing, "Stockfish must finish judging within 30 seconds")
-    #expect(session.game == game, "the rejected move must restore the entire game")
+    #expect(session.game.uciMoves == game.uciMoves, "the rejected move must restore the entire game")
     #expect(try #require(session.refused).san == "g4")
     #expect(session.refused!.drop >= 10)
 
@@ -629,8 +630,44 @@ func interceptionSettingSurvivesReopeningWithoutChangingTheOpponentClock(_ line:
     session.play(try #require(game.state.move(matching: "e2e4")))
     #expect(session.game != game)
     session.suspend()
-    #expect(session.game == game)
+    #expect(session.game.uciMoves == game.uciMoves)
     #expect(!session.isWeighing)
     await Task.yield()
-    #expect(session.game == game)
+    #expect(session.game.uciMoves == game.uciMoves)
+}
+
+/// Contract: a 试招 that no move absorbed is still there when the game is opened again.
+///
+/// A refused move rides onto the move that finally stands, as a comment on it — so a refusal the
+/// player then walked away from had nowhere to be written and was simply forgotten. Play a wrong
+/// move, look at it, leave: the game came back with no trace of it and nothing to practise.
+@MainActor
+@Test func aRefusalThatNothingAbsorbedSurvivesLeavingTheGame() async throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let afterD4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
+    let engine = ScriptedEngine([], byPosition: [
+        game.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+        ]),
+        afterD4.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
+        ]),
+    ])
+    let session = GameSession.fresh(game, engine: engine)
+    session.setIntercept(JudgementLines.defaultIntercept)
+    await session.waitForPreparedInterception()
+    session.play(try #require(game.state.move(matching: "d2d4")))
+    await session.waitForJudgement()
+    #expect(session.refused?.san == "d4")
+    let written = session.pgn.text
+    session.suspend()
+
+    let reopened = try PGN(parsing: written).game
+    #expect(reopened.plies.isEmpty, "nothing was played")
+    #expect(reopened.pendingTried.map(\.san) == ["d4"], "and the refusal is in the file")
+    #expect(reopened.pendingTried.first?.line == ["e5"], "with the 应招 it earned")
+    #expect(
+        reopened.slips(by: [.white], lines: .standard).map(\.ply) == [1],
+        "so the row under the record has somewhere to take the player"
+    )
 }

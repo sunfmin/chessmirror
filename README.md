@@ -123,7 +123,9 @@ Replace `board.png` with your image. `CHESSFEN_NETS` overrides the source-tree m
 Games are PGN files, with optional photographs alongside them. The append-only practice log is
 separate; schedules and the mistake index are derived. No Slips stores `[%tried SAN -loss%]`, an
 optional `notfound` suffix for assisted attempts, the 应招 after a bar (`[%tried Nf3 -23% | Nxe4
-Nxe4 d5]`), and `[%hint N]`. The `Intercept` tag stores
+Nxe4 d5]`), and `[%hint N]`. A refusal nothing has absorbed yet — the player left before finding a
+move — is written at the end of the movetext under `[%pending …]`, and moves onto the move that
+takes it when one is played. The `Intercept` tag stores
 the game's threshold. Import review stores local depth in `ReviewDepth` and ordering provenance
 in `ReviewSift`. `TrackedSide` identifies the imported side included in the personal mistake book
 without replacing the PGN's `White` and `Black` player names.
@@ -138,6 +140,7 @@ without replacing the PGN's `White` and `Black` player names.
 - [Daily practice](docs/adr/0032-the-daily-is-one-queue-and-cannot-be-sharded.md)
 - [A refused move's reply](docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md)
 - [A game's own wrong moves](docs/adr/0036-a-game-lists-its-own-wrong-moves.md)
+- [A refusal nothing absorbed](docs/adr/0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md)
 
 ## Licence
 

@@ -121,7 +121,34 @@ public struct PGN: Hashable, Sendable {
                 for: game.plies,
                 from: game.startingFullmoveNumber,
                 sideToMove: game.startingSideToMove
-            ) + [game.resultToken]
+            ) + pendingComments + [game.resultToken]
+    }
+
+    /// The 试招 at the position the game stands on, when no move has carried them yet.
+    ///
+    /// Before the result token and not after it, which is not a matter of taste: the reader stops
+    /// at the result, so a comment written past it is a comment nothing will ever read. `%pending`
+    /// rather than `%tried` because the two mean different positions — a `%tried` rides on a move
+    /// and belongs to the position *before* it, and one of these belongs to the position the
+    /// movetext ends on (docs/adr/0037).
+    private var pendingComments: [String] {
+        guard !game.pendingTried.isEmpty else { return [] }
+        let body = game.pendingTried.map { Self.attempt($0, named: "pending") }.joined(separator: " ")
+        return ["{\(body)}"]
+    }
+
+    /// One refused move, as a token — a 试招 or the 试招 at the end of the movetext, which differ
+    /// in the name and in nothing else.
+    private static func attempt(_ attempt: Game.Ply.Tried, named name: String) -> String {
+        var body = "\(attempt.san) \(percent(attempt.drop))"
+        if attempt.notFound { body += " notfound" }
+        // The 应招 follows a bar (docs/adr/0034). A bar and not a word, because what comes after it
+        // is a line of moves and a token of its own would need a second delimiter inside a comment
+        // that already ends at the first `]`.
+        if !attempt.line.isEmpty {
+            body += " | " + attempt.line.joined(separator: " ")
+        }
+        return "[%\(name) \(body)]"
     }
 
     /// One line of moves, with its Variations in brackets after the moves they replace —
@@ -162,15 +189,7 @@ public struct PGN: Hashable, Sendable {
             // they were played, because a reader that only knows `[%eval]` skips them the same
             // way it already skips everything else in a comment.
             for attempt in ply.tried {
-                var body = "\(attempt.san) \(Self.percent(attempt.drop))"
-                if attempt.notFound { body += " notfound" }
-                // The 应招 follows a bar (docs/adr/0034). A bar and not a word, because what
-                // comes after it is a line of moves and a token of its own would need a second
-                // delimiter inside a comment that already ends at the first `]`.
-                if !attempt.line.isEmpty {
-                    body += " | " + attempt.line.joined(separator: " ")
-                }
-                comment.append("[%tried \(body)]")
+                comment.append(Self.attempt(attempt, named: "tried"))
             }
             if ply.hints > 0 {
                 comment.append("[%hint \(ply.hints)]")
@@ -285,6 +304,10 @@ public struct PGN: Hashable, Sendable {
                 game.setEvaluation(score, atPly: game.plies.count - 1, reviewed: isReviewed)
             case .tried(let attempt):
                 game.addTried(attempt, atPly: game.plies.count - 1)
+            case .pending(let attempt):
+                // At the end of the movetext by construction: these are the refusals at the
+                // position the game stopped on, and the position is the game's own.
+                game.setPendingTried(game.pendingTried + [attempt])
             case .hint(let rungs):
                 game.setHints(rungs, atPly: game.plies.count - 1)
             case .judgement(let judgement):
@@ -322,6 +345,7 @@ private struct Scanner {
         case evaluation(Score)
         case line([String])
         case tried(Game.Ply.Tried)
+        case pending(Game.Ply.Tried)
         case hint(Int)
         case judgement(Game.Ply.Judgement)
         case variationStart
@@ -371,6 +395,7 @@ private struct Scanner {
                 if let score = Self.evaluation(in: comment) { tokens.append(.evaluation(score)) }
                 if let line = Self.line(in: comment) { tokens.append(.line(line)) }
                 tokens.append(contentsOf: Self.tried(in: comment).map { .tried($0) })
+                if let pending = Self.pending(in: comment).first { tokens.append(.pending(pending)) }
                 if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
                 if let judgement = Self.judgement(in: comment) { tokens.append(.judgement(judgement)) }
             case ";":
@@ -409,7 +434,18 @@ private struct Scanner {
     /// position 耕棋 stopped somebody at three times has three of them. The 应招 rides after a bar
     /// in the same token, so the two can never be read apart from each other (docs/adr/0034).
     private static func tried(in comment: String) -> [Game.Ply.Tried] {
-        bodies(of: "tried", in: comment).compactMap { body in
+        attempts(of: "tried", in: comment)
+    }
+
+    /// The 试招 at the position the movetext ends on (docs/adr/0037). The same grammar as a `tried`
+    /// token — one move, what it cost, and the 应招 it earned — under the name that says the
+    /// refusals belong to the position the game stopped at rather than to a move after them.
+    private static func pending(in comment: String) -> [Game.Ply.Tried] {
+        attempts(of: "pending", in: comment)
+    }
+
+    private static func attempts(of name: String, in comment: String) -> [Game.Ply.Tried] {
+        bodies(of: name, in: comment).compactMap { body in
             let halves = body.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
             let parts = halves[0].split(separator: " ")
             guard let san = parts.first,

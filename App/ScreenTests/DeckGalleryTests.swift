@@ -26,7 +26,7 @@ struct DeckGallery {
             #expect(ScreenImage.activate(localized("board.faceToFace"), in: window))
             await ScreenImage.settle()
             #expect(session.isFaceToFace)
-            #expect(session.game == game)
+            #expect(session.game.uciMoves == game.uciMoves)
             #expect(session.controller(for: .white) == .hand)
             #expect(session.controller(for: .black) == .hand)
             let normal = BoardView(pieces: [:], isFaceToFace: session.isFaceToFace)
@@ -107,7 +107,7 @@ struct DeckGallery {
         #expect(rendered.says(localized("till.off")))
         #expect(!rendered.says(localized("screen.opinion")))
         #expect(!rendered.says("练习"))
-        #expect(session.game == game)
+        #expect(session.game.uciMoves == game.uciMoves)
     }
     @Test(arguments: [false, true]) func playerSettingsExpandInPlace(_ engineOpponent: Bool) async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -381,7 +381,7 @@ struct DeckGallery {
         #expect(!rendered.says("提示 1"))
         #expect(rendered.says("\(PieceColour.black.label) · \(localized("game.toPlay"))"))
         #expect(!rendered.says("\(PieceColour.white.label) · \(localized("game.toPlay"))"))
-        #expect(session.game == game)
+        #expect(session.game.uciMoves == game.uciMoves)
     }
     /// Waits for something the session does on its own clock — a judgement, a take-back — which
     /// arrives a search later and, for a refusal, after the beat the board is given to show the
@@ -401,9 +401,12 @@ struct DeckGallery {
             Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3"])
         )
         var played = game
-        // One 试招 and one move that stood, so both sources of a cost are on the list.
+        // One 试招 and one move that stood, so both sources of a cost are on the list — and one
+        // refusal at the end that no move has absorbed, which is the one a player who walks away
+        // from the board leaves behind (docs/adr/0037).
         played.setTried([.init(san: "f3", drop: 24)], atPly: 0)
         played.setJudgement(.init(drop: 14, score: .centipawns(-40), depth: 20), atPly: 2)
+        played.setPendingTried([.init(san: "Qh4", drop: 30)])
         let engine = ScriptedEngine([])
         let session = GameSession.fresh(played, engine: engine)
         defer { session.suspend() }
@@ -411,16 +414,20 @@ struct DeckGallery {
 
         let rendered = await ScreenImage.write("game-slips", interact: { window in
             let words = ScreenImage.words(in: window)
-            // One is owed by the 入列线 (24%), one is only written down (14%).
-            #expect(words.contains { $0.contains(localized("slips.owed", 1)) })
+            // Two are owed by the 入列线 (24% and 30%), one is only written down (14%).
+            #expect(words.contains { $0.contains(localized("slips.owed", 2)) })
             #expect(words.contains { $0.contains(localized("book.cost", 24)) }, "the mark speaks")
             #expect(ScreenImage.activate(localized("slips.next"), in: window))
             await ScreenImage.settle()
             #expect(session.cursor == 2, "下一处 walked the record to the position before the slip")
+            #expect(ScreenImage.activate(localized("slips.next"), in: window))
+            await ScreenImage.settle()
+            #expect(session.cursor == 3, "and again, to the refusal nothing has absorbed")
         }) {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says(localized("slips.owed", 1)))
+        #expect(rendered.says(localized("slips.owed", 2)))
+        #expect(rendered.says("Qh4"), "a refusal the game was left on is on the list too")
         #expect(rendered.says("f3"), "the chip names the move the way the 已退回 strip does")
         #expect(rendered.says("Nf3"))
         #expect(!rendered.says("1. f3"), "compact: a 试招 is a move that never happened")

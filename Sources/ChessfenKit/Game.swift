@@ -138,6 +138,19 @@ public struct Game: Hashable, Sendable {
     /// The position after every ply, recomputed whenever the Game changes.
     public private(set) var state: GameState
 
+    /// The 试招 made at the position this Game now stands on, when nothing has been played there
+    /// to carry them (docs/adr/0037).
+    ///
+    /// A refused move is written as a comment on the move that finally stands, because that is
+    /// what it is: something that happened at this position before this move was found. A player
+    /// who is refused and then walks away has played no such move, and these are the refusals with
+    /// nowhere to go — kept at the end of the movetext until a move stands and takes them.
+    public private(set) var pendingTried: [Ply.Tried] = []
+
+    public mutating func setPendingTried(_ attempts: [Ply.Tried]) {
+        pendingTried = attempts
+    }
+
     /// The one Depth every `Ply.evaluation` in this Game was computed at, or nil for a Game
     /// no Review has been over.
     ///

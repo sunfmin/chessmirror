@@ -30,6 +30,7 @@ struct EngineClock {
         session.setController(.engine, for: .white)
         await session.waitForPreparedInterception()
         #expect(session.game != start)
+        // A refusal leaves the moves alone; what it writes down is the 试招 itself (docs/adr/0037).
         #expect(session.game.uciMoves == ["e2e4"])
         await session.waitForPreparedInterception()
         #expect(engine.positions.filter { $0 == start.state.fen }.count == 1)
@@ -73,7 +74,7 @@ struct EngineClock {
         session.retune()
         await session.waitForPreparedInterception()
         #expect(engine.searchCount == 1)
-        #expect(session.game == start)
+        #expect(session.game.uciMoves == start.uciMoves)
     }
 
     @Test func pausedScreensDoNotStartOrQueueLiveWork() async throws {

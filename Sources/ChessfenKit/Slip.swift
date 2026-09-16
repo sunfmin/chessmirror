@@ -66,9 +66,11 @@ extension Game {
     /// which is not the same question as the 错题本's, where scores from different games are
     /// compared and so must come from one uniform pass (docs/adr/0016).
     public func slips(by mine: Set<PieceColour>, lines: JudgementLines) -> [Slip] {
-        guard !mine.isEmpty, !plies.isEmpty, var walked = rewound(to: 0) else { return [] }
+        guard !mine.isEmpty, var walked = rewound(to: 0) else { return [] }
         var found: [Slip] = []
-        for ply in 1...plies.count where plies.indices.contains(ply - 1) {
+        // `max(1, …)` because a game with no moves can still have refusals at the position it
+        // stopped on, and `1...0` is a range that traps rather than an empty one.
+        for ply in 1...max(1, plies.count) where plies.indices.contains(ply - 1) {
             let fen = walked.state.fen
             guard walked.apply(uci: plies[ply - 1].uci) else { break }
             let mover = mover(ofPly: ply)
@@ -99,6 +101,31 @@ extension Game {
                 )
             )
         }
+        // And the refusals nothing has absorbed, which sit at the position the game ends on. Their
+        // Ply is the one past the last move, so the position they are walked to is the end of the
+        // game — and when a move is played there and takes them, the same Ply is that move's
+        // (docs/adr/0037).
+        if let worst = pendingTried.worst(lines),
+            let key = PositionKey(fen: walked.state.fen) {
+            found.append(
+                Slip(
+                    ply: plies.count + 1,
+                    position: key,
+                    played: worst.played,
+                    wanted: reviewLine(atPly: plies.count).first,
+                    drop: worst.drop,
+                    wasTried: true
+                )
+            )
+        }
         return found
+    }
+}
+
+extension Array where Element == Game.Ply.Tried {
+    /// The worst of these that is worth writing down at all, which is the one to show.
+    func worst(_ lines: JudgementLines) -> (played: String, drop: Double)? {
+        compactMap { lines.records($0.drop) ? ($0.san, $0.drop) : nil }
+            .max { $0.1 < $1.1 }
     }
 }

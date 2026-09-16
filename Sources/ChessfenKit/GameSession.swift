@@ -738,7 +738,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         helpPosition = fen
         let pending = helpByPosition[fen]
-        triedHere = pending?.tried ?? []
+        // At the end of the game the refusals are the file's, which is how a refusal the player
+        // walked away from is still on the board when they come back (docs/adr/0037).
+        triedHere = pending?.tried ?? (cursor == game.plies.count ? game.pendingTried : [])
         hintLayer = pending?.layer ?? 0
         relaxedIntercept = pending?.relaxed
         refused = pending?.refusal
@@ -941,6 +943,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if !triedHere.isEmpty || hintLayer > 0 {
             game.setTried(triedHere, hints: hintLayer, atPly: ply)
         }
+        // The move that stands has taken the refusals with it, and the position they were made at
+        // is behind the game now.
+        game.setPendingTried([])
         triedHere = []
         hintLayer = 0
         relaxedIntercept = nil
@@ -1292,10 +1297,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         refused = Refusal(san: san, drop: drop)
         game = gameBefore
         cursor = cursorBefore ?? game.plies.count
+        // Written down here rather than when a move finally stands, because a player who is
+        // refused and then walks away has played no such move — and the refusal used to go with
+        // them: leaving the game forgot it, and opening it again showed nothing to practise
+        // (docs/adr/0037). No retune: the engine is not owed a reply to a move that came back.
+        game.setPendingTried(triedHere)
+        save()
         Sounds.current.play(.refused)
         if findsPunishment { punishment = Punishment(position: played, engine: engine) }
-        // No save and no retune: nothing happened to the game, and the engine is not owed a
-        // reply to a move that was taken back.
     }
 
     /// The one way a move lands: the write, the cursor, the noise, the save, the retune. The
