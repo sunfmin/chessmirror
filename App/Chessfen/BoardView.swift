@@ -174,6 +174,12 @@ struct BoardView: View {
             )
         }
         .aspectRatio(1, contentMode: .fit)
+        // A board nobody can play on does not take taps either, because it is rarely alone: the
+        // small ones are the *names* of positions inside buttons — a 错题 tile, a 错题本 row — and a
+        // gesture here is one the button behind it never sees. Guarding only inside `onEnded` ate
+        // the tap and did nothing with it, so pressing the picture of the position was dead while
+        // pressing the figures printed with it worked.
+        .allowsHitTesting(isInteractive)
         .accessibilityLabel(localized("board"))
         .onAppear { tracked.settle(to: pieces) }
         .onChange(of: pieces) { _, placement in

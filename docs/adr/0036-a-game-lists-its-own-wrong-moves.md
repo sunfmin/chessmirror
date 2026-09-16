@@ -22,9 +22,9 @@ worth stopping at, and `×N` for how many wrong moves were tried there.
   the file, the alarm colour for what the 入列线 says is still owed. It is an overlay, not a row, so
   a card with a mistake in it is exactly as tall as one without — the curve behind the strip is
   drawn against those cards being even.
-- **A row under the strip lists them** — 「3 处要重练」 and a chip per 错招 — and pressing one walks
-  the board to its position. 下一处 is the whole of the reading: it takes the eye to the next one
-  whether or not the player knows which one they are looking for.
+- **A row under the strip lists them** — 「3 处要重练」 and a chip per 错招 — and pressing one takes
+  the board straight to its position. 下一处 is the whole of the reading: it takes the eye to the
+  next one whether or not the player knows which one they are looking for.
 - **The position is the one before the move.** Reading a game wants what was played — which is why
   an encounter row in the 错题本 opens on the position *after* it, with the blunder on the board. A
   错招 is there to be tried again, so it lands on the position where the move has to be found, which
@@ -61,9 +61,20 @@ history is a question about that game.
 - **One row, and it is the record row's twin**: full width, square corners, an alarm bar down its
   leading edge and a hairline at each end. It was a rounded card inset from the page, which made it
   a different kind of thing from every row around it; the words 「本局 N 处错题」 and 「已退回」 went
-  with it, to VoiceOver. The tile shows the position's board (forty points — at twenty-eight a
-  chessboard is a fingernail), the scoresheet number the cell above carries, the cost at the weight
-  its line gives it, and `×N`.
+  with it, to VoiceOver. The tile shows the position's board (sixty-four points, the size the
+  错题本 gives the same job — at twenty-eight a chessboard is a fingernail), and **under it**, as a
+  caption on the picture it belongs to, the scoresheet number the cell above carries, `×N`, and the
+  cost at the weight its line gives it. Every tile carries a number, the last one included: the
+  错招 at the position a game stops on is at the Ply one past the last move (ADR 0037), which is the
+  Ply a move played there would take, and a word in the middle of a row of figures was a tile of a
+  different kind. VoiceOver still says 「现在」 for it, because spoken, in a sentence, that is what
+  the position a game stands on is. Beside the board those figures made every tile half as wide
+  again as the thing worth looking at; under it a tile is its board, and the row holds nearly twice
+  as many of them before anybody has to scroll.
+- **The picture is the button.** A board that cannot be played on takes no taps of its own
+  (`BoardView.isInteractive`): these small ones sit inside buttons, and a gesture on the board is
+  one the button never sees — pressing the position was dead while pressing the figures beside it
+  worked, which is the opposite of what a tile named by its picture promises.
 - The registers share one rail and one frame, and the lower one is the upper one **at the position
   on the board**: walking to a 错题 slides its 试招 out, and a position where nothing was refused
   has none. The 惩罚 exercise is the last register — the only thing in the row that asks something

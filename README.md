@@ -27,9 +27,10 @@ through your own iCloud Drive.
   Judgement, advantage, tactics and opponent replies share the result; device caches survive relaunch.
   Turning interception off disables rollback, not this assessment gate. Search uses at most two
   threads by default, and opening the game never launches an automatic historical scoring pass.
-- A game lists its own 错题 — one entry per position, described by a small board and the move
-  number, marked across the foot of that position on the record strip in two weights (written down,
-  and still owed), and walked to by a tile or by 下一处. Under the positions, the 试招 tried where
+- A game lists its own 错题 — one entry per position, described by a small board with the move
+  number and the cost captioned under it, marked across the foot of that position on the record
+  strip in two weights (written down, and still owed), and reached by pressing the tile — the board
+  itself included — or by 下一处. Under the positions, the 试招 tried where
   the eye is standing, and then the opponent-reply exercise when it is on: one full-width row, the
   record row's twin, and nothing rounded. The library row says how many a game holds.
 - The advantage bar remains visible. Refused attempts appear as a compact horizontal strip

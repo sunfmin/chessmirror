@@ -1100,13 +1100,18 @@ struct GameScreen: View {
     /// player still owes it and held back when it is only written down (docs/adr/0027), and `×N` is
     /// the fact that one position takes N wrong moves — which is why the entry is not named after
     /// one of them.
+    ///
+    /// **The figures sit under the board, not beside it.** They are a caption on the picture they
+    /// belong to, and a tile no wider than its own board is one the row fits nearly twice as many
+    /// of — which is the errand: seeing the whole game's worth of wrong places at once, and
+    /// pressing the one you mean.
     private func slipTile(_ slip: Slip) -> some View {
         let on = session.cursor == slip.positionPly
         let owed = slip.isWorthDrilling(session.lines)
         return Button {
             jumpTo(slip: slip)
         } label: {
-            HStack(spacing: 6) {
+            VStack(spacing: 3) {
                 // Sixty-four points, which is the size the 错题本 already uses for the same job:
                 // the board is the name of a position, and a name has to be legible.
                 thumbnail(slip.position, side: 64)
@@ -1117,24 +1122,17 @@ struct GameScreen: View {
                                 lineWidth: on ? 1.5 : 0.5
                             )
                     )
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 4) {
-                        Text(slipNumber(slip))
-                            .font(.caption2.monospacedDigit().weight(.medium))
-                            .foregroundStyle(Palette.ink)
-                        if slip.wrong.count > 1 {
-                            Text("×\(slip.wrong.count)")
-                                .font(.caption2.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(Palette.alarm)
-                        }
-                    }
-                    Text(String(format: "−%.0f%%", slip.drop))
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
-                }
-                .frame(minWidth: 42, alignment: .leading)
+                // One Text and not three in a row, because the line has to shrink as a line:
+                // laid out as separate views the longest of them — 「现在 ×2 −30%」 — spent the
+                // width on the first two figures and truncated the cost, which is the one figure
+                // that says whether to stop. Squeezed rather than wrapped or cut: none of the
+                // three parts is decoration.
+                slipCaption(slip, owed: owed)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                    .frame(width: 64)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 2)
             .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
@@ -1144,6 +1142,25 @@ struct GameScreen: View {
             "\(slipSpoken(slip))\(localized("clause.separator"))\(localized("book.cost", Int(slip.drop.rounded())))\(slip.wrong.count > 1 ? localized("clause.separator") + localized("slips.wrong", slip.wrong.count) : "")"
         )
         .accessibilityHint(localized("slips.hint"))
+    }
+
+    /// The caption under a 错题's board: where in the game, how many wrong moves were tried there,
+    /// and what the worst of them cost — as one Text, so it is one thing that shrinks to the
+    /// board's width rather than three that fight over it.
+    private func slipCaption(_ slip: Slip, owed: Bool) -> Text {
+        var line = Text(slipNumber(slip))
+            .font(.caption2.monospacedDigit().weight(.medium))
+            .foregroundStyle(Palette.ink)
+        if slip.wrong.count > 1 {
+            line = line
+                + Text(" ×\(slip.wrong.count)")
+                .font(.caption2.monospacedDigit().weight(.semibold))
+                .foregroundStyle(Palette.alarm)
+        }
+        return line
+            + Text(" " + String(format: "−%.0f%%", slip.drop))
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
     }
 
     /// The 试招 tried at the position on the board, newest first, under the positions they belong
@@ -1172,11 +1189,15 @@ struct GameScreen: View {
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 
-    /// A position in the words a scoresheet gives it: the move number and whose move it is —
-    /// the same figure the cell above carries, so the eye can match a tile to the strip — or
-    /// 「现在」 for the position the game stops on, which is past the last move and has no number.
+    /// A position in the words a scoresheet gives it: the move number and whose move it is — the
+    /// same figure the cell above carries, so the eye can match a tile to the strip.
+    ///
+    /// **Including the position the game stops on**, which said 「现在」 and now says the number of
+    /// the move nobody has played there yet. It has one: a 错招 at the end of a game sits at the Ply
+    /// one past the last move (docs/adr/0037), and when a move is finally played there that is the
+    /// Ply it takes. Every tile in the row is then the same kind of label — 「1.」「2…」「3.」 — which
+    /// is what a row of tiles wants, rather than one of them being a word in the middle of figures.
     private func slipNumber(_ slip: Slip) -> String {
-        guard slip.ply <= session.game.plies.count else { return localized("record.now") }
         let side = session.game.mover(ofPly: slip.ply) == .white ? "." : "…"
         return "\(session.game.moveNumber(ofPly: slip.ply))\(side)"
     }
