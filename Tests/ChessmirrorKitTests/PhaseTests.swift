@@ -1,6 +1,7 @@
 @testable import ChessmirrorKit
 import Foundation
 import Testing
+import ChessmirrorKitTesting
 
 /// Contract: the session is doing one thing at a time, and says which. What the player's hands
 /// have to wait for, whether the record may be browsed, and whose clock it is are all read off
@@ -86,7 +87,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     defer { session.suspend() }
 
     session.play(try #require(game.state.move(matching: "e2e4")))
-    await Task.yield()
+    await session.waitForJudgement()
 
     #expect(session.phase == .thinking(.own))
     #expect(!session.isOccupied)

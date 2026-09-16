@@ -4,6 +4,7 @@ import SwiftUI
 import Testing
 
 @testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// 日课 on the first screen: how much is left today, and the one verb it offers
 /// (docs/adr/0030, docs/adr/0032).

@@ -452,7 +452,6 @@
 "screen.stopFinder" = "Stop finding";
 "screen.find" = "Find a tactic";
 "screen.finder" = "Tactic finder";
-"screen.finderStopped" = "Finder stopped. Tap Find a tactic to check tactics and mates again.";
 "screen.finderIdle" = "Not searched yet. Tap Find a tactic to check tactics and mates.";
 "screen.hideArrows" = "Hide arrows";
 "screen.showArrows" = "Draw on board";

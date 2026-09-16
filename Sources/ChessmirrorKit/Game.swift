@@ -56,12 +56,12 @@ public struct Game: Hashable, Sendable {
             public let drop: Double
             public let score: Score
             public let depth: Int
-            /// The 拦截线 the move stood under, or nil for a move weighed with 正着 off.
+            /// The 拦截线 the move stood under, or nil for a move weighed with 把关 off.
             ///
-            /// A move is weighed whenever the badge under the board is on, not only under 正着,
-            /// and the two are told apart here: 正着数 and 连正 count the moves that *stood* —
-            /// that could have been taken back and were not — and a move nothing would have
-            /// refused is not one of those (CONTEXT.md, 正着数).
+            /// Every move that lands is weighed, not only under 把关, and the two are told apart
+            /// here: 连正 counts the moves that *stood* — that could have been taken back and
+            /// were not — and a move nothing would have refused is not one of those
+            /// (CONTEXT.md, 连正).
             public let intercept: Double?
             /// 最佳: the move was the engine's own first choice, by the search that judged it
             /// (CONTEXT.md). Written down, because it is a fact about which move it was and not

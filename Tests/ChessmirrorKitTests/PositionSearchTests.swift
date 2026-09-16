@@ -2,6 +2,7 @@
 import Foundation
 import Synchronization
 import Testing
+import ChessmirrorKitTesting
 
 /// Concurrent consumers → one search → shallow result → disk round trip → no new work.
 @Test func positionSearchSharesAndPersistsTheCompletedResult() async throws {

@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 
 @testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// The game screen, photographed.
 ///
@@ -874,7 +875,6 @@ struct GameScreenScreenshots {
             ]),
         ])
         let session = GameSession.fresh(played, engine: engine)
-        session.showPositionFeedback()
         return (session, engine)
     }
 

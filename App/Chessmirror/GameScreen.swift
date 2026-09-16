@@ -38,12 +38,6 @@ struct GameScreen: View {
     @State private var hasGuessedUnfold = false
     /// Whether the deck has been dealt yet. Once, for the same reason.
     @State private var hasDealt = false
-    /// Whether it was arriving at 杀 or 战术 that turned the finder on, rather than a person
-    /// pressing its switch. Only what a swipe turned on does a swipe turn off again.
-    @State private var finderIsOurs = false
-    /// Whether the finder is off because somebody pressed it off, rather than because nobody has
-    /// pressed it on. The card says different things about the two.
-    @State private var finderClosedByHand = false
     /// Whether a thumb is on 让引擎走 right now. The engine is thinking for exactly as long as it is —
     /// which is why this is read off the session rather than kept here as well. A screen holding
     /// its own copy of "a finger is down" is a screen that can be left holding it: a press that
@@ -249,7 +243,6 @@ struct GameScreen: View {
             // wants is not the one that just ran. Retuned before the deal rather than after it, or
             // the Stint the deal just started would be cancelled a line later.
             session.attach(engine: engine.service, library: library)
-            session.showPositionFeedback()
             session.retune()
             deal()
         }
@@ -1117,29 +1110,19 @@ struct GameScreen: View {
         session.jump(toPly: slip.positionPly)
     }
 
-    /// History feedback is available in practice too. Unknown positions remain unknown;
-    /// complete live judgements and reviews supply the same curve.
-    private var canShowCurve: Bool {
-        (0...session.game.plies.count).filter { session.historyScore(atPly: $0) != nil }.count > 1
-    }
-
     /// The curve as a ground. It marks no cursor of its own — the card on the cursor is already
-    /// filled, and a second mark is a second answer.
-    private var curveGround: some View {
-        EvalCurve(
-            plies: session.game.plies.count,
-            score: { session.historyScore(atPly: $0) }
-        )
+    /// filled, and a second mark is a second answer. History feedback is available in practice
+    /// too: unknown positions remain unknown, and judgements and reviews supply the same curve.
+    private func curveGround(_ curve: ScoreCurve) -> some View {
+        EvalCurve(curve: curve)
         .accessibilityLabel(localized("record.curve"))
-        .accessibilityValue(localized("record.ply", (0...session.game.plies.count).last {
-            session.historyScore(atPly: $0) != nil
-        } ?? 0))
+        .accessibilityValue(localized("record.ply", curve.lastKnownPly ?? 0))
     }
 
     private var moveStrip: some View {
         // Walked once for the whole strip: the marks are a lookup per half, and the walk behind
         // them is a rules probe per Ply.
-        let slips = slipByPosition
+        let slips = session.slipByPosition
         // Whether the record has a line of costs to draw at all: none when nothing in the game
         // has been measured, so a game nobody judged is the strip exactly as it was.
         let costs = session.game.hasCosts
@@ -1163,7 +1146,8 @@ struct GameScreen: View {
                 }
                 .padding(.horizontal, 2)
                 .background {
-                    if canShowCurve { curveGround }
+                    let curve = session.curve
+                    if curve.isDrawable { curveGround(curve) }
                 }
             }
             .scrollIndicators(.hidden)
@@ -1178,7 +1162,7 @@ struct GameScreen: View {
     /// The position the game began in, at the head of its own record. It is a place in the game
     /// like any other, and without it there is no way back to it in one tap.
     private var openingCell: some View {
-        let slip = slipByPosition[0]
+        let slip = session.slipByPosition[0]
         let on = session.cursor == 0
         // One name for one place. It used to say 「从这里开始走」 while the game had no moves in it,
         // which is an instruction standing where every other cell in the strip names a place.
@@ -1283,16 +1267,6 @@ struct GameScreen: View {
             .foregroundStyle(colour)
     }
 
-    /// The 错招 by the *position* they were made at, which is what the record strip's cells are:
-    /// a cell's cursor is the position it takes the board to, so a mistake at Ply `n` is marked on
-    /// the cell at `n - 1` (docs/adr/0036). Zero is the opening cell.
-    private var slipByPosition: [Int: Slip] {
-        Dictionary(
-            session.slips.map { ($0.positionPly, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-    }
-
     /// 战术 — the shot, named in the verbs a player declares in.
     ///
     /// **The switch did become the card.** 战术发现器 has a press of its own on the card, but
@@ -1318,21 +1292,18 @@ struct GameScreen: View {
                 if let tactic = session.tactic {
                     CardMoves(moves: tactic.line.enumerated().map { index, san in
                         CardMoves.Move(step: index + 1, san: san,
-                            isYours: tacticLineArrows.first { $0.step == index + 1 }?.isYours ?? index.isMultiple(of: 2))
+                            isYours: session.tacticArrows.first { $0.step == index + 1 }?.isYours ?? index.isMultiple(of: 2))
                     })
                     if tactic.line.count > MateNews.arrowLimit {
                         CardNote(localized("screen.arrowLimit", MateNews.arrowLimit))
                     }
                 }
             } else {
-                // Two silences, and they are not the same silence. The deck has to open on one of
-                // its two cards and both of them are questions for the engine, so the card in
-                // front is dealt at rest and nobody has asked anything yet. Saying 「你自己关掉的」
-                // there accuses the reader of an act they did not commit, and the next thing they
-                // look for is the switch they are told they threw.
-                Text(
-                    localized(finderClosedByHand ? "screen.finderStopped" : "screen.finderIdle")
-                )
+                // The deck has to open on one of its two cards and both of them are questions for
+                // the engine, so the card in front is dealt at rest and nobody has asked anything
+                // yet. It used to be able to say 「你自己关掉的」 as well, off a flag nothing ever
+                // set: a silence with one cause has one sentence (docs/adr/0040).
+                Text(localized("screen.finderIdle"))
                     .font(.caption)
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1478,7 +1449,7 @@ struct GameScreen: View {
             VStack(alignment: .leading, spacing: 8) {
                 body()
                 if revealed.contains(kind), kind == card, wantsAdvice(kind) {
-                    if let progress = standingProgress {
+                    if let progress = session.standingProgress {
                         HStack(spacing: 6) {
                             if isCardSearching(kind) { ProgressView().controlSize(.mini) }
                             Text(localized(isCardSearching(kind) ? "till.judging" : "search.reached"))
@@ -1552,8 +1523,8 @@ struct GameScreen: View {
         switch was {
         case .mate:
             showsMateLine = false
-            if !wantsFinder(now) { closeFinder() }
-        case .tactics: if !wantsFinder(now) { closeFinder() }
+            if !wantsFinder(now) { session.leaveFinder() }
+        case .tactics: if !wantsFinder(now) { session.leaveFinder() }
         }
     }
 
@@ -1561,8 +1532,8 @@ struct GameScreen: View {
         switch now {
         case .mate:
             showsMateLine = revealed.contains(.mate)
-            openFinder()
-        case .tactics: openFinder()
+            session.arriveAtFinder()
+        case .tactics: session.arriveAtFinder()
         }
         if wantsAdvice(now) { session.adviseForCard() }
     }
@@ -1574,45 +1545,15 @@ struct GameScreen: View {
         }
     }
 
-    /// Depth already paid for, once the Stint has stopped. The card still names it so a cache
-    /// hit does not look like the engine never ran.
-    private var standingProgress: GameSession.SearchProgress? {
-        if let progress = session.searchProgress, progress.depth > 0 { return progress }
-        guard let analysis = session.analysis, analysis.depth > 0 else { return nil }
-        return GameSession.SearchProgress(
-            depth: analysis.depth,
-            selectiveDepth: analysis.selectiveDepth,
-            milliseconds: analysis.timeMilliseconds
-        )
-    }
-
     /// Whether this card currently has a search in flight, so the frame can say 正在算 and the
     /// depth. Neighbouring pages stay alive in a paged TabView; only the card in front speaks.
     private func isCardSearching(_ kind: Card) -> Bool {
-        wantsAdvice(kind) && session.thinking == nil && session.isSearching
-            && !session.isAdviceSpent
+        wantsAdvice(kind) && session.isAdvising
     }
-
-
 
     /// The two cards the finder answers for: the shot, and the mate that falls out of the same
     /// probe. Swiping between them does not stop and restart it.
     private func wantsFinder(_ kind: Card) -> Bool { kind == .mate || kind == .tactics }
-
-    private func openFinder() {
-        guard !session.isFindingTactics else { return }
-        finderIsOurs = true
-        session.setFindingTactics(true)
-    }
-
-    /// Puts back only what the swipe turned on. A switch somebody flipped by hand is theirs and
-    /// stays as they left it — including on the strip, where it goes on colouring the mate's dot
-    /// for the rest of the game.
-    private func closeFinder() {
-        guard finderIsOurs else { return }
-        finderIsOurs = false
-        session.setFindingTactics(false)
-    }
 
     // ------------------------------------------------------------------ 杀
 
@@ -1690,22 +1631,6 @@ struct GameScreen: View {
     private var mateArrows: [MoveArrow] {
         guard showsMateLine, card == .mate, let news = session.mateNews else { return [] }
         return news.arrows
-    }
-
-    /// Replay only a copy: numbered arrows must follow legal moves without advancing the game.
-    private var tacticLineArrows: [MoveArrow] {
-        guard let tactic = session.tactic else { return [] }
-        var position = viewed
-        var arrows: [MoveArrow] = []
-        for (index, san) in tactic.line.prefix(MateNews.arrowLimit).enumerated() {
-            guard let move = SAN.move(for: san, in: position.state) else { break }
-            let mover = position.state.sideToMove
-            arrows.append(MoveArrow(step: index + 1,
-                move: MoveSquares(from: move.from, to: move.to),
-                isYours: session.controller(for: mover) == .hand, isPlayed: false))
-            guard position.apply(move) else { break }
-        }
-        return arrows
     }
 
     // ------------------------------------------------------------------ the bar at the top
@@ -1826,7 +1751,7 @@ struct GameScreen: View {
             // just asked for, and the board can only carry one at a time.
             plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 }
                 ?? (card == .tactics && revealed.contains(.tactics) && showsTacticLine && !session.isTilling
-                    ? tacticLineArrows : mateArrows),
+                    ? session.tacticArrows : mateArrows),
             isInteractive: session.isHandTurn,
             onTap: tap
         )

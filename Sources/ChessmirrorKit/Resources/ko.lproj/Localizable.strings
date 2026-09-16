@@ -382,7 +382,6 @@
 "screen.stopFinder" = "탐색 중지";
 "screen.find" = "전술 찾기";
 "screen.finder" = "전술 탐색기";
-"screen.finderStopped" = "탐색이 중지되었습니다. 전술 찾기로 전술과 메이트를 다시 확인하세요.";
 "screen.finderIdle" = "아직 분석하지 않았습니다. 전술 찾기로 전술과 메이트를 확인하세요.";
 "screen.hideArrows" = "화살표 숨기기";
 "screen.showArrows" = "체스판에 표시";

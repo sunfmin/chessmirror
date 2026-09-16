@@ -48,6 +48,13 @@ what it cost. The answer to 「这一局我哪儿走错了」, and what a game's
 walks to. Not a 错题: a 错题 is the position, and this is one game's account of reaching it.
 _Avoid_: 错误, 失误, 招法
 
+**分数曲线 (Score curve)**:
+The record's Scores as one shape: a level per position of a game, high where White is doing well,
+nil where nobody has scored it, drawn under the record strip once two positions are known
+(`ScoreCurve`). It is read off the record — the 细判 written on each move first, then the Review —
+and never off the live search. One Score is a number, not a shape.
+_Avoid_: 走势, 评估曲线
+
 **遭遇 (Occurrence)**:
 One time the player fell for a 错题 — when, in which game, which move they played, what it
 cost, where it came from. A 错题 owns a list of them.
@@ -122,6 +129,14 @@ _Avoid_: 好棋, 正确
 A move the player played and 把关 took back. It never happened in the game, and it is exactly
 what the 错题 is made of.
 _Avoid_: 变着, 悔棋
+
+**原局 (Standpoint)**:
+The game as it was being read when a move was played, and where the eye stood in it, kept while
+the move is weighed. What is put back when the move does not stand — refused, or nobody finished
+weighing it, or the player left mid-weighing — whole, with the eye where it was. The whole game,
+not only the position the move was played from: a move played from an earlier position must not
+swallow the line being read.
+_Avoid_: 原位, 之前的局面, snapshot
 
 **应招 (Reply)**:
 The Line a 试招 earned — the opponent's strongest answer and the few moves after it. Worked out

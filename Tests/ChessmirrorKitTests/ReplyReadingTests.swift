@@ -1,6 +1,7 @@
 @testable import ChessmirrorKit
 import Foundation
 import Testing
+import ChessmirrorKitTesting
 
 /// Contract: reading a 应招 is one value the session holds — which 试招 is open, the line it
 /// makes, and whether the answer is still coming — opened by asking, filled in when the answer

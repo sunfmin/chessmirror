@@ -382,7 +382,6 @@
 "screen.stopFinder" = "探索を停止";
 "screen.find" = "戦術を探す";
 "screen.finder" = "戦術探索";
-"screen.finderStopped" = "探索を停止しました。戦術を探すと戦術とメイトを再確認します。";
 "screen.finderIdle" = "未探索です。戦術を探すと戦術とメイトを確認します。";
 "screen.hideArrows" = "矢印を隠す";
 "screen.showArrows" = "盤上に表示";

@@ -1,6 +1,7 @@
 @testable import ChessmirrorKit
 import Foundation
 import Testing
+import ChessmirrorKitTesting
 
 /// Contract: what the strip under the board says is one sentence chosen by one priority, and the
 /// session chooses it from facts it already holds (`Standing`). Every voice is reachable here
@@ -83,7 +84,6 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
     session.orientation = .blackAtBottom
-    session.showPositionFeedback()
     session.play(try #require(start.state.move(matching: "e2e4")))
     #expect(session.game.uciMoves == ["e2e4"])
     await session.waitForJudgement()

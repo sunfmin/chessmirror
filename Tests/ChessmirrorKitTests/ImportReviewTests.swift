@@ -1,6 +1,7 @@
 @testable import ChessmirrorKit
 import Foundation
 import Testing
+import ChessmirrorKitTesting
 
 /// Contract: finding opportunities cannot displace an engine-controlled turn, including
 /// the following engine turn after a human reply. Real Stockfish must commit both moves.
@@ -21,6 +22,9 @@ import Testing
     try #require(session.game.plies.count == 1, "the engine must actually commit its move")
     let reply = try #require(session.viewed.state.legalMoves.first)
     session.play(reply)
+    #expect(session.game.plies.count == 2)
+    // The reply is weighed before it stands — every move is — and with 把关 off it stands.
+    await session.waitForJudgement()
     #expect(session.game.plies.count == 2)
     #expect(session.thinking == .own, "an already-enabled finder must not precede the next engine turn")
     deadline = ContinuousClock.now + .seconds(5)
@@ -190,7 +194,8 @@ func selectingOneImportWritesOnlyThatGameAndOpeningStartsReview(engineArrivesLat
     await library.waitForImportReviews()
     #expect(library.reviewingURLs.isEmpty)
     #expect(session.game.reviewDepth == 16)
-    #expect(engine.searchCount == 3)
+    // The review's own searches, apart from the live position searches the opened game starts.
+    #expect(engine.budgets.filter { $0 != PositionSearches.budget }.count == 3)
     let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
     #expect(disk.game.reviewDepth == 16)
     #expect(disk.tag("ReviewSift") == "full-local")

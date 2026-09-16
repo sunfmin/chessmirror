@@ -407,7 +407,6 @@
 "screen.stopFinder" = "Detener búsqueda";
 "screen.find" = "Buscar táctica";
 "screen.finder" = "Buscador de tácticas";
-"screen.finderStopped" = "Búsqueda detenida. Buscar táctica vuelve a comprobar tácticas y mates.";
 "screen.finderIdle" = "Sin analizar. Buscar táctica comprueba tácticas y mates.";
 "screen.hideArrows" = "Ocultar flechas";
 "screen.showArrows" = "Dibujar en tablero";

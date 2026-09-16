@@ -4,6 +4,7 @@ import Testing
 import UIKit
 
 @testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// Contract: the board keeps the entire viewport width regardless of height or text size.
 /// Settings start closed; bottom analysis tabs remain reachable without shrinking the board.

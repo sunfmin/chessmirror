@@ -588,11 +588,12 @@ struct LibraryScreen: View {
 
     private func start(_ game: Game?, tilling: Bool = false) {
         guard let game else { return }
+        var lines = judgement.lines
+        if tilling { lines.intercept = JudgementLines.defaultIntercept }
         let session = GameSession.playing(
-            game, engine: engine.service, library: library, strength: StrengthSetting.shared.strength
+            game, engine: engine.service, library: library,
+            strength: StrengthSetting.shared.strength, lines: lines
         )
-        session.lines = judgement.lines
-        if tilling { session.setIntercept(JudgementLines.defaultIntercept) }
         path.append(.game(session))
     }
 

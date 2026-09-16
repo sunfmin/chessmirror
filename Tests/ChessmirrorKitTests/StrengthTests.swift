@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import ChessmirrorKit
+import ChessmirrorKitTesting
 
 /// Contract: a 棋力 bounds the opponent's own move and nothing else, is written onto every move
 /// the engine plays, and comes back out of the file (docs/adr/0038).

@@ -4,6 +4,7 @@ import Testing
 import UIKit
 
 @testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// The advantage bar, from both ways up.
 ///

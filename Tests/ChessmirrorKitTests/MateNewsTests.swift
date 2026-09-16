@@ -1,6 +1,7 @@
 import ChessmirrorKit
 import Foundation
 import Testing
+import ChessmirrorKitTesting
 
 @Suite(.speaking(.chinese)) struct MateNewsTests {
     /// Morphy–Duke of Brunswick & Count Isouard, Paris 1858, before 16.Qb8+. White mates in two:

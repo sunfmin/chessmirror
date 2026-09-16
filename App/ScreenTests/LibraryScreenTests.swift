@@ -4,6 +4,7 @@ import SwiftUI
 import Testing
 
 @testable import Chessmirror
+import ChessmirrorKitTesting
 
 /// The first screen, photographed: the ways a board gets into this app.
 ///

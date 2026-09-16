@@ -407,7 +407,6 @@
 "screen.stopFinder" = "Arrêter la recherche";
 "screen.find" = "Chercher une tactique";
 "screen.finder" = "Recherche tactique";
-"screen.finderStopped" = "Recherche arrêtée. Chercher une tactique vérifie à nouveau tactiques et mats.";
 "screen.finderIdle" = "Pas encore analysé. Chercher une tactique vérifie tactiques et mats.";
 "screen.hideArrows" = "Masquer les flèches";
 "screen.showArrows" = "Dessiner sur l’échiquier";

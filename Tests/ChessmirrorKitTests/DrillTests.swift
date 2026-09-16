@@ -2,6 +2,7 @@
 import Foundation
 import Synchronization
 import Testing
+import ChessmirrorKitTesting
 
 /// Practising one 错题: the position, one move, a verdict, and a line in the log (docs/adr/0029).
 

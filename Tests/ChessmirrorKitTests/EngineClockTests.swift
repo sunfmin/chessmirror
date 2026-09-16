@@ -1,5 +1,6 @@
 @testable import ChessmirrorKit
 import Testing
+import ChessmirrorKitTesting
 
 /// Contract: advice, settings, a card, an asked move and an opponent all use the same
 /// completed position search. The old mirrored/stint clocks no longer start searches.
@@ -14,7 +15,6 @@ struct EngineClock {
         ])
         let session = GameSession.fresh(start, engine: engine)
         defer { session.suspend() }
-        session.showPositionFeedback()
         session.retune()
         await session.waitForPreparedInterception()
         #expect(engine.searchCount == 1)
@@ -52,7 +52,6 @@ struct EngineClock {
         })
         let session = GameSession.fresh(start, engine: engine)
         defer { gate.continuation.finish(); session.suspend() }
-        session.showPositionFeedback()
         session.retune()
         var requests = requested.stream.makeAsyncIterator()
         _ = await requests.next()
@@ -86,7 +85,6 @@ struct EngineClock {
         engine.pause()
         let session = GameSession.fresh(start, engine: engine)
         defer { session.suspend() }
-        session.showPositionFeedback()
         session.retune()
         await session.waitForPreparedInterception()
         #expect(engine.searchCount == 0)

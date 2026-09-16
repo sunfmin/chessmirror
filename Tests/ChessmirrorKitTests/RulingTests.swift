@@ -35,8 +35,9 @@ struct RulingTests {
         before.recordTried(.init(san: "f3", drop: 20, line: ["e5"]), atPly: 0)
         let (played, san, weighed) = try weigh("e2e4", from: before, cp: 30, after: 20)
 
-        let ruling = Ruling(weighed, san: san, played: played, before: before, cursor: 0,
-                            lines: JudgementLines(intercept: 5), hints: 2)
+        let ruling = Ruling(weighed, san: san, played: played,
+                            from: Standpoint(game: before, cursor: 0, hints: 2),
+                            lines: JudgementLines(intercept: 5))
 
         #expect(ruling.verdict == .stands(MoveChange(before: .centipawns(30), after: .centipawns(20))))
         #expect(!ruling.takesTheMoveBack)
@@ -58,8 +59,9 @@ struct RulingTests {
         let (played, san, weighed) = try weigh("f1c4", from: twoIn, cp: 30, after: -400, reply: ["Nf6", "d3"])
         #expect(played.uciMoves == ["e2e4", "e7e5", "f1c4"], "the board showed the move while it was weighed")
 
-        let ruling = Ruling(weighed, san: san, played: played, before: before, cursor: 2,
-                            lines: JudgementLines(intercept: 5), hints: 1)
+        let ruling = Ruling(weighed, san: san, played: played,
+                            from: Standpoint(game: before, cursor: 2, hints: 1),
+                            lines: JudgementLines(intercept: 5))
 
         #expect(ruling.verdict == .refused(Refusal(san: "Bc4", drop: weighed.drop)))
         #expect(ruling.takesTheMoveBack)
@@ -77,7 +79,8 @@ struct RulingTests {
         var cursor = 0
         for uci in ["f2f3", "g2g4"] {
             let (played, san, weighed) = try weigh(uci, from: game, cp: 0, after: -300)
-            let ruling = Ruling(weighed, san: san, played: played, before: game, cursor: cursor, lines: lines)
+            let ruling = Ruling(weighed, san: san, played: played,
+                                from: Standpoint(game: game, cursor: cursor), lines: lines)
             #expect(ruling.takesTheMoveBack)
             game = ruling.game
             cursor = ruling.cursor
@@ -85,7 +88,8 @@ struct RulingTests {
         #expect(game.pendingTries(atPly: 0).map(\.san) == ["f3", "g4"])
 
         let (played, san, weighed) = try weigh("e2e4", from: game, cp: 0, after: 0)
-        let ruling = Ruling(weighed, san: san, played: played, before: game, cursor: cursor, lines: lines)
+        let ruling = Ruling(weighed, san: san, played: played,
+                            from: Standpoint(game: game, cursor: cursor), lines: lines)
 
         #expect(ruling.game.uciMoves == ["e2e4"])
         #expect(ruling.game.plies[0].tried.map(\.san) == ["f3", "g4"])
@@ -97,13 +101,15 @@ struct RulingTests {
         before.recordTried(.init(san: "Qh5", drop: 12), atPly: 2)
         let (played, san, _) = try weigh("g1f3", from: before, cp: 0, after: 0)
 
-        let ruling = Ruling(nil, san: san, played: played, before: before, cursor: 2,
-                            lines: JudgementLines(intercept: 5), hints: 3)
+        let standpoint = Standpoint(game: before, cursor: 2, hints: 3)
+        let ruling = Ruling(nil, san: san, played: played, from: standpoint,
+                            lines: JudgementLines(intercept: 5))
 
         #expect(ruling.verdict == .unjudged)
         #expect(ruling.takesTheMoveBack, "the move comes off the board")
         #expect(ruling.game == before, "and nothing is written, not even a refusal")
         #expect(ruling.cursor == 2)
+        #expect(ruling == .unjudged(standpoint), "which is what a session leaving mid-weighing puts back")
     }
 
     /// The hint ladder climbed to a relaxed line lets a move through that the 拦截线 would have
@@ -116,8 +122,9 @@ struct RulingTests {
         #expect(Ruling.intercepts(weighed.drop, lines: lines), "the line as set would have stopped it")
         #expect(!Ruling.intercepts(weighed.drop, lines: lines, relaxedIntercept: weighed.drop + 1))
 
-        let ruling = Ruling(weighed, san: san, played: played, before: before, cursor: 0,
-                            lines: lines, relaxedIntercept: weighed.drop + 1, hints: 3)
+        let ruling = Ruling(weighed, san: san, played: played,
+                            from: Standpoint(game: before, cursor: 0, hints: 3, relaxedIntercept: weighed.drop + 1),
+                            lines: lines)
 
         #expect(!ruling.takesTheMoveBack)
         let judgement = try #require(ruling.game.plies[0].judgement)
@@ -134,7 +141,8 @@ struct RulingTests {
         let (played, san, weighed) = try weigh("g2g4", from: before, cp: 30, after: -500)
         #expect(!Ruling.intercepts(weighed.drop, lines: .standard))
 
-        let ruling = Ruling(weighed, san: san, played: played, before: before, cursor: 0, lines: .standard)
+        let ruling = Ruling(weighed, san: san, played: played,
+                            from: Standpoint(game: before, cursor: 0), lines: .standard)
 
         #expect(!ruling.takesTheMoveBack)
         let judgement = try #require(ruling.game.plies[0].judgement)

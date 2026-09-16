@@ -427,7 +427,6 @@
 "screen.stopFinder" = "不找了";
 "screen.find" = "找一记";
 "screen.finder" = "战术发现器";
-"screen.finderStopped" = "发现器已关闭。按「找一记」重新检查战术和杀招。";
 "screen.finderIdle" = "还没算。按「找一记」检查战术和杀招。";
 "screen.hideArrows" = "把箭头收起";
 "screen.showArrows" = "画在棋盘上";

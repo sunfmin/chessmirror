@@ -1,6 +1,7 @@
 import ChessmirrorKit
 import Foundation
 import Synchronization
+import ChessmirrorKitTesting
 
 /// A fetcher that returns what it was told to return.
 ///

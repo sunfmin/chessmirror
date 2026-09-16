@@ -1,26 +1,12 @@
 import ChessmirrorKit
+import ChessmirrorKitTesting
 import Foundation
 import Testing
 
 /// What a saved record opens facing: the side about to move, whoever that is.
 
 /// An engine that says nothing. Enough for `opened` to hand the other side over to one.
-private final class SilentEngine: Engine, @unchecked Sendable {
-    let positionSearches = PositionSearches()
-    var isPaused = false
-    func analyse(
-        _ game: Game, budget: SearchBudget, lines: Int, strength: Strength
-    ) -> AsyncStream<Analysis> {
-        AsyncStream { _ in }
-    }
-    func pause() {}
-    func resume() {}
-    func clear() async {}
-    func evaluate(_ game: Game, budget: SearchBudget) async -> Score? { nil }
-    func review(
-        _ game: Game, depth: Int, onPly: (@Sendable (Int, ReviewedPly) -> Void)?
-    ) async -> [ReviewedPly] { [] }
-}
+private func silentEngine() -> ScriptedEngine { ScriptedEngine([]) }
 
 @MainActor @Test("a saved record opens facing the side to move")
 func savedRecordFacesSideToMove() throws {
@@ -69,7 +55,7 @@ func recordOpensWithEngineOpponent() throws {
     )
 
     // White moves first: the person's side, with the engine on the answer and no advice shown.
-    let session = try #require(GameSession.opened(entry, engine: SilentEngine()))
+    let session = try #require(GameSession.opened(entry, engine: silentEngine()))
     #expect(session.controller(for: .white) == .hand)
     #expect(session.controller(for: .black) == .engine)
 
@@ -83,7 +69,7 @@ func recordOpensWithEngineOpponent() throws {
             pgn: PGN(game: blackFirstGame, tags: []),
             modified: Date(timeIntervalSince1970: 1_786_000_500)
         ),
-        engine: SilentEngine()
+        engine: silentEngine()
     ))
     #expect(blackFirst.controller(for: .black) == .hand)
     #expect(blackFirst.controller(for: .white) == .engine)
@@ -98,7 +84,7 @@ func recordOpensWithEngineOpponent() throws {
 @MainActor @Test("from the opening, Black is the engine")
 func aFreshOpeningFacesAnEngineOpponent() throws {
     let standard = try #require(Game(startFEN: PGN.standardStartFEN))
-    let session = GameSession.playing(standard, engine: SilentEngine())
+    let session = GameSession.playing(standard, engine: silentEngine())
     #expect(session.controller(for: .white) == .hand)
     #expect(session.controller(for: .black) == .engine)
 }
@@ -110,7 +96,7 @@ func aFreshOpeningFacesAnEngineOpponent() throws {
     let game = try #require(
         Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"])
     )
-    let session = GameSession.fresh(game, engine: SilentEngine())
+    let session = GameSession.fresh(game, engine: silentEngine())
     defer { session.suspend() }
     // Where a reopened record stands: the beginning. A game being played stands at its end, and
     // there is nothing to walk to from there.

@@ -310,3 +310,51 @@ func theOldDeclarationsAreJustUnknownTokens() throws {
     #expect(!written.contains("%plan"))
     #expect(written.contains("[%eval 0.31]"), "and the tokens it does know come back out")
 }
+
+/// Contract: the facts about a game that are not moves — who sat at each side, where it came
+/// from, the lines it is judged by — go into the file through one door and come back out through
+/// its inverse, on the PGN value alone, with no session in the room. The session names no tag.
+@Test("the facts of a game round-trip through their tags")
+func theFactsOfAGameRoundTripThroughTheirTags() throws {
+    let game = try #require(Game(startFEN: start, uciMoves: ["e2e4", "e7e5"]))
+
+    let on = PGN(
+        game: game, seats: [.white: .hand, .black: .engine], origin: .recognised,
+        lines: JudgementLines(intercept: 7), preferredIntercept: 7,
+        carrying: [.init("Date", "2026.09.16")]
+    )
+    let readOn = try PGN(parsing: on.text)
+    #expect(readOn.intercept == 7)
+    #expect(readOn.interceptPreference == nil, "on, so nothing to come back to")
+    #expect(readOn.origin == .recognised)
+    #expect(readOn.handColours == [.white])
+    #expect(readOn.tag("Date") == "2026.09.16", "what the file carried is kept")
+    #expect(readOn.tag("Event") == "Chessmirror")
+
+    let off = PGN(
+        game: game, seats: [.white: .engine, .black: .hand], origin: .fresh,
+        lines: .standard, preferredIntercept: 37
+    )
+    let readOff = try PGN(parsing: off.text)
+    #expect(readOff.intercept == nil)
+    #expect(readOff.interceptPreference == 37, "off, at the line it comes back on at")
+    #expect(readOff.origin == .fresh)
+    #expect(readOff.handColours == [.black])
+    #expect(readOff.tag("Date") != nil, "a date is written when none was carried")
+
+    // An imported game keeps its two real people, and the tracked side says which is the player.
+    var imported = PGN(game: game, tags: [.init("White", "Carlsen"), .init("Black", "Nakamura")])
+    imported.track(.black)
+    imported.setName("Round 3")
+    let written = PGN(
+        game: game, seats: [.white: .hand, .black: .engine], origin: .imported,
+        lines: .standard, preferredIntercept: nil, carrying: imported.tags
+    )
+    let readImported = try PGN(parsing: written.text)
+    #expect(readImported.tag("White") == "Carlsen")
+    #expect(readImported.tag("Black") == "Nakamura")
+    #expect(readImported.trackedSide == .black)
+    #expect(readImported.handColours == [.black], "the seats do not say whose moves are whose here")
+    #expect(readImported.name == "Round 3")
+    #expect(readImported.origin == .imported)
+}

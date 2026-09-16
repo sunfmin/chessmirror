@@ -11,21 +11,24 @@ struct StripTests {
         try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: uciMoves))
     }
 
-    @Test func aGameWithTheBadgeOffShowsNothingButItsVoice() throws {
+    /// Every game has the strip: there is no switch that turns the bar or the depth off
+    /// (docs/adr/0040). A game nothing has judged yet draws an empty bar and a depth of zero.
+    @Test func aGameNothingHasJudgedHasAnEmptyBar() throws {
         let session = GameSession.fresh(try opening(["e2e4"]))
         defer { session.suspend() }
 
-        #expect(session.strip == Strip(voice: .quiet, tally: nil, depth: nil, bar: nil))
+        #expect(session.strip == Strip(
+            voice: .quiet, tally: nil, depth: 0, bar: Strip.Bar(score: nil, finish: nil)
+        ))
     }
 
-    /// The badge on: a bar to draw, reading what was written on the move on screen, and a depth to
-    /// account for — zero before the search has said anything.
-    @Test func theBadgeBringsTheBarAndTheDepth() throws {
+    /// A bar to draw, reading what was written on the move on screen, and a depth to account
+    /// for — zero before the search has said anything.
+    @Test func theBarReadsTheJudgementOnTheMove() throws {
         var game = try opening(["e2e4", "e7e5"])
         game.setJudgement(.init(drop: 1, score: .centipawns(35), depth: 20), atPly: 1)
         let session = GameSession.fresh(game)
         defer { session.suspend() }
-        session.showPositionFeedback()
 
         #expect(session.strip.bar == Strip.Bar(score: .centipawns(35), finish: nil))
         #expect(session.strip.depth == 0)
@@ -33,8 +36,7 @@ struct StripTests {
         #expect(session.strip.tally == nil, "nothing stood under 正着, so nothing to count")
     }
 
-    /// A finished game draws its result whatever the badge is doing, and has no search to
-    /// account for.
+    /// A finished game draws its result, and has no search to account for.
     @Test func aFinishedGameReadsItsResult() throws {
         let mated = try opening(["f2f3", "e7e5", "g2g4", "d8h4"])
         let session = GameSession.fresh(mated)
@@ -44,10 +46,6 @@ struct StripTests {
         #expect(session.strip.bar == Strip.Bar(score: nil, finish: .won(.black)))
         #expect(session.strip.depth == nil)
         #expect(session.strip.voice == .finished("\(mated.turn) 0-1"))
-
-        session.showPositionFeedback()
-        #expect(session.strip.bar?.finish == .won(.black), "the badge does not unfinish a game")
-        #expect(session.strip.depth == nil)
     }
 
     @Test func aDrawIsHalfABar() throws {

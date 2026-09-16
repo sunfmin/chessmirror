@@ -34,6 +34,94 @@ public struct PGN: Hashable, Sendable {
         tags.first { $0.name == name }?.value
     }
 
+    // ------------------------------------------- the facts a game carries in its tags
+    //
+    // The one place a fact about a game is given its tag name. A session writes its game through
+    // `init(game:seats:origin:lines:preferredIntercept:carrying:)` and reads the facts back
+    // through the properties below, and never names a tag itself; the library's list, the 错题本
+    // and the 连正榜 read the same properties off the same file, which is how the row under the
+    // board and the ladder come to agree about whose moves are whose.
+
+    static let interceptTag = "Intercept"
+    static let interceptPreferenceTag = "InterceptPreference"
+    static let trackedSideTag = "TrackedSide"
+
+    /// The file this app writes for a game it holds: the Game, and the facts about the game that
+    /// are not moves — who sat at each side, where it came from, the lines it is judged by —
+    /// each in the tag it lives in, over whatever the file carried before (`carrying`).
+    public init(
+        game: Game, seats: [PieceColour: Controller], origin: GameOrigin,
+        lines: JudgementLines, preferredIntercept: Double?, carrying tags: [Tag] = []
+    ) {
+        var written = PGN(game: game, tags: tags)
+        // Event carries the app's name, which is what PGN's "which set of games is this" tag is
+        // worth saying now that there are no collections (docs/adr/0028). Written unconditionally:
+        // an Event an import brought in names somebody else's tournament, and the file this app
+        // writes is this app's.
+        written.setTag("Event", to: "Chessmirror")
+        // An imported game keeps the two real people in its roster; which of them is the player
+        // is `trackedSide`, said by the import (docs/adr/0028).
+        if origin != .imported {
+            written.setTag("White", to: (seats[.white] ?? .hand).playerName)
+            written.setTag("Black", to: (seats[.black] ?? .hand).playerName)
+            // The standard Elo tags, for other tools, when the whole game was at one rung; a game
+            // that changed rung says so per move and nowhere else (docs/adr/0038).
+            written.setTag("WhiteElo", to: game.constantElo(of: .white).map(String.init))
+            written.setTag("BlackElo", to: game.constantElo(of: .black).map(String.init))
+        }
+        written.setTag("Result", to: game.resultToken)
+        written.setTag(Self.interceptTag, to: lines.intercept.map(String.init(describing:)))
+        written.setTag(
+            Self.interceptPreferenceTag,
+            to: lines.intercept == nil ? preferredIntercept.map(String.init(describing:)) : nil
+        )
+        written.setTag(GameOrigin.tagName, to: origin.tagValue)
+        if written.tag("Date") == nil {
+            written.tags.append(Self.dateTag())
+        }
+        self = written
+    }
+
+    /// The 拦截线 the game was saved under: 把关 was on, at this line.
+    public var intercept: Double? { line(Self.interceptTag) }
+
+    /// The 拦截线 to come back on at, kept while 把关 is off. Nil when it is on (`intercept` says).
+    public var interceptPreference: Double? { line(Self.interceptPreferenceTag) }
+
+    private func line(_ name: String) -> Double? {
+        guard let value = tag(name).flatMap(Double.init), value.isFinite,
+              JudgementLines.interceptRange.contains(value) else { return nil }
+        return value
+    }
+
+    /// Where the game came from. Not a standard tag; readers that do not know it ignore it.
+    public var origin: GameOrigin {
+        GameOrigin(rawValue: tag(GameOrigin.tagName) ?? "") ?? .fresh
+    }
+
+    /// What the game is called, if anybody has said. Its own tag rather than `Event`: PGN has no
+    /// tag for the name of a single game, and the precedent for adding one is `Source`.
+    public var name: String? {
+        tag(GameLibrary.nameTag).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    public mutating func setName(_ name: String?) {
+        setTag(GameLibrary.nameTag, to: name)
+    }
+
+    /// Which side of an imported game is the player's, said by the import (docs/adr/0028).
+    public var trackedSide: PieceColour? {
+        switch tag(Self.trackedSideTag) {
+        case "white": .white
+        case "black": .black
+        default: nil
+        }
+    }
+
+    public mutating func track(_ side: PieceColour?) {
+        setTag(Self.trackedSideTag, to: side.map { $0 == .white ? "white" : "black" })
+    }
+
     /// The colours the player moved themselves, read off the roster.
     ///
     /// What the 错题本 is counted over: a game where the engine had Black is a game where Black's
@@ -45,12 +133,8 @@ public struct PGN: Hashable, Sendable {
     /// person holding the phone is a question the import knows the answer to and this does not,
     /// and answering it by guessing would fill the book with somebody else's blunders.
     public var handColours: Set<PieceColour> {
-        if let tracked = tag("TrackedSide") {
-            switch tracked {
-            case "white": return [.white]
-            case "black": return [.black]
-            default: return []
-            }
+        if tag(Self.trackedSideTag) != nil {
+            return trackedSide.map { [$0] } ?? []
         }
         var found: Set<PieceColour> = []
         if tag("White") == Controller.hand.playerName { found.insert(.white) }
@@ -364,7 +448,7 @@ public struct PGN: Hashable, Sendable {
         // And a judgement written before the 拦截线 travelled with it stood under the file's
         // 拦截线, when the file has one: 正着 was on when the game was saved, which is the best
         // account there is of whether it was on when the move was played.
-        if let intercept = (tags.first { $0.name == "Intercept" }?.value).flatMap(Double.init) {
+        if let intercept = (tags.first { $0.name == Self.interceptTag }?.value).flatMap(Double.init) {
             for index in game.plies.indices {
                 guard let judgement = game.plies[index].judgement, judgement.intercept == nil else { continue }
                 game.setJudgement(
