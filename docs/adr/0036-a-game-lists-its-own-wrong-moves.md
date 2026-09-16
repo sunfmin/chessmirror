@@ -55,7 +55,9 @@ history is a question about that game.
   other.
 - `MistakeBook` is untouched. The book keeps its own gate, and the game's list has a different one.
   That is two readings of the same Plies, and the reason is stated above; if a third reader ever
-  appears, the walk is the thing to share and the gate is the thing to keep.
+  appears, the walk is the thing to share and the gate is the thing to keep. It appeared — the
+  library counts a game's positions through the book — and the walk is now shared: `Game.stops(by:)`
+  lays out every position the player moved at once, and each reader keeps its own gate over it.
 - The list is walked lazily and cached against the game and the two lines, because the record strip
   asks for it on every draw and walking it is a rules probe per Ply.
 - **One row, and it is the record row's twin**: full width, square corners, an alarm bar down its

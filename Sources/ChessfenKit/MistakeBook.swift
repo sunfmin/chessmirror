@@ -183,28 +183,16 @@ public struct MistakeBook: Sendable {
     ) -> [(PositionKey, Encounter)] {
         guard let pgn = entry.pgn else { return [] }
         let game = pgn.game
-        let mine = pgn.handColours
-        guard !mine.isEmpty else { return [] }
-
         var found: [(PositionKey, Encounter)] = []
-        // Walked forward once rather than rewound per ply: `rewound(to:)` replays from the start
-        // every time it is called, which over a whole game is a quadratic number of rules probes
-        // (docs/adr/0003) — the cost this whole derivation is trying not to pay on every screen.
-        guard var walked = game.rewound(to: 0) else { return [] }
-        for ply in 1...max(1, game.plies.count) where game.plies.indices.contains(ply - 1) {
-            let fen = walked.state.fen
-            guard walked.apply(uci: game.plies[ply - 1].uci) else { break }
-            let mover = game.mover(ofPly: ply)
-            guard mine.contains(mover), let key = PositionKey(fen: fen) else { continue }
-            let wanted = game.reviewLine(atPly: ply - 1).first
+        for stop in game.stops(by: pgn.handColours) {
             func note(_ played: String, _ cost: Double, attempt: Int? = nil, notFound: Bool = false) {
                 guard lines.records(cost) else { return }
                 found.append(
                     (
-                        key,
+                        stop.position,
                         Encounter(
-                            game: entry.url, ply: ply, when: entry.modified, played: played,
-                            wanted: wanted, cost: cost, origin: entry.origin, attempt: attempt,
+                            game: entry.url, ply: stop.ply, when: entry.modified, played: played,
+                            wanted: stop.wanted, cost: cost, origin: entry.origin, attempt: attempt,
                             notFound: notFound
                         )
                     )
@@ -212,40 +200,16 @@ public struct MistakeBook: Sendable {
             }
             // Refused first, because they happened first: they are what the player reached for
             // before the move that stands.
-            for (index, attempt) in game.plies[ply - 1].tried.enumerated() {
+            for (index, attempt) in stop.tried.enumerated() {
                 note(attempt.san, attempt.drop, attempt: index, notFound: attempt.notFound)
             }
-            let move = game.plies[ply - 1]
-            let alreadyRecorded = move.tried.contains { $0.notFound && $0.san == move.san }
-            if game.isReviewed, !alreadyRecorded, let cost = game.drop(atPly: ply) {
-                note(game.plies[ply - 1].san, cost)
-            }
-        }
-        // And the refusals no move has absorbed, which are written at the position they happened
-        // at rather than onto a move (docs/adr/0037). **The commonest 错题 there is**: the player
-        // reaches for something, 耕棋 takes it back, and they put the phone down — the game ends
-        // with the refusal as the last thing in it, and no move ever comes along to carry it. The
-        // book heard nothing about those, so the one position a session was actually stopped at
-        // was the one position it did not record.
-        for pending in game.pendingTried {
-            // The side to move at that position is the side that got it wrong, and it is named
-            // by the Ply a move played there would take.
-            guard mine.contains(game.mover(ofPly: pending.ply + 1)),
-                let at = game.rewound(to: pending.ply),
-                let key = PositionKey(fen: at.state.fen)
-            else { continue }
-            let wanted = game.reviewLine(atPly: pending.ply).first
-            for (index, attempt) in pending.tries.enumerated() where lines.records(attempt.drop) {
-                found.append(
-                    (
-                        key,
-                        Encounter(
-                            game: entry.url, ply: pending.ply + 1, when: entry.modified,
-                            played: attempt.san, wanted: wanted, cost: attempt.drop,
-                            origin: entry.origin, attempt: index, notFound: attempt.notFound
-                        )
-                    )
-                )
+            // The move that stood, by the book's own gate: a Review's number and nothing else,
+            // because the book compares across games (docs/adr/0016) — and not a second time when
+            // a 惩罚 exercise already wrote it down as the move the player did not find.
+            guard let move = stop.move else { continue }
+            let alreadyRecorded = stop.tried.contains { $0.notFound && $0.san == move.san }
+            if game.isReviewed, !alreadyRecorded, let cost = game.drop(atPly: stop.ply) {
+                note(move.san, cost)
             }
         }
         return found

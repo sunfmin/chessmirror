@@ -62,7 +62,8 @@ import Testing
     @Test func aTailRefusalBelongsToTheEndOfTheGame() throws {
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
         game.setPendingTried([.init(san: "Qh4", drop: 30)], atPly: game.plies.count)
-        let slips = game.slips(by: [.white], lines: .standard)
+        // Qh4 was Black's to try: the side to move at the position is the side that got it wrong.
+        let slips = game.slips(by: [.black], lines: .standard)
         #expect(slips.map(\.ply) == [2])
         #expect(slips[0].positionPly == 1, "the position after the only move")
         #expect(slips[0].wasTried)

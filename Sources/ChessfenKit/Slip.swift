@@ -86,58 +86,22 @@ extension Game {
     /// which is not the same question as the 错题本's, where scores from different games are
     /// compared and so must come from one uniform pass (docs/adr/0016).
     public func slips(by mine: Set<PieceColour>, lines: JudgementLines) -> [Slip] {
-        guard !mine.isEmpty, var walked = rewound(to: 0) else { return [] }
-        var found: [Slip] = []
-        // `max(1, …)` because a game with no moves can still have refusals at the position it
-        // stopped on, and `1...0` is a range that traps rather than an empty one.
-        for ply in 1...max(1, plies.count) where plies.indices.contains(ply - 1) {
-            let fen = walked.state.fen
-            guard walked.apply(uci: plies[ply - 1].uci) else { break }
-            let mover = mover(ofPly: ply)
-            guard mine.contains(mover), let key = PositionKey(fen: fen) else { continue }
-
+        stops(by: mine).compactMap { stop in
             // Everything wrong that happened here, whether it stood or not — the 试招 in the order
             // they were refused, and the move that finally stood if it was too expensive too.
-            var wrong = plies[ply - 1].tried
+            var wrong = stop.tried
                 .filter { lines.records($0.drop) }
                 .map { Slip.Wrong(san: $0.san, drop: $0.drop, wasTried: true) }
-            let stood = plies[ply - 1].judgement?.drop ?? drop(atPly: ply)
-            if let stood, lines.records(stood) {
-                wrong.append(
-                    Slip.Wrong(san: plies[ply - 1].san, drop: stood, wasTried: false)
-                )
+            if let move = stop.move, let stood = move.judgement?.drop ?? drop(atPly: stop.ply),
+                lines.records(stood) {
+                wrong.append(Slip.Wrong(san: move.san, drop: stood, wasTried: false))
             }
-            guard !wrong.isEmpty else { continue }
-            found.append(
-                Slip(
-                    ply: ply,
-                    position: key,
-                    wrong: wrong.sorted { $0.drop > $1.drop },
-                    wanted: reviewLine(atPly: ply - 1).first
-                )
+            guard !wrong.isEmpty else { return nil }
+            return Slip(
+                ply: stop.ply, position: stop.position,
+                wrong: wrong.sorted { $0.drop > $1.drop }, wanted: stop.wanted
             )
         }
-        // And the refusals nothing has absorbed, which sit at the position the game ends on. Their
-        // Ply is the one past the last move, so the position they are walked to is the end of the
-        // game — and when a move is played there and takes them, the same Ply is that move's
-        // (docs/adr/0037).
-        for pending in pendingTried {
-            let wrong = pending.tries
-                .filter { lines.records($0.drop) }
-                .map { Slip.Wrong(san: $0.san, drop: $0.drop, wasTried: true) }
-            guard !wrong.isEmpty, let at = rewound(to: pending.ply),
-                let key = PositionKey(fen: at.state.fen)
-            else { continue }
-            found.append(
-                Slip(
-                    ply: pending.ply + 1,
-                    position: key,
-                    wrong: wrong.sorted { $0.drop > $1.drop },
-                    wanted: reviewLine(atPly: pending.ply).first
-                )
-            )
-        }
-        return found.sorted { $0.ply < $1.ply }
     }
 }
 

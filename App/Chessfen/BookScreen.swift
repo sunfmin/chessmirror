@@ -239,11 +239,7 @@ struct BookEntryScreen: View {
         guard let entry = entry(for: encounter),
             let session = GameSession.opened(entry, engine: engine.service, library: library)
         else { return }
-        // A move that stood opens on the position *after* it, with the blunder on the board — that
-        // is what reading a game wants (docs/adr/0036). A move 耕棋 took back never stood, so there
-        // is no position after it: the board it belongs to is the one it was played from, which is
-        // also the one to try again from.
-        session.walkOnArrival(toPly: encounter.attempt == nil ? encounter.ply : encounter.ply - 1)
+        session.walkOnArrival(toPly: encounter.arrivalPly)
         path.append(.game(session))
     }
 }
