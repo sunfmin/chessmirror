@@ -23,14 +23,14 @@ fi
 stamp=$(date +%Y%m%d%H%M)
 
 echo "==> building for $udid (build $stamp)"
-xcodebuild -project Chessfen.xcodeproj -scheme Chessfen -configuration Release \
+xcodebuild -project Chessmirror.xcodeproj -scheme Chessmirror -configuration Release \
   -destination 'generic/platform=iOS' -derivedDataPath /tmp/dd \
   CURRENT_PROJECT_VERSION="$stamp" build
 
 echo "==> installing"
 xcrun devicectl device install app --device "$udid" \
-  /tmp/dd/Build/Products/Release-iphoneos/Chessfen.app
+  /tmp/dd/Build/Products/Release-iphoneos/Chessmirror.app
 
 echo "==> launching"
 xcrun devicectl device process launch --device "$udid" \
-  --terminate-existing com.sunfmin.chessfen
+  --terminate-existing com.sunfmin.chessmirror

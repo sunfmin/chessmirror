@@ -1,8 +1,8 @@
-import ChessfenKit
+import ChessmirrorKit
 import SwiftUI
 import Testing
 
-@testable import Chessfen
+@testable import Chessmirror
 
 /// The deck under the board, one card per picture (docs/adr/0025).
 ///

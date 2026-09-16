@@ -1,4 +1,4 @@
-import ChessfenKit
+import ChessmirrorKit
 import Foundation
 import Synchronization
 

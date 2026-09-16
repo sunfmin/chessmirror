@@ -2,7 +2,7 @@ import Darwin
 import SwiftUI
 import UIKit
 
-@testable import Chessfen
+@testable import Chessmirror
 
 /// Draws a screen the way the app draws it, writes the picture, and hands back what the screen
 /// says.

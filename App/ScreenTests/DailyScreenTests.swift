@@ -1,9 +1,9 @@
-import ChessfenKit
+import ChessmirrorKit
 import Foundation
 import SwiftUI
 import Testing
 
-@testable import Chessfen
+@testable import Chessmirror
 
 /// 日课 on the first screen: how much is left today, and the one verb it offers
 /// (docs/adr/0030, docs/adr/0032).
@@ -12,7 +12,7 @@ import Testing
 struct DailyScreenshots {
     private func tempDir() -> URL {
         URL(filePath: NSTemporaryDirectory())
-            .appending(path: "chessfen-daily-\(UUID().uuidString)", directoryHint: .isDirectory)
+            .appending(path: "chessmirror-daily-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 
     /// Two games that blunder the same position, 31% each — over the 入列线, so the schedule is

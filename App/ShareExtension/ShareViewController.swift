@@ -1,4 +1,4 @@
-import ChessfenKit
+import ChessmirrorKit
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -70,7 +70,7 @@ final class ShareViewController: UIViewController {
         // scheme, opened through the host's context. Where the system declines to bring the
         // app forward, the picture is still in the inbox and the app finds it on its own next
         // launch — so this is a shortcut, never the handoff itself.
-        if let url = URL(string: "chessfen://shared") {
+        if let url = URL(string: "chessmirror://shared") {
             extensionContext?.open(url)
         }
         finish()

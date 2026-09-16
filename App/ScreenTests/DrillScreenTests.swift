@@ -1,9 +1,9 @@
-import ChessfenKit
+import ChessmirrorKit
 import Foundation
 import SwiftUI
 import Testing
 
-@testable import Chessfen
+@testable import Chessmirror
 
 /// Practising one 错题, photographed: the position with nothing said about it, and the settlement
 /// after the move (docs/adr/0029).
@@ -45,7 +45,7 @@ struct DrillScreenshots {
     private func temporaryLog() -> PracticeLog {
         PracticeLog(
             url: URL(filePath: NSTemporaryDirectory())
-                .appending(path: "chessfen-drill-screen-\(UUID().uuidString).jsonl")
+                .appending(path: "chessmirror-drill-screen-\(UUID().uuidString).jsonl")
         )
     }
 

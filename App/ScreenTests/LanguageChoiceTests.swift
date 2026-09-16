@@ -1,14 +1,14 @@
-import ChessfenKit
+import ChessmirrorKit
 import Observation
 import Testing
 
-@testable import Chessfen
+@testable import Chessmirror
 
 /// The one thing about choosing a language that a screenshot cannot show: that the screens are
 /// told about it.
 ///
 /// The root view is keyed on `LanguageSetting.current` so that every screen is rebuilt when the
-/// language changes (`ChessfenApp`). That only works if reading `current` registers a dependency
+/// language changes (`ChessmirrorApp`). That only works if reading `current` registers a dependency
 /// on something observable — and it did not, for a while, because `current` answered out of the
 /// kit's global instead of the app's own stored choice. The answer was right and the screens
 /// never heard about it. So this reads it the way SwiftUI does.

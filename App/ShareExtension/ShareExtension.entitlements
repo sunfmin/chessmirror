@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.sunfmin.chessfen</string>
+		<string>group.com.sunfmin.chessmirror</string>
 	</array>
 </dict>
 </plist>

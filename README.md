@@ -61,12 +61,12 @@ chessmirror/
 ├── Package.swift
 ├── Sources/
 │   ├── CStockfish/        # vendored engine and C bridge
-│   ├── ChessfenKit/       # recognition, rules, games, practice, persistence
-│   └── chessfen-cli/      # macOS command-line entry point
+│   ├── ChessmirrorKit/       # recognition, rules, games, practice, persistence
+│   └── chessmirror-cli/      # macOS command-line entry point
 ├── Resources/Nets/        # NNUE weights, stored with Git LFS
-├── Tests/ChessfenKitTests/
+├── Tests/ChessmirrorKitTests/
 ├── App/
-│   ├── Chessfen/          # SwiftUI screens
+│   ├── Chessmirror/          # SwiftUI screens
 │   ├── project.yml       # XcodeGen project definition
 │   └── ScreenTests/      # simulator rendering and assertions
 └── docs/adr/              # design decisions
@@ -91,7 +91,7 @@ swift test -c release --no-parallel
 swift test --filter EngineTests
 cd App
 xcodegen generate
-xcodebuild -project Chessfen.xcodeproj -scheme Chessfen \
+xcodebuild -project Chessmirror.xcodeproj -scheme Chessmirror \
   -destination 'generic/platform=iOS Simulator' ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
 ```
 
@@ -106,7 +106,7 @@ unrelated concurrent tests would be included in their measurements.
 From `App/`, with an installed iPhone 17 simulator:
 
 ```bash
-xcodebuild test -project Chessfen.xcodeproj -scheme Chessfen \
+xcodebuild test -project Chessmirror.xcodeproj -scheme Chessmirror \
   -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64
 ```
 
@@ -119,14 +119,14 @@ Inspect the images as well as their accessibility assertions.
 From the repository root:
 
 ```bash
-swift run chessfen-cli recognise board.png
-swift run chessfen-cli recognise board.png --straight
-swift run chessfen-cli validate '8/8/8/8/8/8/4K3/7k w - - 0 1'
-swift run chessfen-cli perft '8/8/8/8/8/8/4K3/7k w - - 0 1' 3
-swift run chessfen-cli analyse '8/8/8/8/8/8/4K3/7k w - - 0 1' 16
+swift run chessmirror-cli recognise board.png
+swift run chessmirror-cli recognise board.png --straight
+swift run chessmirror-cli validate '8/8/8/8/8/8/4K3/7k w - - 0 1'
+swift run chessmirror-cli perft '8/8/8/8/8/8/4K3/7k w - - 0 1' 3
+swift run chessmirror-cli analyse '8/8/8/8/8/8/4K3/7k w - - 0 1' 16
 ```
 
-Replace `board.png` with your image. `CHESSFEN_NETS` overrides the source-tree model path.
+Replace `board.png` with your image. `CHESSMIRROR_NETS` overrides the source-tree model path.
 
 ## Persistence and design
 
