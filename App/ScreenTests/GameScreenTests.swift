@@ -714,6 +714,54 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("让引擎走"))
     }
 
+    // ------------------------------------------------------------ 正着数 · 连正
+
+    /// The Italian with 正着 on: White's four moves all stood, and a 试招 at 3. Bc4 broke the run,
+    /// so the row says 「正着 4 · 连正 2」 (docs/adr/0038).
+    private static func tallied() throws -> GameSession {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: italian))
+        let stood = Game.Ply.Judgement(drop: 1, score: .centipawns(20), depth: 20, intercept: 5)
+        for ply in [0, 2, 4, 6] { game.setJudgement(stood, atPly: ply) }
+        game.setTried([.init(san: "Nh3", drop: 12)], atPly: 4)
+        let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
+        session.setIntercept(5)
+        return session
+    }
+
+    /// 正着数 and 连正 sit on the 正着 row, next to the switch, so the two numbers a 正着 game is
+    /// about are in view while it is being played.
+    @Test("the 正着 row counts the moves that stood and the run they are on")
+    func theTallyOnTheRow() async throws {
+        let session = try Self.tallied()
+        let rendered = await ScreenImage.write("game-tally") {
+            screen(session, engine: ScriptedEngine([]))
+        }
+        #expect(session.noSlips == .init(distance: 4, run: 2, longestRun: 2))
+        #expect(rendered.says("正着 4 · 连正 2"))
+    }
+
+    @Test("the tally, in English", .speaking(.english))
+    func theTallyInEnglish() async throws {
+        let session = try Self.tallied()
+        let rendered = await ScreenImage.write("game-tally-english") {
+            screen(session, engine: ScriptedEngine([]))
+        }
+        #expect(rendered.says("4 stood · run 2"))
+    }
+
+    /// Nothing to count, nothing said: a game with the switch off and no move that stood keeps
+    /// the row as it was.
+    @Test("a game that never stood under 正着 shows no tally")
+    func noTallyWithoutNoSlips() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
+        session.setPractising(false)
+        let rendered = await ScreenImage.write("game-no-tally") {
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
+        }
+        #expect(!rendered.says("连正"))
+    }
+
     // ------------------------------------------------------------------- glue
 
     /// The Italian eight plies in, with a pass already over it and the switch on — the state both

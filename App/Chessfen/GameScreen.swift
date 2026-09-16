@@ -304,6 +304,19 @@ struct GameScreen: View {
             HStack(spacing: 12) {
                 tillingSwitch
                     .fixedSize(horizontal: true, vertical: false)
+                // How far the game has gone without a slip, and how far since the last one:
+                // 正着数 and 连正, read off the game rather than counted (CONTEXT.md). On the
+                // row that names 正着 and on no row of its own, for as long as 正着 is on or has
+                // left something standing.
+                if session.isTilling || session.noSlips.distance > 0 {
+                    let tally = session.noSlips
+                    Text(localized("till.tally", tally.distance, tally.run))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(Palette.inkSoft)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .contentTransition(.numericText())
+                        .accessibilityLabel(localized("till.tally", tally.distance, tally.run))
+                }
                 Spacer(minLength: 8)
                 // What the strip says is the session's to decide, by one priority (`Standing`);
                 // this draws whichever voice it is handed. The one thing the session cannot know

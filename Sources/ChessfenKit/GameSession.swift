@@ -1230,6 +1230,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return slips
     }
 
+    /// 正着数 and 连正 for the sides the player is moving, read out of the game (CONTEXT.md).
+    public var noSlips: Game.NoSlips { game.noSlips(by: handColours) }
+
     /// The next 错招 from where the eye is: the one after it when it is standing on one, the
     /// first at or after it otherwise. Nil at the end of the game.
     public var nextSlip: Slip? {
