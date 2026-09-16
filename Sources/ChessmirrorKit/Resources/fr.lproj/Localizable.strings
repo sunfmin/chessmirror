@@ -444,6 +444,7 @@
 "slips.hint" = "Y aller et rejouer ce coup";
 "slips.here" = "%d positions ratées";
 "slips.wrong" = "%d coups fautifs";
+"wrong.stood" = "Le coup fautif joué";
 "library.wrong" = "%d fautes";
 "record.now" = "Maintenant";
 

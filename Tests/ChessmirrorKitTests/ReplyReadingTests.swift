@@ -24,7 +24,7 @@ import ChessmirrorKitTesting
         session.readReply(at: 0)
         let reading = try #require(session.replyReading)
         #expect(reading.index == 0)
-        #expect(reading.tried.san == "g4")
+        #expect(reading.move.san == "g4")
         #expect(!reading.isAsking)
         #expect(reading.line == ["g4", "Qh4"], "the move that was refused leads its own answer")
         #expect(reading.arrows.map { "\($0.move.from)\($0.move.to)" } == ["g2g4", "d8h4"])

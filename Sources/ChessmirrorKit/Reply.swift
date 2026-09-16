@@ -30,6 +30,11 @@ public enum Reply {
         [tried.san] + (reply ?? tried.line)
     }
 
+    /// The same for any wrong move on the strip: the move, then what answers it.
+    public static func moves(of wrong: GameSession.WrongMove, reply: [String]? = nil) -> [String] {
+        [wrong.san] + (reply ?? wrong.line)
+    }
+
     /// The line as numbered arrows, from the position the 试招 was refused in.
     ///
     /// The 试招 wears the player's own colour and everything after it wears the alarm colour:

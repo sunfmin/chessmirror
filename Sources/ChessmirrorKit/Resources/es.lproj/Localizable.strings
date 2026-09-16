@@ -444,6 +444,7 @@
 "slips.hint" = "Ir allí y volver a jugarla";
 "slips.here" = "%d posiciones falladas";
 "slips.wrong" = "%d jugadas erróneas";
+"wrong.stood" = "La jugada errónea que se hizo";
 "library.wrong" = "%d fallos";
 "record.now" = "Ahora";
 

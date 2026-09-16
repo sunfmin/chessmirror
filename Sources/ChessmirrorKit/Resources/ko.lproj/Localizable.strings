@@ -419,6 +419,7 @@
 "slips.hint" = "그 자리로 가서 다시 둡니다";
 "slips.here" = "이 대국 %d곳";
 "slips.wrong" = "잘못 둔 수 %d개";
+"wrong.stood" = "실제로 둔 잘못된 수";
 "library.wrong" = "실수 %d";
 "record.now" = "현재";
 

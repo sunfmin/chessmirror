@@ -419,6 +419,7 @@
 "slips.hint" = "その局面へ行って指し直す";
 "slips.here" = "この対局の %d 箇所";
 "slips.wrong" = "ミス %d 手";
+"wrong.stood" = "指してしまったミス";
 "library.wrong" = "ミス %d";
 "record.now" = "現在";
 
