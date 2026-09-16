@@ -55,37 +55,23 @@ struct LibraryScreen: View {
                         note(reason, symbol: "exclamationmark.triangle.fill")
                     }
                     entries
-                    dailyDoor
-                    bookDoor
+                    practice
                     ladderBoard
                     games
                 }
                 .padding(.horizontal, 16)
+                .padding(.top, 8)
                 .padding(.bottom, 24)
             }
             .background(Palette.parchment)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Palette.parchment, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
             .tint(Palette.analysis)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if case .starting = engine.status {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text(localized("library.engineStarting")).eyebrow()
-                        }
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isAboutShowing = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                    }
-                }
-            }
+            // No bar. The name is the title of this screen and it is set in the page, with the
+            // way to 关于 beside it — a bar holding one button over an empty title was a row of
+            // the first screen spent on nothing. The screens pushed from here keep their own bars;
+            // the game hides its for the same reason and draws its own strip.
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isAboutShowing) { AboutScreen() }
             .sheet(isPresented: $isImporting) { ImportSheet(onOpen: open) }
             .navigationDestination(for: Step.self) { step in
@@ -212,22 +198,44 @@ struct LibraryScreen: View {
     /// puts the board in front of you onto the phone, unchanged.
     private var masthead: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(localized("app.name"))
-                    .font(.system(size: 34, weight: .bold))
-                    .tracking(6)
-                    .foregroundStyle(Palette.ink)
-                Text(localized("app.mark"))
-                    .font(.caption2.weight(.medium))
-                    .tracking(3)
-                    .foregroundStyle(Palette.inkSoft)
+            HStack(spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(localized("app.name"))
+                        .font(.system(size: 34, weight: .bold))
+                        .tracking(6)
+                        .foregroundStyle(Palette.ink)
+                    Text(localized("app.mark"))
+                        .font(.caption2.weight(.medium))
+                        .tracking(3)
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                Spacer(minLength: 0)
+                if case .starting = engine.status {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text(localized("library.engineStarting")).eyebrow()
+                    }
+                }
+                Button {
+                    isAboutShowing = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.title3)
+                        .foregroundStyle(Palette.inkSoft)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localized("about"))
+                // The tap target hangs off the right edge, so the glyph sits on the margin the
+                // rows below it end at.
+                .padding(.trailing, -12)
             }
             Text(localized("library.tagline"))
                 .font(.footnote)
                 .foregroundStyle(Palette.inkSoft)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 4)
         .padding(.bottom, 6)
     }
 
@@ -295,36 +303,60 @@ struct LibraryScreen: View {
             .buttonStyle(.plain)
             .disabled(!engine.isReady)
 
-            Button {
-                start(Game(startFEN: PGN.standardStartFEN))
-            } label: {
+            // The two quieter doors share a row. Four full-width rows of the same shape read as
+            // a menu, and these two are not peers of the camera or of 把关: one is the board with
+            // nothing on it yet, the other is somebody else's game. Side by side they say so —
+            // and stack again in a language whose words do not fit half a phone.
+            ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) {
-                    Image(systemName: "plus")
-                    Text(localized("library.fromStart")).font(.subheadline.weight(.medium))
-                    Spacer(minLength: 0)
+                    lesserDoor(localized("library.fromStart"), symbol: "plus") {
+                        start(Game(startFEN: PGN.standardStartFEN))
+                    }
+                    lesserDoor(localized("import.title"), symbol: "link") {
+                        isImporting = true
+                    }
                 }
-                .foregroundStyle(Palette.ink)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 13)
-                .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                isImporting = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "link")
-                    Text(localized("import.title")).font(.subheadline.weight(.medium))
-                    Spacer(minLength: 0)
+                VStack(spacing: 10) {
+                    lesserDoor(localized("library.fromStart"), symbol: "plus") {
+                        start(Game(startFEN: PGN.standardStartFEN))
+                    }
+                    lesserDoor(localized("import.title"), symbol: "link") {
+                        isImporting = true
+                    }
                 }
-                .foregroundStyle(Palette.ink)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 13)
-                .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
             }
-            .buttonStyle(.plain)
         }
+    }
+
+    private func lesserDoor(_ title: String, symbol: String, act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol).font(.footnote.weight(.medium))
+                Text(title).font(.subheadline.weight(.medium))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(Palette.ink)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity)
+            .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 日课 and the 错题本 as one panel: the book, and today's slice of it. Two rows in one
+    /// shape, the way the ladder's rungs are, because they are one thing seen twice — and because
+    /// two loose rows under the four ways into a game were two more items on a list that had
+    /// stopped meaning anything by its fifth.
+    private var practice: some View {
+        VStack(spacing: 0) {
+            dailyDoor
+            if index.daily.remaining == 0 {
+                Divider().padding(.leading, 18)
+            }
+            bookDoor
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     /// 日课, and how much of it is left (docs/adr/0030).
@@ -357,10 +389,7 @@ struct LibraryScreen: View {
             .foregroundStyle(left > 0 ? Palette.parchment : Palette.ink)
             .padding(.horizontal, 18)
             .padding(.vertical, 13)
-            .background(
-                left > 0 ? Palette.analysis : Palette.chipRest,
-                in: RoundedRectangle(cornerRadius: 14)
-            )
+            .background(left > 0 ? Palette.analysis : Palette.chipRest)
         }
         .buttonStyle(.plain)
         .disabled(left == 0)
@@ -389,7 +418,7 @@ struct LibraryScreen: View {
             .foregroundStyle(Palette.ink)
             .padding(.horizontal, 18)
             .padding(.vertical, 13)
-            .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+            .background(Palette.chipRest)
         }
         .buttonStyle(.plain)
     }
@@ -590,7 +619,9 @@ struct GameList: View {
     @State private var nameDraft = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // Lazy, because every row now draws a board, and a library of a hundred games is a
+        // hundred boards nobody has scrolled to.
+        LazyVStack(alignment: .leading, spacing: 8) {
             ForEach(entries) { entry in
                 row(entry)
             }
@@ -612,14 +643,28 @@ struct GameList: View {
             open(entry)
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: entry.origin.symbol)
-                    .font(.footnote)
-                    .foregroundStyle(entry.origin == .recognised ? Palette.parchment : Palette.ink)
-                    .frame(width: 30, height: 30)
-                    .background(
-                        entry.origin == .recognised ? Palette.analysis : Palette.chipRest,
-                        in: RoundedRectangle(cornerRadius: 8)
+                // The position the game stands at, in place of a glyph saying where it came
+                // from. A game is a position before it is anything else, and a shelf of boards
+                // is what a 棋谱 collection looks like; where it came from is the first word of
+                // the line under the name. The glyph stays for a file with no position in it.
+                if let pgn = entry.pgn {
+                    BoardView(
+                        pieces: PositionDraft(fen: pgn.game.state.fen)?.pieces ?? [:],
+                        orientation: pgn.handColours == [.black] ? .blackAtBottom : .whiteAtBottom,
+                        coordinates: false,
+                        isInteractive: false
                     )
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Palette.hairline, lineWidth: 0.5))
+                    .accessibilityHidden(true)
+                } else {
+                    Image(systemName: entry.origin.symbol)
+                        .font(.footnote)
+                        .foregroundStyle(Palette.ink)
+                        .frame(width: 48, height: 48)
+                        .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 8))
+                }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(entry.title)
                         .font(.subheadline.weight(.medium))
