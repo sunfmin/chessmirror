@@ -45,7 +45,13 @@ public protocol Engine: AnyObject, Sendable {
     /// product is a move needs one; advice shown to a player wants the three the panel
     /// has room for. Each extra line roughly doubles the time to a given Depth, so the
     /// number is asked per search rather than set once.
-    func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis>
+    ///
+    /// `strength` is the 棋力 the search is bound to, and it is asked per search for the same
+    /// reason: only the opponent's own move is ever bound, and every other search — 细判, a hint,
+    /// a card, the finder — is at 满力 whatever the game is being played at (docs/adr/0038).
+    func analyse(
+        _ game: Game, budget: SearchBudget, lines: Int, strength: Strength
+    ) -> AsyncStream<Analysis>
     /// A background position yields to foreground searches and resumes after interruption.
     func analyseInBackground(_ game: Game, depth: Int) async -> Analysis?
     func pause()
@@ -61,6 +67,11 @@ public protocol Engine: AnyObject, Sendable {
 }
 
 extension Engine {
+    /// A search at 满力, which is every search but the opponent's own move.
+    public func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
+        analyse(game, budget: budget, lines: lines, strength: .full)
+    }
+
     public func analyseInBackground(_ game: Game, depth: Int) async -> Analysis? {
         var result: Analysis?
         for await snapshot in analyse(game, budget: .depth(depth), lines: 1) {

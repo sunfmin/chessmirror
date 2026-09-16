@@ -449,3 +449,11 @@
 "slips.wrong" = "%d lances errados";
 "library.wrong" = "%d erros";
 "record.now" = "Agora";
+
+"strength" = "Força";
+"strength.full" = "Força total";
+"till.tally" = "%d certos · sequência %d";
+"ladder" = "Escada sem erros";
+"ladder.run" = "Maior sequência";
+"ladder.distance" = "Maior distância";
+"ladder.stood" = "%d no total";

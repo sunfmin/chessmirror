@@ -47,16 +47,32 @@ public struct Game: Hashable, Sendable {
         public var hints: Int = 0
         /// The completed interception judgement, kept separate from a full-game Review.
         public var judgement: Judgement?
+        /// The 棋力 the engine played this move at, for a move the engine played under its own
+        /// Controller; nil for a move by hand (docs/adr/0038). 满力 is written as such rather than
+        /// left blank, because a blank is a hand, and the 正着榜 has to tell the two apart.
+        public var strength: Strength?
 
         public struct Judgement: Hashable, Sendable {
             public let drop: Double
             public let score: Score
             public let depth: Int
-            public init(drop: Double, score: Score, depth: Int) {
+            /// The 拦截线 the move stood under, or nil for a move weighed with 正着 off.
+            ///
+            /// A move is weighed whenever the badge under the board is on, not only under 正着,
+            /// and the two are told apart here: 正着数 and 连正 count the moves that *stood* —
+            /// that could have been taken back and were not — and a move nothing would have
+            /// refused is not one of those (CONTEXT.md, 正着数).
+            public let intercept: Double?
+
+            public init(drop: Double, score: Score, depth: Int, intercept: Double? = nil) {
                 self.drop = max(0, drop)
                 self.score = score
                 self.depth = depth
+                self.intercept = intercept
             }
+
+            /// Whether the move stood under 正着.
+            public var stoodUnderNoSlips: Bool { intercept != nil }
         }
 
         /// One move 正着 took back, and what it cost.
@@ -91,6 +107,7 @@ public struct Game: Hashable, Sendable {
             tried: [Tried] = [],
             hints: Int = 0,
             judgement: Judgement? = nil,
+            strength: Strength? = nil,
         ) {
             self.uci = uci
             self.san = san
@@ -100,6 +117,7 @@ public struct Game: Hashable, Sendable {
             self.tried = tried
             self.hints = hints
             self.judgement = judgement
+            self.strength = strength
         }
 
         /// How many Ply of a Review's Line are kept.
@@ -122,6 +140,7 @@ public struct Game: Hashable, Sendable {
             tried = other.tried
             hints = other.hints
             judgement = other.judgement
+            strength = other.strength
         }
     }
 
@@ -522,6 +541,68 @@ public struct Game: Hashable, Sendable {
         guard plies.indices.contains(ply) else { return }
         plies[ply].tried = attempts
         plies[ply].hints = hints
+    }
+
+    /// Records the 棋力 the engine played the move at `ply` at (docs/adr/0038).
+    public mutating func setStrength(_ strength: Strength?, atPly ply: Int) {
+        guard plies.indices.contains(ply) else { return }
+        plies[ply].strength = strength
+    }
+
+    /// A run of consecutive moves played at one 棋力 (docs/adr/0038).
+    public struct Stretch: Hashable, Sendable {
+        /// The 棋力 in force, or nil for moves against a human.
+        public let strength: Strength?
+        /// The Plies it covers, counting from one.
+        public let plies: ClosedRange<Int>
+
+        public init(strength: Strength?, plies: ClosedRange<Int>) {
+            self.strength = strength
+            self.plies = plies
+        }
+    }
+
+    /// The 棋力 the `ply`th move was played at, counting from one.
+    ///
+    /// An engine move's own; for a move by hand, the 棋力 of the engine move that answered it —
+    /// that is the opponent the move was played against — or, when nothing answered because the
+    /// game ended there, of the engine move before it. Nil against a human, and nil for every
+    /// game saved before 棋力 was written down, which the 正着榜 credits to no rung.
+    public func strength(ofPly ply: Int) -> Strength? {
+        guard plies.indices.contains(ply - 1) else { return nil }
+        if let own = plies[ply - 1].strength { return own }
+        if plies.indices.contains(ply), let reply = plies[ply].strength { return reply }
+        if ply >= 2, let before = plies[ply - 2].strength { return before }
+        return nil
+    }
+
+    /// The game as a sequence of stretches, in order: a game can change 棋力 as it goes, the way it
+    /// can change a Controller, and each stretch is credited to the rung it was played at.
+    public var stretches: [Stretch] {
+        var stretches: [Stretch] = []
+        for ply in plies.indices.map({ $0 + 1 }) {
+            let strength = strength(ofPly: ply)
+            if let last = stretches.last, last.strength == strength {
+                stretches[stretches.count - 1] = Stretch(
+                    strength: strength, plies: last.plies.lowerBound...ply
+                )
+            } else {
+                stretches.append(Stretch(strength: strength, plies: ply...ply))
+            }
+        }
+        return stretches
+    }
+
+    /// The one Elo every engine move by `colour` was played at, or nil when there was none, the
+    /// rung changed, or the engine was at 满力 — the cases where a standard `WhiteElo` tag would
+    /// be a lie (docs/adr/0038).
+    public func constantElo(of colour: PieceColour) -> Int? {
+        var rungs: Set<Strength> = []
+        for (index, ply) in plies.enumerated() where mover(ofPly: index + 1) == colour {
+            if let strength = ply.strength { rungs.insert(strength) }
+        }
+        guard rungs.count == 1, let only = rungs.first else { return nil }
+        return only.elo
     }
 
     /// Set from the file's `[ReviewDepth]` tag as it is read, so the tag has exactly one home.

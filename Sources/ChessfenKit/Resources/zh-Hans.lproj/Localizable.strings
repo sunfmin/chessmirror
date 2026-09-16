@@ -468,3 +468,11 @@
 "slips.wrong" = "%d 个错招";
 "library.wrong" = "%d 处错";
 "record.now" = "现在";
+
+"strength" = "棋力";
+"strength.full" = "满力";
+"till.tally" = "正着 %d · 连正 %d";
+"ladder" = "正着榜";
+"ladder.run" = "最长连正";
+"ladder.distance" = "最长正着数";
+"ladder.stood" = "共 %d 步";

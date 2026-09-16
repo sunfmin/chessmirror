@@ -296,3 +296,45 @@ struct EngineTests {
         #expect(await search.value != nil, "a held search should run on the way back, not fail")
     }
 }
+
+/// The bound itself, on the real engine: at 1400 Stockfish picks among its top moves rather than
+/// playing the best one, and says which only in `bestmove` (docs/adr/0038).
+///
+/// A convergence property rather than an exact move, as ADR 0009 asks of every test of the real
+/// engine: the pick is a seeded random, so one position may well get the best move — but six
+/// positions all getting it is what a bound that never took would look like.
+@Suite("Stockfish at a 棋力", .serialized)
+struct BoundEngineTests {
+    @Test("a bound engine chooses like a weaker player, and the next search is unbound")
+    func aBoundEngineErrs() async throws {
+        let service = try #require(shared, "the NNUE weights are missing — see ios/README.md")
+        let openings = [
+            ["e2e4", "e7e5", "g1f3", "b8c6"], ["d2d4", "d7d5", "c2c4"],
+            ["e2e4", "c7c5", "g1f3", "d7d6"], ["e2e4", "e7e6", "d2d4", "d7d5"],
+            ["c2c4", "e7e5"], ["g1f3", "d7d5", "g2g3"],
+        ]
+        var differed = 0
+        for moves in openings {
+            let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: moves))
+            var full: Analysis?
+            for await snapshot in service.analyse(game, budget: .depth(10), lines: 1) { full = snapshot }
+            var bound: Analysis?
+            for await snapshot in service.analyse(
+                game, budget: .depth(10), lines: 1, strength: .elo(1400)
+            ) { bound = snapshot }
+            let chosen = try #require(bound?.bestMove, "a bound search still answers")
+            #expect(game.state.move(matching: chosen) != nil, "with a legal move")
+            #expect(bound?.best?.uciMoves.first == chosen, "and the chosen move heads the lines")
+            if chosen != full?.bestMove { differed += 1 }
+        }
+        #expect(differed > 0, "six positions and never a weaker pick is a bound that did not take")
+
+        // The bound is cleared for whatever searches next: the same position at 满力 answers with
+        // its strongest line first, which a bound search only does by chance.
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: openings[0]))
+        var again: Analysis?
+        for await snapshot in service.analyse(game, budget: .depth(10), lines: 1) { again = snapshot }
+        #expect(again?.bestMove != nil)
+        #expect(again?.lines.count == 1, "one line asked for, one line reported: no skill MultiPV")
+    }
+}

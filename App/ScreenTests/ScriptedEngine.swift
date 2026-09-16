@@ -28,6 +28,10 @@ final class ScriptedEngine: Engine {
     /// budget is the whole of how hard the engine was asked to play (docs/adr/0009).
     private let asked = Mutex<[SearchBudget]>([])
     private let askedLines = Mutex<[Int]>([])
+    /// The 棋力 each search was bound to. What a test of the bound asserts on, because which
+    /// move a bound engine plays is a seeded random (docs/adr/0038).
+    private let askedStrengths = Mutex<[Strength]>([])
+    var strengths: [Strength] { askedStrengths.withLock { $0 } }
 
     /// Every search asked for so far, in order, each with the clock it was given.
     var budgets: [SearchBudget] { asked.withLock { $0 } }
@@ -58,9 +62,12 @@ final class ScriptedEngine: Engine {
     func resume() { paused.withLock { $0 = false } }
     func clear() async {}
 
-    func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
+    func analyse(
+        _ game: Game, budget: SearchBudget, lines: Int, strength: Strength
+    ) -> AsyncStream<Analysis> {
         asked.withLock { $0.append(budget) }
         askedLines.withLock { $0.append(lines) }
+        askedStrengths.withLock { $0.append(strength) }
         if let stream = controlled?(game, budget) { return stream }
         let scripted = byPosition[game.state.fen].map { [$0] } ?? snapshots
         let reachedDepth: Bool

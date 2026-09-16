@@ -8,7 +8,9 @@ import Testing
 private final class SilentEngine: Engine, @unchecked Sendable {
     let positionSearches = PositionSearches()
     var isPaused = false
-    func analyse(_ game: Game, budget: SearchBudget, lines: Int) -> AsyncStream<Analysis> {
+    func analyse(
+        _ game: Game, budget: SearchBudget, lines: Int, strength: Strength
+    ) -> AsyncStream<Analysis> {
         AsyncStream { _ in }
     }
     func pause() {}

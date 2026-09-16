@@ -449,3 +449,11 @@
 "slips.wrong" = "%d coups fautifs";
 "library.wrong" = "%d fautes";
 "record.now" = "Maintenant";
+
+"strength" = "Force";
+"strength.full" = "Pleine force";
+"till.tally" = "%d justes · série %d";
+"ladder" = "Palmarès sans faute";
+"ladder.run" = "Plus longue série";
+"ladder.distance" = "Plus longue distance";
+"ladder.stood" = "%d au total";

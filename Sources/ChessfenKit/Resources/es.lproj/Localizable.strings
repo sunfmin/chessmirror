@@ -449,3 +449,11 @@
 "slips.wrong" = "%d jugadas erróneas";
 "library.wrong" = "%d fallos";
 "record.now" = "Ahora";
+
+"strength" = "Fuerza";
+"strength.full" = "Toda la fuerza";
+"till.tally" = "%d en pie · racha %d";
+"ladder" = "Escalera sin errores";
+"ladder.run" = "Racha más larga";
+"ladder.distance" = "Mayor distancia";
+"ladder.stood" = "%d en total";

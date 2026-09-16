@@ -172,6 +172,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     @ObservationIgnored private var analysisByFen: [String: Analysis] = [:]
 
     private var controllers: [PieceColour: Controller]
+    /// The 棋力 the engine plays its own moves at (docs/adr/0038). A fact about the game rather
+    /// than a way of playing it, unlike the clock: it is written onto every move the engine plays,
+    /// and a reopened game comes back at the rung its last engine move was played at.
+    public private(set) var strength: Strength
     /// The clock somebody has put the engine on, if anybody has. Nil means the game decides —
     /// see `thinkingTime`, which is the one to read.
     ///
@@ -213,10 +217,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         url: URL? = nil,
         tags: [PGN.Tag] = [],
         /// Which ply to open on. The latest by default, which is where a game being played is.
-        viewing: Int? = nil
+        viewing: Int? = nil,
+        /// The 棋力 to play at when the game itself does not say: what the player last picked.
+        strength: Strength = .full
     ) {
         self.game = game
         self.controllers = controllers
+        // The game's own word first: a record with engine moves in it was played at a rung, and
+        // reopening it at some other rung would be a different opponent wearing the same name.
+        self.strength = game.plies.last(where: { $0.strength != nil })?.strength ?? strength
         self.orientation = orientation
         self.origin = origin
         self.picture = picture
@@ -266,9 +275,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         _ game: Game,
         controllers: [PieceColour: Controller] = [.white: .hand, .black: .hand],
         engine: (any Engine)? = nil,
-        library: GameLibrary? = nil
+        library: GameLibrary? = nil,
+        strength: Strength = .full
     ) -> GameSession {
-        let session = GameSession(game: game, controllers: controllers, origin: .fresh)
+        let session = GameSession(
+            game: game, controllers: controllers, origin: .fresh, strength: strength
+        )
         session.attach(engine: engine, library: library)
         return session
     }
@@ -279,9 +291,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public static func playing(
         _ game: Game,
         engine: (any Engine)? = nil,
-        library: GameLibrary? = nil
+        library: GameLibrary? = nil,
+        strength: Strength = .full
     ) -> GameSession {
-        let session = fresh(game, engine: engine, library: library)
+        let session = fresh(game, engine: engine, library: library, strength: strength)
         session.seatEngineOpponent()
         return session
     }
@@ -340,10 +353,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public static func opened(
         _ entry: GameLibrary.Entry,
         engine: (any Engine)? = nil,
-        library: GameLibrary? = nil
+        library: GameLibrary? = nil,
+        strength: Strength = .full
     ) -> GameSession? {
         guard !entry.isDownloading else { return nil }
-        let session = GameSession(entry: entry, library: library)
+        let session = GameSession(entry: entry, library: library, strength: strength)
         session.pendingImportURL = entry.url
         session.attach(engine: engine, library: library)
         session.seatEngineOpponent()
@@ -376,7 +390,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// Reopens a saved game, at the position it began in, facing the side about to move.
-    private convenience init(entry: GameLibrary.Entry, library: GameLibrary? = nil) {
+    private convenience init(
+        entry: GameLibrary.Entry, library: GameLibrary? = nil, strength: Strength = .full
+    ) {
         let pgn = entry.pgn
         let game = pgn?.game ?? Game(startFEN: PGN.standardStartFEN)!
         self.init(
@@ -390,7 +406,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             picture: entry.origin == .recognised ? library?.picture(for: entry.url) : nil,
             url: entry.url,
             tags: pgn?.tags ?? [],
-            viewing: 0
+            viewing: 0,
+            strength: strength
         )
     }
 
@@ -417,6 +434,20 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // Changing who moves for the side already on the clock has to take effect now, not
         // next move — that is what the switch is for.
         retune()
+    }
+
+    /// Puts the engine on another rung of the ladder, mid-move if that is when it is said.
+    ///
+    /// Now rather than next move, for the reason a clock change is: the move being waited for is
+    /// the one anybody reaches for this because of, so a search the engine is walking under the
+    /// old rung starts again under the new one (docs/adr/0038). Nothing else restarts — the bound
+    /// is on the opponent's own move and on nothing else, so 细判 and the cards have nothing to
+    /// redo.
+    public func setStrength(_ strength: Strength) {
+        guard !isWeighing, activePunishment == nil else { return }
+        guard self.strength != strength else { return }
+        self.strength = strength
+        if thinking == .own { retune() }
     }
 
     /// Both Controllers on the engine: the app playing itself, with nobody on the clock.
@@ -617,9 +648,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return punishment
     }
 
-    /// Moves the 拦截线, or switches 正着 off with nil. **The only difficulty dial there is** —
-    /// how strong the opponent is and how much slack the coach cuts are two different questions,
-    /// and answering both with one knob makes it impossible to say who improved (docs/adr/0009).
+    /// Moves the 拦截线, or switches 正着 off with nil. **The only dial 正着 has on the judgement
+    /// of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how much slack the
+    /// coach cuts are two different questions, and answering both with one knob makes it
+    /// impossible to say who improved (docs/adr/0009).
     public func setTilling(_ enabled: Bool) {
         setIntercept(enabled ? (preferredIntercept ?? JudgementLines.defaultIntercept) : nil)
     }
@@ -1005,7 +1037,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     private func recordHelp(atPly ply: Int, san: String, drop: Double? = nil, score: Score? = nil, depth: Int? = nil) {
         if isTilling || hasTillingFeedback, let drop, let score {
-            game.setJudgement(.init(drop: drop, score: score, depth: depth ?? interceptTable?.analysis.depth ?? 0), atPly: ply)
+            // With the 拦截线 it stood under when 正着 was on — the relaxed one if the ladder had
+            // been climbed to it — and none when 正着 was off, which is how 正着数 tells a move
+            // that stood from a move that was merely measured (CONTEXT.md, 正着数).
+            game.setJudgement(
+                .init(
+                    drop: drop, score: score, depth: depth ?? interceptTable?.analysis.depth ?? 0,
+                    intercept: isTilling ? (relaxedIntercept ?? lines.intercept) : nil
+                ),
+                atPly: ply
+            )
         }
         // A move let through at a relaxed line is written down as a 试招 the player did not find,
         // after the ones that were refused on the way to it.
@@ -1410,6 +1451,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // started from, and applying it anywhere else would be a different move.
             guard isAtLatest, game.apply(move) else { return }
             cursor = game.plies.count
+            // With the rung it was found at, 满力 included: the record of a game against the
+            // engine says what the engine was (docs/adr/0038).
+            game.setStrength(strength, atPly: game.plies.count - 1)
         } else {
             guard game.play(move, atPly: cursor) else {
                 Sounds.current.play(.refused)
@@ -1708,13 +1752,21 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // Mirrored Time is only the default, and only against a person: with both Controllers
             // on the engine there is no last human move to mirror, and there is a named clock
             // instead (`thinkingTime`).
+            let strength = strength
             searchTask = Task { [weak self] in
                 var last: Analysis?
-                // One line: the engine is choosing a move, not advising, and each extra line
+                // At 满力 the engine's move is the shared bounded search every other reader of
+                // this position joins. At a rung it is a search of its own, bound to that rung and
+                // shared with nothing: a bound answer is the opponent's and must not become the
+                // number a hint or a judgement reads for this position (docs/adr/0038). One line
+                // either way: the engine is choosing a move, not advising, and each extra line
                 // roughly doubles the time to the same Depth — a weaker move on the same clock.
-                for await snapshot in engine.analysePosition(position) {
+                let search = strength == .full
+                    ? engine.analysePosition(position)
+                    : engine.analyse(position, budget: PositionSearches.budget, lines: 1, strength: strength)
+                for await snapshot in search {
                     if Task.isCancelled { return }
-                    self?.record(snapshot)
+                    if strength == .full { self?.record(snapshot) } else { self?.noteProgress(snapshot) }
                     self?.thinkingBest = snapshot.bestMove
                     last = snapshot
                 }
@@ -1895,6 +1947,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if origin != .imported {
             written.setTag("White", to: controller(for: .white).playerName)
             written.setTag("Black", to: controller(for: .black).playerName)
+            // The standard Elo tags, for other tools, when the whole game was at one rung; a game
+            // that changed rung says so per move and nowhere else (docs/adr/0038).
+            written.setTag("WhiteElo", to: game.constantElo(of: .white).map(String.init))
+            written.setTag("BlackElo", to: game.constantElo(of: .black).map(String.init))
         }
         written.setTag("Result", to: game.resultToken)
         written.setTag("Intercept", to: lines.intercept.map(String.init(describing:)))

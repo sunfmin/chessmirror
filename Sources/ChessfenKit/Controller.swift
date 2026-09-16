@@ -25,9 +25,10 @@ public enum Controller: String, Hashable, Sendable, CaseIterable, Codable {
 /// How long the engine thinks before moving a colour it controls: about as long as the
 /// player took over their own last move.
 ///
-/// The engine is never handicapped — no skill level, no Elo limit, no reduced depth. It
-/// plays at full strength and the only thing that shapes how well it plays is how long it
-/// is left alone, which is exactly the courtesy a human opponent extends (docs/adr/0009).
+/// The clock never handicaps the engine: at 满力 it plays at full strength and the only thing
+/// that shapes how well it plays is how long it is left alone, which is exactly the courtesy a
+/// human opponent extends (docs/adr/0009). A 棋力 is the one other dial, and it is a bound on the
+/// opponent's own moves alone — the clock is untouched by it (docs/adr/0038).
 public enum MirroredTime {
     /// A floor, because a player who taps a move out in a tenth of a second has not
     /// offered a thinking time so much as a reflex, and an engine answering in 100 ms
@@ -47,9 +48,9 @@ public enum MirroredTime {
 
 /// How long the engine thinks over a move it plays for a colour it controls.
 ///
-/// Time is the only dial in this app — the engine is never handicapped, so how long it is left
-/// alone is the whole of how well it plays (docs/adr/0009) — and this is that dial. Two kinds of
-/// answer, and which one is right depends on who is on the other side of the board.
+/// Time is one of the two dials on the opponent — the other is its 棋力 (docs/adr/0038) — and
+/// at 满力 it is the whole of how well the engine plays (docs/adr/0009). Two kinds of answer,
+/// and which one is right depends on who is on the other side of the board.
 ///
 /// It says nothing about the other two things the engine does. Advice is unbounded, because it is
 /// deepening under a player who is thinking; an Asked Move takes as long as the button is held.

@@ -5,10 +5,11 @@ import Foundation
 /// Separate because they answer different questions, and one control answering all three would
 /// make it impossible to say which of them the player actually wanted moved:
 ///
-/// - **拦截线** is what 正着 stops the player for and rolls the board back over. It is 正着's only
-///   difficulty dial — the engine's strength is never one, because how strong the opponent is and
-///   how much slack the coach cuts are two questions, and answering them with one knob makes it
-///   impossible to say who improved (docs/adr/0009).
+/// - **拦截线** is what 正着 stops the player for and rolls the board back over. It is the only
+///   dial 正着 has on the judgement of a move — the engine's 棋力 shapes the opponent it plays and
+///   never what a move costs (docs/adr/0038), because how strong the opponent is and how much
+///   slack the coach cuts are two questions, and answering them with one knob makes it impossible
+///   to say who improved (docs/adr/0009).
 /// - **记录线** is what gets written into the game as a mistake worth remembering.
 /// - **入列线** is what earns a place in the player's future practice time. It never sits *below*
 ///   the 记录线 — practice time is spent on things that were written down — and a player who wants

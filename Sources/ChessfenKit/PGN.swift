@@ -179,7 +179,16 @@ public struct PGN: Hashable, Sendable {
             // the same tag is what makes the round trip exact.
             var comment: [String] = []
             if let judgement = ply.judgement {
-                comment.append("[%judged \(judgement.depth) \(judgement.drop) \(judgement.score.pgnText)]")
+                // With the 拦截线 the move stood under after `under`, when it stood under one: a
+                // reader that knows only the three-part form reads the three parts it knows.
+                var judged = "[%judged \(judgement.depth) \(judgement.drop) \(judgement.score.pgnText)"
+                if let intercept = judgement.intercept { judged += " under \(intercept)" }
+                comment.append(judged + "]")
+            }
+            // The 棋力 the engine played this move at (docs/adr/0038). Only on the engine's own
+            // moves, and 满力 written as `full` rather than left off: a hand move has no token.
+            if let strength = ply.strength {
+                comment.append("[%strength \(strength.text)]")
             }
             if let evaluation = ply.evaluation ?? ply.importedEvaluation {
                 comment.append("[%eval \(evaluation.pgnText)]")
@@ -319,6 +328,8 @@ public struct PGN: Hashable, Sendable {
                 game.setHints(rungs, atPly: game.plies.count - 1)
             case .judgement(let judgement):
                 game.setJudgement(judgement, atPly: game.plies.count - 1)
+            case .strength(let strength):
+                game.setStrength(strength, atPly: game.plies.count - 1)
             case .line(let line):
                 // A Line standing before the first move belongs to the starting position and has
                 // nowhere to go: what reads it is a move's own consequences, and there is no move.
@@ -329,6 +340,33 @@ public struct PGN: Hashable, Sendable {
                 // A stray closing bracket. Nothing opened, so nothing closes: files in the wild
                 // carry worse than this, and losing a game to save a footnote is the wrong trade.
                 continue
+            }
+        }
+
+        // A file written before 棋力 existed says who the engine was only in the roster, and says
+        // nothing per move. Its engine moves were at 满力 — that was the only opponent there was
+        // (docs/adr/0009) — so they are read as such, and only when no move in the file carries a
+        // rung of its own: a file that writes rungs writes one on every engine move, and a move
+        // without one there is a hand's.
+        if !game.plies.contains(where: { $0.strength != nil }) {
+            let engine = Controller.engine.playerName
+            for colour in [PieceColour.white, .black]
+            where tags.first(where: { $0.name == (colour == .white ? "White" : "Black") })?.value == engine {
+                for index in game.plies.indices where game.mover(ofPly: index + 1) == colour {
+                    game.setStrength(.full, atPly: index)
+                }
+            }
+        }
+        // And a judgement written before the 拦截线 travelled with it stood under the file's
+        // 拦截线, when the file has one: 正着 was on when the game was saved, which is the best
+        // account there is of whether it was on when the move was played.
+        if let intercept = (tags.first { $0.name == "Intercept" }?.value).flatMap(Double.init) {
+            for index in game.plies.indices {
+                guard let judgement = game.plies[index].judgement, judgement.intercept == nil else { continue }
+                game.setJudgement(
+                    .init(drop: judgement.drop, score: judgement.score, depth: judgement.depth, intercept: intercept),
+                    atPly: index
+                )
             }
         }
 
@@ -355,6 +393,7 @@ private struct Scanner {
         case pending(Int, Game.Ply.Tried)
         case hint(Int)
         case judgement(Game.Ply.Judgement)
+        case strength(Strength)
         case variationStart
         case variationEnd
     }
@@ -405,6 +444,7 @@ private struct Scanner {
                 tokens.append(contentsOf: Self.pending(in: comment).map { .pending($0.ply, $0.tried) })
                 if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
                 if let judgement = Self.judgement(in: comment) { tokens.append(.judgement(judgement)) }
+                if let strength = Self.strength(in: comment) { tokens.append(.strength(strength)) }
             case ";":
                 _ = read(while: { !$0.isNewline })
             case "(":
@@ -486,13 +526,26 @@ private struct Scanner {
         body(of: "hint", in: comment).flatMap { Int($0) }
     }
 
+    /// `[%judged 20 3.2 +0.35]`, or the same with ` under 10.0` after it for a move that stood
+    /// under 正着 at that 拦截线.
     private static func judgement(in comment: String) -> Game.Ply.Judgement? {
         guard let body = body(of: "judged", in: comment) else { return nil }
         let parts = body.split(separator: " ")
-        guard parts.count == 3, let depth = Int(parts[0]), depth > 0,
+        guard parts.count == 3 || (parts.count == 5 && parts[3] == "under"),
+              let depth = Int(parts[0]), depth > 0,
               let drop = Double(parts[1]), drop.isFinite, drop >= 0,
               let score = Score(pgnText: String(parts[2])) else { return nil }
-        return .init(drop: drop, score: score, depth: depth)
+        var intercept: Double?
+        if parts.count == 5 {
+            guard let line = Double(parts[4]), line.isFinite, line >= 0 else { return nil }
+            intercept = line
+        }
+        return .init(drop: drop, score: score, depth: depth, intercept: intercept)
+    }
+
+    /// `[%strength 1800]` or `[%strength full]` (docs/adr/0038).
+    private static func strength(in comment: String) -> Strength? {
+        body(of: "strength", in: comment).flatMap(Strength.init(text:))
     }
 
     private static func line(in comment: String) -> [String]? {

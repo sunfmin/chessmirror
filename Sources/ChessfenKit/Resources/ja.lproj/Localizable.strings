@@ -423,3 +423,11 @@
 "slips.wrong" = "ミス %d 手";
 "library.wrong" = "ミス %d";
 "record.now" = "現在";
+
+"strength" = "棋力";
+"strength.full" = "全力";
+"till.tally" = "正着 %d · 連続 %d";
+"ladder" = "ミスなし番付";
+"ladder.run" = "最長連続";
+"ladder.distance" = "最長正着数";
+"ladder.stood" = "計 %d 手";

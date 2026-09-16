@@ -75,7 +75,9 @@ public final class EngineService: @unchecked Sendable {
     private struct Sink {
         var generation: UInt64 = 0
         var onInfo: (@Sendable (CfSearchInfo) -> Void)?
-        var onFinish: (@Sendable () -> Void)?
+        /// Told the move the engine settled on, or nil when the search was superseded before
+        /// it said. Only a bound search reads it (see `DepthGroup.choose`).
+        var onFinish: (@Sendable (String?) -> Void)?
     }
 
     private let generations = Atomic<UInt64>(0)
@@ -112,6 +114,9 @@ public final class EngineService: @unchecked Sendable {
     /// The MultiPV the engine is set to right now, so a search can tell when the option
     /// needs changing. Touched only on the serial queue (and once, by `init`).
     private var multiPV: Int
+    /// The 棋力 the engine is bound to right now, for the same reason. 满力 at init, and 满力
+    /// again before every search that is not the opponent's own move (docs/adr/0038).
+    private var bound: Strength = .full
 
     public init(
         bigNetURL: URL, smallNetURL: URL, configuration: Configuration = Configuration()
@@ -215,16 +220,20 @@ public final class EngineService: @unchecked Sendable {
     /// installs itself, all in that order on the serial queue. Callers therefore cannot
     /// interleave two searches however hard they try, and no stream is ever left hanging.
     public func analyse(
-        _ game: Game, budget: SearchBudget = .untilStopped, lines: Int = 3
+        _ game: Game, budget: SearchBudget = .untilStopped, lines: Int = 3,
+        strength: Strength = .full
     ) -> AsyncStream<Analysis> {
-        analysisRequest(game, budget: budget, lines: lines, background: false).stream
+        analysisRequest(game, budget: budget, lines: lines, strength: strength, background: false)
+            .stream
     }
 
     public func analyseInBackground(_ game: Game, depth: Int) async -> Analysis? {
         while !Task.isCancelled {
             await waitWhilePaused()
             guard !Task.isCancelled else { return nil }
-            let request = analysisRequest(game, budget: .depth(depth), lines: 1, background: true)
+            let request = analysisRequest(
+                game, budget: .depth(depth), lines: 1, strength: .full, background: true
+            )
             var result: Analysis?
             for await snapshot in request.stream {
                 guard !Task.isCancelled else { return nil }
@@ -238,7 +247,7 @@ public final class EngineService: @unchecked Sendable {
     }
 
     private func analysisRequest(
-        _ game: Game, budget: SearchBudget, lines: Int, background: Bool
+        _ game: Game, budget: SearchBudget, lines: Int, strength: Strength, background: Bool
     ) -> (stream: AsyncStream<Analysis>, generation: UInt64) {
         let startFEN = game.startFEN
         let moves = game.uciMoves
@@ -272,6 +281,20 @@ public final class EngineService: @unchecked Sendable {
                     cf_engine_set_option(handle.pointer, "MultiPV", "\(max(1, lines))")
                     multiPV = lines
                 }
+                // The 棋力, the same way: set for the opponent's own move and cleared again before
+                // whatever searches next, so a bound never outlives the one search it was asked
+                // for (docs/adr/0038). Stockfish reads both options at the start of a search.
+                if strength != bound {
+                    switch strength {
+                    case .full:
+                        cf_engine_set_option(handle.pointer, "UCI_LimitStrength", "false")
+                    case .elo(let elo):
+                        let clamped = min(max(elo, Strength.eloRange.lowerBound), Strength.eloRange.upperBound)
+                        cf_engine_set_option(handle.pointer, "UCI_Elo", "\(clamped)")
+                        cf_engine_set_option(handle.pointer, "UCI_LimitStrength", "true")
+                    }
+                    bound = strength
+                }
 
                 // Accumulates the MultiPV lines of one Depth, then emits them together.
                 let group = Mutex(DepthGroup(state: state, perspective: perspective))
@@ -288,7 +311,13 @@ public final class EngineService: @unchecked Sendable {
                             let flush = group.withLock { $0.absorb(info) }
                             if flush { emit() }
                         },
-                        onFinish: { [weak self] in
+                        onFinish: { [weak self] chosen in
+                            // A bound engine picks its move among its top lines by a seeded
+                            // random and says which only here, in `bestmove`; the lines it
+                            // reported stay in order of strength (docs/adr/0038).
+                            if strength != .full, let chosen, chosen != "(none)" {
+                                group.withLock { $0.choose(chosen) }
+                            }
                             emit()
                             continuation.finish()
                             self?.searchFinished(generation)
@@ -296,7 +325,7 @@ public final class EngineService: @unchecked Sendable {
                     )
                     return previous
                 }
-                superseded.onFinish?()
+                superseded.onFinish?(nil)
 
                 // The pause rule, applied at the one way in. A standing Analysis belongs to a
                 // screen someone is looking at, so a paused engine does not start one — the
@@ -318,11 +347,12 @@ public final class EngineService: @unchecked Sendable {
                                 .fromOpaque(context).takeUnretainedValue()
                             service.sink.withLock { $0.onInfo }?(info.pointee)
                         },
-                        { context, _, _ in
+                        { context, best, _ in
                             guard let context else { return }
                             let service = Unmanaged<EngineService>
                                 .fromOpaque(context).takeUnretainedValue()
-                            service.sink.withLock { $0.onFinish }?()
+                            let chosen = best.map { String(cString: $0) }
+                            service.sink.withLock { $0.onFinish }?(chosen)
                         }
                     )
                 }
@@ -503,6 +533,36 @@ struct DepthGroup {
     }
 
     private var pending: Analysis?
+
+    /// Puts the move the engine settled on first, for a search that was bound to a 棋力.
+    ///
+    /// Stockfish at a limited strength searches at full strength and then *picks* among its top
+    /// lines with a seeded random, and the pick is said only in `bestmove` — the lines it reported
+    /// along the way stay in order of strength. A reader of the last snapshot would therefore play
+    /// the strongest move at every rung, which is the one thing the bound exists to prevent
+    /// (docs/adr/0038). What is emitted after this is the snapshot as reported, reordered so that
+    /// `best` is the move the engine chose; a chosen move the lines never carried gets a Line of
+    /// its own, at the best Score known, because the move is the fact and the Score is telemetry.
+    mutating func choose(_ uci: String) {
+        guard let base = pending ?? (lines.isEmpty ? nil : snapshot()) else { return }
+        var ordered = base.lines
+        if let index = ordered.firstIndex(where: { $0.bestMove == uci }) {
+            ordered.insert(ordered.remove(at: index), at: 0)
+        } else {
+            var played = Game(startFEN: state.fen)
+            let san = played?.apply(uci: uci) == true ? played?.plies.last?.san : nil
+            ordered.insert(
+                Line(score: base.best?.score ?? .centipawns(0), uciMoves: [uci], san: [san ?? uci]),
+                at: 0
+            )
+        }
+        pending = Analysis(
+            depth: base.depth, selectiveDepth: base.selectiveDepth, lines: ordered,
+            nodes: base.nodes, nodesPerSecond: base.nodesPerSecond,
+            timeMilliseconds: base.timeMilliseconds, hashFull: base.hashFull,
+            isPartial: base.isPartial
+        )
+    }
 
     /// The completed Depth, if one is waiting; otherwise whatever has been collected.
     mutating func take() -> Analysis? {

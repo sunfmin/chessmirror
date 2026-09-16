@@ -494,3 +494,12 @@
 "slips.wrong" = "%d wrong moves";
 "library.wrong" = "%d wrong";
 "record.now" = "Now";
+
+"strength" = "Strength";
+"strength.full" = "Full strength";
+"till.tally" = "%d stood · run %d";
+"ladder" = "No Slips ladder";
+"ladder.run" = "Longest run";
+"ladder.distance" = "Longest distance";
+"ladder.stood" = "%d stood in all";
+"ladder.stood.one" = "%d stood in all";

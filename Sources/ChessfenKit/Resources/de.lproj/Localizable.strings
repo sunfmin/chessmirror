@@ -448,3 +448,11 @@
 "slips.wrong" = "%d falsche Züge";
 "library.wrong" = "%d falsch";
 "record.now" = "Jetzt";
+
+"strength" = "Stärke";
+"strength.full" = "Volle Stärke";
+"till.tally" = "%d gestanden · Serie %d";
+"ladder" = "Bestenliste ohne Patzer";
+"ladder.run" = "Längste Serie";
+"ladder.distance" = "Längste Strecke";
+"ladder.stood" = "%d insgesamt";
