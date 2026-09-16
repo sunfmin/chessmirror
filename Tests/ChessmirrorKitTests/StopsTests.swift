@@ -90,4 +90,28 @@ import Testing
         )
         #expect(refused.arrivalPly == 6, "a move taken back never stood: open where it was played from")
     }
+    /// One value under both readers: a stop lays out what the 记录线 writes down — the 试招 in
+    /// the order they were refused, each knowing which attempt it was and whether it was found —
+    /// and the move that stood only when the reader hands in a cost for it. Which cost is the
+    /// reader's gate, and a stood move nobody costed is not in the list.
+    @Test func aStopLaysOutItsWrongMovesOnceForBothReaders() throws {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+        game.setTried([.init(san: "f3", drop: 24), .init(san: "a3", drop: 2), .init(san: "g4", drop: 40, notFound: true)], atPly: 0)
+        game.setJudgement(.init(drop: 12, score: .centipawns(-40), depth: 20), atPly: 0)
+        let stop = try #require(game.stops(by: [.white]).first)
+
+        let uncosted = stop.wrong(recordedBy: .standard, stood: nil)
+        #expect(uncosted.map(\.san) == ["f3", "g4"], "the 试招 over the line, as they happened; a3 is under it")
+        #expect(uncosted.map(\.attempt) == [0, 2], "each knows which attempt it was")
+        #expect(uncosted.map(\.notFound) == [false, true])
+        #expect(uncosted.allSatisfy { $0.wasTried })
+
+        let costed = stop.wrong(recordedBy: .standard, stood: game.cost(atPly: 1))
+        #expect(costed.map(\.san) == ["f3", "g4", "e4"], "and the move that stood, last, when the reader costs it")
+        #expect(costed.last == .init(san: "e4", drop: 12, wasTried: false))
+        #expect(stop.wrong(recordedBy: .standard, stood: 3).map(\.san) == ["f3", "g4"], "a cost under the line is not written")
+
+        let slips = game.slips(by: [.white], lines: .standard)
+        #expect(slips.first?.wrong.map(\.san) == ["g4", "f3", "e4"], "the 错招 list is this, worst first")
+    }
 }

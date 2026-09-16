@@ -21,7 +21,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     session.setIntercept(10)
     session.findsPunishment = true
     session.play(try #require(game.state.move(matching: "g2g4")))
-    await session.waitForJudgement()
+    await session.settled()
     let exercise = try #require(session.activePunishment)
     // A refusal leaves the moves alone; what it writes down is the 试招 itself (docs/adr/0037).
     #expect(session.game.uciMoves == game.uciMoves)
@@ -34,7 +34,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     case .reveal: exercise.reveal()
     case .skip: exercise.skip()
     }
-    await exercise.waitForJudgement()
+    await exercise.settled()
     #expect(exercise.isFinished)
     if exit == .reveal {
         #expect(exercise.revealedMove == "Qh4#")
@@ -50,7 +50,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
 
     session.setIntercept(nil)
     session.play(try #require(game.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.game != game)
     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -82,7 +82,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
         let exercise = Punishment(position: game, engine: engine)
         exercise.submit(try #require(game.state.move(matching: "d2d4")))
 
-        await exercise.waitForJudgement()
+        await exercise.settled()
         #expect(!exercise.isJudging)
         #expect(exercise.isFinished == accepted)
         #expect(engine.budgets == [PositionSearches.budget, PositionSearches.budget])
@@ -117,7 +117,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     session.setIntercept(10)
     session.play(try #require(game.state.move(matching: "d2d4")))
 
-    await session.waitForJudgement()
+    await session.settled()
     let exercise = try #require(session.activePunishment)
     #expect(session.game.uciMoves == game.uciMoves)
     #expect(session.board.uciMoves == ["d2d4"])
@@ -130,7 +130,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     #expect(session.controller(for: .white) == .hand)
     #expect(!session.canPlayBestMove)
     session.play(try #require(session.board.state.move(matching: "e7e5")))
-    await exercise.waitForJudgement()
+    await exercise.settled()
     #expect(exercise.isFinished)
     #expect(session.activePunishment == nil)
     // The board is back where the move was refused, with the moves as they were; what differs
@@ -139,7 +139,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     #expect(session.board.state == game.state)
     #expect(session.board.state.sideToMove == .white)
     session.play(try #require(game.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
     let read = try PGN(parsing: session.pgn.text)
     try #require(read.game.uciMoves == ["e2e4"])
     #expect(read.game.plies[0].tried.count == 1)
@@ -159,7 +159,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
         let exercise = Punishment(position: game, engine: engine)
         exercise.submit(try #require(game.state.move(matching: uci)))
 
-        await exercise.waitForJudgement()
+        await exercise.settled()
         #expect(!exercise.isJudging)
         #expect(exercise.isFinished)
         #expect(exercise.position == game)
@@ -168,7 +168,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     let revealed = Punishment(position: game, engine: engine)
     revealed.reveal()
 
-    await revealed.waitForJudgement()
+    await revealed.settled()
     #expect(revealed.isFinished)
     #expect(revealed.revealedMove == "e4")
     #expect(revealed.position == game)
@@ -192,13 +192,13 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     let exercise = Punishment(position: game, engine: engine)
     exercise.submit(try #require(game.state.move(matching: "f2f3")))
 
-    await exercise.waitForJudgement()
+    await exercise.settled()
     #expect(!exercise.isJudging)
     #expect(!exercise.isFinished)
     #expect(exercise.wasIncorrect)
     #expect(exercise.revealedMove == nil)
     #expect(exercise.position == game)
     exercise.submit(try #require(game.state.move(matching: "e2e4")))
-    await exercise.waitForJudgement()
+    await exercise.settled()
     #expect(exercise.isFinished)
 }

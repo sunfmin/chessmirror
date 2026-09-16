@@ -140,12 +140,12 @@ import ChessmirrorKitTesting
         #expect(session.noSlips == .none)
 
         session.play(try #require(start.state.move(matching: "f2f3")))
-        await session.waitForJudgement()
+        await session.settled()
         #expect(session.refused?.san == "f3")
         #expect(session.noSlips == .init(run: 0, longestRun: 0))
 
         session.play(try #require(start.state.move(matching: "e2e4")))
-        await session.waitForJudgement()
+        await session.settled()
         #expect(session.game.uciMoves == ["e2e4"])
         #expect(session.noSlips == .init(run: 1, longestRun: 1))
         #expect(session.game.plies[0].judgement?.intercept == 10)

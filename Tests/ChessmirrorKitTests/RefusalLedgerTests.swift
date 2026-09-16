@@ -27,15 +27,13 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     let played = game.apply(uci: "e2e4")
     #expect(played)
 
-    game.absorbPendingTried(atPly: 0, hints: 2, adding: [.init(san: "e4", drop: 12, notFound: true)])
+    game.absorbPendingTried(atPly: 0)
 
-    #expect(game.plies[0].tried.map(\.san) == ["f3", "g4", "e4"])
-    #expect(game.plies[0].tried.last?.notFound == true)
-    #expect(game.plies[0].hints == 2)
+    #expect(game.plies[0].tried.map(\.san) == ["f3", "g4"])
     #expect(game.pendingTried.isEmpty)
     // And the file says the same: the refusals ride on the move, and nothing is pending.
     let read = try PGN(parsing: PGN(game: game).text).game
-    #expect(read.plies[0].tried.map(\.san) == ["f3", "g4", "e4"])
+    #expect(read.plies[0].tried.map(\.san) == ["f3", "g4"])
     #expect(read.pendingTried.isEmpty)
 }
 
@@ -99,7 +97,7 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     session.jump(toPly: 2)
     await session.waitForPreparedInterception()
     session.play(try #require(twoPliesIn.state.move(matching: "f1c4")))
-    await session.waitForJudgement()
+    await session.settled()
 
     #expect(session.visibleAttempts.map(\.san) == ["Bc4"])
     #expect(session.visibleAttempts == session.game.pendingTries(atPly: 2))
@@ -136,13 +134,13 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     await session.waitForPreparedInterception()
     for uci in ["f2f3", "g2g4"] {
         session.play(try #require(start.state.move(matching: uci)))
-        await session.waitForJudgement()
+        await session.settled()
     }
     #expect(session.game.pendingTries(atPly: 0).map(\.san) == ["f3", "g4"])
     #expect(session.visibleAttempts.map(\.san) == ["f3", "g4"])
 
     session.play(try #require(start.state.move(matching: "e2e4")))
-    await session.waitForJudgement()
+    await session.settled()
 
     #expect(session.game.uciMoves == ["e2e4"])
     #expect(session.game.plies[0].tried.map(\.san) == ["f3", "g4"])

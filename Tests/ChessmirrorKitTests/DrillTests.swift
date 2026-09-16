@@ -84,7 +84,7 @@ private func engine(
     #expect(log.attempts().isEmpty)
     session.notePracticeHelp()
     session.play(try #require(session.game.state.move(matching: "b8c6")))
-    await session.waitForJudgement()
+    await session.settled()
     let verdict = try #require(drill.verdict)
     #expect(verdict.played == "Nc6")
     #expect(session.game.plies.first?.judgement?.depth == 20)
@@ -96,7 +96,7 @@ private func engine(
     let before = session.game.uciMoves
     let move = try #require(session.game.state.legalMoves.first)
     session.play(move)
-    await session.waitForJudgement()
+    await session.settled()
     #expect(session.game.uciMoves == before + [move.uci])
     #expect(log.attempts().count == 1, "continuing is not another attempt at the original question")
     let url = try #require(session.url)
@@ -143,6 +143,43 @@ func aTwelvePointMoveFails() async throws {
     #expect(!verdict.passed)
     #expect(abs(verdict.drop - 12.0) < 0.2, "drop was \(verdict.drop)")
     #expect(verdict.wanted == "Nc6", "and the engine's move is named, now that it is wanted")
+}
+
+/// The 线 a drill is judged under and the 线 it is refused under are one value, the drill's own.
+/// A session practising it mirrors those 线 and lands the drill's ruling as it is — a twelve-point
+/// move is refused under a 拦截线 of five and stands under one of thirty, and nothing in the
+/// session has a line of its own to say otherwise.
+@MainActor
+@Test("the drill rules its own attempt, and the session lands it under the same 线")
+func theDrillRulesItsOwnAttempt() async throws {
+    for (intercept, stands) in [(5.0, false), (30.0, true)] {
+        let (scripted, move) = try engine(
+            before: .centipawns(0), playing: "Qh4", after: .centipawns(133), wanting: "Nc6"
+        )
+        let log = temporaryLog()
+        defer { try? FileManager.default.removeItem(at: log.url) }
+        let lines = JudgementLines(intercept: intercept)
+        let drill = try #require(Drill(position: afterNf3, engine: scripted, log: log, lines: lines))
+        let session = GameSession.practising(drill, engine: scripted)
+        defer { session.suspend() }
+        #expect(session.lines == lines, "one value for the 线")
+
+        session.play(move)
+        await session.settled()
+
+        let ruling = try #require(drill.ruling)
+        #expect(ruling.takesTheMoveBack == !stands, "at \(intercept)")
+        #expect(session.game == ruling.game, "the session shows what the drill ruled")
+        if stands {
+            #expect(session.game.plies.count == 1)
+            #expect(session.refused == nil)
+        } else {
+            #expect(session.game.plies.isEmpty, "back to the position alone")
+            #expect(session.refused?.san == "Qh4")
+            #expect(session.game.pendingTries(atPly: 0).map(\.san) == ["Qh4"])
+        }
+        #expect(drill.verdict?.passed == false, "the 记录线 is still five: written down either way")
+    }
 }
 
 @MainActor

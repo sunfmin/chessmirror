@@ -40,7 +40,7 @@ import ChessmirrorKitTesting
         session.setIntercept(5)
         await session.waitForPreparedInterception()
         session.play(try #require(Self.start.state.move(matching: "e2e4")))
-        await session.waitForJudgement()
+        await session.settled()
         // The engine's own move, and then the preparation of the position it made.
         await session.waitForPreparedInterception()
         await session.waitForPreparedInterception()

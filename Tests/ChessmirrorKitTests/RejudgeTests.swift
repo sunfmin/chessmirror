@@ -56,7 +56,7 @@ struct RejudgeTests {
         session.rejudge(at: 0)
         #expect(session.rejudging?.tried.san == "g4")
         #expect(session.rejudgeOffer(at: 0) == .waiting, "one at a time")
-        await until { session.rejudging == nil }
+        await session.settled()
 
         let rewritten = session.game.pendingTries(atPly: 2)
         #expect(rewritten == [.init(san: "g4", drop: expectedDrop, depth: 26, line: ["Qh4"])],
@@ -85,7 +85,7 @@ struct RejudgeTests {
         #expect(session.visibleAttempts.map(\.san) == ["g4"])
 
         session.rejudge(at: 0)
-        await until { session.rejudging == nil }
+        await session.settled()
         #expect(session.game.plies[2].tried == [.init(san: "g4", drop: expectedDrop, depth: 28, line: ["Qh4"])])
         #expect(session.game.plies[2].hints == 1, "the ladder count rides along")
         #expect(session.game.plies[2].judgement == judgement, "the move that stood is not re-judged")
@@ -102,7 +102,7 @@ struct RejudgeTests {
 
         session.rejudge(at: 0)
         #expect(session.replyReading?.move.depth == 20, "unchanged until the number lands")
-        await until { session.rejudging == nil }
+        await session.settled()
         let reading = try #require(session.replyReading)
         #expect(reading.move.depth == 28)
         #expect(reading.move.drop == expectedDrop)
@@ -135,7 +135,7 @@ struct RejudgeTests {
         await until { engine.searchCount == 2 }
         session.play(try #require(session.game.state.move(matching: "d2d4")))
         #expect(session.rejudging == nil, "a move was played")
-        await session.waitForJudgement()
+        await session.settled()
         #expect(session.game.uciMoves == ["f2f3", "e7e5", "d2d4"])
         #expect(session.game.plies[2].tried.map(\.drop) == [40], "carried along as it was")
     }

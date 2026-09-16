@@ -185,31 +185,27 @@ public struct MistakeBook: Sendable {
         let game = pgn.game
         var found: [(PositionKey, Encounter)] = []
         for stop in game.stops(by: pgn.handColours) {
-            func note(_ played: String, _ cost: Double, attempt: Int? = nil, notFound: Bool = false) {
-                guard lines.records(cost) else { return }
+            // The move that stood, by the book's own gate: a Review's number and nothing else,
+            // because the book compares across games (docs/adr/0016) — and not a second time when
+            // a 惩罚 exercise already wrote it down as the move the player did not find. The
+            // 试招 come first, because they happened first: they are what the player reached
+            // for before the move that stands.
+            var stood: Double?
+            if let move = stop.move, game.isReviewed,
+                !stop.tried.contains(where: { $0.notFound && $0.san == move.san }) {
+                stood = game.drop(atPly: stop.ply)
+            }
+            for wrong in stop.wrong(recordedBy: lines, stood: stood) {
                 found.append(
                     (
                         stop.position,
                         Encounter(
-                            game: entry.url, ply: stop.ply, when: entry.modified, played: played,
-                            wanted: stop.wanted, cost: cost, origin: entry.origin, attempt: attempt,
-                            notFound: notFound
+                            game: entry.url, ply: stop.ply, when: entry.modified, played: wrong.san,
+                            wanted: stop.wanted, cost: wrong.drop, origin: entry.origin,
+                            attempt: wrong.attempt, notFound: wrong.notFound
                         )
                     )
                 )
-            }
-            // Refused first, because they happened first: they are what the player reached for
-            // before the move that stands.
-            for (index, attempt) in stop.tried.enumerated() {
-                note(attempt.san, attempt.drop, attempt: index, notFound: attempt.notFound)
-            }
-            // The move that stood, by the book's own gate: a Review's number and nothing else,
-            // because the book compares across games (docs/adr/0016) — and not a second time when
-            // a 惩罚 exercise already wrote it down as the move the player did not find.
-            guard let move = stop.move else { continue }
-            let alreadyRecorded = stop.tried.contains { $0.notFound && $0.san == move.san }
-            if game.isReviewed, !alreadyRecorded, let cost = game.drop(atPly: stop.ply) {
-                note(move.san, cost)
             }
         }
         return found
