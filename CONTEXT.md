@@ -144,13 +144,11 @@ by the search that refused the move, kept beside it, and shown only when the 试
 The 惩罚 exercise asks the player to find this same answer; what differs is who finds it.
 _Avoid_: 反击, 变着, 惩罚
 
-**提示层 (Hint layer)**:
-One rung of what the app will say when asked. Every rung must be asked for, and how far the
-player climbed is part of what the move is worth knowing about.
+**提示层 (Hint layer)**: _retired._ The word named a ladder of rungs no screen could press
+(docs/adr/0042). A game file may still carry how many were opened before a move. Do not reuse
+it without a rung on the screen.
 
-**放宽 (Relax)**:
-Letting one move through at a looser 拦截线 because the player could not find anything better.
-The move still becomes a 错题, and a heavier one than a first-try slip.
+**放宽 (Relax)**: _retired._ The top of that ladder, gone with it (docs/adr/0042).
 
 **棋力 (Strength)**:
 The Elo the engine is bound to for its own moves, picked from a fixed ladder; 满力 is unbound.

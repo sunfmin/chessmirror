@@ -27,15 +27,13 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     let played = game.apply(uci: "e2e4")
     #expect(played)
 
-    game.absorbPendingTried(atPly: 0, hints: 2, adding: [.init(san: "e4", drop: 12, notFound: true)])
+    game.absorbPendingTried(atPly: 0)
 
-    #expect(game.plies[0].tried.map(\.san) == ["f3", "g4", "e4"])
-    #expect(game.plies[0].tried.last?.notFound == true)
-    #expect(game.plies[0].hints == 2)
+    #expect(game.plies[0].tried.map(\.san) == ["f3", "g4"])
     #expect(game.pendingTried.isEmpty)
     // And the file says the same: the refusals ride on the move, and nothing is pending.
     let read = try PGN(parsing: PGN(game: game).text).game
-    #expect(read.plies[0].tried.map(\.san) == ["f3", "g4", "e4"])
+    #expect(read.plies[0].tried.map(\.san) == ["f3", "g4"])
     #expect(read.pendingTried.isEmpty)
 }
 

@@ -36,7 +36,7 @@ struct RulingTests {
         let (played, san, weighed) = try weigh("e2e4", from: before, cp: 30, after: 20)
 
         let ruling = Ruling(weighed, san: san, played: played,
-                            from: Standpoint(game: before, cursor: 0, hints: 2),
+                            from: Standpoint(game: before, cursor: 0),
                             lines: JudgementLines(intercept: 5))
 
         #expect(ruling.verdict == .stands(MoveChange(before: .centipawns(30), after: .centipawns(20))))
@@ -47,7 +47,6 @@ struct RulingTests {
         #expect(stood == .init(drop: weighed.drop, score: .centipawns(20), depth: 20, intercept: 5))
         #expect(stood.stoodUnderNoSlips)
         #expect(ruling.game.plies[0].tried.map(\.san) == ["f3"], "the refusal rides on the move that stands")
-        #expect(ruling.game.plies[0].hints == 2)
         #expect(ruling.game.pendingTried.isEmpty)
     }
 
@@ -60,7 +59,7 @@ struct RulingTests {
         #expect(played.uciMoves == ["e2e4", "e7e5", "f1c4"], "the board showed the move while it was weighed")
 
         let ruling = Ruling(weighed, san: san, played: played,
-                            from: Standpoint(game: before, cursor: 2, hints: 1),
+                            from: Standpoint(game: before, cursor: 2),
                             lines: JudgementLines(intercept: 5))
 
         #expect(ruling.verdict == .refused(Refusal(san: "Bc4", drop: weighed.drop)))
@@ -101,7 +100,7 @@ struct RulingTests {
         before.recordTried(.init(san: "Qh5", drop: 12), atPly: 2)
         let (played, san, _) = try weigh("g1f3", from: before, cp: 0, after: 0)
 
-        let standpoint = Standpoint(game: before, cursor: 2, hints: 3)
+        let standpoint = Standpoint(game: before, cursor: 2)
         let ruling = Ruling(nil, san: san, played: played, from: standpoint,
                             lines: JudgementLines(intercept: 5))
 
@@ -110,45 +109,6 @@ struct RulingTests {
         #expect(ruling.game == before, "and nothing is written, not even a refusal")
         #expect(ruling.cursor == 2)
         #expect(ruling == .unjudged(standpoint), "which is what a session leaving mid-weighing puts back")
-    }
-
-    /// The hint ladder climbed to a relaxed line lets a move through that the 拦截线 would have
-    /// stopped — and writes it down as a 试招 the player did not find, under the line it stood at.
-    @Test func aRelaxedLineLetsTheMoveThroughAsAMoveNotFound() throws {
-        var before = try opening()
-        before.recordTried(.init(san: "f3", drop: 20), atPly: 0)
-        let (played, san, weighed) = try weigh("d2d4", from: before, cp: 30, after: -100)
-        let lines = JudgementLines(intercept: weighed.drop - 1, record: 5)
-        #expect(Ruling.intercepts(weighed.drop, lines: lines), "the line as set would have stopped it")
-        #expect(!Ruling.intercepts(weighed.drop, lines: lines, relaxedIntercept: weighed.drop + 1))
-
-        let ruling = Ruling(weighed, san: san, played: played,
-                            from: Standpoint(game: before, cursor: 0, hints: 3, relaxedIntercept: weighed.drop + 1),
-                            lines: lines)
-
-        #expect(!ruling.takesTheMoveBack)
-        let judgement = try #require(ruling.game.plies[0].judgement)
-        #expect(judgement.intercept == weighed.drop + 1, "it stood under the relaxed line")
-        #expect(ruling.game.plies[0].tried.map(\.san) == ["f3", "d4"], "after the ones refused on the way")
-        #expect(ruling.game.plies[0].tried.last?.notFound == true)
-        #expect(ruling.game.plies[0].hints == 3)
-    }
-
-    /// With 正着 off a move is measured — the badge needs the number — but never stood: no line, no
-    /// refusal, and a judgement that does not count for 正着数.
-    @Test func withNoSlipsOffAMoveIsMeasuredButNeverStood() throws {
-        let before = try opening()
-        let (played, san, weighed) = try weigh("g2g4", from: before, cp: 30, after: -500)
-        #expect(!Ruling.intercepts(weighed.drop, lines: .standard))
-
-        let ruling = Ruling(weighed, san: san, played: played,
-                            from: Standpoint(game: before, cursor: 0), lines: .standard)
-
-        #expect(!ruling.takesTheMoveBack)
-        let judgement = try #require(ruling.game.plies[0].judgement)
-        #expect(judgement.drop == weighed.drop)
-        #expect(judgement.intercept == nil)
-        #expect(!judgement.stoodUnderNoSlips)
     }
 
     /// A drill's attempt is ruled at the same line. The drill has already written its judgement,

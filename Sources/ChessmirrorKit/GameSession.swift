@@ -768,38 +768,22 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard let shown = standpoint?.shown, shown < Self.takeBackHold else { return }
         try? await Task.sleep(for: Self.takeBackHold - shown)
     }
-    public private(set) var hintLayer = 0
-    public private(set) var relaxedIntercept: Double?
-    /// Where the hint ladder stood, and what was last said about a refusal, at each position the
-    /// player has been asked at. Session state and nothing more: the refusals themselves are the
-    /// Game's (`Game.pendingTried`, docs/adr/0037), read at the cursor, and a session that kept
-    /// its own copy of them was one more place for them to be wrong.
-    private struct PendingHelp {
-        var layer: Int
-        var relaxed: Double?
-        var refusal: Refusal?
-    }
-    private var helpByPosition: [String: PendingHelp] = [:]
-    private var helpPosition: String?
+    /// What was last said about a refusal at each position the player has been refused at, so
+    /// the sentence under the board follows the eye: browsing away from a refusal puts it away,
+    /// and coming back brings it back. Session state and nothing more: the refusals themselves
+    /// are the Game's (`Game.pendingTried`, docs/adr/0037), read at the cursor, and a session
+    /// that kept its own copy of them was one more place for them to be wrong.
+    private var refusalByPosition: [String: Refusal] = [:]
+    private var refusalPosition: String?
 
-    private func restoreHelpForViewedPosition() {
+    private func restoreRefusalForViewedPosition() {
         let fen = viewed.state.fen
-        guard helpPosition != fen else { return }
-        if let helpPosition {
-            helpByPosition[helpPosition] = PendingHelp(
-                layer: hintLayer, relaxed: relaxedIntercept, refusal: refused
-            )
+        guard refusalPosition != fen else { return }
+        if let refusalPosition {
+            refusalByPosition[refusalPosition] = refused
         }
-        helpPosition = fen
-        let pending = helpByPosition[fen]
-        hintLayer = pending?.layer ?? 0
-        relaxedIntercept = pending?.relaxed
-        refused = pending?.refusal
-    }
-    public var hintScore: Score? {
-        guard activePunishment == nil else { return nil }
-        guard hintLayer >= 1, interceptTable?.fen == viewed.state.fen else { return nil }
-        return interceptTable?.analysis.best?.score
+        refusalPosition = fen
+        refused = refusalByPosition[fen]
     }
     /// The number for the position on screen: the live bounded search of it when 正着 has one,
     /// else the curve's number for it. No recommended move is exposed here.
@@ -1183,21 +1167,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             }
         }
     }
-    public func requestHint() {
-        guard activePunishment == nil else { return }
-        guard isTilling, !isWeighing, isHandTurn, isAtLatest else { return }
-        hintLayer = min(3, hintLayer + 1)
-    }
-
-    public func relaxIntercept(to value: Double) {
-        guard isTilling, hintLayer == 3, !isWeighing, [20.0, 30.0].contains(value),
-            value > (lines.intercept ?? 0) else { return }
-        relaxedIntercept = value
-    }
-
     /// What a move that lands through `commit` takes with it: the refusals made where it was
-    /// played from, as its 试招, with the rungs of the hint ladder that were open
-    /// (`Game.absorbPendingTried`, docs/adr/0031, 0037).
+    /// played from, as its 试招 (`Game.absorbPendingTried`, docs/adr/0037).
     ///
     /// Nothing is judged here. Every move that lands is weighed by the one 细判 — the engine's
     /// own move, a move played with 把关 off, a move asked of the engine — and its judgement is
@@ -1205,31 +1176,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// judgement read off the before-table alone used to be written here, and it was a seventh
     /// copy of the 细判 that disagreed with the badge about 最佳 (CONTEXT.md, 细判).
     private func absorbRefusals(atPly ply: Int) {
-        game.absorbPendingTried(atPly: ply, hints: hintLayer)
-        closeTheLadder()
+        game.absorbPendingTried(atPly: ply)
     }
 
-    /// A move has stood: the rungs climbed for it are written on it and the ladder is shut,
-    /// and a line it was relaxed to does not carry to the next move.
-    private func closeTheLadder() {
-        hintLayer = 0
-        relaxedIntercept = nil
-    }
-
-    public func revealTillingMove() {
-        guard isTilling, hintLayer == 3, !isWeighing, isAtLatest, isHandTurn,
-            let table = interceptTable, table.fen == game.state.fen,
-            let uci = table.analysis.bestMove, let move = game.state.move(matching: uci)
-        else { return }
-        // Mark the original failed attempts, rather than manufacturing another occurrence.
-        game.setPendingTried(
-            pendingAttempts.map {
-                .init(san: $0.san, drop: $0.drop, notFound: true, depth: $0.depth, line: $0.line)
-            },
-            atPly: cursor
-        )
-        commit(move, by: .asked)
-    }
     private var interceptTable: (fen: String, analysis: Analysis)?
 
     private func prepareInterception(on position: Game, using engine: any Engine) {
@@ -1470,9 +1419,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         stopSearching()
-        standpoint = Standpoint(
-            game: game, cursor: cursor, hints: hintLayer, relaxedIntercept: relaxedIntercept
-        )
+        standpoint = Standpoint(game: game, cursor: cursor)
         game = played
         cursor = game.plies.count
         analysis = nil
@@ -1525,7 +1472,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .unjudged:
             retune()
         case .stands(let change):
-            closeTheLadder()
             if let change { measuredMove = (game.uciMoves, game.state.fen, change) }
             save()
             retune()
@@ -1802,7 +1748,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Starts whatever the position calls for. Safe to call repeatedly.
     public func retune() {
         guard !isOccupied else { return }
-        restoreHelpForViewedPosition()
+        restoreRefusalForViewedPosition()
         stopSearching()
         measureLatestMove()
         thinking = nil

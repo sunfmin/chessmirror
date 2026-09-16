@@ -22,8 +22,11 @@ import Testing
         let session = GameSession.fresh(position, engine: engine)
         session.setIntercept(10)
         await session.waitForPreparedInterception()
-        session.requestHint()
-        let before = try #require(session.hintScore)
+        var reference: Analysis?
+        for await snapshot in engine.analyse(position, budget: .depth(20), lines: 1) {
+            if snapshot.depth == 20, !snapshot.isPartial { reference = snapshot }
+        }
+        let before = try #require(reference?.best?.score)
         let move = try #require(position.state.move(matching: pgn.game.plies[index].uci))
         session.play(move)
         await session.waitForJudgement()
