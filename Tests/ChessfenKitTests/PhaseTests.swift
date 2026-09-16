@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// Contract: the session is doing one thing at a time, and says which. What the player's hands
 /// have to wait for, whether the record may be browsed, and whose clock it is are all read off

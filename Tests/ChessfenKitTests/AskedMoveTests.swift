@@ -1,6 +1,7 @@
 import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// What 让引擎走 does, and how long the screen goes on asking about the pieces it read off a
 /// photograph. Neither is visible in a picture — a press is a moment and the screenshots are of

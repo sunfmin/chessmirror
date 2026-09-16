@@ -4,6 +4,7 @@ import Testing
 import UIKit
 
 @testable import Chessfen
+import ChessfenKitTesting
 
 /// The advantage bar, from both ways up.
 ///

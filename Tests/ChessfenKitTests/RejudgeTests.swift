@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// Contract: a 复判 judges one 试招 again, deeper — both ends to depth 28 through the shared store
 /// — and rewrites that one move's 掉幅, 应招 and depth in place, saving the game. The refusal

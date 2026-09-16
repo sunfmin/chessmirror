@@ -723,7 +723,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard let shown = standpoint?.shown, shown < Self.takeBackHold else { return }
         try? await Task.sleep(for: Self.takeBackHold - shown)
     }
-    public static let interceptDepth = 20
     public private(set) var hintLayer = 0
     public private(set) var relaxedIntercept: Double?
     /// Where the hint ladder stood, and what was last said about a refusal, at each position the
@@ -1031,20 +1030,20 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// The app's number for the position after `ply` moves — what the curve draws — by one
-    /// priority: what the 细判 wrote onto the move, then the position the badge's weighing
-    /// started from (which a move that was never judged has nothing else for), then what a
-    /// Review wrote (docs/adr/0016). The record first, because the badge is written from the
-    /// same weighing as the record and never disagrees with it. The live search of the position
-    /// on screen does not enter here: reading an older move is reading history, and the live
-    /// number belongs to `tillingScore`.
+    /// priority: what the 细判 wrote onto the move, then what the badge's weighing found at
+    /// either end of the last move (which a move that came from the file without a judgement
+    /// has nothing else for), then what a Review wrote (docs/adr/0016). The record first,
+    /// because the badge is written from the same weighing as the record and never disagrees
+    /// with it. The live search of the position on screen does not enter here: reading an older
+    /// move is reading history, and the live number belongs to `tillingScore`.
     public func historyScore(atPly ply: Int) -> Score? {
         guard (0...game.plies.count).contains(ply) else { return nil }
         if ply > 0, let judgement = game.plies[ply - 1].judgement {
             return judgement.score
         }
-        if let measuredMove, measuredMove.moves == game.uciMoves, measuredMove.fen == game.state.fen,
-           ply == game.plies.count - 1 {
-            return measuredMove.change.before
+        if let measuredMove, measuredMove.moves == game.uciMoves, measuredMove.fen == game.state.fen {
+            if ply == game.plies.count { return measuredMove.change.after }
+            if ply == game.plies.count - 1 { return measuredMove.change.before }
         }
         return game.reviewScore(atPly: ply)
     }

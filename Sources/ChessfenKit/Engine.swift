@@ -37,8 +37,11 @@ public enum SearchBudget: Hashable, Sendable {
 /// side of the seam that both adapters can reach, and the tests that most need a substitute are
 /// the package's own.
 ///
-/// The whole of what the app asks of an engine, and no more: analysis for the game screen,
-/// evaluate/review for the Review, and the pause gate for the app leaving the front.
+/// The whole of what the app asks of an engine, and no more: a search of a position, the shared
+/// store those searches are joined through, and the pause gate for the app leaving the front.
+/// `evaluate`, `review` and `clear` used to be requirements too, and nothing asked them of an
+/// `any Engine` — only the real service, directly, in its own tests — so every fake carried
+/// three stubs for a seam nothing crossed. A fake now implements one search and a gate.
 public protocol Engine: AnyObject, Sendable {
     var positionSearches: PositionSearches { get }
     var isPaused: Bool { get }
@@ -54,17 +57,10 @@ public protocol Engine: AnyObject, Sendable {
         _ game: Game, budget: SearchBudget, lines: Int, strength: Strength
     ) -> AsyncStream<Analysis>
     /// A background position yields to foreground searches and resumes after interruption.
+    /// The real service has its own; a fake gets the walk below for free.
     func analyseInBackground(_ game: Game, depth: Int) async -> Analysis?
     func pause()
     func resume()
-    func clear() async
-    func evaluate(_ game: Game, budget: SearchBudget) async -> Score?
-    /// One `ReviewedPly` per ply: the Score after that ply, and the Line the same search
-    /// produced. The Line is picked up here because this is the only search that visits every
-    /// position of a Game, and fetching it later would cost a Stint (docs/adr/0020, 0021).
-    func review(
-        _ game: Game, depth: Int, onPly: (@Sendable (Int, ReviewedPly) -> Void)?
-    ) async -> [ReviewedPly]
 }
 
 extension Engine {

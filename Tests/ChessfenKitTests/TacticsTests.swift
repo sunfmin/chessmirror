@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 @Suite(.speaking(.chinese)) struct TacticsTests {
     /// White queen on d1, black rook hanging on d5.

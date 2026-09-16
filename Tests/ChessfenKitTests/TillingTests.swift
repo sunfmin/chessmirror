@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// Contract: 正着 weighs a move wherever the eye is standing. A saved game reopens at its first
 /// position, so "play the first move again" is the ordinary way a person meets the board — and it
@@ -765,4 +766,26 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     // The file says the same, and reading it back is the same judgement.
     let read = try PGN(parsing: session.pgn.text)
     #expect(read.game.plies[1].judgement == judgement)
+}
+
+/// Contract: a move that was already in the file without a judgement gets the badge and the
+/// curve's last point from the badge's weighing, and nothing written onto it — filling old files
+/// in is the explicit migration, never something a screen starts.
+@MainActor
+@Test func aMoveFromTheFileGetsTheBadgeAndNothingWritten() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let played = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["d2d4"], san: ["d4"])]),
+        played.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(-133), uciMoves: [], san: [])]),
+    ])
+    let session = GameSession.fresh(played, engine: engine)
+    defer { session.suspend() }
+    await session.measureLatestMoveChange()
+
+    let change = try #require(session.moveChange)
+    #expect(change.after == .centipawns(-133))
+    #expect(session.historyScore(atPly: 1) == .centipawns(-133), "the curve reaches the last move")
+    #expect(session.historyScore(atPly: 0) == .centipawns(0))
+    #expect(session.game.plies[0].judgement == nil, "and the file is not written to")
 }

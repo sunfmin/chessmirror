@@ -43,6 +43,9 @@ let package = Package(
     platforms: [.iOS("26.0"), .macOS("26.0")],
     products: [
         .library(name: "ChessfenKit", targets: ["ChessfenKit"]),
+        // The fakes at the kit's seams, for any test bundle that drives the real code above them:
+        // the package's own tests and the app's screen tests both.
+        .library(name: "ChessfenKitTesting", targets: ["ChessfenKitTesting"]),
         .executable(name: "chessfen-cli", targets: ["chessfen-cli"]),
     ],
     targets: [
@@ -65,11 +68,12 @@ let package = Package(
             resources: [.process("Resources")]
         ),
         .executableTarget(name: "chessfen-cli", dependencies: ["ChessfenKit"]),
+        .target(name: "ChessfenKitTesting", dependencies: ["ChessfenKit"]),
         .testTarget(
             name: "ChessfenKitTests",
             // CStockfish directly, for the seam tests: they feed synthetic info frames to
             // the depth grouper, and a frame is the bridge's own struct.
-            dependencies: ["ChessfenKit", "CStockfish"],
+            dependencies: ["ChessfenKit", "ChessfenKitTesting", "CStockfish"],
             // Real pictures of real boards, the same ones the app reads: a different
             // piece set, inline coordinates, a highlighted square. Nothing rendered
             // here can stand in for them. The whole folder rather than the three files

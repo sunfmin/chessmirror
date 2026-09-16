@@ -90,8 +90,8 @@ public struct DrillVerdict: Hashable, Sendable {
         case picked
     }
 
-    /// The depth ceiling shared with live interception (the ten-second limit can win).
-    public static let depth = GameSession.interceptDepth
+    /// The depth ceiling every live search shares: the 搜索预算's (the time can win).
+    public static var depth: Int { PositionSearches.depth }
 
     public let position: PositionKey
     /// The board: the position, and the attempt once it has been played.

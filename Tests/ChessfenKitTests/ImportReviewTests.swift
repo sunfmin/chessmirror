@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// Contract: finding opportunities cannot displace an engine-controlled turn, including
 /// the following engine turn after a human reply. Real Stockfish must commit both moves.

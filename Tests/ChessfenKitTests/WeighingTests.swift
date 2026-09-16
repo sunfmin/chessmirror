@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// The 细判 of one move, crossed at the one seam it has: the engine. Nothing here stands up a
 /// session, a drill or an exercise — those are three callers of this, and what they do with a

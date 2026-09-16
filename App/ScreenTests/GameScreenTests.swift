@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 
 @testable import Chessfen
+import ChessfenKitTesting
 
 /// The game screen, photographed.
 ///

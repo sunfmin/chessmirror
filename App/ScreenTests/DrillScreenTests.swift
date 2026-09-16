@@ -4,6 +4,7 @@ import SwiftUI
 import Testing
 
 @testable import Chessfen
+import ChessfenKitTesting
 
 /// Practising one 错题, photographed: the position with nothing said about it, and the settlement
 /// after the move (docs/adr/0029).

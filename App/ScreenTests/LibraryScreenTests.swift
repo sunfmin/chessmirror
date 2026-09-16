@@ -4,6 +4,7 @@ import SwiftUI
 import Testing
 
 @testable import Chessfen
+import ChessfenKitTesting
 
 /// The first screen, photographed: the ways a board gets into this app.
 ///

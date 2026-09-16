@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 
 @testable import Chessfen
+import ChessfenKitTesting
 
 /// The deck under the board, one card per picture (docs/adr/0025).
 ///

@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// Contract: actual Stockfish intercepts g4; solving, revealing, and skipping each restore
 /// White's retry. A disk PGN round-trip contains g4 once without the temporary mating move.

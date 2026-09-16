@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// Contract: a refusal has one home, the Game, from the moment it happens (docs/adr/0037). The
 /// session reads it there at the cursor, a move that stands takes it from there, and a position

@@ -1,5 +1,6 @@
 @testable import ChessfenKit
 import Testing
+import ChessfenKitTesting
 
 /// Contract: advice, settings, a card, an asked move and an opponent all use the same
 /// completed position search. The old mirrored/stint clocks no longer start searches.

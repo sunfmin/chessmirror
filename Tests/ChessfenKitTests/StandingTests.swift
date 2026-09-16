@@ -1,6 +1,7 @@
 @testable import ChessfenKit
 import Foundation
 import Testing
+import ChessfenKitTesting
 
 /// Contract: what the strip under the board says is one sentence chosen by one priority, and the
 /// session chooses it from facts it already holds (`Standing`). Every voice is reachable here

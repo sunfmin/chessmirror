@@ -1,6 +1,7 @@
 import ChessfenKit
 import Foundation
 import Synchronization
+import ChessfenKitTesting
 
 /// A fetcher that returns what it was told to return.
 ///

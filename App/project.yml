@@ -176,6 +176,9 @@ targets:
       - path: ScreenTests
     dependencies:
       - target: Chessfen
+      # The kit's own fakes, so the screen tests drive the same scripted engine the kit tests do.
+      - package: ChessfenKit
+        product: ChessfenKitTesting
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sunfmin.chessfen.screentests
