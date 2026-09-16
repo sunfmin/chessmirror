@@ -414,8 +414,8 @@ struct DeckGallery {
 
         let rendered = await ScreenImage.write("game-slips", interact: { window in
             let words = ScreenImage.words(in: window)
-            // Two are owed by the 入列线 (24% and 30%), one is only written down (14%).
-            #expect(words.contains { $0.contains(localized("slips.owed", 2)) })
+            // Three positions: two owed by the 入列线 (24% and 30%) and one only written down (14%).
+            #expect(words.contains { $0.contains(localized("slips.here", 3)) })
             #expect(words.contains { $0.contains(localized("book.cost", 24)) }, "the mark speaks")
             #expect(ScreenImage.activate(localized("slips.next"), in: window))
             await ScreenImage.settle()
@@ -426,7 +426,17 @@ struct DeckGallery {
         }) {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says(localized("slips.owed", 2)))
+        #expect(rendered.says(localized("slips.here", 3)))
+        // And the marks are on the *positions*, which is the thing that went wrong first: the 24%
+        // 试招 was made at the opening, the 14% move at Ply 3 was made two Plies in, and the tail
+        // refusal at the position the game ends on.
+        func marked(_ cell: String, _ cost: Int) -> String {
+            cell + localized("clause.separator") + localized("book.cost", cost)
+        }
+        #expect(rendered.says(marked(localized("record.opening"), 24)))
+        #expect(rendered.says(marked(localized("screen.spokenMove", 2, "e5"), 14)))
+        #expect(rendered.says(marked(localized("screen.spokenMove", 3, "Nf3"), 30)))
+        #expect(!rendered.says(marked(localized("screen.spokenMove", 1, "e4"), 24)), "not the move itself")
         #expect(rendered.says("Qh4"), "a refusal the game was left on is on the list too")
         #expect(rendered.says("f3"), "the chip names the move the way the 已退回 strip does")
         #expect(rendered.says("Nf3"))

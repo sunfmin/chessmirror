@@ -46,6 +46,15 @@ public struct Slip: Hashable, Sendable, Identifiable {
         self.wasTried = wasTried
     }
 
+    /// The position this happened at, counted in Plies played — which is what the record strip's
+    /// cells count, because a cell *is* a position: tapping the move at Ply `n` puts the board on
+    /// the position after `n` Plies.
+    ///
+    /// So a mistake at Ply `n` is marked on the cell at `n - 1`, which shows the position the move
+    /// was played from. That is the whole point of the mark — it says 「这里你走错过，来重新下」
+    /// and the board it takes you to is the one to try again from.
+    public var positionPly: Int { ply - 1 }
+
     /// Whether this one is worth the player's practice time, by the 入列线 — which is what the
     /// 日课 would hand them. Everything here is at or over the 记录线, so this is the split
     /// between "written down" and "owed".

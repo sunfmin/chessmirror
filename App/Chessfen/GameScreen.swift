@@ -996,10 +996,7 @@ struct GameScreen: View {
         let slips = session.slips
         if !slips.isEmpty {
             HStack(spacing: 10) {
-                Label(
-                    localized("slips.owed", slips.count { $0.isWorthDrilling(session.lines) }),
-                    systemImage: "exclamationmark.triangle"
-                )
+                Label(localized("slips.here", slips.count), systemImage: "exclamationmark.triangle")
                 .font(.caption)
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize()
@@ -1099,7 +1096,7 @@ struct GameScreen: View {
     private var moveStrip: some View {
         // Walked once for the whole strip: the marks are a lookup per half, and the walk behind
         // them is a rules probe per Ply.
-        let slips = slipByPly
+        let slips = slipByPosition
         return ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
@@ -1135,31 +1132,48 @@ struct GameScreen: View {
     /// The position the game began in, at the head of its own record. It is a place in the game
     /// like any other, and without it there is no way back to it in one tap.
     private var openingCell: some View {
-        Button { walk(to: 0) } label: {
-            Text(localized(session.game.plies.isEmpty ? "record.startHere" : "record.opening"))
+        let slip = slipByPosition[0]
+        let on = session.cursor == 0
+        // An empty game's cell says where to start rather than naming a place it has not been.
+        let name = localized(session.game.plies.isEmpty ? "record.startHere" : "record.opening")
+        return Button { walk(to: 0) } label: {
+            Text(name)
                 .font(.caption)
-                .foregroundStyle(session.cursor == 0 ? Palette.parchment : Palette.inkSoft)
+                .foregroundStyle(on ? Palette.parchment : Palette.inkSoft)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
                 .background(
-                    session.cursor == 0
-                        ? AnyShapeStyle(Palette.analysis) : AnyShapeStyle(Palette.chipRest),
+                    on ? AnyShapeStyle(Palette.analysis) : AnyShapeStyle(Palette.chipRest),
                     in: RoundedRectangle(cornerRadius: 9)
                 )
+                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
         }
         .buttonStyle(.plain)
         .id(0)
+        .accessibilityLabel(
+            slip.map { "\(name)\(localized("clause.separator"))\(localized("book.cost", Int($0.drop.rounded())))" } ?? name
+        )
     }
 
-    /// One half of a move, and — when the player got it wrong — a mark at its foot.
+    /// The mark a 错招 leaves at the foot of the position it was made at.
     ///
-    /// The mark is an overlay rather than a row, so a card with a mistake in it is exactly as tall
-    /// as one without: the curve behind the strip is drawn against these cards being even.
+    /// An overlay rather than a row, so a card with a mistake in it is exactly as tall as one
+    /// without: the curve behind the strip is drawn against these cards being even. Two weights on
+    /// the one scale the app already has (docs/adr/0027): pale is what the 记录线 put in the file,
+    /// the alarm colour is what the 入列线 says the player still owes.
+    @ViewBuilder private func slipMark(_ slip: Slip?, on: Bool) -> some View {
+        if let slip {
+            Circle()
+                .fill(slip.isWorthDrilling(session.lines) ? Palette.alarm : Palette.alarm.opacity(0.35))
+                .frame(width: 3.5, height: 3.5)
+                .offset(y: 1)
+        }
+    }
+
+    /// One half of a move, and — when the player got a position wrong here — a mark at its foot.
     ///
-    /// Two weights on the one scale the app already has (docs/adr/0027). Pale is what the 记录线
-    /// put in the file; the alarm colour is what the 入列线 says the player still owes. Both are
-    /// the colour the cost wears everywhere else, because both are the player's own mistakes and
-    /// this board has one colour for the engine and one for them.
+    /// The `slip` passed in is the one whose *position* this cell is, which is the position before
+    /// the next move rather than after this one (see `slipByPosition`).
     private func half(_ cell: PlyCell, _ slip: Slip?) -> some View {
         let on = cell.cursor == session.cursor
         return Button { walk(to: cell.cursor) } label: {
@@ -1171,17 +1185,7 @@ struct GameScreen: View {
                 .background {
                     if on { RoundedRectangle(cornerRadius: 5).fill(Palette.analysis) }
                 }
-                .overlay(alignment: .bottom) {
-                    if let slip {
-                        Circle()
-                            .fill(
-                                slip.isWorthDrilling(session.lines)
-                                    ? Palette.alarm : Palette.alarm.opacity(0.35)
-                            )
-                            .frame(width: 3.5, height: 3.5)
-                            .offset(y: 1)
-                    }
-                }
+                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
         }
         .buttonStyle(.plain)
         .id(cell.cursor)
@@ -1197,9 +1201,14 @@ struct GameScreen: View {
         .accessibilityHint(localized("record.jump"))
     }
 
-    /// The 错招 by the Ply they were played at, for the record strip's marks.
-    private var slipByPly: [Int: Slip] {
-        Dictionary(session.slips.map { ($0.ply, $0) }, uniquingKeysWith: { first, _ in first })
+    /// The 错招 by the *position* they were made at, which is what the record strip's cells are:
+    /// a cell's cursor is the position it takes the board to, so a mistake at Ply `n` is marked on
+    /// the cell at `n - 1` (docs/adr/0036). Zero is the opening cell.
+    private var slipByPosition: [Int: Slip] {
+        Dictionary(
+            session.slips.map { ($0.positionPly, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
     }
 
     /// What a ranked move cost its mover, in pawns. A move that *gained* is ranked too and reads

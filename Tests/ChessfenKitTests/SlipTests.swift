@@ -44,6 +44,28 @@ import Testing
         )
     }
 
+    /// The mark goes on a *position*, and the record strip's cells are positions: a mistake at Ply
+    /// `n` is marked on the cell at `n - 1`, which is the one that shows the board it was played
+    /// from. Getting this wrong put every mark one move too late, which is to say on a position
+    /// the player was not mistaken in.
+    @Test func theMarkBelongsToThePositionNotTheMove() throws {
+        let game = try played()
+        let slips = game.slips(by: [.white], lines: .standard)
+        #expect(slips.map(\.ply) == [1, 3])
+        #expect(slips.map(\.positionPly) == [0, 2], "the opening, and the position after two Plies")
+    }
+
+    /// A refusal nothing absorbed is the position the game ends on, which is the cell of the last
+    /// move — and when a move is played there and takes it, the same position, still.
+    @Test func aTailRefusalBelongsToTheEndOfTheGame() throws {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+        game.setPendingTried([.init(san: "Qh4", drop: 30)])
+        let slips = game.slips(by: [.white], lines: .standard)
+        #expect(slips.map(\.ply) == [2])
+        #expect(slips[0].positionPly == 1, "the position after the only move")
+        #expect(slips[0].wasTried)
+    }
+
     /// Two lines, two weights — which is the whole reason the list is one list rather than two:
     /// everything here has been written down, and only some of it is still owed.
     @Test func theEnrolLineSaysWhichOnesAreOwed() throws {

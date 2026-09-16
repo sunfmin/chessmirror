@@ -439,7 +439,7 @@
 "tried.reply" = "Die Antwort darauf";
 "tried.reply.hint" = "Die Antwort zeigen, die dieser Zug herausfordert";
 "tried.reply.none" = "Auf diesen Zug gibt es keine Antwort zu sehen.";
-"slips.owed" = "%d zum Üben";
 "slips.next" = "Nächster Fehler";
 "slips.next.hint" = "Zum nächsten falschen Zug gehen";
 "slips.hint" = "Dorthin gehen und den Zug neu spielen";
+"slips.here" = "%d falsche Stellungen";
