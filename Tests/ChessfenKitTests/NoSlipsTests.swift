@@ -40,6 +40,40 @@ import Testing
         #expect(game.noSlips(by: [.black]) == .none, "Black's moves were never judged")
     }
 
+    /// The walk under the row and under the 正着榜 is one walk: each of the player's own moves,
+    /// with whether it stood, whether a 试招 came before it, and the rung it was played against.
+    @Test func theRowAndTheLadderReadTheSameOwnMoves() throws {
+        // 1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6, White to move.
+        var game = try #require(Game(
+            startFEN: PGN.standardStartFEN,
+            uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5", "c2c3", "g8f6"]
+        ))
+        game.setJudgement(Self.under, atPly: 0)
+        game.setJudgement(Self.under, atPly: 2)
+        game.setTried([.init(san: "Nh3", drop: 12)], atPly: 2)
+        game.setJudgement(Self.measured, atPly: 4)
+        game.setStrength(.elo(1400), atPly: 1)
+        game.setStrength(.elo(1800), atPly: 3)
+        // And a refusal waiting at the end, where White's next move would go.
+        game.recordTried(.init(san: "Ke2", drop: 30), atPly: 8)
+
+        let moves = game.ownMoves(by: [.white])
+        #expect(moves.map(\.ply) == [1, 3, 5, 7, 9], "four moves and the place the refusal waits at")
+        #expect(moves.map(\.stood) == [true, true, false, false, false])
+        #expect(moves.map(\.afterSlip) == [false, true, false, false, true])
+        #expect(
+            moves.map(\.strength) == [.elo(1400), .elo(1800), .elo(1800), nil, nil],
+            "Bc4 by the rung before it; c3 has no engine move within reach to say"
+        )
+
+        // Both readers agree with the walk, and with each other, about the refusal at the end.
+        #expect(game.noSlips(by: [.white]) == .init(distance: 2, run: 0, longestRun: 1))
+        let credits = Ladder.credits(in: game, by: [.white])
+        #expect(credits.map(\.distance).reduce(0, +) == 2)
+        #expect(credits.first { $0.strength == .elo(1800) }?.longestRun == 1)
+        #expect(game.ownMoves(by: [.black]).map(\.ply) == [2, 4, 6, 8], "Black's moves, and no refusal of Black's")
+    }
+
     @Test func aRefusalWaitingAtTheEndZeroesTheRunAndLeavesTheDistance() throws {
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
         game.setJudgement(Self.under, atPly: 0)

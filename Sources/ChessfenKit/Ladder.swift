@@ -73,11 +73,14 @@ public struct Ladder: Hashable, Sendable {
     /// One game's credits, one per rung it was played at.
     ///
     /// The player's own moves that stood under 正着, each credited to the rung the engine was on
-    /// when it was played (`Game.strength(ofPly:)`). A stretch against a human, or before any
-    /// engine move has said what rung it was, is at no rung and is credited nowhere; so are moves
-    /// played with 正着 off, which stood under nothing. A 连正 is broken by a 试招, as on the row,
-    /// and by a change of rung: a run is a run *at* a 棋力, and a run that crossed from 1400 to
-    /// 2800 would belong to neither.
+    /// when it was played. A stretch against a human, or before any engine move has said what
+    /// rung it was, is at no rung and is credited nowhere; so are moves played with 正着 off,
+    /// which stood under nothing. A 连正 is broken by a 试招, as on the row, and by a change of
+    /// rung: a run is a run *at* a 棋力, and a run that crossed from 1400 to 2800 would belong to
+    /// neither.
+    ///
+    /// The same walk the row under the board counts (`Game.ownMoves(by:)`): what stood and what
+    /// came after a slip is read once, and this only sums it per rung.
     public static func credits(in entry: GameLibrary.Entry) -> [Credit] {
         guard let pgn = entry.pgn else { return [] }
         return credits(in: pgn.game, by: pgn.handColours)
@@ -88,13 +91,11 @@ public struct Ladder: Hashable, Sendable {
         var longest: [Strength: Int] = [:]
         var run = 0
         var last: Strength?
-        let refusedAt = Set(game.pendingTried.filter { !$0.tries.isEmpty }.map(\.ply))
-        for (index, ply) in game.plies.enumerated() where mine.contains(game.mover(ofPly: index + 1)) {
-            let rung = game.strength(ofPly: index + 1)
-            if rung != last { run = 0 }
-            last = rung
-            if refusedAt.contains(index) || !ply.tried.isEmpty { run = 0 }
-            guard ply.judgement?.stoodUnderNoSlips == true, let rung else { continue }
+        for move in game.ownMoves(by: mine) {
+            if move.strength != last { run = 0 }
+            last = move.strength
+            if move.afterSlip { run = 0 }
+            guard move.stood, let rung = move.strength else { continue }
             distance[rung, default: 0] += 1
             run += 1
             longest[rung] = max(longest[rung] ?? 0, run)
