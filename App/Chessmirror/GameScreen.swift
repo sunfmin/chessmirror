@@ -26,6 +26,11 @@ struct GameScreen: View {
     @Environment(GameLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Square?
+    /// Set by a tap on a cell of the record strip, for the one cursor change that tap causes:
+    /// the strip is not to move under the finger that is on it. A cell that was tapped was on
+    /// the screen already, and sliding it to the middle is the record jumping away from where
+    /// the eye just was. Every other way the cursor moves still centres.
+    @State private var isTappingStrip = false
     @State private var promotion: PromotionRequest?
     @State private var isSoundOn = Sounds.current.isSoundOn
     /// Which side's own controls are open. Nobody's, unless somebody said otherwise — and then
@@ -1153,7 +1158,13 @@ struct GameScreen: View {
             .scrollIndicators(.hidden)
             // Where the eye is, kept in the middle of the strip as it moves — a record that
             // has scrolled off the position on the board is a record of somebody else's game.
+            // Not when the move was a tap on the strip itself: that cell is under the finger,
+            // and the record stays where the finger found it.
             .onChange(of: session.cursor, initial: true) { _, now in
+                if isTappingStrip {
+                    isTappingStrip = false
+                    return
+                }
                 withAnimation(.snappy(duration: 0.2)) { scroller.scrollTo(now, anchor: .center) }
             }
         }
@@ -1791,8 +1802,13 @@ struct GameScreen: View {
         session.step(by: delta)
     }
 
+    /// A tap on a cell of the record strip. The strip holds still for it (see `isTappingStrip`);
+    /// the flag is raised only when the cursor is actually going to move, so a tap on the cell
+    /// already on the cursor — which changes nothing — cannot leave it raised for the next arrow.
     private func walk(to cursor: Int) {
         selected = nil
+        guard session.canBrowse, cursor != session.cursor else { return }
+        isTappingStrip = true
         session.step(by: cursor - session.cursor)
     }
 
