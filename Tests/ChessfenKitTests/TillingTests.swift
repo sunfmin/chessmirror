@@ -393,10 +393,11 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     await legacy.fillMissingTillingJudgements()
     #expect(legacy.game != oldGame)
     #expect(legacy.game.uciMoves == oldGame.uciMoves)
-    // The same measurement — but measured after the fact, so it stood under nothing: a move
-    // nobody weighed before it was played did not stand under 正着 (docs/adr/0038).
+    // The same measurement, 最佳 included — but measured after the fact, so it stood under
+    // nothing: a move nobody weighed before it was played did not stand under 把关
+    // (docs/adr/0038).
     let measured = Game.Ply.Judgement(
-        drop: judgement.drop, score: judgement.score, depth: judgement.depth
+        drop: judgement.drop, score: judgement.score, depth: judgement.depth, best: judgement.best
     )
     #expect(legacy.game.plies[0].judgement == measured)
     #expect(legacy.game.plies[0].judgement?.stoodUnderNoSlips == false)
