@@ -40,6 +40,7 @@ struct BookScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Palette.parchment, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.visible, for: .navigationBar)
     }
 }
 
@@ -165,6 +166,7 @@ struct BookEntryScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Palette.parchment, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.visible, for: .navigationBar)
     }
 
     /// Drawn from the player's own side, because that is the side that has to find the move.
