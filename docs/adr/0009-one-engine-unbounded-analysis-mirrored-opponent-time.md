@@ -23,6 +23,11 @@ as the player took over their last move — and, when there is no player to mirr
 would rather name a number, a fixed number of seconds a move. No `UCI_LimitStrength`, no
 `UCI_Elo`, no `Skill Level` — there is no difficulty setting in this app, only a clock.
 
+> Superseded in part by [ADR 0038](0038-strength-bounds-the-opponent-and-never-the-judge.md):
+> the opponent's own moves may be bound to a 棋力, an Elo from a fixed ladder, because a number
+> the player measures themself against has to mean the same thing on every phone. Every other
+> search stays at full strength, and everything else here stands.
+
 ## Consequences
 
 - Memory stays at one resident copy of the 67 MiB network plus one transposition table.
