@@ -463,7 +463,7 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localized("till.name"))
         .accessibilityValue(localized(session.isTilling ? "screen.on" : "till.off"))
-        .disabled(session.isWeighing || session.activePunishment != nil || (!engine.isReady && !session.isTilling))
+        .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
     }
 
     /// Who is ahead, with how hard the engine is still working on that answer drawn underneath it.
@@ -529,7 +529,7 @@ struct GameScreen: View {
     /// The side on the clock gets two more things, and they are the reason the controls are here
     /// rather than in a deck: the button that plays a move, and the move it would play.
     private func playerBar(_ colour: PieceColour) -> some View {
-        let live = isOnClock(colour)
+        let live = session.isOnClock(colour)
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Swatch(colour: colour)
@@ -700,7 +700,7 @@ struct GameScreen: View {
             .foregroundStyle(Palette.inkSoft)
             .contentShape(Rectangle())
         }
-        .disabled(session.isWeighing || session.activePunishment != nil)
+        .disabled(session.isOccupied)
         .accessibilityLabel(localized("strength"))
         .accessibilityValue(rungTitle)
     }
@@ -770,7 +770,7 @@ struct GameScreen: View {
                 set: { session.setTilling($0) }
             ))
             .toggleStyle(SettingToggleStyle(label: localized("till.name")))
-            .disabled(session.isWeighing || session.activePunishment != nil || (!engine.isReady && !session.isTilling))
+            .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
             if let intercept = session.lines.intercept {
                 HStack(spacing: 12) {
                     Text(localized("till.intercept"))
@@ -781,7 +781,7 @@ struct GameScreen: View {
                     ), in: JudgementLines.interceptRange, step: 1)
                     .accessibilityLabel(localized("till.intercept"))
                     .accessibilityValue("\(Int(intercept))%")
-                    .disabled(session.isWeighing || session.activePunishment != nil)
+                    .disabled(session.isOccupied)
                     Text("\(Int(intercept))%")
                         .font(.footnote.weight(.medium))
                         .monospacedDigit()
@@ -1929,15 +1929,6 @@ struct GameScreen: View {
 
     private var bottomColour: PieceColour {
         session.orientation == .whiteAtBottom ? .white : .black
-    }
-
-    /// Whether this colour is the one to move in the position being looked at — which is where
-    /// the mark down the bar, the action and the engine's line all go.
-    private func isOnClock(_ colour: PieceColour) -> Bool {
-        if session.activePunishment != nil {
-            return session.board.state.sideToMove == colour
-        }
-        return !session.isWeighing && !viewed.isOver && viewed.state.sideToMove == colour
     }
 
 }

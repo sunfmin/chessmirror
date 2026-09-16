@@ -413,7 +413,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func setController(_ controller: Controller, for colour: PieceColour) {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isOccupied else { return }
         guard controllers[colour] != controller else { return }
         controllers[colour] = controller
         // Changing who moves for the side already on the clock has to take effect now, not
@@ -429,7 +429,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// is on the opponent's own move and on nothing else, so 细判 and the cards have nothing to
     /// redo.
     public func setStrength(_ strength: Strength) {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isOccupied else { return }
         guard self.strength != strength else { return }
         self.strength = strength
         if thinking == .own { retune() }
@@ -540,7 +540,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// is the case this exists for: correcting a piece straight after the photograph should fix
     /// the game in front of you, not leave a second record behind.
     public func replaceStart(with fresh: Game) -> Bool {
-        guard !isWeighing, activePunishment == nil else { return false }
+        guard !isOccupied else { return false }
         guard game.plies.isEmpty else { return false }
         stopSearching()
         game = fresh
@@ -607,7 +607,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func setIntercept(_ line: Double?) {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isOccupied else { return }
         if let line, !line.isFinite || !JudgementLines.interceptRange.contains(line) { return }
         guard lines.intercept != line else { return }
         if line != nil, !isTilling { adviceBeforeTilling = isPractising }
@@ -630,7 +630,72 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// True while 正着 is working out what the move just played costs. The board shows the move
     /// during this: it has been played, and whether it is allowed to stand is the question.
+    ///
+    /// One of the four facts `phase` is read from; ask `phase` unless the question is this fact.
     public private(set) var isWeighing = false
+
+    /// What the session is doing, which is one thing at a time.
+    ///
+    /// The session keeps four facts about itself — a move being weighed, an exercise on the board,
+    /// the record being walked, the engine thinking — and every mutator used to guard on its own
+    /// handful of them, every screen `disabled` used to spell out its own combination, and the two
+    /// drifted: which of the four the player's hands have to wait for was answered in fifteen
+    /// places. Now it is answered here, once, and the readers ask the one question they have:
+    /// is the board spoken for (`isOccupied`), may the record be browsed (`canBrowse`), and whose
+    /// clock it is (`isOnClock`).
+    public enum Phase: Hashable, Sendable {
+        /// Nothing is in flight: the board is the player's, or the record is being read.
+        case reading
+        /// 正着 is working out what the move just played costs (`isWeighing`).
+        case weighing
+        /// The record is being walked forward to a Ply, one move at a time (`isWalkingRecord`).
+        case walking
+        /// A 惩罚 exercise is on the board in place of the game (`activePunishment`).
+        case exercising
+        /// The engine is walking a move: its own, or one somebody is holding the button for.
+        case thinking(Thinking)
+    }
+
+    /// Weighing first, because it is the one the others wait on: an exercise is set only after a
+    /// judgement, a walk and a thought are both stopped by a move being played.
+    public var phase: Phase {
+        if isWeighing { return .weighing }
+        if activePunishment != nil { return .exercising }
+        if isWalkingRecord { return .walking }
+        if let thinking { return .thinking(thinking) }
+        return .reading
+    }
+
+    /// The board is spoken for — a move being weighed, or an exercise standing in for the game —
+    /// and nothing may change the game, its lines or its seats until it is given back.
+    public var isOccupied: Bool {
+        switch phase {
+        case .weighing, .exercising: true
+        case .reading, .walking, .thinking: false
+        }
+    }
+
+    /// Whether the record may be browsed: not while the board is occupied, and not while it is
+    /// already being walked. Browsing while the engine thinks is allowed — it is how a
+    /// self-playing game is paused (docs/adr/0009).
+    public var canBrowse: Bool {
+        switch phase {
+        case .reading, .thinking: true
+        case .weighing, .walking, .exercising: false
+        }
+    }
+
+    /// Whether `colour` is the side to move on the board being looked at — the side the action,
+    /// the mark down the bar and the engine's line belong to. Nobody is on the clock while a move
+    /// is being weighed: it has been played, and whether it stands is the question. An exercise
+    /// has its own board and its own side to move.
+    public func isOnClock(_ colour: PieceColour) -> Bool {
+        switch phase {
+        case .weighing: false
+        case .exercising: board.state.sideToMove == colour
+        case .reading, .walking, .thinking: !viewed.isOver && viewed.state.sideToMove == colour
+        }
+    }
 
     /// The move 正着 has just taken back, for the screen to say one sentence about. Cleared by
     /// the next move, because it is about a board that is no longer there.
@@ -950,7 +1015,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Explicit legacy migration only; never started automatically by the game screen.
     public func fillMissingTillingJudgements() async {
-        guard hasTillingFeedback, !isWeighing, activePunishment == nil, let engine else { return }
+        guard hasTillingFeedback, !isOccupied, let engine else { return }
         let original = game
         for index in original.plies.indices {
             guard !Task.isCancelled else { return }
@@ -961,7 +1026,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             let weighed = await engine.weigh(after, from: before)
             guard !Task.isCancelled else { return }
             guard let weighed else { continue }
-            guard hasTillingFeedback, !isWeighing, activePunishment == nil else { return }
+            guard hasTillingFeedback, !isOccupied else { return }
             guard game.uciMoves.prefix(index + 1).elementsEqual(original.uciMoves.prefix(index + 1)) else { return }
             if game.plies[index].judgement == nil {
                 game.setJudgement(weighed.judgement, atPly: index)
@@ -1067,7 +1132,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var lastMove: MoveSquares? { game.moveSquares(atPly: cursor) }
 
     public func step(by delta: Int) {
-        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
+        guard canBrowse else { return }
         let wanted = min(max(0, cursor + delta), game.plies.count)
         guard wanted != cursor else { return }
         cursor = wanted
@@ -1077,7 +1142,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func jumpToLatest() {
-        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
+        guard canBrowse else { return }
         guard cursor != game.plies.count else { return }
         cursor = game.plies.count
         adoptViewedAnalysis()
@@ -1090,7 +1155,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// through again. It is the other end of `jumpToLatest`, and between them a game is readable
     /// without a single move being taken off it.
     public func jumpToStart() {
-        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
+        guard canBrowse else { return }
         guard cursor != 0 else { return }
         cursor = 0
         adoptViewedAnalysis()
@@ -1100,7 +1165,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Straight to a named Ply. Zero is the position the Game began in.
     public func jump(toPly ply: Int) {
-        guard !isWeighing, !isWalkingRecord, activePunishment == nil else { return }
+        guard canBrowse else { return }
         let wanted = min(max(0, ply), game.plies.count)
         guard wanted != cursor else { return }
         cursor = wanted
@@ -1126,7 +1191,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// walking shows the moves landing one after another, which is what the record strip has been
     /// scrolling through either way.
     public func walkOnArrival(toPly ply: Int) {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isOccupied else { return }
         arrivalWalk = min(max(0, ply), game.plies.count)
     }
 
@@ -1144,7 +1209,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// position on the way — twenty searches to watch twenty moves go by. The walk moves the eye
     /// and the board and nothing else, and retunes once, where the eye stops.
     public func walk(toPly ply: Int, step: Duration = .milliseconds(120)) async {
-        guard !isWalkingRecord, !isWeighing, activePunishment == nil else { return }
+        guard canBrowse else { return }
         let wanted = min(max(0, ply), game.plies.count)
         guard wanted != cursor else { return }
         guard wanted > cursor else {
@@ -1196,15 +1261,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     // ------------------------------------------------------------------ moves
 
     public var isEngineTurn: Bool {
-        !isWeighing && isAtLatest && !game.isOver && controller(for: viewed.state.sideToMove) == .engine
+        phase != .weighing && isAtLatest && !game.isOver && controller(for: viewed.state.sideToMove) == .engine
     }
 
     /// Whether a person may move on the board as it is being looked at. True in the past as
     /// well as the present: playing from an earlier position is how a move is taken back
     /// (docs/adr/0028) — what followed it is dropped, and the game carries on from there.
     public var isHandTurn: Bool {
-        if let activePunishment { return !activePunishment.isJudging }
-        guard !isWeighing, !isWalkingRecord, !viewed.isOver else { return false }
+        switch phase {
+        case .exercising: return activePunishment?.isJudging == false
+        case .weighing, .walking: return false
+        case .reading, .thinking: break
+        }
+        guard !viewed.isOver else { return false }
         if !isAtLatest { return true }
         return controller(for: viewed.state.sideToMove) == .hand
     }
@@ -1445,7 +1514,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// and 马上走 is how you stop waiting for it. Asking a second time for a move that is already
     /// being played is two controls doing one job.
     public var canPlayBestMove: Bool {
-        engine != nil && !viewed.isOver && !isEngineTurn && !isWeighing && activePunishment == nil
+        engine != nil && !viewed.isOver && !isEngineTurn && !isOccupied
     }
 
     /// Starts the engine thinking about a move it will play when it is let go.
@@ -1533,7 +1602,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Takes the last move of the game off. Only from the latest position: in the middle of a
     /// game, going backwards is browsing, and deleting is not what a back button means.
     public func undo() {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isOccupied else { return }
         guard isAtLatest, !game.plies.isEmpty else { return }
         stopSearching()
         game.undo()
@@ -1566,7 +1635,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Starts the game again from the position it began in, with `colour` to move.
     public func restart(withSideToMove colour: PieceColour) {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isOccupied else { return }
         guard let fresh = restarted(withSideToMove: colour) else { return }
         stopSearching()
         // A game with moves in it has already been written to its own file. Leaving that file
@@ -1606,7 +1675,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Starts whatever the position calls for. Safe to call repeatedly.
     public func retune() {
-        guard !isWeighing, activePunishment == nil else { return }
+        guard !isOccupied else { return }
         restoreHelpForViewedPosition()
         stopSearching()
         measureLatestMove()
