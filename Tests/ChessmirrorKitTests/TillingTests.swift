@@ -63,7 +63,9 @@ import ChessmirrorKitTesting
     await session.settled()
 
     #expect(session.refused == nil, "a move that costs a hair stands")
-    #expect(session.game.plies.map(\.san) == ["e4"], "and it replaces what was there")
+    #expect(session.game.plies.map(\.san) == ["e4"], "on the board")
+    #expect(session.game.variations(atPly: 0).map { $0.map(\.san) } == [["d4"]], "with what was there kept beside it (docs/adr/0043)")
+    #expect(session.game.plies.first?.isTrunk == false, "as the 树枝 it is")
     let judgement = try #require(session.game.plies.first?.judgement, "but it was weighed")
     #expect(judgement.depth == 20)
     #expect(session.moveChange != nil, "and the screen has a percentage to show")

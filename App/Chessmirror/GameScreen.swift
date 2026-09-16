@@ -1153,6 +1153,22 @@ struct GameScreen: View {
                 }
                 withAnimation(.snappy(duration: 0.2)) { scroller.scrollTo(now, anchor: .center) }
             }
+            .simultaneousGesture(forkSwipe)
+            .accessibilityHint(session.forkPly == nil ? "" : localized("record.branch"))
+        }
+    }
+
+    /// Vertical swipe on the strip walks the tree: up is the next sibling, down the previous
+    /// (docs/adr/0043). The strip scrolls sideways, so a swipe up or down is free for this.
+    private var forkSwipe: some Gesture {
+        DragGesture(minimumDistance: 24).onEnded { value in
+            let dy = value.translation.height
+            let dx = value.translation.width
+            guard abs(dy) > abs(dx) * 1.2, abs(dy) > 28 else { return }
+            selected = nil
+            withAnimation(.snappy(duration: 0.22)) {
+                session.cycleFork(by: dy < 0 ? 1 : -1)
+            }
         }
     }
 
@@ -1220,28 +1236,53 @@ struct GameScreen: View {
         let on = cell.ply == session.cursor
         let cost = costs ? session.game.cost(atPly: cell.ply) : nil
         let best = costs && session.game.isBest(atPly: cell.ply)
-        return Button { walk(to: cell.ply) } label: {
-            VStack(spacing: 1) {
-                Text(cell.san)
-                    .font(.footnote.weight(on ? .medium : .regular))
-                    .foregroundStyle(on ? Palette.parchment : Palette.ink)
-                if costs { costCaption(cost, best: best, on: on) }
+        // A 树枝 is inked in its own colour, so a line tried from an earlier position cannot be
+        // mistaken for the game (docs/adr/0043). A cell on a fork is outlined rather than filled
+        // when the eye is on it, so the rail beside it reads as part of the same cell.
+        let mark = cell.isTrunk ? Palette.ink : Palette.mine
+        let filled = on && !cell.isFork
+        return HStack(spacing: 3) {
+            if cell.isFork {
+                Button {
+                    selected = nil
+                    withAnimation(.snappy(duration: 0.22)) {
+                        session.cycleFork(atPly: cell.ply - 1, by: 1)
+                    }
+                } label: {
+                    ForkRail(current: cell.branchNumber, of: cell.siblingCount, tint: mark)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localized("record.fork"))
+                .accessibilityValue(cell.spoken)
+                .accessibilityHint(localized("record.fork.hint"))
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background {
-                if on { RoundedRectangle(cornerRadius: 5).fill(Palette.analysis) }
+            Button { walk(to: cell.ply) } label: {
+                VStack(spacing: 1) {
+                    Text(cell.san)
+                        .font(.footnote.weight(on ? .medium : .regular))
+                        .foregroundStyle(filled ? Palette.parchment : mark)
+                    if costs { costCaption(cost, best: best, on: filled) }
+                }
+                .padding(.horizontal, cell.isFork ? 3 : 5)
+                .padding(.vertical, 2)
+                .background {
+                    if filled {
+                        RoundedRectangle(cornerRadius: 5).fill(Palette.analysis)
+                    } else if on {
+                        RoundedRectangle(cornerRadius: 5).stroke(mark, lineWidth: 1.2)
+                    }
+                }
+                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
             }
-            .overlay(alignment: .bottom) { slipMark(slip, on: on) }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver
+            // is a move with no place in the game, and place is the whole of what this strip is
+            // for — and what it cost, and a mistake made from here, are worth saying out loud too.
+            .accessibilityLabel(spoken(cell.spoken, cost: cost, best: best, slip: slip))
+            .accessibilityHint(localized("record.jump"))
         }
-        .buttonStyle(.plain)
         .id(cell.ply)
-        .accessibilityElement(children: .combine)
-        // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver is a
-        // move with no place in the game, and place is the whole of what this strip is for — and
-        // what it cost, and a mistake made from here, are worth saying out loud too.
-        .accessibilityLabel(spoken(cell.spoken, cost: cost, best: best, slip: slip))
-        .accessibilityHint(localized("record.jump"))
     }
 
     /// The move's 掉幅 under it, in the app's one figure. 「最佳」 for the engine's own first
@@ -1833,8 +1874,53 @@ struct GameScreen: View {
 
 extension Game.Half {
     /// Said the way somebody reading a game aloud says it: a bare "Nf6" out of VoiceOver is a
-    /// move with no place in the game, and place is the whole of what the record strip is for.
-    var spoken: String { localized("screen.spokenMove", ply, san) }
+    /// move with no place in the game, and place is the whole of what the record strip is for —
+    /// and on a fork, which line this is of the ones played from here (docs/adr/0043).
+    var spoken: String {
+        let step = localized("screen.spokenMove", ply, san)
+        guard isFork else { return step }
+        let place = localized(isTrunk ? "record.trunk" : "record.twig", branchNumber, siblingCount)
+        return step + localized("clause.separator") + place
+    }
+}
+
+/// The tree, compressed to one column of ticks (docs/adr/0043). PGN writes a fork as
+/// parentheses; this is that crease, thin enough to live in the scoresheet's own row. Each
+/// sibling is a ring on a spine, the current one filled — a number sitting after the SAN was
+/// being read as a move, which is the one thing a scoresheet cannot afford.
+struct ForkRail: View {
+    let current: Int
+    let of: Int
+    var tint: Color
+
+    private var ticks: Int { min(max(of, 2), 4) }
+
+    var body: some View {
+        let shown = tickIndex(current)
+        ZStack {
+            Capsule().fill(tint.opacity(0.3)).frame(width: 1.5)
+            VStack(spacing: ticks == 2 ? 7 : 3) {
+                ForEach(1...ticks, id: \.self) { n in
+                    let on = n == shown
+                    Circle()
+                        .strokeBorder(tint.opacity(on ? 1 : 0.38), lineWidth: 1.2)
+                        .background(Circle().fill(on ? tint : Color.clear))
+                        .frame(width: on ? 6 : 4.5, height: on ? 6 : 4.5)
+                }
+            }
+        }
+        .frame(width: 11, height: 28)
+        .contentShape(Rectangle())
+    }
+
+    /// Which tick is lit: one per sibling up to four, and past four the ends stay the ends and
+    /// everything between lights the second.
+    private func tickIndex(_ current: Int) -> Int {
+        if of <= 4 { return min(max(current, 1), ticks) }
+        if current <= 1 { return 1 }
+        if current >= of { return ticks }
+        return min(2, ticks)
+    }
 }
 
 extension GameScreen.Card {

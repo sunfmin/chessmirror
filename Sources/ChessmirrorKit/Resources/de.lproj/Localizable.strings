@@ -261,6 +261,11 @@
 "record.curve" = "Bewertungskurve";
 "record.ply" = "Halbzug %d";
 "record.jump" = "Zu diesem Zug zurück";
+"record.branch" = "Nach oben oder unten wischen, um die Variante zu wechseln";
+"record.fork" = "Variante wechseln";
+"record.fork.hint" = "Antippen für die nächste Variante";
+"record.trunk" = "Hauptvariante %1$d von %2$d";
+"record.twig" = "Variante %1$d von %2$d";
 "record.opening" = "Anfang";
 "record.slipMark" = "Von hier aus falsch gezogen, kostet %d%%";
 

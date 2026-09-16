@@ -283,6 +283,11 @@
 "record.curve" = "分数曲线";
 "record.ply" = "第 %d 步";
 "record.jump" = "回到这一步";
+"record.branch" = "上下滑动切换分支";
+"record.fork" = "切换分支";
+"record.fork.hint" = "点一下换到下一条线";
+"record.trunk" = "树干 %1$d/%2$d";
+"record.twig" = "树枝 %1$d/%2$d";
 "record.opening" = "开局";
 "record.slipMark" = "此处走错，掉 %d%%";
 

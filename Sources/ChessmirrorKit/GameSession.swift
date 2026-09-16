@@ -1459,6 +1459,50 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
+    // ------------------------------------------------------------ the branches
+
+    /// The lines that were played from the position on screen instead of the move that
+    /// follows it (docs/adr/0043).
+    public var variationsHere: [[Game.Ply]] { game.variations(atPly: cursor) }
+
+    /// The Ply whose siblings the record can cycle, if the eye is on a fork: the one just
+    /// played, else the one about to be.
+    public var forkPly: Int? {
+        if cursor > 0, game.siblings(atPly: cursor - 1).count > 1 { return cursor - 1 }
+        if cursor < game.plies.count, game.siblings(atPly: cursor).count > 1 { return cursor }
+        return nil
+    }
+
+    /// Swipes the record onto the next (or previous) sibling at the fork the eye is on. The
+    /// strip stays one line; the tree is what the swipe walks.
+    public func cycleFork(by delta: Int) {
+        guard let ply = forkPly else { return }
+        cycleFork(atPly: ply, by: delta, keepStanding: true)
+    }
+
+    /// Cycles the siblings of a named Ply. A tap on that Ply's rail names it; a swipe on the
+    /// strip uses whichever fork the eye is already on, and tries not to jump the cursor.
+    ///
+    /// Browsing, like a step: the game is the same tree afterwards with a different line on
+    /// the board, and nothing is judged. Not while a move is being weighed or a drill is on —
+    /// the same gate every other walk through the game has.
+    public func cycleFork(atPly ply: Int, by delta: Int, keepStanding: Bool = false) {
+        guard canBrowse, delta != 0 else { return }
+        let siblings = game.siblings(atPly: ply)
+        guard siblings.count > 1 else { return }
+        let current = siblings.firstIndex { $0.variationIndex == nil } ?? 0
+        let count = siblings.count
+        let next = siblings[((current + delta) % count + count) % count]
+        guard let index = next.variationIndex else { return }
+        let standing = cursor
+        guard game.promoteVariation(index, atPly: ply) else { return }
+        cursor = keepStanding ? (standing <= ply ? ply : ply + 1) : ply + 1
+        adoptViewedAnalysis()
+        Sounds.current.play(.move)
+        save()
+        retune()
+    }
+
     // ------------------------------------------------------- walking to a mistake
 
     /// A Ply this session was asked to walk to when its screen arrives, if any.
@@ -1564,8 +1608,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// Whether a person may move on the board as it is being looked at. True in the past as
-    /// well as the present: playing from an earlier position is how a move is taken back
-    /// (docs/adr/0028) — what followed it is dropped, and the game carries on from there.
+    /// well as the present: playing from an earlier position is how a 分支 is made
+    /// (docs/adr/0043) — what followed stays beside the new move, and the game carries on down it.
     public var isHandTurn: Bool {
         switch phase {
         case .exercising: return activePunishment?.isJudging == false
@@ -1635,8 +1679,17 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         stopSearching()
         standpoint = Standpoint(game: game, cursor: cursor)
-        game = played
-        cursor = game.plies.count
+        // What the board and the record show while the engine thinks: the move in the game it
+        // was played in, with the line it was played over kept beside it as a 分支
+        // (docs/adr/0043) — the shape the ruling lands if the move stands, so nothing on the
+        // strip disappears and comes back. `played` is the prefix the engine weighs.
+        var shown = game
+        guard shown.play(move, atPly: cursor) else {
+            Sounds.current.play(.refused)
+            return
+        }
+        game = shown
+        cursor += 1
         analysis = nil
         thinking = nil
         refused = nil
@@ -1743,11 +1796,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             weigh(move)
             return
         }
-        // A move played over an earlier one: what used to follow is dropped, and losing a line is
-        // worth its own noise. Computed before the play, which is what the comparison is against.
-        // The engine's own moves always land at the latest position, so this is only ever a hand
-        // or asked concern.
-        let replacing = mover != .engine && !isAtLatest && game.plies[cursor].uci != move.uci
+        // A move played over an earlier one: what used to follow becomes a 分支 (docs/adr/0043),
+        // and a line forking is worth its own noise. Computed before the play, which is what the
+        // comparison is against. The engine's own moves always land at the latest position, so
+        // this is only ever a hand or asked concern.
+        let branching = mover != .engine && !isAtLatest && game.plies[cursor].uci != move.uci
         if mover == .engine {
             // Played only at the latest position: it was found for the position its search
             // started from, and applying it anywhere else would be a different move.
@@ -1764,7 +1817,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             cursor += 1
         }
         Sounds.current.play(move, outcome: viewed.state.outcome)
-        if replacing { Sounds.current.play(.check) }
+        if branching { Sounds.current.play(.check) }
         // The invariant: the Analysis that described the position before this move is stale,
         // the game is written to its file, and the engine is asked what it makes of the new
         // position — whoever moved.

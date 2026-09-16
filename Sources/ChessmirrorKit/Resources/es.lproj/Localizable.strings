@@ -261,6 +261,11 @@
 "record.curve" = "Curva de evaluación";
 "record.ply" = "Media jugada %d";
 "record.jump" = "Volver a esta jugada";
+"record.branch" = "Desliza arriba o abajo para cambiar de variante";
+"record.fork" = "Cambiar de variante";
+"record.fork.hint" = "Toca para la siguiente variante";
+"record.trunk" = "línea principal %1$d de %2$d";
+"record.twig" = "variante %1$d de %2$d";
 "record.opening" = "Inicio";
 "record.slipMark" = "Jugada errónea desde aquí, cuesta %d%%";
 

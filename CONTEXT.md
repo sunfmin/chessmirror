@@ -130,6 +130,14 @@ A move the player played and 把关 took back. It never happened in the game, an
 what the 错题 is made of.
 _Avoid_: 变着, 悔棋
 
+**分支 (Branch)**:
+A line played from an earlier position instead of the move that stood there. Playing over a
+move never writes it out: what followed moves in beside the new move, whole, and the record can
+switch between them (docs/adr/0043). A game is a tree of lines with one 树干 — the line it
+arrived as, imported or played out — and every other line a 树枝, inked in its own colour.
+_Avoid_: 变着 (that word is for a 试招 and is refused there too), 变体, alternative, fork as the
+name of the line (a fork is the position the lines leave from)
+
 **原局 (Standpoint)**:
 The game as it was being read when a move was played, and where the eye stood in it, kept while
 the move is weighed. What is put back when the move does not stand — refused, or nobody finished

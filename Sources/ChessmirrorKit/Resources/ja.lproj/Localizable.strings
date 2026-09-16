@@ -243,6 +243,11 @@
 "record.curve" = "評価の曲線";
 "record.ply" = "%d 手目";
 "record.jump" = "この手に戻る";
+"record.branch" = "上下にスワイプで変化を切り替え";
+"record.fork" = "変化を切り替え";
+"record.fork.hint" = "タップで次の変化へ";
+"record.trunk" = "本譜 %1$d/%2$d";
+"record.twig" = "変化 %1$d/%2$d";
 "record.opening" = "開始";
 "record.slipMark" = "ここから間違えた、%d%% 落とす";
 

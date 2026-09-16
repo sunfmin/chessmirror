@@ -316,10 +316,10 @@ struct GameScreenScreenshots {
         #expect(rendered.says("让引擎走"))
     }
 
-    /// A move played over an earlier one. It replaces what followed rather than branching beside
-    /// it: a Game is a list now, not a tree (docs/adr/0028), and somebody taking a move back and
-    /// playing another has played one game, not two.
-    @Test("a move played over an earlier one drops the line it replaced")
+    /// A move played over an earlier one. It branches beside what followed rather than replacing
+    /// it (docs/adr/0043): the line that was there is kept whole, the record marks the fork with
+    /// a rail, and the strip can be swiped onto the other line.
+    @Test("a move played over an earlier one keeps the line it was played over as a 分支")
     func replayedFromEarlier() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game)
@@ -334,11 +334,25 @@ struct GameScreenScreenshots {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
         }
 
-        #expect(session.game.plies.count == 7, "the tail it was played over is gone, not kept")
+        #expect(session.game.plies.count == 7, "the new move is the end of the line on the board")
+        #expect(session.game.variations(atPly: 6).first?.map(\.san) == ["c3", "Nf6"], "and the tail it was played over is kept beside it")
         #expect(rendered.says("回到最新"), "and the way back to the present, beside the arrows")
-        #expect(rendered.says("第 7 步 d3"), "with the move that replaced it in the record")
-        #expect(!rendered.says("第 7 步 c3"), "and no sign of the move it replaced")
-        #expect(!rendered.says("第 8 步 Nf6"), "nor of what used to follow that")
+        #expect(rendered.says("第 7 步 d3"), "with the new move in the record")
+        #expect(rendered.says("树枝 2/2"), "named as the 树枝 it is, second of two lines")
+        #expect(rendered.says("切换分支"), "with the rail that switches lines beside it")
+        #expect(!rendered.says("第 7 步 c3"), "and the line it was played over off the strip")
+        #expect(!rendered.says("第 8 步 Nf6"), "along with what used to follow that")
+
+        // Swiping the strip onto the other line puts the game back as it was imported.
+        session.cycleFork(by: 1)
+        let swiped = await ScreenImage.write("game-replayed-swiped") {
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
+        }
+        #expect(session.game.plies.map(\.san).suffix(2) == ["c3", "Nf6"], "the original line is the game again")
+        #expect(swiped.says("第 7 步 c3"), "and back on the strip")
+        #expect(swiped.says("树干 1/2"), "as the 树干, first of two")
+        #expect(swiped.says("第 8 步 Nf6"))
+        #expect(!swiped.says("第 7 步 d3"), "with the tried line waiting in the bracket")
     }
 
     /// A finished game. The engine has nothing to search and so says nothing, and the screen has to

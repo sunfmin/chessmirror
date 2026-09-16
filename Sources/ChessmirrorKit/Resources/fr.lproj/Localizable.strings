@@ -261,6 +261,11 @@
 "record.curve" = "Courbe d'évaluation";
 "record.ply" = "Demi-coup %d";
 "record.jump" = "Revenir à ce coup";
+"record.branch" = "Glissez vers le haut ou le bas pour changer de variante";
+"record.fork" = "Changer de variante";
+"record.fork.hint" = "Touchez pour la variante suivante";
+"record.trunk" = "ligne principale %1$d sur %2$d";
+"record.twig" = "variante %1$d sur %2$d";
 "record.opening" = "Départ";
 "record.slipMark" = "Mauvais coup depuis ici, coûte %d%%";
 

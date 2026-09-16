@@ -261,6 +261,11 @@
 "record.curve" = "Curva de avaliação";
 "record.ply" = "Meio-lance %d";
 "record.jump" = "Voltar a este lance";
+"record.branch" = "Deslize para cima ou para baixo para trocar de variante";
+"record.fork" = "Trocar de variante";
+"record.fork.hint" = "Toque para a próxima variante";
+"record.trunk" = "linha principal %1$d de %2$d";
+"record.twig" = "variante %1$d de %2$d";
 "record.opening" = "Início";
 "record.slipMark" = "Lance errado a partir daqui, custa %d%%";
 
