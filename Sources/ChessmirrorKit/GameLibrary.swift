@@ -109,30 +109,53 @@ import Foundation
     public let folder: GameFolder
 
     public var directory: URL { folder.url }
-    public private(set) var reviewingURLs: Set<URL> = []
+    /// The imported games whose Review is running, and how far each has got. A game is here
+    /// from the moment its Review is asked for until it lands or fails, so a second ask while one
+    /// is running is refused rather than queued twice.
+    public private(set) var reviewing: [URL: ImportReview.Progress] = [:]
+    public var reviewingURLs: Set<URL> { Set(reviewing.keys) }
     private var importReviewChain: Task<Void, Never>?
     func waitForImportReviews() async { await importReviewChain?.value }
 
+    /// How a Review of an imported game ended.
+    public enum ReviewOutcome: Sendable {
+        /// The Review landed and was written: the entry as it now is.
+        case reviewed(PGN)
+        /// The game changed while the Review was running, and the Review was thrown away.
+        case superseded
+        /// The engine could not settle every position (`ImportReview.Failure`) or the write
+        /// failed. Nothing is saved; asking again starts over.
+        case failed
+    }
+
+    /// Runs the Review of an imported game (docs/adr/0016) and writes it into the file. Asked for,
+    /// never started on its own: it is a few seconds of engine per move, and the player says when.
+    /// Refused — with no callback — for a game that is not imported, is already reviewed, or is
+    /// being reviewed now.
     public func reviewImported(_ entry: Entry, using engine: any Engine,
-                               completed: @escaping @MainActor (PGN) -> Void = { _ in }) {
+                               completed: @escaping @MainActor (ReviewOutcome) -> Void = { _ in }) {
         guard entry.origin == .imported, let original = entry.pgn, !original.game.isReviewed,
-            reviewingURLs.insert(entry.url).inserted else { return }
+            reviewing[entry.url] == nil else { return }
+        reviewing[entry.url] = ImportReview.Progress(judged: 0, total: 0)
         let previous = importReviewChain
         importReviewChain = Task { [weak self] in
             await previous?.value
             guard let self else { return }
-            defer { reviewingURLs.remove(entry.url) }
+            defer { reviewing[entry.url] = nil }
             do {
                 await writeChain?.value
-                let judged = try await ImportReview.judge(original, using: engine)
+                let judged = try await ImportReview.judge(original, using: engine) { [weak self] progress in
+                    self?.reviewing[entry.url] = progress
+                }
                 guard let current = entries.first(where: { $0.url == entry.url })?.pgn,
-                    current.game == original.game else { return }
+                    current.game == original.game else { return completed(.superseded) }
                 var result = current
                 result.game = judged.game
                 result.setTag("ReviewSift", to: judged.tag("ReviewSift"))
-                if write(result, to: entry.url) { completed(result) }
+                completed(write(result, to: entry.url) ? .reviewed(result) : .failed)
             } catch {
-                // No partial scores are saved; opening the game again retries the job.
+                // No partial scores are saved; asking again starts the job over.
+                completed(.failed)
             }
         }
     }

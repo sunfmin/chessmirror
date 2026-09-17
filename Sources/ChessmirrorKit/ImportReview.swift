@@ -38,9 +38,27 @@ public enum ImportReview {
 
     public enum Failure: Error { case incompleteSearch(Int) }
 
-    public static func judge(_ pgn: PGN, using engine: any Engine) async throws -> PGN {
+    /// How far a Review has got: positions settled out of the positions it has to settle. Reported
+    /// as it goes, so a screen can say something truer than 「正在分析」 for a game of eighty moves.
+    public struct Progress: Hashable, Sendable {
+        public let judged: Int
+        public let total: Int
+
+        public init(judged: Int, total: Int) {
+            self.judged = judged
+            self.total = total
+        }
+
+        public var fraction: Double { total > 0 ? Double(judged) / Double(total) : 0 }
+    }
+
+    public static func judge(
+        _ pgn: PGN, using engine: any Engine,
+        progress: @escaping @MainActor (Progress) -> Void = { _ in }
+    ) async throws -> PGN {
         let plan = plan(for: pgn.game)
         var scores: [Int: Score] = [:]
+        await progress(Progress(judged: 0, total: plan.positions.count))
         for ply in plan.positions {
             try Task.checkCancellation()
             guard let position = pgn.game.rewound(to: ply) else { throw Failure.incompleteSearch(ply) }
@@ -54,6 +72,7 @@ public enum ImportReview {
                 }
             }
             guard scores[ply] != nil else { throw Failure.incompleteSearch(ply) }
+            await progress(Progress(judged: scores.count, total: plan.positions.count))
         }
         var result = pgn
         result.game.applyReview(pgn.game.plies.indices.map { scores[$0 + 1] },

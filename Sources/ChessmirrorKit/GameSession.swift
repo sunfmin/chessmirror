@@ -327,18 +327,51 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         practice.hintsOpened += 1
     }
 
-    private var pendingImportURL: URL?
+    // ------------------------------------------------------------- the Review of an import
 
-    private func reviewImportIfReady() {
-        let session = self
-        if let engine, let library, let pendingImportURL,
-            let entry = library.entries.first(where: { $0.url == pendingImportURL }) {
-            library.reviewImported(entry, using: engine) { [weak session] reviewed in
-                guard let session, session.game.uciMoves == reviewed.game.uciMoves,
-                    session.game.startFEN == reviewed.game.startFEN else { return }
-                session.game = reviewed.game
-                session.tags = reviewed.tags
-                session.pendingImportURL = nil
+    /// An imported game nobody has judged yet (docs/adr/0016). Its moves carry no cost, so it
+    /// has no 错招 and puts nothing in the 错题本 — not a clean game, a game nobody has looked
+    /// at. The screen says so and offers the Review, rather than starting it on its own: it is
+    /// seconds of engine per move, and the player says when.
+    public var awaitsReview: Bool { origin == .imported && url != nil && !game.isReviewed }
+
+    /// Whether the offer can be taken up right now: an engine to judge with, a library to write
+    /// into, and no Review of this game already running.
+    public var canReview: Bool { awaitsReview && engine != nil && library != nil && !isReviewing }
+
+    /// How far this game's Review has got, while one is running. Read off the library, which is
+    /// where the Review runs — a session that came and went finds it still going.
+    public var reviewProgress: ImportReview.Progress? { url.flatMap { library?.reviewing[$0] } }
+    public var isReviewing: Bool { reviewProgress != nil }
+
+    /// How the last Review this session asked for ended, for the screen to say once.
+    public enum ReviewNews: Hashable, Sendable {
+        /// The Review landed, and this many positions of the game turned out to be 错招 — each
+        /// of them, from the moment the file was written, an occurrence in the 错题本.
+        case done(slips: Int)
+        /// The engine could not settle every position. Nothing was written; ask again.
+        case failed
+    }
+    public private(set) var reviewNews: ReviewNews?
+
+    /// Starts the Review of this imported game. Nothing happens unless `canReview`.
+    public func review() {
+        guard canReview, let engine, let library, let url,
+            let entry = library.entries.first(where: { $0.url == url }) else { return }
+        reviewNews = nil
+        library.reviewImported(entry, using: engine) { [weak self] outcome in
+            guard let self else { return }
+            switch outcome {
+            case .reviewed(let reviewed):
+                guard game.uciMoves == reviewed.game.uciMoves,
+                    game.startFEN == reviewed.game.startFEN else { return }
+                game = reviewed.game
+                tags = reviewed.tags
+                reviewNews = .done(slips: slips.count)
+            case .superseded:
+                return
+            case .failed:
+                reviewNews = .failed
             }
         }
     }
@@ -367,7 +400,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     ) -> GameSession? {
         guard !entry.isDownloading else { return nil }
         let session = GameSession(entry: entry, library: library, strength: strength)
-        session.pendingImportURL = entry.url
         session.attach(engine: engine, library: library)
         session.seatEngineOpponent()
         return session
@@ -423,7 +455,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func attach(engine: (any Engine)?, library: GameLibrary?) {
         self.engine = engine
         self.library = library
-        reviewImportIfReady()
     }
 
     // ------------------------------------------------------------ the screen's comings and goings
