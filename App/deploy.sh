@@ -7,8 +7,11 @@ cd "$(dirname "$0")"
 if [ $# -ge 1 ]; then
   udid="$1"
 else
+  # The identifier is picked out by its shape rather than its column: Xcode 27 prints it as
+  # `00008150-000144891A42401C (UDID)` with an empty Hostname column before it, so the third
+  # column is the literal "(UDID)" and the build would try to install onto that.
   udid=$(xcrun devicectl list devices \
-    | awk '/iPhone/ && /available/ { print $3; exit }')
+    | awk '/iPhone/ && /available/ { for (i = 1; i <= NF; i++) if ($i ~ /^[0-9A-Fa-f-]{20,}$/) { print $i; exit } }')
 fi
 
 if [ -z "$udid" ]; then
