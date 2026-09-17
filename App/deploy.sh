@@ -7,8 +7,11 @@ cd "$(dirname "$0")"
 if [ $# -ge 1 ]; then
   udid="$1"
 else
+  # The identifier by its shape rather than by its column: Xcode 27's devicectl appends a
+  # "(UDID)" word to the column, which is what the third field then was.
   udid=$(xcrun devicectl list devices \
-    | awk '/iPhone/ && /available/ { print $3; exit }')
+    | awk '/iPhone/ && /available/' \
+    | rg -o '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{16}' | head -1)
 fi
 
 if [ -z "$udid" ]; then

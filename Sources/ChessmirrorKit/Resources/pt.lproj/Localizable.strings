@@ -229,7 +229,7 @@
 "import.howMany" = "Quantas";
 "import.fetch" = "Trazer as partidas";
 "import.fetch.recent" = "Trazer as últimas %1$d partidas de %2$@";
-"import.fetch.recent.one" = "Trazer a última partida de %2$@";
+"import.fetch.recent.one" = "Trazer %1$d última partida de %2$@";
 "import.fetch.share" = "Ler esta partida";
 "import.fetching" = "A descarregar…";
 "import.writing" = "A gravar…";
