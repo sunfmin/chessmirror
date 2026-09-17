@@ -266,7 +266,7 @@
 "import.howMany" = "How many";
 "import.fetch" = "Fetch the games";
 "import.fetch.recent" = "Fetch %2$@'s last %1$d games";
-"import.fetch.recent.one" = "Fetch %2$@'s last game";
+"import.fetch.recent.one" = "Fetch %2$@'s last %1$d game";
 "import.fetch.share" = "Read this game";
 "import.fetching" = "Downloading…";
 "import.writing" = "Writing…";

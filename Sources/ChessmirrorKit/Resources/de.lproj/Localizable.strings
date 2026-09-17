@@ -229,7 +229,7 @@
 "import.howMany" = "Wie viele";
 "import.fetch" = "Partien holen";
 "import.fetch.recent" = "Die letzten %1$d Partien von %2$@ holen";
-"import.fetch.recent.one" = "Die letzte Partie von %2$@ holen";
+"import.fetch.recent.one" = "%1$d letzte Partie von %2$@ holen";
 "import.fetch.share" = "Diese Partie lesen";
 "import.fetching" = "Wird geladen…";
 "import.writing" = "Wird geschrieben…";

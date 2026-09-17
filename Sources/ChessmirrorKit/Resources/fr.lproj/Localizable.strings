@@ -229,7 +229,7 @@
 "import.howMany" = "Combien";
 "import.fetch" = "Récupérer";
 "import.fetch.recent" = "Récupérer les %1$d dernières parties de %2$@";
-"import.fetch.recent.one" = "Récupérer la dernière partie de %2$@";
+"import.fetch.recent.one" = "Récupérer %1$d dernière partie de %2$@";
 "import.fetch.share" = "Lire cette partie";
 "import.fetching" = "Téléchargement…";
 "import.writing" = "Écriture…";
