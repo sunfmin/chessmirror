@@ -41,11 +41,52 @@ public enum PGNImport {
             }
         }
     }
+    // ----------------------------------------------------------------- sites
+
+    /// Where games come from. Named here so an error can say which one it is talking about
+    /// and a remembered username can say which one it belongs to (docs/adr/0044).
+    ///
+    /// Two of them hand over somebody's recent games by username; the third has no such door
+    /// and shares one game at a time as a link that carries the whole game inside it.
+    public enum Site: String, CaseIterable, Hashable, Sendable, Codable {
+        case lichess
+        case chessCom
+        /// 国象联盟, the Chinese platform at chessease.net.
+        case chessease
+
+        /// The name the site goes by on its own front page, which is the only name anyone
+        /// types it as. Not localised: a brand is the same word in every language.
+        public var label: String {
+            switch self {
+            case .lichess: "lichess"
+            case .chessCom: "chess.com"
+            case .chessease: "国象联盟"
+            }
+        }
+
+        /// The sites that answer to a username at all.
+        public static let withPlayers: [Site] = [.lichess, .chessCom]
+
+        /// A username somebody on this site would recognise as one, for the message that says
+        /// what one looks like.
+        public var exampleUser: String {
+            switch self {
+            case .lichess: "DrNykterstein"
+            case .chessCom: "Hikaru"
+            case .chessease: ""
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- errors
 
     /// What went wrong, one case per way an import can die. The wording of a failure
     /// follows from the case rather than from the call site, so every door shows the
     /// same message for the same failure (`BoardIntake.Intake.alert` convention).
+    ///
+    /// A failure about a person carries the site and the name as typed, so the message can
+    /// say 「chess.com 上没有 sunfmn」 rather than 「没有这个用户」: the one thing the reader wants
+    /// to check is the spelling, and the message shows them what they spelt.
     public enum Error: Swift.Error, Hashable, Sendable {
         /// The input is not a link at all.
         case notALink
@@ -57,10 +98,15 @@ public enum PGNImport {
         /// There is no such game. A mistyped id and a deleted game look the same from here,
         /// and the message says both rather than picking one.
         case missingGame
-        /// lichess has no player of that name.
-        case unknownPlayer
+        /// The site has no player of that name.
+        case unknownPlayer(Site, String)
         /// What was typed is not a username at all.
-        case notAPlayer
+        case notAPlayer(Site)
+        /// The player exists but the site holds no games of theirs to hand over.
+        case noGames(Site, String)
+        /// A 国象联盟 link that does not carry a game after all — cut short by whatever it was
+        /// pasted through, or not a share link to begin with.
+        case unreadableShare
         /// The link downloaded, but what came down is not a PGN.
         case notPGN
         /// It is a PGN, but not one game in it parses.
@@ -80,13 +126,26 @@ public enum PGNImport {
                 (localized("import.privateGame.title"), localized("import.privateGame.message"))
             case .missingGame:
                 (localized("import.missingGame.title"), localized("import.missingGame.message"))
-            case .unknownPlayer:
+            case .unknownPlayer(let site, let name):
                 (
-                    localized("import.unknownPlayer.title"),
-                    localized("import.unknownPlayer.message")
+                    localized("import.unknownPlayer.title", site.label, name),
+                    localized("import.unknownPlayer.message", site.label, name)
                 )
-            case .notAPlayer:
-                (localized("import.notAPlayer.title"), localized("import.notAPlayer.message"))
+            case .notAPlayer(let site):
+                (
+                    localized("import.notAPlayer.title"),
+                    localized("import.notAPlayer.message", site.label, site.exampleUser)
+                )
+            case .noGames(let site, let name):
+                (
+                    localized("import.noGames.title", site.label, name),
+                    localized("import.noGames.message", site.label, name)
+                )
+            case .unreadableShare:
+                (
+                    localized("import.unreadableShare.title"),
+                    localized("import.unreadableShare.message")
+                )
             case .notPGN:
                 (localized("import.notPGN.title"), localized("import.notPGN.message"))
             case .noReadableGames:
@@ -106,16 +165,23 @@ public enum PGNImport {
         /// Pure, and here rather than inside the fetcher, because "what does a 403 mean" is a
         /// statement about lichess and not about `URLSession`: 403 on a study is a study nobody
         /// outside it may read, 404 on a game export is a game that is not there, and 404 on the
-        /// user endpoint is a person who does not exist. Anything else is the status itself,
-        /// said plainly.
+        /// user endpoint is a person who does not exist. chess.com answers 404 for a player it
+        /// has never heard of, on any of that player's pages. Anything else is the status
+        /// itself, said plainly.
         public static func from(status: Int, url: URL) -> Self {
-            guard let host = url.host?.lowercased(),
-                host == "lichess.org" || host.hasSuffix(".lichess.org")
-            else { return .http(status) }
             let path = url.path
+            if let name = chessComPlayer(in: url) {
+                switch status {
+                case 404: return .unknownPlayer(.chessCom, name)
+                default: return .http(status)
+                }
+            }
+            guard isLichess(url) else { return .http(status) }
             switch status {
             case 403: return path.contains("/study/") ? .privateStudy : .privateGame
-            case 404 where path.contains("/api/games/user/"): return .unknownPlayer
+            case 404 where path.contains("/api/games/user/"):
+                let name = url.pathComponents.drop { $0 != "user" }.dropFirst().first ?? ""
+                return .unknownPlayer(.lichess, name)
             case 404 where path.contains("/game/export/"): return .missingGame
             default: return .http(status)
             }
@@ -217,23 +283,100 @@ public enum PGNImport {
         URL(string: "https://lichess.org/game/export/\(id)?evals=true&clocks=false")!
     }
 
-    /// A player's recent games, most recent first — nil for anything that is not a username.
+    /// A player's recent games on lichess, most recent first — nil for anything that is not a
+    /// username.
     ///
     /// The count is clamped rather than refused: a number nobody would type on purpose is a
     /// slip, and the useful answer to a slip is the nearest thing that works.
     public static func recentGamesURL(user: String, count: Int) -> URL? {
-        var name = user.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.hasPrefix("@") { name.removeFirst() }
-        // lichess usernames are letters, digits, underscores and hyphens. Anything else — a
-        // space, a slash, a whole URL pasted into the wrong field — is not one.
-        guard !name.isEmpty, name.count <= 30,
-            name.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") })
-        else { return nil }
+        guard let name = username(user, on: .lichess) else { return nil }
         let many = min(max(count, 1), maxRecentGames)
         return URL(
             string: "https://lichess.org/api/games/user/\(name)?max=\(many)"
                 + "&evals=true&clocks=false&sort=dateDesc"
         )
+    }
+
+    /// The list of a chess.com player's monthly archives — nil for anything that is not a
+    /// username. chess.com hands games over a month at a time, so "the last few" is a walk
+    /// back from the newest month (`ImportSession.recent`), and this is where the walk starts.
+    public static func chessComArchivesURL(user: String) -> URL? {
+        guard let name = username(user, on: .chessCom) else { return nil }
+        return URL(string: "https://api.chess.com/pub/player/\(name.lowercased())/games/archives")
+    }
+
+    /// The PGN of one monthly archive, given the archive's own URL from the list.
+    public static func chessComMonthURL(archive: URL) -> URL {
+        archive.appending(path: "pgn")
+    }
+
+    /// The archive URLs in the list chess.com answers with, newest first — nil when what came
+    /// down is not that list.
+    public static func chessComArchives(in text: String) -> [URL]? {
+        guard let data = text.data(using: .utf8),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let archives = object["archives"] as? [String]
+        else { return nil }
+        return archives.compactMap { URL(string: $0) }.reversed()
+    }
+
+    /// How many months back a chess.com import looks. A player who has not played in three
+    /// months has no recent games in any sense worth a fourth request.
+    public static let chessComMonthsBack = 3
+
+    /// The name as the site would accept it — nil when what was typed is not a username there.
+    ///
+    /// The `@` people type in front of a handle is not part of it. Beyond that: letters,
+    /// digits, underscores and hyphens, which is what both sites allow. Anything else — a
+    /// space, a slash, a whole URL pasted into the wrong field — is not one.
+    public static func username(_ typed: String, on site: Site) -> String? {
+        var name = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.hasPrefix("@") { name.removeFirst() }
+        guard site != .chessease, !name.isEmpty, name.count <= 30,
+            name.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") })
+        else { return nil }
+        return name
+    }
+
+    /// The player a chess.com API URL is about, nil for any other URL.
+    static func chessComPlayer(in url: URL) -> String? {
+        guard url.host?.lowercased() == "api.chess.com" else { return nil }
+        let parts = url.pathComponents
+        guard parts.count >= 4, parts[1] == "pub", parts[2] == "player" else { return nil }
+        return parts[3]
+    }
+
+    static func isLichess(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "lichess.org" || host.hasSuffix(".lichess.org")
+    }
+
+    // ------------------------------------------------------------- 国象联盟
+
+    /// The game a 国象联盟 share link carries — nil for a link that is not one.
+    ///
+    /// 国象联盟 has no export endpoint. What it has is a share link whose fragment *is* the
+    /// game: `app.chessease.net/pgn/#…`, the part after the `#` being a JSON object, brotli
+    /// compressed and base64url encoded, whose `p` is the PGN. Nothing is fetched; the link is
+    /// read the way the site's own viewer reads it. A link that has the shape but will not
+    /// decode is a share link cut short, and `.unreadableShare` says so.
+    public static func chesseaseGame(in input: String) -> Result<String, Error>? {
+        var raw = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !raw.contains("://") { raw = "https://" + raw }
+        guard let url = URL(string: raw), let host = url.host?.lowercased(),
+            host == "chessease.net" || host.hasSuffix(".chessease.net")
+        else { return nil }
+        guard let fragment = url.fragment, !fragment.isEmpty else { return .failure(.unreadableShare) }
+        var padded = fragment
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while padded.count % 4 != 0 { padded += "=" }
+        guard let packed = Data(base64Encoded: padded),
+            let unpacked = Brotli.decode(packed),
+            let object = try? JSONSerialization.jsonObject(with: unpacked) as? [String: Any],
+            let pgn = object["p"] as? String, !pgn.isEmpty
+        else { return .failure(.unreadableShare) }
+        return .success(pgn)
     }
 
     /// How many recent games one import may ask for. A ceiling because this is the thing you
@@ -249,9 +392,7 @@ public enum PGNImport {
     /// anything after it is a chapter, and anything before the study id is a
     /// different page.
     private static func lichessStudyID(from url: URL) -> String? {
-        guard let host = url.host?.lowercased(),
-            host == "lichess.org" || host.hasSuffix(".lichess.org")
-        else { return nil }
+        guard isLichess(url) else { return nil }
         let parts = url.pathComponents
         guard parts.count >= 3, parts[1] == "study", !parts[2].isEmpty else { return nil }
         let studyID = parts[2]
@@ -268,9 +409,7 @@ public enum PGNImport {
     /// long. A page this misreads as a game costs one 404 and an honest error, which is why a
     /// list of a dozen names is enough and a list of every page lichess has is not needed.
     private static func lichessGameID(from url: URL) -> String? {
-        guard let host = url.host?.lowercased(),
-            host == "lichess.org" || host.hasSuffix(".lichess.org")
-        else { return nil }
+        guard isLichess(url) else { return nil }
         let parts = url.pathComponents.dropFirst()  // the leading "/"
         guard let first = parts.first, !first.isEmpty else { return nil }
         guard parts.count == 1 || (parts.count == 2 && ["white", "black"].contains(parts.last!))
@@ -425,10 +564,11 @@ public enum PGNImport {
 
     public static func name(for pgn: PGN, chapter ordinal: Int) -> String {
         if let chapterName = pgn.tag("ChapterName"), !chapterName.isEmpty { return chapterName }
-        // A lichess game export before the Event check, because its Event is "Rated Blitz
-        // game" — true of a million of them, and a name every game in an import would share.
-        // Who played and when is what tells one of somebody's Tuesday games from the next.
-        if lichessGameID(of: pgn) != nil, let played = playersAndDate(of: pgn) { return played }
+        // A lichess or chess.com game before the Event check, because its Event is "Rated Blitz
+        // game" or "Live Chess" — true of a million of them, and a name every game in an
+        // import would share. Who played and when is what tells one of somebody's Tuesday
+        // games from the next.
+        if siteGameID(of: pgn) != nil, let played = playersAndDate(of: pgn) { return played }
         if let event = pgn.tag("Event"), !event.isEmpty, !Self.namelessEvents.contains(event) {
             return event
         }
@@ -437,6 +577,38 @@ public enum PGNImport {
         if white != "?" || black != "?" { return localized("import.name.players", white, black) }
         if let date = pgn.tag("Date"), !date.isEmpty, date != "????.??.??" { return date }
         return localized("import.name.chapter", ordinal)
+    }
+
+    /// The side a named account played in a game — nil when it played neither. Case does not
+    /// count, because the sites' URLs lowercase a name their pages spell with capitals, and the
+    /// `@` people type in front of a handle is not part of it.
+    public static func side(of player: String, in pgn: PGN) -> PieceColour? {
+        var name = player.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.hasPrefix("@") { name.removeFirst() }
+        guard !name.isEmpty else { return nil }
+        if pgn.tag("White")?.caseInsensitiveCompare(name) == .orderedSame { return .white }
+        if pgn.tag("Black")?.caseInsensitiveCompare(name) == .orderedSame { return .black }
+        return nil
+    }
+
+    /// How a game went for one side, in a word — nil for a game with no result yet.
+    public static func verdict(for side: PieceColour, in pgn: PGN) -> String? {
+        switch pgn.tag("Result") {
+        case "1-0": localized(side == .white ? "import.row.won" : "import.row.lost")
+        case "0-1": localized(side == .black ? "import.row.won" : "import.row.lost")
+        case "1/2-1/2": localized("import.row.drawn")
+        default: nil
+        }
+    }
+
+    /// When a game was played, as the file says it: the day, and the time when there is one.
+    public static func playedAt(_ pgn: PGN) -> String? {
+        let date = [pgn.tag("UTCDate"), pgn.tag("Date")]
+            .compactMap { $0 }
+            .first { !$0.isEmpty && $0 != "????.??.??" }
+        guard var when = date else { return nil }
+        if let time = pgn.tag("UTCTime"), time.count >= 5 { when += " \(time.prefix(5))" }
+        return when
     }
 
     /// A game named by who played it and when — nil when the file does not say who.
@@ -459,19 +631,31 @@ public enum PGNImport {
 
     /// What dedup compares one game against another by.
     ///
-    /// A lichess game has a canonical URL of its own, which is the one true answer to "is this
-    /// the same game": the same game imported twice, under two names, from two doors, is one
-    /// game. Everything else falls back to the name, which is what a study chapter is told
-    /// apart by — a chapter is named by the person who owns it and has no id of its own.
+    /// A lichess or chess.com game has a canonical URL of its own, which is the one true
+    /// answer to "is this the same game": the same game imported twice, under two names, from
+    /// two doors, is one game. Everything else falls back to the name, which is what a study
+    /// chapter is told apart by — a chapter is named by the person who owns it and has no id
+    /// of its own.
     public static func identity(of pgn: PGN, named name: String) -> String {
-        guard let id = lichessGameID(of: pgn) else { return name }
-        return "lichess:\(id)"
+        siteGameID(of: pgn) ?? name
     }
 
-    /// The lichess game this file is, read off the `Site` tag the export writes.
-    private static func lichessGameID(of pgn: PGN) -> String? {
-        guard let site = pgn.tag("Site"), let url = URL(string: site) else { return nil }
-        return lichessGameID(from: url)
+    /// The game this file is on the site it came from, as `site:id` — nil for a file no site
+    /// gave an id to. lichess writes its URL into `Site`; chess.com writes it into `Link`.
+    private static func siteGameID(of pgn: PGN) -> String? {
+        if let site = pgn.tag("Site"), let url = URL(string: site),
+            let id = lichessGameID(from: url)
+        {
+            return "lichess:\(id)"
+        }
+        if let link = pgn.tag("Link"), let url = URL(string: link),
+            let host = url.host?.lowercased(),
+            host == "chess.com" || host.hasSuffix(".chess.com"),
+            let id = url.pathComponents.last, id.allSatisfy(\.isNumber), !id.isEmpty
+        {
+            return "chesscom:\(id)"
+        }
+        return nil
     }
 
     // -------------------------------------------------------------- applying
@@ -571,6 +755,15 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     /// at when the same URL plus `.pgn` is the right one. The last failure is the
     /// one shown, because it is the one that would have succeeded.
     public func run(_ input: String) async {
+        // A 国象联盟 share link carries its game with it: nothing to download, and the reading
+        // is the same reading a downloaded PGN gets.
+        if let shared = PGNImport.chesseaseGame(in: input) {
+            switch shared {
+            case .success(let pgn): await read { pgn }
+            case .failure(let failure): phase = .failed(failure)
+            }
+            return
+        }
         guard let candidates = PGNImport.candidateURLs(for: input) else {
             phase = .failed(.notALink)
             return
@@ -581,47 +774,108 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     /// The other door: somebody's recent games, newest first.
     ///
     /// The same pipeline — one download, split, one file per game — because a multi-game PGN
-    /// is a multi-game PGN whether lichess calls it a study or an account's history.
-    public func recent(of user: String, count: Int = PGNImport.recentGames) async {
-        guard let url = PGNImport.recentGamesURL(user: user, count: count) else {
-            phase = .failed(.notAPlayer)
-            return
+    /// is a multi-game PGN whether lichess calls it a study or an account's history. chess.com
+    /// keeps that history a month to a file, so its door is a short walk back through the
+    /// newest months until there are enough games or the months run out
+    /// (`PGNImport.chessComMonthsBack`).
+    public func recent(
+        of user: String, count: Int = PGNImport.recentGames, on site: PGNImport.Site = .lichess
+    ) async {
+        let typed = user.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch site {
+        case .lichess:
+            guard let url = PGNImport.recentGamesURL(user: typed, count: count) else {
+                phase = .failed(.notAPlayer(.lichess))
+                return
+            }
+            await run([url], asked: typed)
+        case .chessCom:
+            guard let archives = PGNImport.chessComArchivesURL(user: typed) else {
+                phase = .failed(.notAPlayer(.chessCom))
+                return
+            }
+            let fetching = fetcher
+            let many = min(max(count, 1), PGNImport.maxRecentGames)
+            await read(asked: typed) {
+                let list = try await fetching.fetch(archives)
+                guard let months = PGNImport.chessComArchives(in: list) else {
+                    throw PGNImport.Error.notPGN
+                }
+                guard !months.isEmpty else { throw PGNImport.Error.noGames(.chessCom, typed) }
+                // Newest month first, and each month's games newest first: chess.com lists a
+                // month oldest-game-first, and "the last ten" are the ten at its end.
+                var text = ""
+                var gathered = 0
+                for month in months.prefix(PGNImport.chessComMonthsBack) {
+                    let pgn = try await fetching.fetch(PGNImport.chessComMonthURL(archive: month))
+                    let blocks = PGNImport.split(pgn).reversed()
+                    text += blocks.joined(separator: "\n\n") + "\n\n"
+                    gathered += blocks.count
+                    if gathered >= many { break }
+                }
+                guard gathered > 0 else { throw PGNImport.Error.noGames(.chessCom, typed) }
+                return PGNImport.split(text).prefix(many).joined(separator: "\n\n")
+            }
+        case .chessease:
+            phase = .failed(.notAPlayer(.chessease))
         }
-        await run([url])
     }
 
-    private func run(_ candidates: [URL]) async {
-        phase = .fetching
+    private func run(_ candidates: [URL], asked: String? = nil) async {
         let fetching = fetcher
+        await read(asked: asked) {
+            var lastError: PGNImport.Error = .notPGN
+            for candidate in candidates {
+                let text: String
+                do {
+                    text = try await fetching.fetch(candidate)
+                } catch let failure as PGNImport.Error {
+                    lastError = failure
+                    continue
+                } catch {
+                    lastError = .network(error.localizedDescription)
+                    continue
+                }
+                guard PGNImport.chapters(in: text).0.first != nil else {
+                    lastError = PGNImport.chapters(in: text).1 > 0 ? .noReadableGames : .notPGN
+                    continue
+                }
+                return text
+            }
+            throw lastError
+        }
+    }
+
+    /// The one pipeline behind every door: get the text, split it, and the plan is what was
+    /// readable. What differs between doors is only how the text is got, which is `source`.
+    ///
+    /// A failure about a player comes back naming the player as typed, not as the URL spelt
+    /// them — chess.com lowercases its URLs — so the message shows the reader their own
+    /// spelling, which is the thing they are about to check.
+    private func read(asked: String? = nil, _ source: @escaping @Sendable () async throws -> String) async {
+        phase = .fetching
         // The language goes with it. What comes back off this task is not only a download: it
         // names the games, and a detached task starts outside whatever
         // language was scoped around this one (docs/adr/0019).
         let language = Speech.language
         phase = await Task.detached(priority: .userInitiated) { () -> Phase in
             await Speech.speaking(language) { () -> Phase in
-                var lastError: PGNImport.Error = .notPGN
-                for candidate in candidates {
-                    let text: String
-                    do {
-                        text = try await fetching.fetch(candidate)
-                    } catch let failure as PGNImport.Error {
-                        lastError = failure
-                        continue
-                    } catch {
-                        lastError = .network(error.localizedDescription)
-                        continue
+                let text: String
+                do {
+                    text = try await source()
+                } catch let failure as PGNImport.Error {
+                    if case .unknownPlayer(let site, _) = failure, let asked {
+                        return .failed(.unknownPlayer(site, asked))
                     }
-                    let (chapters, unreadable) = PGNImport.chapters(in: text)
-                    guard let first = chapters.first else {
-                        lastError = unreadable > 0 ? .noReadableGames : .notPGN
-                        continue
-                    }
-                    _ = first
-                    return .ready(
-                        PGNImport.ImportPlan(chapters: chapters, unreadable: unreadable)
-                    )
+                    return .failed(failure)
+                } catch {
+                    return .failed(.network(error.localizedDescription))
                 }
-                return .failed(lastError)
+                let (chapters, unreadable) = PGNImport.chapters(in: text)
+                guard !chapters.isEmpty else {
+                    return .failed(unreadable > 0 ? .noReadableGames : .notPGN)
+                }
+                return .ready(PGNImport.ImportPlan(chapters: chapters, unreadable: unreadable))
             }
         }.value
     }

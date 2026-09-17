@@ -674,7 +674,7 @@ func statusesAreNamed() throws {
     #expect(PGNImport.Error.from(status: 404, url: game) == .missingGame)
     #expect(PGNImport.Error.from(status: 403, url: game) == .privateGame)
     #expect(PGNImport.Error.from(status: 403, url: study) == .privateStudy)
-    #expect(PGNImport.Error.from(status: 404, url: user) == .unknownPlayer)
+    #expect(PGNImport.Error.from(status: 404, url: user) == .unknownPlayer(.lichess, "nobody"))
     #expect(PGNImport.Error.from(status: 500, url: game) == .http(500))
     #expect(
         PGNImport.Error.from(status: 403, url: elsewhere) == .http(403),
@@ -684,7 +684,7 @@ func statusesAreNamed() throws {
     // Each one says what happened, in its own words.
     #expect(PGNImport.Error.missingGame.alert.title.contains("找不到"))
     #expect(PGNImport.Error.privateGame.alert.message.contains("不对外"))
-    #expect(PGNImport.Error.unknownPlayer.alert.title.contains("用户"))
+    #expect(PGNImport.Error.unknownPlayer(.lichess, "nobody").alert.title.contains("lichess 上没有 nobody"))
 }
 
 @MainActor
@@ -698,6 +698,157 @@ func honestFailures() async throws {
     let quiet = ScriptedFetcher([:])
     let refused = ImportSession(fetcher: quiet)
     await refused.recent(of: "not a username", count: 5)
-    #expect(refused.phase == .failed(.notAPlayer))
+    #expect(refused.phase == .failed(.notAPlayer(.lichess)))
     #expect(quiet.askedURLs.isEmpty, "nothing was asked of the network")
+}
+
+// ------------------------------------------------------------------ chess.com
+
+/// One month of somebody's chess.com games, in the shape the monthly archive hands them over:
+/// oldest first, clocks in the comments, black's moves numbered again, and `Link` naming the game.
+private let chessComMonth = """
+[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2026.08.29"]
+[Round "-"]
+[White "penguingm1"]
+[Black "sunfmin"]
+[Result "1-0"]
+[UTCDate "2026.08.29"]
+[UTCTime "09:02:11"]
+[TimeControl "180"]
+[Link "https://www.chess.com/game/live/100000001"]
+
+1. d4 {[%clk 0:02:59.9]} 1... d5 {[%clk 0:02:58.1]} 2. c4 {[%clk 0:02:58]} 1-0
+
+[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2026.08.30"]
+[Round "-"]
+[White "sunfmin"]
+[Black "Hikaru"]
+[Result "0-1"]
+[UTCDate "2026.08.30"]
+[UTCTime "21:14:03"]
+[TimeControl "180"]
+[Link "https://www.chess.com/game/live/100000002"]
+
+1. e4 {[%clk 0:02:59.9]} 1... e5 {[%clk 0:02:58.1]} 2. Nf3 {[%clk 0:02:58]} 0-1
+"""
+
+private let chessComArchivesList = """
+{"archives":["https://api.chess.com/pub/player/sunfmin/games/2026/07","https://api.chess.com/pub/player/sunfmin/games/2026/08"]}
+"""
+
+@Test("a chess.com username makes the archives URL, lowercased the way the site spells it")
+func chessComURLs() throws {
+    let archives = try #require(PGNImport.chessComArchivesURL(user: "@SunFmin"))
+    #expect(archives.absoluteString == "https://api.chess.com/pub/player/sunfmin/games/archives")
+    #expect(PGNImport.chessComArchivesURL(user: "two names") == nil)
+
+    let months = try #require(PGNImport.chessComArchives(in: chessComArchivesList))
+    #expect(months.map(\.lastPathComponent) == ["08", "07"], "newest month first")
+    #expect(PGNImport.chessComMonthURL(archive: months[0]).path == "/pub/player/sunfmin/games/2026/08/pgn")
+    #expect(PGNImport.chessComArchives(in: "<html>") == nil)
+}
+
+@MainActor
+@Test("chess.com games come newest first, from the newest month back", .speaking(.chinese))
+func chessComImport() async throws {
+    let fetcher = ScriptedFetcher([
+        "https://api.chess.com/pub/player/sunfmin/games/archives": .success(chessComArchivesList),
+        "https://api.chess.com/pub/player/sunfmin/games/2026/08/pgn": .success(chessComMonth),
+    ])
+    let session = ImportSession(fetcher: fetcher)
+    await session.recent(of: "SunFmin", count: 2, on: .chessCom)
+
+    guard case .ready(let plan) = session.phase else {
+        Issue.record("expected a plan, got \(session.phase)")
+        return
+    }
+    #expect(plan.chapters.map(\.identity) == ["chesscom:100000002", "chesscom:100000001"])
+    #expect(plan.chapters[0].name == "sunfmin 对 Hikaru · 2026.08.30 21:14", "named by who and when, not 「Live Chess」")
+    #expect(fetcher.askedURLs.count == 2, "two games wanted, two found in the newest month, July never asked for")
+    #expect(plan.chapters[0].pgn.game.plies.count == 3, "the clocks in the comments do not stop the moves reading")
+}
+
+@MainActor
+@Test("a chess.com name nobody has is said back as typed, and an idle account says it has nothing", .speaking(.chinese))
+func chessComFailures() async throws {
+    let archives = try #require(PGNImport.chessComArchivesURL(user: "SunFmn"))
+    #expect(
+        PGNImport.Error.from(status: 404, url: archives) == .unknownPlayer(.chessCom, "sunfmn"),
+        "the site's 404 on a player's page is a player it does not have"
+    )
+    let nobody = ImportSession(fetcher: ScriptedFetcher([
+        archives.absoluteString: .failure(.unknownPlayer(.chessCom, "sunfmn"))
+    ]))
+    await nobody.recent(of: "SunFmn", count: 5, on: .chessCom)
+    #expect(
+        nobody.phase == .failed(.unknownPlayer(.chessCom, "SunFmn")),
+        "said back as typed, not as the URL lowercased it"
+    )
+    #expect(PGNImport.Error.unknownPlayer(.chessCom, "SunFmn").alert.title == "chess.com 上没有 SunFmn")
+
+    let idle = ImportSession(fetcher: ScriptedFetcher([
+        "https://api.chess.com/pub/player/sunfmin/games/archives": .success("{\"archives\":[]}")
+    ]))
+    await idle.recent(of: "sunfmin", count: 5, on: .chessCom)
+    #expect(idle.phase == .failed(.noGames(.chessCom, "sunfmin")))
+
+    let refused = ImportSession(fetcher: ScriptedFetcher([:]))
+    await refused.recent(of: "not a name", count: 5, on: .chessCom)
+    #expect(refused.phase == .failed(.notAPlayer(.chessCom)))
+    #expect(PGNImport.Error.notAPlayer(.chessCom).alert.message.contains("chess.com 用户名，比如 Hikaru"))
+}
+
+// ------------------------------------------------------------------ 国象联盟
+
+/// A 国象联盟 share link: the game itself, brotli-compressed JSON in the fragment, made the way
+/// the site's own viewer expects to read it.
+let chesseaseShareLink =
+    "https://app.chessease.net/pgn/#G-YAAJwFdmN1cVGSZ7WdDBdbPv1N8sd_rCZ2cSB7excYTj1ZCeFBkij2ZATWTXA1CIxLTFte-t1FkQZAFUVaYIvGOLKB2_ATb6HuoBEdJw74EE_Yhdvu29gwnvfXQyRItxgbXHqyqGHpPzcnb1cKxLDwEL-6AzyQuUf-7DxLaEiaviabnNZoLYqJOi2qbZoJKktpkzQQGOATWSqpMUJjg-SuLg"
+
+@Test("a 国象联盟 share link carries its game, and is read without a download")
+func chesseaseLinkDecodes() throws {
+    let pgn = try #require(try PGNImport.chesseaseGame(in: chesseaseShareLink)?.get())
+    #expect(pgn.contains("[White \"棋镜\"]"))
+    #expect(pgn.contains("3. Bb5 a6 1-0"))
+
+    #expect(PGNImport.chesseaseGame(in: "https://lichess.org/study/HgiqcIqW") == nil, "not a 国象联盟 link at all")
+    #expect(PGNImport.chesseaseGame(in: "app.chessease.net/pgn/#") == .failure(.unreadableShare))
+    #expect(
+        PGNImport.chesseaseGame(in: String(chesseaseShareLink.prefix(60))) == .failure(.unreadableShare),
+        "a link cut short says so"
+    )
+}
+
+@MainActor
+@Test("a 国象联盟 share link lands as one game, named by its players", .speaking(.chinese))
+func chesseaseImport() async throws {
+    let quiet = ScriptedFetcher([:])
+    let session = ImportSession(fetcher: quiet)
+    await session.run(chesseaseShareLink)
+    guard case .ready(let plan) = session.phase else {
+        Issue.record("expected a plan, got \(session.phase)")
+        return
+    }
+    #expect(plan.chapters.count == 1)
+    #expect(plan.chapters[0].name == "国象联盟 快棋", "the Event names it, as a study's would")
+    #expect(plan.chapters[0].pgn.tag("Black") == "小马")
+    #expect(quiet.askedURLs.isEmpty, "nothing was asked of the network")
+}
+
+@Test("an account's side, verdict and time are read off the game", .speaking(.chinese))
+func accountSideAndVerdict() throws {
+    let pgn = try PGN(parsing: chessComMonth.components(separatedBy: "\n\n[Event").first!)
+    #expect(PGNImport.side(of: "SUNFMIN", in: pgn) == .black, "case does not count")
+    #expect(PGNImport.side(of: "@penguingm1", in: pgn) == .white, "nor the @")
+    #expect(PGNImport.side(of: "nobody", in: pgn) == nil)
+    #expect(PGNImport.verdict(for: .black, in: pgn) == "负")
+    #expect(PGNImport.verdict(for: .white, in: pgn) == "胜")
+    #expect(PGNImport.playedAt(pgn) == "2026.08.29 09:02")
+
+    let study = try PGN(parsing: twoChapterStudy.components(separatedBy: "\n\n[Event").first!)
+    #expect(PGNImport.verdict(for: .white, in: study) == nil, "a study chapter has no result")
 }
