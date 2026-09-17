@@ -3,7 +3,8 @@ import ChessmirrorKitTesting
 import Foundation
 import Testing
 
-/// What a saved record opens facing: the side about to move, whoever that is.
+/// What a saved record opens facing: the player's own side when the file names it, and the side
+/// about to move otherwise.
 
 /// An engine that says nothing. Enough for `opened` to hand the other side over to one.
 private func silentEngine() -> ScriptedEngine { ScriptedEngine([]) }
@@ -29,6 +30,34 @@ func savedRecordFacesSideToMove() throws {
         modified: Date(timeIntervalSince1970: 1_786_000_100)
     )
     #expect(try #require(GameSession.opened(standardEntry)).orientation == .whiteAtBottom)
+}
+
+@MainActor @Test("a record that knows whose game it is opens from that chair")
+func trackedRecordFacesItsPlayer() throws {
+    // An import where the person holding the phone had Black: White moves first, but the board
+    // turns round for them, exactly as it did on lichess.
+    var asBlack = PGN(
+        game: try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"])),
+        tags: [
+            PGN.Tag("White", "Someone"), PGN.Tag("Black", "Me"),
+            PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue),
+        ]
+    )
+    asBlack.track(.black)
+    let entry = GameLibrary.Entry(
+        url: URL(filePath: "/games/chessmirror-as-black.pgn"), pgn: asBlack,
+        modified: Date(timeIntervalSince1970: 1_786_000_200)
+    )
+    #expect(try #require(GameSession.opened(entry)).orientation == .blackAtBottom)
+
+    // The same game with nobody tracked names two other people: it reads from White's side,
+    // where the play begins.
+    asBlack.track(nil)
+    let untracked = GameLibrary.Entry(
+        url: URL(filePath: "/games/chessmirror-theirs.pgn"), pgn: asBlack,
+        modified: Date(timeIntervalSince1970: 1_786_000_300)
+    )
+    #expect(try #require(GameSession.opened(untracked)).orientation == .whiteAtBottom)
 }
 
 @MainActor @Test("handing the first move over turns the board round with it")

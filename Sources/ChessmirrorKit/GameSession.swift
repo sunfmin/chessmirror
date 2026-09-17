@@ -430,19 +430,25 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return session
     }
 
-    /// Reopens a saved game, at the position it began in, facing the side about to move.
+    /// Reopens a saved game, at the position it began in, facing the person holding the phone
+    /// when the file says who that is, and the side about to move otherwise.
     private convenience init(
         entry: GameLibrary.Entry, library: GameLibrary? = nil, strength: Strength = .full
     ) {
         let pgn = entry.pgn
         let game = pgn?.game ?? Game(startFEN: PGN.standardStartFEN)!
+        let hands = pgn?.handColours ?? []
+        let facing = hands.count == 1 ? hands.first! : game.startingSideToMove
         self.init(
             game: game,
             // The other side is handed to the engine by `opened`. Practice is not set here or
             // there: it is where every Game starts.
             controllers: [.white: .hand, .black: .hand],
-            // A record opens facing the side about to move: reading begins where the play does.
-            orientation: .facing(game.startingSideToMove),
+            // A record that names the player's side (an import tracked as Black, a game where the
+            // engine had White) opens with that side at the bottom: it is their game, seen from
+            // their chair. Any other record faces the side about to move: reading begins where
+            // the play does.
+            orientation: .facing(facing),
             origin: entry.origin,
             picture: entry.origin == .recognised ? library?.picture(for: entry.url) : nil,
             url: entry.url,
