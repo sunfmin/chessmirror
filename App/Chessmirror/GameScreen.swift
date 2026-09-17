@@ -120,6 +120,7 @@ struct GameScreen: View {
                 }
                 VStack(spacing: 0) {
                     record
+                    reviewRow
                     wrongMoves
                 }
                 .chromeType()
@@ -855,6 +856,66 @@ struct GameScreen: View {
         .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
         .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
         .padding(.top, 8)
+    }
+
+    /// The Review an imported game is still owed, in one row under the record (docs/adr/0016).
+    ///
+    /// An imported game arrives with no cost on any of its moves: it has no 错招 to mark and puts
+    /// nothing in the 错题本, and a game like that must not look like a clean one. So the row says
+    /// it has not been looked at and offers the look — a press, not something that starts itself,
+    /// because it is seconds of engine per move. While it runs the row is the count of positions
+    /// settled; when it lands the row says what it found and that the book has it, and the 错招
+    /// row below fills in on its own, because it reads the same game. Absent for every game that
+    /// is not an unreviewed import, which is every game the player played here.
+    @ViewBuilder private var reviewRow: some View {
+        if let progress = session.reviewProgress {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(
+                    progress.total > 0
+                        ? localized("review.progress", progress.judged, progress.total)
+                        : localized("import.status.scoring")
+                )
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(Palette.ink)
+                ProgressView(value: progress.fraction)
+                    .tint(Palette.analysis)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .reviewChrome()
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.updatesFrequently)
+        } else if session.awaitsReview {
+            let failed = session.reviewNews == .failed
+            HStack(spacing: 10) {
+                Text(localized(failed ? "review.failed" : "review.offer"))
+                    .font(.footnote)
+                    .foregroundStyle(failed ? Palette.alarm : Palette.inkSoft)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button { session.review() } label: {
+                    Text(localized(session.canReview ? "review.start" : "review.waiting"))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(session.canReview ? Palette.raised : Palette.inkSoft)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            session.canReview ? Palette.analysis : Palette.chipRest, in: Capsule()
+                        )
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(!session.canReview)
+            }
+            .reviewChrome()
+        } else if case .done(let count) = session.reviewNews {
+            Label(
+                count > 0 ? localized("review.done", count) : localized("review.done.clean"),
+                systemImage: "checkmark.circle.fill"
+            )
+            .font(.footnote)
+            .foregroundStyle(Palette.analysis)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .reviewChrome()
+        }
     }
 
     /// The game's own 错招, in one row under the record (docs/adr/0036).
@@ -1870,6 +1931,20 @@ struct GameScreen: View {
         session.orientation == .whiteAtBottom ? .white : .black
     }
 
+}
+
+private extension View {
+    /// The record row's frame — tinted and edged teal, a hairline at each end — for the rows about
+    /// the Review, which are about the record: they say what its numbers are worth.
+    func reviewChrome() -> some View {
+        padding(.leading, 13)
+            .padding(.trailing, 8)
+            .padding(.vertical, 8)
+            .background(Palette.analysis.opacity(0.06))
+            .overlay(alignment: .leading) { Rectangle().fill(Palette.analysis).frame(width: 3) }
+            .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+            .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+    }
 }
 
 extension Game.Half {

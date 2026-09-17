@@ -1102,13 +1102,146 @@ struct GameScreenScreenshots {
     /// deck — the card to open on. The app decides that for itself from the position; a test says
     /// so, the same way it says which game and which engine (docs/adr/0025).
     private func screen(
-        _ session: GameSession, engine: any Engine, opening: GameScreen.Card? = nil
+        _ session: GameSession, engine: any Engine, opening: GameScreen.Card? = nil,
+        library: GameLibrary? = nil
     ) -> some View {
         NavigationStack {
             GameScreen(session: session, path: .constant([]), opening: opening)
         }
         .environment(EngineHost(engine))
-        .environment(GameLibrary())
+        .environment(library ?? GameLibrary())
+    }
+
+    // ------------------------------------------------------- the Review an import is owed
+
+    /// 1. e4 e5 2. Nf3 Qh4, Black's queen walking into the knight — imported, with Black as the
+    /// side the player was, and nothing judged yet. Written into a folder of its own, because the
+    /// Review writes the file and the 错题本 reads it back off the library.
+    private func importedGame(in folder: URL) throws -> (GameLibrary, GameLibrary.Entry) {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let library = GameLibrary(folder: GameFolder(url: folder))
+        let chapter = PGNImport.ImportChapter(
+            id: 1, name: "Queen to h4", pgn: try PGN(parsing: "1. e4 e5 2. Nf3 Qh4 *")
+        )
+        let entry = try #require(ImportSession().open(chapter, into: library, tracking: .black))
+        return (library, entry)
+    }
+
+    /// One depth-16 verdict per position of that game, White's way: level until the queen hangs.
+    private func reviewer(of game: Game) throws -> [String: Analysis] {
+        var byPosition: [String: Analysis] = [:]
+        for (ply, score) in [20, 20, 20, 20, 420].enumerated() {
+            let fen = try #require(game.rewound(to: ply)).state.fen
+            byPosition[fen] = Analysis(
+                depth: 16, lines: [Line(score: .centipawns(score), uciMoves: ["a2a3"], san: ["a3"])]
+            )
+        }
+        return byPosition
+    }
+
+    private func importFolder() -> URL {
+        URL(filePath: NSTemporaryDirectory())
+            .appending(path: "chessmirror-import-\(UUID().uuidString)", directoryHint: .isDirectory)
+    }
+
+    /// An imported game opens with its moves unpriced, and says so rather than starting the engine
+    /// on its own: the offer to analyse is a press (docs/adr/0016).
+    @Test("an unreviewed import offers its analysis instead of starting it")
+    func importOffersReview() async throws {
+        let folder = importFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let (library, entry) = try importedGame(in: folder)
+        let engine = ScriptedEngine([], byPosition: try reviewer(of: try #require(entry.pgn).game))
+        let session = try #require(GameSession.opened(entry, engine: engine, library: library))
+        defer { session.suspend() }
+
+        let rendered = await ScreenImage.write("game-import-unreviewed") {
+            screen(session, engine: engine, library: library)
+        }
+
+        #expect(session.awaitsReview)
+        #expect(session.canReview)
+        #expect(!session.isReviewing, "nothing started on its own")
+        #expect(library.reviewingURLs.isEmpty)
+        #expect(rendered.says(localized("review.offer")))
+        #expect(rendered.says(localized("review.start")))
+        #expect(!rendered.says(localized("slips.here", 1)), "no 错招 can be named before the Review")
+        #expect(session.slips.isEmpty)
+    }
+
+    /// While the Review runs, the row is how far it has got — positions settled out of positions
+    /// to settle — and the offer is gone, so it cannot be asked for twice.
+    @Test("a running analysis shows its progress")
+    func importReviewInProgress() async throws {
+        let folder = importFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let (library, entry) = try importedGame(in: folder)
+        let game = try #require(entry.pgn).game
+        let byPosition = try reviewer(of: game)
+        // The second position's search is held open, so the Review stands at one of five.
+        let held = try #require(game.rewound(to: 1)).state.fen
+        let gate = AsyncStream<Analysis>.makeStream()
+        let engine = ScriptedEngine([], byPosition: byPosition, controlled: { position, budget in
+            position.state.fen == held && budget == .depth(ImportReview.depth) ? gate.stream : nil
+        })
+        let session = try #require(GameSession.opened(entry, engine: engine, library: library))
+        defer { session.suspend() }
+        session.review()
+        var deadline = ContinuousClock.now + .seconds(5)
+        while session.reviewProgress?.judged != 1, ContinuousClock.now < deadline { await Task.yield() }
+        #expect(session.reviewProgress == ImportReview.Progress(judged: 1, total: 5))
+
+        let rendered = await ScreenImage.write("game-import-reviewing") {
+            screen(session, engine: engine, library: library)
+        }
+
+        #expect(session.isReviewing)
+        #expect(!session.canReview)
+        #expect(rendered.says(localized("review.progress", 1, 5)))
+        #expect(!rendered.says(localized("review.start")), "no second press while one is running")
+
+        // Let it through, and it finishes on its own.
+        gate.continuation.yield(try #require(byPosition[held]))
+        gate.continuation.finish()
+        deadline = ContinuousClock.now + .seconds(5)
+        while session.isReviewing, ContinuousClock.now < deadline { await Task.yield() }
+        #expect(session.game.isReviewed)
+        #expect(session.reviewNews == .done(slips: 1))
+    }
+
+    /// When the Review lands the row says what it found and that the book has it; the 错招 row
+    /// under it fills in from the same game, and the library the 错题本 is derived from now
+    /// holds the position — nobody had to add it.
+    @Test("a finished analysis says what it found, and the mistakes are in the book")
+    func importReviewLanded() async throws {
+        let folder = importFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let (library, entry) = try importedGame(in: folder)
+        let engine = ScriptedEngine([], byPosition: try reviewer(of: try #require(entry.pgn).game))
+        let session = try #require(GameSession.opened(entry, engine: engine, library: library))
+        defer { session.suspend() }
+        session.review()
+        let deadline = ContinuousClock.now + .seconds(5)
+        while session.isReviewing, ContinuousClock.now < deadline { await Task.yield() }
+        try #require(session.game.isReviewed)
+
+        let rendered = await ScreenImage.write("game-import-reviewed") {
+            screen(session, engine: engine, library: library)
+        }
+
+        #expect(session.reviewNews == .done(slips: 1))
+        #expect(!session.awaitsReview)
+        #expect(rendered.says(localized("review.done", 1)))
+        #expect(!rendered.says(localized("review.start")))
+        #expect(rendered.says(localized("slips.here", 1)), "the game's own 错招 row appears from the same game")
+        // And the book, derived from the library the Review wrote into, has the position.
+        let index = MistakeIndex(log: PracticeLog(url: folder.appending(path: "practice.jsonl")))
+        index.update(from: library.entries)
+        #expect(index.wrongByGame[entry.url] == 1)
+        #expect(index.book.mistakes.count == 1)
+        #expect(index.book.mistakes.first?.encounters.first?.played == "Qh4")
+        let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
+        #expect(disk.game.reviewDepth == ImportReview.depth, "and it is in the file, not only on the screen")
     }
 }
 

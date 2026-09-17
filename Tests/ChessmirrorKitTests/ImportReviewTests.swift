@@ -160,7 +160,7 @@ import ChessmirrorKitTesting
 
 @MainActor
 @Test(arguments: [false, true])
-func selectingOneImportWritesOnlyThatGameAndOpeningStartsReview(engineArrivesLate: Bool) async throws {
+func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrivesLate: Bool) async throws {
     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: folder) }
@@ -182,17 +182,30 @@ func selectingOneImportWritesOnlyThatGameAndOpeningStartsReview(engineArrivesLat
         entry, engine: engineArrivesLate ? nil : engine, library: library
     ))
     defer { session.suspend() }
+    // Opening the game starts nothing: the Review is offered, and the player asks for it.
+    #expect(session.awaitsReview)
+    #expect(library.reviewingURLs.isEmpty)
+    #expect(session.reviewProgress == nil)
     if engineArrivesLate {
-        #expect(library.reviewingURLs.isEmpty)
-        #expect(session.game.reviewDepth == nil)
+        #expect(!session.canReview, "no engine yet, so the offer cannot be taken up")
+        session.review()
+        #expect(library.reviewingURLs.isEmpty, "asking without an engine starts nothing")
         session.attach(engine: engine, library: library)
     }
-    // Reappearing while a review is running must not queue another copy.
+    #expect(session.canReview)
+    session.review()
+    #expect(session.isReviewing)
+    #expect(!session.canReview, "a Review already running cannot be asked for again")
+    // Asking again, or reappearing, while it runs must not queue another copy.
+    session.review()
     session.attach(engine: engine, library: library)
     #expect(library.reviewingURLs.contains(entry.url))
     #expect(importer.status(of: chapter, in: library, book: book) == .scoring)
     await library.waitForImportReviews()
     #expect(library.reviewingURLs.isEmpty)
+    #expect(session.reviewProgress == nil)
+    #expect(session.reviewNews == .done(slips: 0))
+    #expect(!session.awaitsReview)
     #expect(session.game.reviewDepth == 16)
     // The review's own searches, apart from the live position searches the opened game starts.
     #expect(engine.budgets.filter { $0 != PositionSearches.budget }.count == 3)
@@ -203,6 +216,47 @@ func selectingOneImportWritesOnlyThatGameAndOpeningStartsReview(engineArrivesLat
     let again = try #require(importer.open(chapter, into: library))
     #expect(again.url == entry.url)
     #expect(library.entries.count == 1)
+}
+
+@MainActor
+@Test func aReviewReportsHowFarItHasGotAndSaysWhenItCouldNotFinish() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let library = GameLibrary(folder: GameFolder(url: folder))
+    let importer = ImportSession()
+    let chapter = PGNImport.ImportChapter(id: 3, name: "Three moves",
+                                         pgn: try PGN(parsing: "1. e4 e5 2. Nf3 *"))
+    let entry = try #require(importer.open(chapter, into: library))
+
+    // Every position settles: the progress climbs to the plan's four positions.
+    var seen: [ImportReview.Progress] = []
+    let judged = try await ImportReview.judge(
+        try #require(entry.pgn),
+        using: ScriptedEngine([Analysis(depth: 16, lines: [
+            Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+        ])])
+    ) { seen.append($0) }
+    #expect(judged.game.isReviewed)
+    #expect(seen.map(\.judged) == [0, 1, 2, 3, 4])
+    #expect(seen.allSatisfy { $0.total == 4 })
+    #expect(seen.last?.fraction == 1)
+
+    // An engine that never reaches the depth settles nothing: the session is told, nothing is
+    // written, and the offer stands so it can be asked again.
+    let shallow = ScriptedEngine([Analysis(depth: 8, lines: [
+        Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
+    ])])
+    let session = try #require(GameSession.opened(entry, engine: shallow, library: library))
+    defer { session.suspend() }
+    session.review()
+    #expect(session.isReviewing)
+    await library.waitForImportReviews()
+    #expect(session.reviewNews == .failed)
+    #expect(session.awaitsReview)
+    #expect(session.canReview, "nothing running, so it can be asked again")
+    let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
+    #expect(!disk.game.isReviewed, "no partial Review is ever written")
 }
 
 @Test func importScoresPrioritizeButNeverExcludeLocalJudgements() async throws {
