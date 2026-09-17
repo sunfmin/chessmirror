@@ -579,6 +579,38 @@ public enum PGNImport {
         return localized("import.name.chapter", ordinal)
     }
 
+    /// The side a named account played in a game — nil when it played neither. Case does not
+    /// count, because the sites' URLs lowercase a name their pages spell with capitals, and the
+    /// `@` people type in front of a handle is not part of it.
+    public static func side(of player: String, in pgn: PGN) -> PieceColour? {
+        var name = player.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.hasPrefix("@") { name.removeFirst() }
+        guard !name.isEmpty else { return nil }
+        if pgn.tag("White")?.caseInsensitiveCompare(name) == .orderedSame { return .white }
+        if pgn.tag("Black")?.caseInsensitiveCompare(name) == .orderedSame { return .black }
+        return nil
+    }
+
+    /// How a game went for one side, in a word — nil for a game with no result yet.
+    public static func verdict(for side: PieceColour, in pgn: PGN) -> String? {
+        switch pgn.tag("Result") {
+        case "1-0": localized(side == .white ? "import.row.won" : "import.row.lost")
+        case "0-1": localized(side == .black ? "import.row.won" : "import.row.lost")
+        case "1/2-1/2": localized("import.row.drawn")
+        default: nil
+        }
+    }
+
+    /// When a game was played, as the file says it: the day, and the time when there is one.
+    public static func playedAt(_ pgn: PGN) -> String? {
+        let date = [pgn.tag("UTCDate"), pgn.tag("Date")]
+            .compactMap { $0 }
+            .first { !$0.isEmpty && $0 != "????.??.??" }
+        guard var when = date else { return nil }
+        if let time = pgn.tag("UTCTime"), time.count >= 5 { when += " \(time.prefix(5))" }
+        return when
+    }
+
     /// A game named by who played it and when — nil when the file does not say who.
     ///
     /// The time as well as the day when there is one, because two people who play each other

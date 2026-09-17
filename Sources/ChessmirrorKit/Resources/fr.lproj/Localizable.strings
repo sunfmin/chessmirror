@@ -234,6 +234,11 @@
 "import.fetching" = "Téléchargement…";
 "import.writing" = "Écriture…";
 "import.plan.games" = "%d parties";
+"import.row.won" = "gagné";
+"import.row.lost" = "perdu";
+"import.row.drawn" = "nulle";
+"import.plan.tap.player" = "Ouvrez une partie, et les erreurs de %@ vont dans le cahier.";
+"import.plan.tap.link" = "Ouvrez une partie, puis choisissez de qui les erreurs vont dans le cahier.";
 "import.plan.games.one" = "%d partie";
 "import.more.one" = "%d autre…";
 "import.unreadable" = "%d parties illisibles seront ignorées.";

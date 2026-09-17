@@ -34,7 +34,7 @@ struct ImportScreenScreenshots {
             #expect(ScreenImage.activate("\(side.label) · \(player)", in: window))
             await ScreenImage.settle()
         }) {
-            ImportSheet(session: session, memory: memory(), onOpen: { opened = $0 }).environment(library).environment(book(in: directory))
+            ImportSheet(session: session, memory: memory(), initialDoor: .link, onOpen: { opened = $0 }).environment(library).environment(book(in: directory))
         }
         let entry = try #require(opened)
         let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
@@ -131,7 +131,7 @@ struct ImportScreenScreenshots {
         await session.run("https://lichess.org/study/HgiqcIqW.pgn")
 
         let rendered = await ScreenImage.write("import-sheet-ready") {
-            ImportSheet(session: session, memory: memory()).environment(library(in: tempDir)).environment(book(in: tempDir))
+            ImportSheet(session: session, memory: memory(), initialDoor: .link).environment(library(in: tempDir)).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("2 局"))
@@ -160,7 +160,7 @@ struct ImportScreenScreenshots {
         _ = session.apply(into: library)
 
         let rendered = await ScreenImage.write("import-sheet-done") {
-            ImportSheet(session: session, memory: memory()).environment(library).environment(book(in: tempDir))
+            ImportSheet(session: session, memory: memory(), initialDoor: .link).environment(library).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("导入了 2 局"))
@@ -220,12 +220,41 @@ struct ImportScreenScreenshots {
         }
 
         #expect(rendered.says("2 局"), "how many came down")
-        #expect(rendered.says("sunfmin 对 DrNykterstein · 2026.08.30 21:14"))
-        #expect(rendered.says("penguingm1 对 sunfmin · 2026.08.29 09:02"), "two games, two names")
+        #expect(rendered.says("sunfmin 这一方的错题记进错题本"), "what opening one does, said up front")
+        #expect(rendered.says("白方 · DrNykterstein · 负 · 2026.08.30 21:14"), "their colour, the opponent, how it went, when")
+        #expect(rendered.says("黑方 · penguingm1 · 负 · 2026.08.29 09:02"), "two games, two rows")
+        #expect(!rendered.says("sunfmin 对 DrNykterstein"), "the account is not named on its own rows")
         #expect(rendered.says("没导入"))
         #expect(!rendered.says("导入 2 局"))
         #expect(rendered.says("填 lichess 用户名"), "the door that fetched them is the open one")
         #expect(rendered.says("拉几局"))
+    }
+
+    /// Through a player's door, opening a game records that account's side — no question asked,
+    /// because the answer is the name in the field.
+    @Test("opening a game from an account's door tracks that account's side without asking")
+    func openingFromAnAccountTracksIt() async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let url = try #require(PGNImport.recentGamesURL(user: "sunfmin", count: 10))
+        let session = ImportSession(
+            fetcher: ScriptedFetcher([url.absoluteString: .success(Self.myGames)])
+        )
+        await session.recent(of: "sunfmin", count: 10)
+        var opened: GameLibrary.Entry?
+        _ = await ScreenImage.write("import-door-lichess-open", interact: { window in
+            #expect(ScreenImage.activate("黑方 · penguingm1 · 负 · 2026.08.29 09:02", in: window))
+            await ScreenImage.settle()
+            #expect(!ScreenImage.words(in: window).contains(localized("import.trackSide")), "nothing to ask")
+        }) {
+            ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), initialDoor: .lichess, onOpen: { opened = $0 })
+                .environment(library).environment(book(in: directory))
+        }
+        let entry = try #require(opened)
+        let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
+        #expect(pgn.handColours == [.black], "sunfmin had Black in that game")
+        #expect(pgn.tag("White") == "penguingm1")
     }
 
     /// A game that is not there says so, in its own words.

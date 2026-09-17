@@ -219,6 +219,11 @@
 "import.fetching" = "받는 중…";
 "import.writing" = "저장하는 중…";
 "import.plan.games" = "%d판";
+"import.row.won" = "승";
+"import.row.lost" = "패";
+"import.row.drawn" = "무";
+"import.plan.tap.player" = "한 판을 열면 %@ 쪽의 실수가 오답 노트에 들어간다.";
+"import.plan.tap.link" = "한 판을 연 다음 누구의 실수를 넣을지 고른다.";
 "import.unreadable" = "%d판은 읽지 못해 건너뛴다.";
 "import.again" = "하나 더 가져오기";
 

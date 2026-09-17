@@ -219,6 +219,11 @@
 "import.fetching" = "ダウンロード中…";
 "import.writing" = "書き込み中…";
 "import.plan.games" = "%d 局";
+"import.row.won" = "勝ち";
+"import.row.lost" = "負け";
+"import.row.drawn" = "引き分け";
+"import.plan.tap.player" = "一局を開くと、%@ 側のミスが錯題本に入る。";
+"import.plan.tap.link" = "一局を開いてから、どちら側のミスを入れるか選ぶ。";
 "import.unreadable" = "%d 局は読めないので飛ばす。";
 "import.again" = "もう一つ取り込む";
 

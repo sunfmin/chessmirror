@@ -234,6 +234,11 @@
 "import.fetching" = "Wird geladen…";
 "import.writing" = "Wird geschrieben…";
 "import.plan.games" = "%d Partien";
+"import.row.won" = "gewonnen";
+"import.row.lost" = "verloren";
+"import.row.drawn" = "remis";
+"import.plan.tap.player" = "Öffne eine Partie, und die Fehler von %@ kommen ins Buch.";
+"import.plan.tap.link" = "Öffne eine Partie und wähle dann, wessen Fehler ins Buch kommen.";
 "import.plan.games.one" = "%d Partie";
 "import.more.one" = "%d weitere…";
 "import.unreadable" = "%d Partien sind nicht lesbar und werden übersprungen.";

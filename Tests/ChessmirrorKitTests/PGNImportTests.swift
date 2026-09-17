@@ -838,3 +838,17 @@ func chesseaseImport() async throws {
     #expect(plan.chapters[0].pgn.tag("Black") == "小马")
     #expect(quiet.askedURLs.isEmpty, "nothing was asked of the network")
 }
+
+@Test("an account's side, verdict and time are read off the game", .speaking(.chinese))
+func accountSideAndVerdict() throws {
+    let pgn = try PGN(parsing: chessComMonth.components(separatedBy: "\n\n[Event").first!)
+    #expect(PGNImport.side(of: "SUNFMIN", in: pgn) == .black, "case does not count")
+    #expect(PGNImport.side(of: "@penguingm1", in: pgn) == .white, "nor the @")
+    #expect(PGNImport.side(of: "nobody", in: pgn) == nil)
+    #expect(PGNImport.verdict(for: .black, in: pgn) == "负")
+    #expect(PGNImport.verdict(for: .white, in: pgn) == "胜")
+    #expect(PGNImport.playedAt(pgn) == "2026.08.29 09:02")
+
+    let study = try PGN(parsing: twoChapterStudy.components(separatedBy: "\n\n[Event").first!)
+    #expect(PGNImport.verdict(for: .white, in: study) == nil, "a study chapter has no result")
+}

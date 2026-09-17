@@ -271,6 +271,11 @@
 "import.fetching" = "Downloading…";
 "import.writing" = "Writing…";
 "import.plan.games" = "%d games";
+"import.row.won" = "won";
+"import.row.lost" = "lost";
+"import.row.drawn" = "drew";
+"import.plan.tap.player" = "Open a game, and %@'s mistakes go in the book.";
+"import.plan.tap.link" = "Open a game, then choose whose mistakes go in the book.";
 "import.plan.games.one" = "%d game";
 "import.more.one" = "%d more…";
 "import.unreadable" = "%d could not be read and will be skipped.";

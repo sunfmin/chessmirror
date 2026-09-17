@@ -30,6 +30,12 @@ The field the failure is about is marked in the alarm colour, and the button und
 the fetch again with the corrected name, not a bare 重试 — the same input a second time is the one
 thing that will not help.
 
+**The side whose mistakes are kept is the account's.** Through a player's door every game that
+comes down is that account's game, so a row is told from their side — a swatch for the colour
+they had, the opponent, 胜 / 负 / 和, when — and opening it records their side without the
+「记录哪一方的错题？」 question, whose answer is already the name in the field. Through a link
+nobody is known: a row is the chapter's own name and opening it still asks.
+
 Not done: a 国象联盟 username. There is no endpoint for one, and a door that asks for what cannot
 be answered is worse than no door. If the site ever publishes one, it is a fourth `withPlayers`
 site and nothing in the sheet changes shape.

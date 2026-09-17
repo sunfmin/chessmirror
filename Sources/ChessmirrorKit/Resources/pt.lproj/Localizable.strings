@@ -234,6 +234,11 @@
 "import.fetching" = "A descarregar…";
 "import.writing" = "A gravar…";
 "import.plan.games" = "%d partidas";
+"import.row.won" = "ganhou";
+"import.row.lost" = "perdeu";
+"import.row.drawn" = "empate";
+"import.plan.tap.player" = "Abre uma partida e os erros de %@ vão para o caderno.";
+"import.plan.tap.link" = "Abre uma partida e escolhe de quem vão os erros para o caderno.";
 "import.plan.games.one" = "%d partida";
 "import.more.one" = "mais %d…";
 "import.unreadable" = "%d partidas não puderam ser lidas e serão ignoradas.";

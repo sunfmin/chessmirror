@@ -255,6 +255,11 @@
 "import.fetching" = "在下载棋谱…";
 "import.writing" = "在写入…";
 "import.plan.games" = "%d 局";
+"import.row.won" = "胜";
+"import.row.lost" = "负";
+"import.row.drawn" = "和";
+"import.plan.tap.player" = "点开一局，%@ 这一方的错题记进错题本。";
+"import.plan.tap.link" = "点开一局，再选记哪一方的错题。";
 "import.unreadable" = "有 %d 局没能读出来，会跳过。";
 "import.again" = "再导入一个";
 

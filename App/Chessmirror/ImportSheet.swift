@@ -284,41 +284,103 @@ struct ImportSheet: View {
         }
     }
 
-    /// What the download found, with the button that makes it real.
+    /// What the download found: one row per game, and what opening one will do.
+    ///
+    /// Through a player's door the account is known, so each row is that account's game as
+    /// they would tell it — which colour they had, who they played, how it went — and opening
+    /// it records their side's mistakes without asking. Through a link nobody is known, so a
+    /// row is the chapter's own name and opening it asks whose mistakes to keep.
     private func ready(_ plan: PGNImport.ImportPlan) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(summary(of: plan))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Palette.ink)
-                // The first few names, so what is about to land can be checked against the
-                // study it came from — all of them would scroll a sheet past its point.
-                ForEach(plan.chapters) { chapter in
-                    Button {
-                        choosingSide = chapter
-                    } label: {
-                        HStack {
-                            Text(chapter.name)
-                            Spacer()
-                            Text(session.status(of: chapter, in: library, book: index).label)
-                                .foregroundStyle(Palette.inkSoft)
-                        }
-                    }
+        let account = door.asksForPlayer && !input.isEmpty ? input : nil
+        return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(summary(of: plan))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Palette.ink)
+                    Text(
+                        account.map { localized("import.plan.tap.player", $0) }
+                            ?? localized("import.plan.tap.link")
+                    )
                     .font(.footnote)
-                    .accessibilityLabel(chapter.name)
-                    .accessibilityValue(session.status(of: chapter, in: library, book: index).label)
+                    .foregroundStyle(Palette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.bottom, 10)
+                ForEach(plan.chapters) { chapter in
+                    Divider().overlay(Palette.hairline)
+                    row(chapter, account: account)
                 }
                 if plan.unreadable > 0 {
+                    Divider().overlay(Palette.hairline)
                     Text(localized("import.unreadable", plural: plan.unreadable))
                         .font(.footnote)
                         .foregroundStyle(Palette.alarm)
+                        .padding(.top, 10)
                 }
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
-
         }
+    }
+
+    /// One game to open. With an account: their colour as a swatch, the opponent, the verdict
+    /// from their side, and when. Without: the chapter's name. The 错题本's standing on the game
+    /// trails either.
+    private func row(_ chapter: PGNImport.ImportChapter, account: String?) -> some View {
+        let side = account.flatMap { PGNImport.side(of: $0, in: chapter.pgn) }
+        let status = session.status(of: chapter, in: library, book: index).label
+        let opponent = side.map { chapter.pgn.tag($0 == .white ? "Black" : "White") ?? "?" }
+        let verdict = side.flatMap { PGNImport.verdict(for: $0, in: chapter.pgn) }
+        let when = side != nil ? PGNImport.playedAt(chapter.pgn) : nil
+        return Button {
+            if let side {
+                if let entry = session.open(chapter, into: library, tracking: side) {
+                    onOpen?(entry)
+                    dismiss()
+                }
+            } else {
+                choosingSide = chapter
+            }
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                if let side {
+                    Swatch(colour: side, size: 12)
+                        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(opponent ?? chapter.name)
+                            .font(.subheadline)
+                            .foregroundStyle(Palette.ink)
+                        if let verdict {
+                            Text(verdict)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Palette.inkSoft)
+                        }
+                    }
+                    if let when {
+                        Text(when)
+                            .font(.footnote)
+                            .foregroundStyle(Palette.inkSoft)
+                    }
+                }
+                Spacer(minLength: 8)
+                Text(status)
+                    .font(.footnote)
+                    .foregroundStyle(Palette.inkSoft)
+                    .multilineTextAlignment(.trailing)
+            }
+            .padding(.vertical, 9)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            [side.map(\.label), opponent ?? chapter.name, verdict, when].compactMap { $0 }
+                .joined(separator: " · ")
+        )
+        .accessibilityValue(status)
     }
 
     private func summary(of plan: PGNImport.ImportPlan) -> String {
