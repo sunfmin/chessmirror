@@ -240,6 +240,8 @@
 "import.applied" = "%d parties ajoutées, analysées une à une.";
 "import.applied.one" = "%d partie ajoutée, en cours d'analyse.";
 "import.applied.none" = "Toutes ces parties sont déjà dans la bibliothèque.";
+"import.applied.landed" = "%d parties ajoutées, toutes analysées.";
+"import.applied.landed.one" = "%d partie ajoutée et analysée.";
 "import.row.won" = "gagné";
 "import.row.lost" = "perdu";
 "import.row.drawn" = "nulle";

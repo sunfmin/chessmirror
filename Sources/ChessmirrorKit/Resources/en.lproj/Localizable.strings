@@ -277,6 +277,8 @@
 "import.applied" = "Added %d games, analysing them one by one.";
 "import.applied.one" = "Added %d game, analysing it.";
 "import.applied.none" = "All of these are already in the library.";
+"import.applied.landed" = "Added %d games, all analysed.";
+"import.applied.landed.one" = "Added %d game, analysed.";
 "import.row.won" = "won";
 "import.row.lost" = "lost";
 "import.row.drawn" = "drew";

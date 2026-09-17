@@ -324,6 +324,7 @@ struct ImportScreenScreenshots {
             ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), engine: engine)
                 .environment(library).environment(book)
         }
+        #expect(landed.says("入库了 2 局，都分析完了。"), "and the report says so, not that it is still running")
         #expect(landed.says("已入库 1 道题"), "White's Nf3 cost, and White is sunfmin")
         #expect(landed.says("已入库 0 道题"), "the other game, tracked as Black, had nothing wrong")
         for file in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)

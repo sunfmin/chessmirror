@@ -331,9 +331,11 @@ struct ImportSheet: View {
                 Text(
                     applied.imported == 0
                         ? localized("import.applied.none")
-                        : engine != nil
-                            ? localized("import.applied", plural: applied.imported)
-                            : localized("import.done", plural: applied.imported)
+                        : engine == nil
+                            ? localized("import.done", plural: applied.imported)
+                            : standing.contains { if case .scoring = $0 { true } else { false } }
+                                ? localized("import.applied", plural: applied.imported)
+                                : localized("import.applied.landed", plural: applied.imported)
                 )
                 .font(.footnote)
                 .foregroundStyle(Palette.inkSoft)

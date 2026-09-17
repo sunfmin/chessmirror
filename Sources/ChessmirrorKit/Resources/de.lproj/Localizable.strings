@@ -240,6 +240,8 @@
 "import.applied" = "%d Partien aufgenommen, werden nacheinander analysiert.";
 "import.applied.one" = "%d Partie aufgenommen, wird analysiert.";
 "import.applied.none" = "Alle diese Partien sind schon in der Bibliothek.";
+"import.applied.landed" = "%d Partien aufgenommen, alle analysiert.";
+"import.applied.landed.one" = "%d Partie aufgenommen und analysiert.";
 "import.row.won" = "gewonnen";
 "import.row.lost" = "verloren";
 "import.row.drawn" = "remis";

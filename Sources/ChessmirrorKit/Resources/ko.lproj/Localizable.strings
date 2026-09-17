@@ -223,6 +223,7 @@
 "import.apply.skipped" = "(%d판은 이미 있음)";
 "import.applied" = "%d판을 담았다. 한 판씩 분석 중.";
 "import.applied.none" = "이 판들은 모두 이미 보관함에 있다.";
+"import.applied.landed" = "%d판을 담았고 모두 분석했다.";
 "import.row.won" = "승";
 "import.row.lost" = "패";
 "import.row.drawn" = "무";

@@ -240,6 +240,8 @@
 "import.applied" = "%d partidas juntas; a analisar uma a uma.";
 "import.applied.one" = "%d partida junta; a analisar.";
 "import.applied.none" = "Todas estas partidas já estão na biblioteca.";
+"import.applied.landed" = "%d partidas juntas, todas analisadas.";
+"import.applied.landed.one" = "%d partida junta e analisada.";
 "import.row.won" = "ganhou";
 "import.row.lost" = "perdeu";
 "import.row.drawn" = "empate";

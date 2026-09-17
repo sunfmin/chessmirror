@@ -223,6 +223,7 @@
 "import.apply.skipped" = "（%d 局は既にある）";
 "import.applied" = "%d 局を取り込んだ。順に解析中。";
 "import.applied.none" = "これらは全部もう棋譜庫にある。";
+"import.applied.landed" = "%d 局を取り込み、すべて解析済み。";
 "import.row.won" = "勝ち";
 "import.row.lost" = "負け";
 "import.row.drawn" = "引き分け";

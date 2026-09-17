@@ -259,6 +259,7 @@
 "import.apply.skipped" = "（%d 局已有）";
 "import.applied" = "入库了 %d 局，正在逐局分析。";
 "import.applied.none" = "这几局都已经在棋库里了。";
+"import.applied.landed" = "入库了 %d 局，都分析完了。";
 "import.row.won" = "胜";
 "import.row.lost" = "负";
 "import.row.drawn" = "和";
