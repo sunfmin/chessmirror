@@ -12,14 +12,19 @@ public enum PGNImport {
     public enum Status: Equatable, Sendable {
         case notImported
         case awaitingReview
-        case scoring
+        /// In the library's review chain: waiting its turn while `total` is still zero, then
+        /// being judged, `judged` of `total` positions settled.
+        case scoring(ImportReview.Progress)
         case ready(Int)
 
         public var label: String {
             switch self {
             case .notImported: localized("import.status.new")
             case .awaitingReview: localized("import.status.pending")
-            case .scoring: localized("import.status.scoring")
+            case .scoring(let progress):
+                progress.total == 0
+                    ? localized("import.status.queued")
+                    : localized("import.status.scoring", progress.judged, progress.total)
             case .ready(let count): localized("import.status.ready", count)
             }
         }
@@ -32,8 +37,8 @@ public enum PGNImport {
         /// lines, and the two could disagree.
         @MainActor
         public init(_ entry: GameLibrary.Entry, in library: GameLibrary, book index: MistakeIndex) {
-            if library.reviewingURLs.contains(entry.url) {
-                self = .scoring
+            if let progress = library.reviewing[entry.url] {
+                self = .scoring(progress)
             } else if entry.pgn?.game.isReviewed != true {
                 self = .awaitingReview
             } else {
@@ -44,7 +49,7 @@ public enum PGNImport {
     // ----------------------------------------------------------------- sites
 
     /// Where games come from. Named here so an error can say which one it is talking about
-    /// and a remembered username can say which one it belongs to (docs/adr/0044).
+    /// and a remembered username can say which one it belongs to (docs/adr/0045).
     ///
     /// Two of them hand over somebody's recent games by username; the third has no such door
     /// and shares one game at a time as a link that carries the whole game inside it.
@@ -734,12 +739,15 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         case idle
         case fetching
         case ready(PGNImport.ImportPlan)
-        case importing
-        case done(PGNImport.ImportOutcome)
         case failed(PGNImport.Error)
     }
 
     public private(set) var phase: Phase = .idle
+
+    /// What the last `apply` did to the plan on screen, for the sheet to report under the list.
+    /// The plan stays: applying it is not the end of it, since every game in it can still be
+    /// opened, and now has a standing in the library to show.
+    public private(set) var applied: PGNImport.ImportOutcome?
 
     private let fetcher: any PGNFetching
 
@@ -854,6 +862,7 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     /// spelling, which is the thing they are about to check.
     private func read(asked: String? = nil, _ source: @escaping @Sendable () async throws -> String) async {
         phase = .fetching
+        applied = nil
         // The language goes with it. What comes back off this task is not only a download: it
         // names the games, and a detached task starts outside whatever
         // language was scoped around this one (docs/adr/0019).
@@ -887,10 +896,21 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     /// Synchronous because it is file writes, which are fast and belong where the
     /// library already is; the download was the part worth taking off the main
     /// thread.
+    ///
+    /// With an engine, every game written is put in the library's review chain at once
+    /// (`GameLibrary.reviewImported`), one after another, so a batch pulled before a flight is
+    /// judged by the time the plane is up. A game opened on its own is still analysed on a press
+    /// (docs/adr/0044): here the player pressed 入库 for the lot, and that press is the ask.
+    ///
+    /// With an account, every game is written tracking the side that account played
+    /// (docs/adr/0045): the 错题 of a batch pulled by username are that person's, and nobody is
+    /// asked ten times what the field already says.
     @discardableResult
-    public func apply(into library: GameLibrary) -> PGNImport.ImportOutcome? {
+    public func apply(
+        into library: GameLibrary, as account: String? = nil,
+        reviewingWith engine: (any Engine)? = nil
+    ) -> PGNImport.ImportOutcome? {
         guard case let .ready(plan) = phase else { return nil }
-        phase = .importing
         // What is already there, by the same identity the incoming games are compared by: a
         // lichess game the library holds is that game whatever it has since been renamed to.
         let existing = Set(
@@ -905,15 +925,24 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
             var pgn = chapter.pgn
             pgn.setTag(GameLibrary.nameTag, to: chapter.name)
             pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
+            if let account, let side = PGNImport.side(of: account, in: pgn) { pgn.track(side) }
             // A fresh name per chapter, asked right before the write so two chapters
             // landing in one second cannot collide (`GameLibrary.newURL` logic).
             let url = library.newURL()
-            if library.write(pgn, to: url) { imported += 1 }
+            guard library.write(pgn, to: url) else { continue }
+            imported += 1
+            // The entry as just written rather than looked up: an iCloud write lands in the
+            // list a hop later, and the review chain waits for the write itself.
+            if let engine {
+                library.reviewImported(
+                    GameLibrary.Entry(url: url, pgn: pgn, modified: Date()), using: engine
+                )
+            }
         }
         let outcome = PGNImport.ImportOutcome(
             imported: imported, skipped: skipped, unreadable: plan.unreadable
         )
-        phase = .done(outcome)
+        applied = outcome
         return outcome
     }
 
@@ -952,5 +981,6 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     /// Back to a blank slate, for the "再导入一个" that follows a done import.
     public func reset() {
         phase = .idle
+        applied = nil
     }
 }

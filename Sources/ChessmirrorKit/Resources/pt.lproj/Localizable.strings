@@ -234,16 +234,22 @@
 "import.fetching" = "A descarregar…";
 "import.writing" = "A gravar…";
 "import.plan.games" = "%d partidas";
+"import.apply" = "Juntar %d partidas";
+"import.apply.skipped" = "(%d já lá estavam)";
+"import.apply.skipped.one" = "(%d já lá estava)";
+"import.applied" = "%d partidas juntas; a analisar uma a uma.";
+"import.applied.one" = "%d partida junta; a analisar.";
+"import.applied.none" = "Todas estas partidas já estão na biblioteca.";
 "import.row.won" = "ganhou";
 "import.row.lost" = "perdeu";
 "import.row.drawn" = "empate";
-"import.plan.tap.player" = "Abre uma partida e os erros de %@ vão para o caderno.";
-"import.plan.tap.link" = "Abre uma partida e escolhe de quem vão os erros para o caderno.";
+"import.plan.tap.player" = "Abre uma partida para a ler; depois de junta, os erros de %@ vão para o caderno.";
+"import.plan.tap.link" = "Abre uma partida para a ler; pergunta de quem vão os erros para o caderno.";
 "import.plan.games.one" = "%d partida";
 "import.more.one" = "mais %d…";
 "import.unreadable" = "%d partidas não puderam ser lidas e serão ignoradas.";
 "import.unreadable.one" = "%d partida não pôde ser lida e será ignorada.";
-"import.apply.one" = "Importar %d partida";
+"import.apply.one" = "Juntar %d partida";
 "import.again" = "Importar outra coisa";
 
 "game.undo" = "Desfazer o lance";
@@ -387,7 +393,8 @@
 "punish.answer" = "Seu adversário pode jogar %@.";
 "import.status.new" = "Não importada";
 "import.status.pending" = "Ainda não analisada · abra a partida para analisar";
-"import.status.scoring" = "Analisando";
+"import.status.queued" = "À espera de análise";
+"import.status.scoring" = "A analisar %1$d/%2$d";
 "import.status.ready" = "%d erros adicionados";
 "review.offer" = "Esta partida ainda não foi analisada, então seus erros ainda não são conhecidos";
 "review.start" = "Analisar esta partida";

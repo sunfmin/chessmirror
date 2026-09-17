@@ -39,3 +39,21 @@ nobody is known: a row is the chapter's own name and opening it still asks.
 Not done: a 国象联盟 username. There is no endpoint for one, and a door that asks for what cannot
 be answered is worse than no door. If the site ever publishes one, it is a fourth `withPlayers`
 site and nothing in the sheet changes shape.
+
+## Postscript: 入库 is one press, and the list stays
+
+The list was, at first, only a list of games to open one at a time: opening a row wrote that
+one game and closed the sheet, and the other nine stayed on the site until the sheet was opened
+and the account pulled again. Ten games meant ten downloads and ten trips. That was the whole
+value of a fetch thrown away.
+
+So the list has one button, 「入库 N 局」, with what will be skipped in brackets. Pressing it
+writes every game not already in the library and **puts each one in the library's review chain
+at once** — this is the one place a Review starts without its own press (docs/adr/0044): the
+player pressed for the lot, and a batch pulled before a flight should be judged by the time the
+plane is up. The sheet does not close. Each row's standing changes where it is — 排队分析,
+分析中 12/40, 已入库 5 道题 — read off the library the chain runs on, so closing the sheet and
+coming back finds it still going. Opening a row is still opening one game to read it.
+
+The fetch is kept across openings of the sheet (`LibraryScreen` owns the `ImportSession`), so a
+list pulled once can be looked at twice.

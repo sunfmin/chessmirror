@@ -219,11 +219,15 @@
 "import.fetching" = "ダウンロード中…";
 "import.writing" = "書き込み中…";
 "import.plan.games" = "%d 局";
+"import.apply" = "%d 局を取り込む";
+"import.apply.skipped" = "（%d 局は既にある）";
+"import.applied" = "%d 局を取り込んだ。順に解析中。";
+"import.applied.none" = "これらは全部もう棋譜庫にある。";
 "import.row.won" = "勝ち";
 "import.row.lost" = "負け";
 "import.row.drawn" = "引き分け";
-"import.plan.tap.player" = "一局を開くと、%@ 側のミスが錯題本に入る。";
-"import.plan.tap.link" = "一局を開いてから、どちら側のミスを入れるか選ぶ。";
+"import.plan.tap.player" = "一局を開いて読む。取り込んだあとは %@ 側のミスが錯題本に入る。";
+"import.plan.tap.link" = "一局を開いて読む。どちら側のミスを入れるか訊かれる。";
 "import.unreadable" = "%d 局は読めないので飛ばす。";
 "import.again" = "もう一つ取り込む";
 
@@ -361,7 +365,8 @@
 "punish.answer" = "相手は %@ と指せます。";
 "import.status.new" = "未インポート";
 "import.status.pending" = "未分析・対局を開いて分析";
-"import.status.scoring" = "分析中";
+"import.status.queued" = "解析待ち";
+"import.status.scoring" = "解析中 %1$d/%2$d";
 "import.status.ready" = "%d 問を登録済み";
 "review.offer" = "この対局はまだ分析していないので、間違いはまだわかりません";
 "review.start" = "この対局を分析";

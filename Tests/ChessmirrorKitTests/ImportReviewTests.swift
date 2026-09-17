@@ -200,7 +200,10 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     session.review()
     session.attach(engine: engine, library: library)
     #expect(library.reviewingURLs.contains(entry.url))
-    #expect(importer.status(of: chapter, in: library, book: book) == .scoring)
+    guard case .scoring = importer.status(of: chapter, in: library, book: book) else {
+        Issue.record("expected the chapter to be scoring, got \(importer.status(of: chapter, in: library, book: book))")
+        return
+    }
     await library.waitForImportReviews()
     #expect(library.reviewingURLs.isEmpty)
     #expect(session.reviewProgress == nil)

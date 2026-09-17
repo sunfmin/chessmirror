@@ -234,16 +234,22 @@
 "import.fetching" = "Descargando…";
 "import.writing" = "Guardando…";
 "import.plan.games" = "%d partidas";
+"import.apply" = "Añadir %d partidas";
+"import.apply.skipped" = "(%d ya estaban)";
+"import.apply.skipped.one" = "(%d ya estaba)";
+"import.applied" = "%d partidas añadidas; se analizan una a una.";
+"import.applied.one" = "%d partida añadida; se está analizando.";
+"import.applied.none" = "Todas estas partidas ya están en la biblioteca.";
 "import.row.won" = "ganó";
 "import.row.lost" = "perdió";
 "import.row.drawn" = "tablas";
-"import.plan.tap.player" = "Abre una partida y los errores de %@ van al cuaderno.";
-"import.plan.tap.link" = "Abre una partida y elige de quién van los errores al cuaderno.";
+"import.plan.tap.player" = "Abre una partida para leerla; una vez añadida, los errores de %@ van al cuaderno.";
+"import.plan.tap.link" = "Abre una partida para leerla; te preguntará de quién van los errores al cuaderno.";
 "import.plan.games.one" = "%d partida";
 "import.more.one" = "%d más…";
 "import.unreadable" = "%d partidas no se han podido leer y se omitirán.";
 "import.unreadable.one" = "%d partida no se ha podido leer y se omitirá.";
-"import.apply.one" = "Importar %d partida";
+"import.apply.one" = "Añadir %d partida";
 "import.again" = "Importar otra cosa";
 
 "game.undo" = "Deshacer jugada";
@@ -387,7 +393,8 @@
 "punish.answer" = "Tu rival puede jugar %@.";
 "import.status.new" = "Sin importar";
 "import.status.pending" = "Sin analizar · abre la partida para analizarla";
-"import.status.scoring" = "Analizando";
+"import.status.queued" = "En espera de análisis";
+"import.status.scoring" = "Analizando %1$d/%2$d";
 "import.status.ready" = "%d errores añadidos";
 "review.offer" = "Esta partida no se ha analizado, así que sus errores aún no se conocen";
 "review.start" = "Analizar esta partida";

@@ -873,7 +873,7 @@ struct GameScreen: View {
                 Text(
                     progress.total > 0
                         ? localized("review.progress", progress.judged, progress.total)
-                        : localized("import.status.scoring")
+                        : localized("import.status.queued")
                 )
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(Palette.ink)
