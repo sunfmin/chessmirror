@@ -180,6 +180,13 @@ against a human is credited to none.
 
 ### 进料 — where positions come from
 
+**门 (Door)**:
+One way into the import sheet: a site's username — lichess, chess.com — a 国象联盟 share link,
+or any other link to a PGN. Four doors, one pipeline behind them. The sheet opens on the door
+used last, with the account that fetched last already in the field, and a failure about a name
+says the site and the name as typed (docs/adr/0044).
+_Avoid_: 来源, 平台, mode
+
 **粗筛 (Sift)**:
 Using evaluations that came with an imported game to decide which moves are worth looking at
 properly. Never decides whether something is a 错题.
