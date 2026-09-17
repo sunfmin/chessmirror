@@ -219,11 +219,16 @@
 "import.fetching" = "받는 중…";
 "import.writing" = "저장하는 중…";
 "import.plan.games" = "%d판";
+"import.apply" = "%d판 담기";
+"import.apply.skipped" = "(%d판은 이미 있음)";
+"import.applied" = "%d판을 담았다. 한 판씩 분석 중.";
+"import.applied.none" = "이 판들은 모두 이미 보관함에 있다.";
+"import.applied.landed" = "%d판을 담았고 모두 분석했다.";
 "import.row.won" = "승";
 "import.row.lost" = "패";
 "import.row.drawn" = "무";
-"import.plan.tap.player" = "한 판을 열면 %@ 쪽의 실수가 오답 노트에 들어간다.";
-"import.plan.tap.link" = "한 판을 연 다음 누구의 실수를 넣을지 고른다.";
+"import.plan.tap.player" = "한 판을 열어 읽는다. 담고 나면 %@ 쪽의 실수가 오답 노트에 들어간다.";
+"import.plan.tap.link" = "한 판을 열어 읽는다. 누구의 실수를 넣을지 묻는다.";
 "import.unreadable" = "%d판은 읽지 못해 건너뛴다.";
 "import.again" = "하나 더 가져오기";
 
@@ -361,7 +366,8 @@
 "punish.answer" = "상대는 %@를 둘 수 있습니다.";
 "import.status.new" = "가져오지 않음";
 "import.status.pending" = "아직 분석 안 됨 · 대국을 열어 분석";
-"import.status.scoring" = "분석 중";
+"import.status.queued" = "분석 대기";
+"import.status.scoring" = "분석 중 %1$d/%2$d";
 "import.status.ready" = "실수 %d개 추가됨";
 "review.offer" = "이 대국은 아직 분석하지 않아 실수를 알 수 없습니다";
 "review.start" = "이 대국 분석";

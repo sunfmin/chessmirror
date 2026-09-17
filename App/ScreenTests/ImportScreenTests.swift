@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import ChessmirrorKitTesting
 import Foundation
 import SwiftUI
 import Testing
@@ -138,7 +139,7 @@ struct ImportScreenScreenshots {
         #expect(rendered.says("第一题"))
         #expect(rendered.says("第二题"))
         #expect(rendered.says("没导入"))
-        #expect(!rendered.says("导入 2 局"))
+        #expect(rendered.says("入库 2 局"), "one press for the lot")
         // The study's own name is not said at all: it named a collection, and there is no
         // collection to name any more (docs/adr/0028). The chapters are what land.
         #expect(rendered.count(of: "Wood Pecker 1-47") == 0)
@@ -163,7 +164,10 @@ struct ImportScreenScreenshots {
             ImportSheet(session: session, memory: memory(), initialDoor: .link).environment(library).environment(book(in: tempDir))
         }
 
-        #expect(rendered.says("导入了 2 局"))
+        #expect(rendered.says("导入了 2 局"), "no engine yet, so written and not analysed")
+        #expect(rendered.says("第一题") && rendered.says("第二题"), "the list stays")
+        #expect(rendered.count(of: "还没分析") == 2)
+        #expect(!rendered.says("入库 2 局"), "nothing left to add")
         #expect(rendered.says("再导入一个"))
         #expect(rendered.says("完成"))
 
@@ -225,7 +229,7 @@ struct ImportScreenScreenshots {
         #expect(rendered.says("黑方 · penguingm1 · 负 · 2026.08.29 09:02"), "two games, two rows")
         #expect(!rendered.says("sunfmin 对 DrNykterstein"), "the account is not named on its own rows")
         #expect(rendered.says("没导入"))
-        #expect(!rendered.says("导入 2 局"))
+        #expect(rendered.says("入库 2 局"))
         #expect(rendered.says("填 lichess 用户名"), "the door that fetched them is the open one")
         #expect(rendered.says("拉几局"))
     }
@@ -255,6 +259,80 @@ struct ImportScreenScreenshots {
         let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
         #expect(pgn.handColours == [.black], "sunfmin had Black in that game")
         #expect(pgn.tag("White") == "penguingm1")
+    }
+
+    /// 入库 with an engine: every game written tracks the account's side, goes straight into the
+    /// review chain, and the list stays — each row saying where its game has got to.
+    @Test("入库 writes the lot, queues each for analysis, and the rows report as it runs")
+    func applyAllAndWatch() async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let book = book(in: directory)
+        let url = try #require(PGNImport.recentGamesURL(user: "sunfmin", count: 10))
+        let session = ImportSession(
+            fetcher: ScriptedFetcher([url.absoluteString: .success(Self.myGames)])
+        )
+        await session.recent(of: "sunfmin", count: 10)
+        guard case .ready(let plan) = session.phase else {
+            Issue.record("expected a plan, got \(session.phase)")
+            return
+        }
+        // One verdict per position of both games. In the first, sunfmin (White) hangs the
+        // game with Nf3; in the second nothing costs anything. The first game's second position
+        // is held open, so the chain stands at 1 of 4 on it with the second game waiting.
+        var byPosition: [String: Analysis] = [:]
+        for (chapter, scores) in zip(plan.chapters, [[20, 20, 20, -400], [20, 20, 20, 20]]) {
+            for (ply, score) in scores.enumerated() {
+                let fen = try #require(chapter.pgn.game.rewound(to: ply)).state.fen
+                byPosition[fen] = Analysis(
+                    depth: 16, lines: [Line(score: .centipawns(score), uciMoves: ["a2a3"], san: ["a3"])]
+                )
+            }
+        }
+        let held = try #require(plan.chapters[0].pgn.game.rewound(to: 1)).state.fen
+        let gate = AsyncStream<Analysis>.makeStream()
+        let engine = ScriptedEngine([], byPosition: byPosition, controlled: { position, budget in
+            position.state.fen == held && budget == .depth(ImportReview.depth) ? gate.stream : nil
+        })
+
+        let running = await ScreenImage.write("import-list-analysing", interact: { window in
+            #expect(ScreenImage.activate("入库 2 局", in: window))
+            let deadline = ContinuousClock.now + .seconds(5)
+            while !library.reviewing.values.contains(where: { $0.judged == 1 }), ContinuousClock.now < deadline {
+                await Task.yield()
+            }
+            await ScreenImage.settle()
+        }) {
+            ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), engine: engine)
+                .environment(library).environment(book)
+        }
+        #expect(running.says("入库了 2 局，正在逐局分析。"))
+        #expect(running.says("分析中 1/4"), "the first game, one position settled of four")
+        #expect(running.says("排队分析"), "the second, waiting its turn")
+        #expect(!running.says("入库 2 局"), "nothing left to add")
+
+        // Let the held position through; both games land, and the rows say what was found.
+        gate.continuation.yield(try #require(byPosition[held]))
+        gate.continuation.finish()
+        let deadline = ContinuousClock.now + .seconds(10)
+        while !library.reviewing.isEmpty, ContinuousClock.now < deadline { await Task.yield() }
+        #expect(library.reviewing.isEmpty)
+        book.update(from: library.entries)
+
+        let landed = await ScreenImage.write("import-list-analysed") {
+            ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), engine: engine)
+                .environment(library).environment(book)
+        }
+        #expect(landed.says("入库了 2 局，都分析完了。"), "and the report says so, not that it is still running")
+        #expect(landed.says("已入库 1 道题"), "White's Nf3 cost, and White is sunfmin")
+        #expect(landed.says("已入库 0 道题"), "the other game, tracked as Black, had nothing wrong")
+        for file in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        where file.pathExtension == "pgn" {
+            let pgn = try PGN(parsing: String(contentsOf: file, encoding: .utf8))
+            #expect(pgn.game.isReviewed)
+            #expect(pgn.handColours == [pgn.tag("White") == "sunfmin" ? .white : .black], "tracked as the account's side")
+        }
     }
 
     /// A game that is not there says so, in its own words.

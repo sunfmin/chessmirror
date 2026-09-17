@@ -255,11 +255,16 @@
 "import.fetching" = "在下载棋谱…";
 "import.writing" = "在写入…";
 "import.plan.games" = "%d 局";
+"import.apply" = "入库 %d 局";
+"import.apply.skipped" = "（%d 局已有）";
+"import.applied" = "入库了 %d 局，正在逐局分析。";
+"import.applied.none" = "这几局都已经在棋库里了。";
+"import.applied.landed" = "入库了 %d 局，都分析完了。";
 "import.row.won" = "胜";
 "import.row.lost" = "负";
 "import.row.drawn" = "和";
-"import.plan.tap.player" = "点开一局，%@ 这一方的错题记进错题本。";
-"import.plan.tap.link" = "点开一局，再选记哪一方的错题。";
+"import.plan.tap.player" = "点开一局看棋；入库后 %@ 这一方的错题记进错题本。";
+"import.plan.tap.link" = "点开一局看棋，会问记哪一方的错题。";
 "import.unreadable" = "有 %d 局没能读出来，会跳过。";
 "import.again" = "再导入一个";
 
@@ -406,7 +411,8 @@
 "punish.answer" = "对手可以走 %@。";
 "import.status.new" = "没导入";
 "import.status.pending" = "还没分析 · 打开棋局来分析";
-"import.status.scoring" = "正在分析";
+"import.status.queued" = "排队分析";
+"import.status.scoring" = "分析中 %1$d/%2$d";
 "import.status.ready" = "已入库 %d 道题";
 "review.offer" = "这一局还没分析过，哪里走错了还不知道";
 "review.start" = "分析这一局";

@@ -43,6 +43,9 @@ struct LibraryScreen: View {
     @State private var isRecognising = false
     @State private var failure: (title: String, message: String)?
     @State private var isImporting = false
+    /// One import, kept across openings of the sheet: what was fetched is still there when the
+    /// sheet is opened again, so a list pulled once is not pulled again to look at it twice.
+    @State private var importSession = ImportSession()
     @State private var recording: MistakeIndex.Recording?
     @Environment(\.scenePhase) private var scenePhase
 
@@ -73,7 +76,9 @@ struct LibraryScreen: View {
             // the game hides its for the same reason and draws its own strip.
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isAboutShowing) { AboutScreen() }
-            .sheet(isPresented: $isImporting) { ImportSheet(onOpen: open) }
+            .sheet(isPresented: $isImporting) {
+                ImportSheet(session: importSession, engine: engine.service, onOpen: open)
+            }
             .navigationDestination(for: Step.self) { step in
                 switch step {
                 case .confirm(let proposal):

@@ -234,16 +234,24 @@
 "import.fetching" = "Téléchargement…";
 "import.writing" = "Écriture…";
 "import.plan.games" = "%d parties";
+"import.apply" = "Ajouter %d parties";
+"import.apply.skipped" = "(%d déjà là)";
+"import.apply.skipped.one" = "(%d déjà là)";
+"import.applied" = "%d parties ajoutées, analysées une à une.";
+"import.applied.one" = "%d partie ajoutée, en cours d'analyse.";
+"import.applied.none" = "Toutes ces parties sont déjà dans la bibliothèque.";
+"import.applied.landed" = "%d parties ajoutées, toutes analysées.";
+"import.applied.landed.one" = "%d partie ajoutée et analysée.";
 "import.row.won" = "gagné";
 "import.row.lost" = "perdu";
 "import.row.drawn" = "nulle";
-"import.plan.tap.player" = "Ouvrez une partie, et les erreurs de %@ vont dans le cahier.";
-"import.plan.tap.link" = "Ouvrez une partie, puis choisissez de qui les erreurs vont dans le cahier.";
+"import.plan.tap.player" = "Ouvrez une partie pour la lire ; une fois ajoutée, les erreurs de %@ vont dans le cahier.";
+"import.plan.tap.link" = "Ouvrez une partie pour la lire ; elle demande de qui les erreurs vont dans le cahier.";
 "import.plan.games.one" = "%d partie";
 "import.more.one" = "%d autre…";
 "import.unreadable" = "%d parties illisibles seront ignorées.";
 "import.unreadable.one" = "%d partie illisible sera ignorée.";
-"import.apply.one" = "Importer %d partie";
+"import.apply.one" = "Ajouter %d partie";
 "import.again" = "Importer autre chose";
 
 "game.undo" = "Reprendre le coup";
@@ -387,7 +395,8 @@
 "punish.answer" = "Votre adversaire peut jouer %@.";
 "import.status.new" = "Non importée";
 "import.status.pending" = "Pas encore analysée · ouvrir la partie pour l’analyser";
-"import.status.scoring" = "Analyse en cours";
+"import.status.queued" = "En attente d'analyse";
+"import.status.scoring" = "Analyse %1$d/%2$d";
 "import.status.ready" = "%d erreurs ajoutées";
 "review.offer" = "Cette partie n’a pas été analysée : ses erreurs ne sont pas encore connues";
 "review.start" = "Analyser cette partie";

@@ -234,16 +234,24 @@
 "import.fetching" = "Wird geladen…";
 "import.writing" = "Wird geschrieben…";
 "import.plan.games" = "%d Partien";
+"import.apply" = "%d Partien aufnehmen";
+"import.apply.skipped" = "(%d schon da)";
+"import.apply.skipped.one" = "(%d schon da)";
+"import.applied" = "%d Partien aufgenommen, werden nacheinander analysiert.";
+"import.applied.one" = "%d Partie aufgenommen, wird analysiert.";
+"import.applied.none" = "Alle diese Partien sind schon in der Bibliothek.";
+"import.applied.landed" = "%d Partien aufgenommen, alle analysiert.";
+"import.applied.landed.one" = "%d Partie aufgenommen und analysiert.";
 "import.row.won" = "gewonnen";
 "import.row.lost" = "verloren";
 "import.row.drawn" = "remis";
-"import.plan.tap.player" = "Öffne eine Partie, und die Fehler von %@ kommen ins Buch.";
-"import.plan.tap.link" = "Öffne eine Partie und wähle dann, wessen Fehler ins Buch kommen.";
+"import.plan.tap.player" = "Öffne eine Partie zum Lesen; einmal aufgenommen, kommen die Fehler von %@ ins Buch.";
+"import.plan.tap.link" = "Öffne eine Partie zum Lesen; sie fragt, wessen Fehler ins Buch kommen.";
 "import.plan.games.one" = "%d Partie";
 "import.more.one" = "%d weitere…";
 "import.unreadable" = "%d Partien sind nicht lesbar und werden übersprungen.";
 "import.unreadable.one" = "%d Partie ist nicht lesbar und wird übersprungen.";
-"import.apply.one" = "%d Partie importieren";
+"import.apply.one" = "%d Partie aufnehmen";
 "import.again" = "Noch etwas importieren";
 
 "game.undo" = "Zug zurücknehmen";
@@ -386,7 +394,8 @@
 "punish.answer" = "Dein Gegner kann %@ spielen.";
 "import.status.new" = "Nicht importiert";
 "import.status.pending" = "Noch nicht analysiert · Partie öffnen und analysieren";
-"import.status.scoring" = "Wird analysiert";
+"import.status.queued" = "Wartet auf Analyse";
+"import.status.scoring" = "Analyse %1$d/%2$d";
 "import.status.ready" = "%d Fehler aufgenommen";
 "review.offer" = "Diese Partie wurde noch nicht analysiert, ihre Fehler sind noch unbekannt";
 "review.start" = "Diese Partie analysieren";

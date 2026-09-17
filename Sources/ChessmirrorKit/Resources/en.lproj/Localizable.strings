@@ -271,16 +271,24 @@
 "import.fetching" = "Downloading…";
 "import.writing" = "Writing…";
 "import.plan.games" = "%d games";
+"import.apply" = "Add %d games";
+"import.apply.skipped" = "(%d already there)";
+"import.apply.skipped.one" = "(%d already there)";
+"import.applied" = "Added %d games, analysing them one by one.";
+"import.applied.one" = "Added %d game, analysing it.";
+"import.applied.none" = "All of these are already in the library.";
+"import.applied.landed" = "Added %d games, all analysed.";
+"import.applied.landed.one" = "Added %d game, analysed.";
 "import.row.won" = "won";
 "import.row.lost" = "lost";
 "import.row.drawn" = "drew";
-"import.plan.tap.player" = "Open a game, and %@'s mistakes go in the book.";
-"import.plan.tap.link" = "Open a game, then choose whose mistakes go in the book.";
+"import.plan.tap.player" = "Open a game to read it; once added, %@'s mistakes go in the book.";
+"import.plan.tap.link" = "Open a game to read it; it asks whose mistakes go in the book.";
 "import.plan.games.one" = "%d game";
 "import.more.one" = "%d more…";
 "import.unreadable" = "%d could not be read and will be skipped.";
 "import.unreadable.one" = "%d could not be read and will be skipped.";
-"import.apply.one" = "Import %d game";
+"import.apply.one" = "Add %d game";
 "import.again" = "Import another";
 
 /* ---------------------------------------------------------------- the game screen */
@@ -432,7 +440,8 @@
 "punish.answer" = "Your opponent can play %@.";
 "import.status.new" = "Not imported";
 "import.status.pending" = "Not analysed yet · open the game to analyse it";
-"import.status.scoring" = "Analysing";
+"import.status.queued" = "Waiting to analyse";
+"import.status.scoring" = "Analysing %1$d/%2$d";
 "import.status.ready" = "%d mistakes added";
 "review.offer" = "This game has not been analysed, so its mistakes are not known yet";
 "review.start" = "Analyse this game";

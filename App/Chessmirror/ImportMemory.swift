@@ -2,7 +2,7 @@ import ChessmirrorKit
 import Foundation
 
 /// What the import sheet remembers between openings: the accounts games have been fetched
-/// for, how many were asked for, and which door was used last (docs/adr/0044).
+/// for, how many were asked for, and which door was used last (docs/adr/0045).
 ///
 /// An account name is typed once. After that it is the name in the field when the sheet opens,
 /// and a chip to tap when there is more than one — the sheet is the thing done before a flight,

@@ -2,7 +2,7 @@ import ChessmirrorKit
 import SwiftUI
 
 /// The sheet that turns somebody's recent games, or a link, into games in the library
-/// (docs/adr/0014, docs/adr/0044).
+/// (docs/adr/0014, docs/adr/0045).
 ///
 /// Four doors and one machine behind them. Two doors take a username — lichess and chess.com —
 /// and fetch that player's last few games; one takes a 国象联盟 share link, which carries its game
@@ -65,6 +65,8 @@ struct ImportSheet: View {
 
     let session: ImportSession
     let memory: ImportMemory
+    /// The engine the games written by 入库 are analysed with, when there is one yet.
+    let engine: (any Engine)?
     let onOpen: ((GameLibrary.Entry) -> Void)?
 
     @Environment(GameLibrary.self) private var library
@@ -85,12 +87,14 @@ struct ImportSheet: View {
     init(
         session: ImportSession = ImportSession(),
         memory: ImportMemory = .shared,
+        engine: (any Engine)? = nil,
         initialInput: String = "",
         initialDoor: Door? = nil,
         onOpen: ((GameLibrary.Entry) -> Void)? = nil
     ) {
         self.session = session
         self.memory = memory
+        self.engine = engine
         self.onOpen = onOpen
         var typed: [Door: String] = [:]
         for site in PGNImport.Site.withPlayers {
@@ -132,10 +136,6 @@ struct ImportSheet: View {
                         waiting(localized("import.fetching"))
                     case .ready(let plan):
                         ready(plan)
-                    case .importing:
-                        waiting(localized("import.writing"))
-                    case .done(let outcome):
-                        done(outcome)
                     case .failed(let error):
                         failed(error)
                     }
@@ -292,6 +292,8 @@ struct ImportSheet: View {
     /// row is the chapter's own name and opening it asks whose mistakes to keep.
     private func ready(_ plan: PGNImport.ImportPlan) -> some View {
         let account = door.asksForPlayer && !input.isEmpty ? input : nil
+        let standing = plan.chapters.map { session.status(of: $0, in: library, book: index) }
+        let toAdd = standing.count { $0 == .notImported }
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -322,7 +324,62 @@ struct ImportSheet: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12))
+
+            // The one press that makes the fetch real. Gone once there is nothing left to add,
+            // and what it did stands in its place — the rows above carry the rest.
+            if let applied = session.applied, toAdd == 0 {
+                Text(
+                    applied.imported == 0
+                        ? localized("import.applied.none")
+                        : engine == nil
+                            ? localized("import.done", plural: applied.imported)
+                            : standing.contains { if case .scoring = $0 { true } else { false } }
+                                ? localized("import.applied", plural: applied.imported)
+                                : localized("import.applied.landed", plural: applied.imported)
+                )
+                .font(.footnote)
+                .foregroundStyle(Palette.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+            } else if toAdd > 0 {
+                primaryButton(applyLabel(adding: toAdd, of: plan.chapters.count), isEnabled: true) {
+                    session.apply(into: library, as: account, reviewingWith: engine)
+                }
+            }
+            HStack(spacing: 10) {
+                Button {
+                    session.reset()
+                    if !door.asksForPlayer { typed[door] = "" }
+                } label: {
+                    Text(localized("import.again"))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                if session.applied != nil {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(localized("done"))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Palette.parchment)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 11)
+                            .background(Palette.ink, in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
+    }
+
+    /// 「入库 8 局（2 局已有）」: what the press will write, and what it will leave alone.
+    private func applyLabel(adding: Int, of total: Int) -> String {
+        var label = localized("import.apply", plural: adding)
+        if total > adding { label += " " + localized("import.apply.skipped", plural: total - adding) }
+        return label
     }
 
     /// One game to open. With an account: their colour as a swatch, the opponent, the verdict
@@ -385,39 +442,6 @@ struct ImportSheet: View {
 
     private func summary(of plan: PGNImport.ImportPlan) -> String {
         localized("import.plan.games", plural: plan.chapters.count)
-    }
-
-    private func done(_ outcome: PGNImport.ImportOutcome) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(outcome.message)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Palette.ink)
-            HStack(spacing: 10) {
-                Button {
-                    session.reset()
-                    if !door.asksForPlayer { typed[door] = "" }
-                } label: {
-                    Text(localized("import.again"))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.ink)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
-                        .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-                Button {
-                    dismiss()
-                } label: {
-                    Text(localized("done"))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.parchment)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
-                        .background(Palette.ink, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     /// What went wrong, and the one thing there is to do about it. The wording comes with
