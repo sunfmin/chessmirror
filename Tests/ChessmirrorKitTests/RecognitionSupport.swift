@@ -43,7 +43,7 @@ func readBack(
 /// The reference screenshot, from the test bundle.
 func referenceScreenshot() throws -> RGBImage {
     let url = try #require(
-        Bundle.module.url(forResource: "reference_board", withExtension: "png")
+        Bundle.module.url(forResource: "reference_board", withExtension: "png", subdirectory: "Resources")
     )
     return try #require(RGBImage(contentsOf: url))
 }

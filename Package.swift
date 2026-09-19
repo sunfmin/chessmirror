@@ -78,7 +78,10 @@ let package = Package(
             // piece set, inline coordinates, a highlighted square. Nothing rendered
             // here can stand in for them. The whole folder rather than the three files
             // it currently holds, so a fixture added to Resources/ is in the bundle
-            // without a second edit here.
+            // without a second edit here. Copied as a folder, so it is a folder *inside* the
+            // bundle's resources and the tests look in `subdirectory: "Resources"`: the old
+            // build system's flat bundle made that folder the resource directory itself by
+            // accident, and swiftbuild's `Contents/Resources/` does not.
             resources: [.copy("Resources")]
         ),
     ],

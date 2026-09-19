@@ -114,9 +114,12 @@ func onlyRecordedMovesCount() throws {
     let relaxed = MistakeBook.derive(from: [entry], lines: JudgementLines(record: 10, enqueue: 20))
     #expect(relaxed.isEmpty)
 
-    // The same game judged by somebody who wants everything written down — which is what the
-    // phone ships with, because it is where 正着 already stops you.
-    let fussy = MistakeBook.derive(from: [entry], lines: .standard)
+    // Which is what the phone ships with: a seven-point slip is not a 错题 for the book.
+    #expect(MistakeBook.derive(from: [entry], lines: .standard).isEmpty)
+
+    // The same game judged by somebody who wants everything written down, from where 正着
+    // already stops you.
+    let fussy = MistakeBook.derive(from: [entry], lines: JudgementLines(record: 5, enqueue: 5))
     #expect(fussy.mistakes.count == 1)
 }
 

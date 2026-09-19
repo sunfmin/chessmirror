@@ -24,7 +24,7 @@ private func footprint() -> Int64 {
 /// folder, kept under a name that says what it is.
 private func photographedBoard() throws -> RGBImage {
     let url = try #require(
-        Bundle.module.url(forResource: "board_photograph", withExtension: "png")
+        Bundle.module.url(forResource: "board_photograph", withExtension: "png", subdirectory: "Resources")
     )
     return try #require(RGBImage(contentsOf: url))
 }
@@ -169,7 +169,7 @@ func recognitionPeakIsBounded() async throws {
 @Test("the photograph that killed the phone is read within a bounded footprint")
 func thePhonePhotoThatKilledTheAppIsBounded() async throws {
     let url = try #require(
-        Bundle.module.url(forResource: "killer_photograph", withExtension: "png")
+        Bundle.module.url(forResource: "killer_photograph", withExtension: "png", subdirectory: "Resources")
     )
     let photo = try #require(RGBImage(contentsOf: url))
     let baseline = footprint()

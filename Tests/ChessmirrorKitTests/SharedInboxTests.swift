@@ -66,7 +66,7 @@ func aSharedScreenshotReachesTheGate() async throws {
     // holds a black king and a white knight and no white king, so it is a legal *reading* of
     // an illegal position — which opens the editor rather than a game (docs/adr/0008,
     // docs/adr/0011), and is the door the criterion names.
-    let url = try #require(Bundle.module.url(forResource: "reference_board", withExtension: "png"))
+    let url = try #require(Bundle.module.url(forResource: "reference_board", withExtension: "png", subdirectory: "Resources"))
     try inbox.deposit(try Data(contentsOf: url))
 
     let shared = try #require(inbox.takeNewest())

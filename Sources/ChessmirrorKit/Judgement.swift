@@ -25,18 +25,21 @@ public struct JudgementLines: Hashable, Sendable, Codable {
     /// Where a written-down move also earns practice time.
     public var enqueue: Double
 
-    public init(intercept: Double? = nil, record: Double = 5, enqueue: Double = 5) {
+    public init(intercept: Double? = nil, record: Double = 10, enqueue: Double = 10) {
         self.intercept = intercept
         self.record = record
         self.enqueue = enqueue
     }
 
-    /// 5 / 5, with 正着 off. The numbers a person who has never touched this gets.
+    /// 10 / 10, with 正着 off. The numbers a person who has never touched this gets.
     ///
-    /// Both at five, which is where 正着 intercepts: what the coach stopped you for is worth
-    /// writing down, and what is worth writing down is worth practising. They are still two lines
-    /// and either moves on its own (docs/adr/0027) — a player who wants the book kept wider than
-    /// the queue raises one of them — but the pair a phone ships with agree.
+    /// Both at ten: what is worth writing down is worth practising. They were five, which is
+    /// where 正着 intercepts, and a book that took every five-point slip filled with moves nobody
+    /// would call a mistake — 「10% 的错题才会进入错题本」. 正着 still stops the player at five
+    /// (`defaultIntercept`): a move taken back under ten is a correction at the board, not a 错题.
+    /// They are still two lines and either moves on its own (docs/adr/0027) — a player who wants
+    /// the book kept wider than the queue raises one of them — but the pair a phone ships with
+    /// agree.
     public static let standard = JudgementLines()
 
     public static let defaultIntercept = 5.0

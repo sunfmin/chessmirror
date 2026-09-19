@@ -11,7 +11,7 @@ import Testing
 /// the two hardest cases on the photograph side, because the second is flat, square on and
 /// blown out to paper white, which is most of what a screenshot looks like.
 private func fixture(_ name: String) throws -> RGBImage {
-    let url = try #require(Bundle.module.url(forResource: name, withExtension: "png"))
+    let url = try #require(Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources"))
     return try #require(RGBImage(contentsOf: url))
 }
 
