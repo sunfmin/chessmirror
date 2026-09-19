@@ -81,8 +81,8 @@ The 掉幅 at which a move is written down at all.
 **入列线 (Enrol line)**:
 The 掉幅 at which a 错题 starts taking up the player's future practice time. Never below the
 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be
-worth remembering without being worth drilling. Both ship at five, which is where 把关 already
-stops the player — what the coach took back is worth writing down, and worth practising.
+worth remembering without being worth drilling. Both ship at ten. 把关 stops the player at five:
+a move taken back under ten is a correction at the board, not a 错题 for the book.
 
 ### 日课 — the day's practice
 

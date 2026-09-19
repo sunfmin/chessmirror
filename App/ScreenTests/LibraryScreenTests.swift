@@ -187,13 +187,13 @@ struct LibraryScreenScreenshots {
 
     /// The two standing lines, where a person can move them (docs/adr/0027). The third is
     /// 正着's and belongs to a game, so it is not on this sheet.
-    @Test("the settings sheet offers the record and drill lines, defaulting to 5 and 5")
+    @Test("the settings sheet offers the record and drill lines, defaulting to 10 and 10")
     func theLinesAreOnTheSettingsSheet() async throws {
         let tempDir = tempDir()
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
-        #expect(JudgementSetting.shared.lines.record == 5)
-        #expect(JudgementSetting.shared.lines.enqueue == 5)
+        #expect(JudgementSetting.shared.lines.record == 10)
+        #expect(JudgementSetting.shared.lines.enqueue == 10)
         #expect(JudgementSetting.shared.lines.intercept == nil, "正着 is not a standing setting")
 
         let rendered = await ScreenImage.write("about-lines") {
@@ -205,8 +205,8 @@ struct LibraryScreenScreenshots {
         #expect(rendered.says("判决线"))
         #expect(rendered.says("记下来"))
         #expect(rendered.says("进练习"))
-        #expect(rendered.says("5%"), "and the two defaults, on the one scale")
-        #expect(rendered.count(of: "5%") >= 2, "both lines read 5%")
+        #expect(rendered.says("10%"), "and the two defaults, on the one scale")
+        #expect(rendered.count(of: "10%") >= 2, "both lines read 10%")
     }
 
     /// The 搜索预算, where a person can set it (CONTEXT.md): time, depth, and which end stops
