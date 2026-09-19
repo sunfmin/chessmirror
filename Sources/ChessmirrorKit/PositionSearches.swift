@@ -53,6 +53,10 @@ public actor PositionSearches {
 
     private var entries: [String: Entry] = [:]
     private var tail: Task<Void, Never>?
+    /// The position the engine is searching right now, and how many searches are queued behind
+    /// it (`yieldIfAbandoned`).
+    private var current: String?
+    private var waiting = 0
     private let storage: URL?
 
     public init(storage: URL? = nil) {
@@ -116,12 +120,16 @@ public actor PositionSearches {
     private func start(_ key: String, game: Game, engine: any Engine, budget: SearchBudget) {
         entries[key]?.running = budget
         let previous = tail
+        waiting += 1
+        yieldIfAbandoned()
         let search = Task {
             await previous?.value
+            waiting -= 1
             guard !Task.isCancelled, entries[key]?.listeners.isEmpty == false, !engine.isPaused else {
                 abandon(key)
                 return
             }
+            current = key
             var reached: Analysis?
             // Two lines cover tactics too; never launch a wider second pass.
             for await snapshot in engine.analyse(game, budget: budget, lines: 2) {
@@ -135,10 +143,25 @@ public actor PositionSearches {
                     listener.continuation.yield(snapshot)
                 }
             }
+            current = nil
             finish(key, game: game, engine: engine, budget: budget, reached: reached, cancelled: Task.isCancelled)
         }
         entries[key]?.search = search
         tail = search
+    }
+
+    /// Stops the search in flight when nobody is reading it and somebody is waiting behind it.
+    ///
+    /// A search runs on after its readers leave so the position has its answer, and that is
+    /// right while the engine has nothing else to do. Searches run one at a time, though, and
+    /// on a phone one is ten seconds: leave a drill while its position is still being searched
+    /// and the next drill's board waits out the rest of that clock with no number on it, and a
+    /// bar with no number draws a level game — 「一直是 50% 50%」. What the stopped search had
+    /// climbed to is kept (`latest` commits as it climbs) and the entry stays unfinished, so the
+    /// next reader of that position picks the search back up out of the engine's hash table.
+    private func yieldIfAbandoned() {
+        guard waiting > 0, let current, entries[current]?.listeners.isEmpty == true else { return }
+        entries[current]?.search?.cancel()
     }
 
     /// No search started, so there is nothing new to keep: the readers are let go, and an entry
@@ -160,6 +183,7 @@ public actor PositionSearches {
         // A deeper search is for whoever asked for it. With nobody left waiting it is stopped,
         // where the everyday search runs on: that one is the position's answer for everybody.
         if entry.running == Self.deeper, !entry.hasDeeperListener { entry.search?.cancel() }
+        yieldIfAbandoned()
     }
 
     private func finish(

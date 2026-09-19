@@ -713,3 +713,33 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     #expect(session.historyScore(atPly: 0) == .centipawns(0))
     #expect(session.game.plies[0].judgement == nil, "and the file is not written to")
 }
+
+/// Contract: a bar with no number draws a level game, so the bar is never without one while a
+/// move is being weighed. The position the move made has not been searched yet — that is what
+/// the weighing is — and on a phone that is ten seconds or more of a bar sitting at half and
+/// half over a position that is nothing like level. Until the verdict, it holds the number of
+/// the position the move was played from.
+@MainActor
+@Test func theBarHoldsItsNumberWhileAMoveIsWeighed() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let afterE4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let unanswered = AsyncStream<Analysis>.makeStream()
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(300), uciMoves: ["d2d4"], san: ["d4"])
+        ]),
+    ], controlled: { game, _ in game.state.fen == afterE4.state.fen ? unanswered.stream : nil })
+    let session = GameSession.fresh(start, engine: engine)
+    defer {
+        session.suspend()
+        unanswered.continuation.finish()
+    }
+    session.setIntercept(JudgementLines.defaultIntercept)
+    await session.waitForPreparedInterception()
+    try #require(session.strip.bar?.score == .centipawns(300))
+
+    session.play(try #require(start.state.move(matching: "e2e4")))
+    for _ in 0..<20 { await Task.yield() }
+    try #require(session.isWeighing, "the position the move made has no answer yet")
+    #expect(session.strip.bar?.score == .centipawns(300), "not nil, which the bar draws as 50/50")
+}
