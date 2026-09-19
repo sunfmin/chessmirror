@@ -374,7 +374,7 @@
 "lines" = "Lines";
 "lines.record" = "Write it down";
 "lines.enqueue" = "Drill it";
-"lines.explained" = "How much of the game a move has to give away to count. Past the first it is written into the game; past the second it also takes practice time, so that one should be higher. Near equality, a pawn is about 10%.";
+"lines.explained" = "How much of the game a move has to give away to count. Past the first it is written into the game — and, with No Slips on, taken back; past the second it also takes practice time, so that one should be higher. Near equality, a pawn is about 10%.";
 
 /* ------------------------------------------------------------ the book */
 "book" = "Mistakes";
@@ -423,7 +423,6 @@
 "till.start" = "Start No Slips";
 "till.name" = "No Slips";
 "till.practice" = "Practice";
-"till.intercept" = "Intercept line";
 "till.off" = "Off";
 "till.judging" = "Calculating";
 "till.refused" = "%@ costs %d%%. Try again.";

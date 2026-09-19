@@ -22,7 +22,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(played, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(JudgementLines.defaultIntercept)
+    session.setTilling(true)
     await session.waitForPreparedInterception()
     session.jump(toPly: 0)
     await session.waitForPreparedInterception()
@@ -53,7 +53,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(played, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(JudgementLines.defaultIntercept)
+    session.setTilling(true)
     await session.waitForPreparedInterception()
     session.jump(toPly: 0)
     await session.waitForPreparedInterception()
@@ -94,7 +94,7 @@ import ChessmirrorKitTesting
         ]),
     ])
     let session = GameSession.fresh(played, engine: engine)
-    session.setIntercept(JudgementLines.defaultIntercept)
+    session.setTilling(true)
     session.jump(toPly: 2)
     await session.waitForPreparedInterception()
     let twoPliesIn = try #require(played.rewound(to: 2))
@@ -130,7 +130,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(5)
+    session.till(at: 5)
     await session.waitForPreparedInterception()
     for _ in 0..<2 {
         session.play(try #require(start.state.move(matching: "f2f3")))
@@ -168,7 +168,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(5)
+    session.till(at: 5)
     await session.waitForPreparedInterception()
     session.play(try #require(start.state.move(matching: "f2f3")))
     await session.settled()
@@ -318,19 +318,19 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     #expect(session.historyScore(atPly: 2) == .centipawns(2 * score))
 }
 
-/// Contract: toggling interception remembers its threshold, keeps the badge under the board on,
-/// survives a real PGN file round trip while OFF, and never changes the game.
+/// Contract: 把关 is a switch and nothing else. On, it stops the player at the 记录线; off, the
+/// file says nothing of it, a real PGN file round trip comes back off, and the game never changes.
 @MainActor
-@Test func tillingToggleRemembersItsThreshold() throws {
+@Test func tillingIsASwitchThatReadsTheRecordLine() throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
-    let session = GameSession.fresh(game)
+    let session = GameSession.fresh(game, lines: JudgementLines(record: 15, enqueue: 20))
     session.setTilling(true)
     #expect(session.isTilling)
-    #expect(session.lines.intercept == 5)
-    session.setIntercept(37)
+    #expect(session.lines.intercept == 15, "it stops the player where the book writes down")
+    #expect(session.pgn.tag("Intercept") == "15.0")
     session.setTilling(false)
     #expect(!session.isTilling)
-    #expect(session.preferredIntercept == 37)
+    #expect(session.lines.record == 15, "and switching it off moves no line")
     #expect(session.game.uciMoves == game.uciMoves)
     let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -343,9 +343,42 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     #expect(!reopened.isTilling)
     reopened.setTilling(true)
     #expect(reopened.isTilling)
-    #expect(reopened.lines.intercept == 37)
-    #expect(reopened.pgn.tag("InterceptPreference") == nil, "active threshold has only one authoritative tag")
+    #expect(reopened.lines.intercept == JudgementLines.standard.record)
     #expect(reopened.game == game)
+}
+
+/// Contract: a game saved when 把关 had a dial of its own comes back with 把关 on, stopping the
+/// player at the 记录线 they have now; the moves already judged keep the line they stood under,
+/// and the file stops carrying a line to come back on at (docs/adr/0046).
+@MainActor
+@Test func aGameSavedUnderItsOwnInterceptLineReopensOnTheRecordLine() throws {
+    let saved = try PGN(parsing: """
+        [Event "Chessmirror"]
+        [White "手动"]
+        [Black "Stockfish 18"]
+        [Result "*"]
+        [Intercept "5.0"]
+        [Source "fresh"]
+
+        1. e4 {[%judged 20 0.0 0.33 under 5.0]} e5 *
+        """)
+    let entry = GameLibrary.Entry(url: URL(filePath: "/games/old.pgn"), pgn: saved, modified: Date())
+    let opened = try #require(GameSession.opened(entry, lines: JudgementLines(record: 15, enqueue: 15)))
+    #expect(opened.isTilling, "the file's word on the switch")
+    #expect(opened.lines.intercept == 15, "the player's word on the line")
+    #expect(opened.game.plies[0].judgement?.intercept == 5, "what stood under five still says five")
+    #expect(opened.pgn.tag("Intercept") == "15.0")
+
+    var off = saved
+    off.setTag("Intercept", to: nil)
+    off.setTag("InterceptPreference", to: "37.0")
+    let quiet = try #require(GameSession.opened(
+        GameLibrary.Entry(url: URL(filePath: "/games/off.pgn"), pgn: off, modified: Date())
+    ))
+    #expect(!quiet.isTilling)
+    #expect(quiet.pgn.tag("InterceptPreference") == nil, "a dial that is gone has nothing to come back to")
+    quiet.setTilling(true)
+    #expect(quiet.lines.intercept == JudgementLines.standard.record)
 }
 
 /// A real post-move depth-20 judgement, followed by an opponent reply on its own clock.
@@ -358,7 +391,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine], engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
     await session.waitForPreparedInterception()
     try #require((session.searchProgress?.depth ?? 0) > 0)
     let started = ContinuousClock.now
@@ -386,7 +419,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     session.suspend()
     let oldGame = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: session.game.uciMoves))
     let legacy = GameSession.fresh(oldGame, controllers: [.white: .hand, .black: .engine])
-    legacy.setIntercept(JudgementLines.defaultIntercept)
+    legacy.setTilling(true)
     legacy.attach(engine: engine, library: nil)
     defer { legacy.suspend() }
     #expect(legacy.game.plies[0].judgement == nil)
@@ -420,7 +453,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ], isPartial: true)])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
     await session.settled()
@@ -440,7 +473,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
     await session.waitForPreparedInterception()
     let searches = engine.searchCount
     session.play(try #require(game.state.move(matching: "d8h4")))
@@ -465,7 +498,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
 
@@ -488,7 +521,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
     session.play(try #require(session.game.state.move(matching: "f2f3")))
     await session.settled()
     #expect(session.refused?.san == "f3")
@@ -511,7 +544,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
 
     await session.waitForPreparedInterception()
     #expect(session.searchProgress?.depth == 20)
@@ -531,21 +564,23 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 
 @MainActor
 @Test(arguments: [0.0, 5.0, 7.0, 37.0, 100.0])
-func interceptionSettingSurvivesReopening(_ line: Double) throws {
+func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
     let session = GameSession.fresh(game)
-    session.setIntercept(line)
+    session.till(at: line)
     #expect(session.isTilling)
     let pgn = try PGN(parsing: session.pgn.text)
     let opened = try #require(GameSession.opened(GameLibrary.Entry(
         url: URL(filePath: "/games/tilling.pgn"), pgn: pgn, modified: Date()
     )))
-    #expect(opened.lines.intercept == line)
-    opened.setIntercept(.nan)
-    #expect(opened.lines.intercept == line)
-    opened.setIntercept(101)
-    #expect(opened.lines.intercept == line)
-    opened.setIntercept(nil)
+    #expect(pgn.intercept == line, "the file says where the moves in it were stopped")
+    #expect(opened.isTilling)
+    #expect(opened.lines.intercept == JudgementLines.standard.record, "and the player says where the next is")
+    opened.till(at: .nan)
+    #expect(opened.lines == JudgementLines(tilling: true), "a line off the scale is not a line")
+    opened.till(at: 101)
+    #expect(opened.lines == JudgementLines(tilling: true))
+    opened.setTilling(false)
     #expect(!opened.isTilling)
     #expect(opened.pgn.tag("Intercept") == nil)
 }
@@ -561,7 +596,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3", "e7e5"]))
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
     let blunder = try #require(game.state.move(matching: "g2g4"))
     session.play(blunder)
     #expect(session.isWeighing)
@@ -573,7 +608,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     #expect(session.refused!.drop >= 10)
 
     // Switching interception off lets a retry stand, while preserving the earlier refusal.
-    session.setIntercept(nil)
+    session.setTilling(false)
     session.play(try #require(game.state.move(matching: "e2e4")))
     await session.settled()
     #expect(session.game.uciMoves == ["f2f3", "e7e5", "e2e4"])
@@ -599,7 +634,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, engine: engine)
-    session.setIntercept(10)
+    session.till(at: 10)
     session.play(try #require(game.state.move(matching: "e2e4")))
     #expect(session.game != game)
     session.suspend()
@@ -627,7 +662,7 @@ func interceptionSettingSurvivesReopening(_ line: Double) throws {
         ]),
     ])
     let session = GameSession.fresh(game, engine: engine)
-    session.setIntercept(JudgementLines.defaultIntercept)
+    session.setTilling(true)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "d2d4")))
     await session.settled()

@@ -328,7 +328,7 @@
 "lines" = "Umbrales";
 "lines.record" = "Anotarla";
 "lines.enqueue" = "Practicarla";
-"lines.explained" = "Cuánto tiene que regalar una jugada para contar. Pasado el primero se anota en la partida; pasado el segundo también ocupa tiempo de práctica, así que ese debería ser más alto. Cerca de la igualdad, un peón es más o menos un 10%.";
+"lines.explained" = "Cuánto tiene que regalar una jugada para contar. Pasado el primero se anota en la partida — y, con Sin errores activado, se devuelve; pasado el segundo también ocupa tiempo de práctica, así que ese debería ser más alto. Cerca de la igualdad, un peón es más o menos un 10%.";
 
 /* ------------------------------------------------------------ el cuaderno */
 "book" = "Errores";
@@ -378,7 +378,6 @@
 "till.start" = "Empezar sin errores";
 "till.name" = "Sin errores";
 "till.practice" = "Práctica";
-"till.intercept" = "Umbral de rechazo";
 "till.off" = "Desactivado";
 "till.judging" = "Calculando";
 "till.refused" = "%@ pierde %d%%. Inténtalo de nuevo.";

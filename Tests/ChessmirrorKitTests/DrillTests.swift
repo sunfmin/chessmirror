@@ -147,18 +147,19 @@ func aTwelvePointMoveFails() async throws {
 
 /// The 线 a drill is judged under and the 线 it is refused under are one value, the drill's own.
 /// A session practising it mirrors those 线 and lands the drill's ruling as it is — a twelve-point
-/// move is refused under a 拦截线 of five and stands under one of thirty, and nothing in the
-/// session has a line of its own to say otherwise.
+/// move is refused under a 记录线 of five and stands under one of thirty, and nothing in the
+/// session has a line of its own to say otherwise. The line that takes it back is the line that
+/// writes it down (docs/adr/0046), so the move that stands is also the move that passes.
 @MainActor
 @Test("the drill rules its own attempt, and the session lands it under the same 线")
 func theDrillRulesItsOwnAttempt() async throws {
-    for (intercept, stands) in [(5.0, false), (30.0, true)] {
+    for (record, stands) in [(5.0, false), (30.0, true)] {
         let (scripted, move) = try engine(
             before: .centipawns(0), playing: "Qh4", after: .centipawns(133), wanting: "Nc6"
         )
         let log = temporaryLog()
         defer { try? FileManager.default.removeItem(at: log.url) }
-        let lines = JudgementLines(intercept: intercept)
+        let lines = JudgementLines(tilling: true, record: record, enqueue: record)
         let drill = try #require(Drill(position: afterNf3, engine: scripted, log: log, lines: lines))
         let session = GameSession.practising(drill, engine: scripted)
         defer { session.suspend() }
@@ -168,7 +169,7 @@ func theDrillRulesItsOwnAttempt() async throws {
         await session.settled()
 
         let ruling = try #require(drill.ruling)
-        #expect(ruling.takesTheMoveBack == !stands, "at \(intercept)")
+        #expect(ruling.takesTheMoveBack == !stands, "at \(record)")
         #expect(session.game == ruling.game, "the session shows what the drill ruled")
         if stands {
             #expect(session.game.plies.count == 1)
@@ -178,7 +179,7 @@ func theDrillRulesItsOwnAttempt() async throws {
             #expect(session.refused?.san == "Qh4")
             #expect(session.game.pendingTries(atPly: 0).map(\.san) == ["Qh4"])
         }
-        #expect(drill.verdict?.passed == false, "the 记录线 is still five: written down either way")
+        #expect(drill.verdict?.passed == stands, "taken back and written down are one line")
     }
 }
 

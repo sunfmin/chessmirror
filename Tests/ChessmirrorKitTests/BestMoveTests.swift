@@ -23,7 +23,7 @@ import Testing
         ))
         let ruling = Ruling(
             weighed, san: "e4", played: played, from: Standpoint(game: start, cursor: 0),
-            lines: JudgementLines(intercept: 10, record: 5, enqueue: 5)
+            lines: JudgementLines(tilling: true, record: 5, enqueue: 5)
         )
         #expect(ruling.game.plies[0].judgement?.best == true)
         #expect(ruling.game.isBest(atPly: 1))
@@ -36,7 +36,7 @@ import Testing
         try #require(appliedD4)
         let other = Ruling(
             second, san: "d4", played: d4, from: Standpoint(game: start, cursor: 0),
-            lines: JudgementLines(intercept: 10, record: 5, enqueue: 5)
+            lines: JudgementLines(tilling: true, record: 5, enqueue: 5)
         )
         #expect(other.game.plies[0].judgement?.best == false)
         #expect(!other.game.isBest(atPly: 1))

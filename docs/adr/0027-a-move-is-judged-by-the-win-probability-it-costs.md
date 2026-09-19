@@ -30,6 +30,10 @@ The 入列线 is what earns a place in the player's future practice time, and it
 记录线 because a mistake can be worth remembering without being worth drilling. Defaults are 10%,
 10% and 20%.
 
+_Amended by [ADR 0046](0046-no-slips-stops-the-player-at-the-record-line.md): the 拦截线 is no
+longer a line of its own — 把关 stops the player at the 记录线 — and both remaining lines ship at
+ten._
+
 ## Consequences
 
 - **The 拦截线 is 耕棋's only difficulty dial, and the engine's strength is never one.** How

@@ -571,7 +571,8 @@ struct LibraryScreen: View {
                     picture: picture,
                     shaky: shaky,
                     engine: engine.service,
-                    library: library
+                    library: library,
+                    lines: judgement.lines
                 )
                 path.append(.game(session))
             case .needsEditing(let draft, let shaky, let orientation, let picture):
@@ -594,7 +595,7 @@ struct LibraryScreen: View {
     private func start(_ game: Game?, tilling: Bool = false) {
         guard let game else { return }
         var lines = judgement.lines
-        if tilling { lines.intercept = JudgementLines.defaultIntercept }
+        lines.tilling = tilling
         let session = GameSession.playing(
             game, engine: engine.service, library: library,
             strength: StrengthSetting.shared.strength, lines: lines
@@ -604,7 +605,8 @@ struct LibraryScreen: View {
 
     private func open(_ entry: GameLibrary.Entry) {
         guard let session = GameSession.opened(
-            entry, engine: engine.service, library: library, strength: StrengthSetting.shared.strength
+            entry, engine: engine.service, library: library,
+            strength: StrengthSetting.shared.strength, lines: judgement.lines
         ) else { return }
         path.append(.game(session))
     }

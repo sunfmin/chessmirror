@@ -43,7 +43,7 @@ struct DeckFloor {
         #expect(!rendered.says(localized("discovery.mateFound")))
         #expect(!rendered.says(localized("discovery.tacticFound")))
         #expect(!rendered.says(localized("discovery.none")), "no-result states occupy no UI")
-        #expect(!rendered.says(localized("till.intercept")), "settings must not open automatically")
+        #expect(!rendered.says(localized("punish.toggle")), "settings must not open automatically")
         #expect(!rendered.says("e4"), "an engine answer is not permission to reveal it")
         let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
         func wood(_ colour: (r: Int, g: Int, b: Int)) -> Bool {

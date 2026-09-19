@@ -135,7 +135,7 @@ import ChessmirrorKitTesting
         ])
         let session = GameSession.fresh(start, engine: engine)
         defer { session.suspend() }
-        session.setIntercept(10)
+        session.till(at: 10)
         await session.waitForPreparedInterception()
         #expect(session.noSlips == .none)
 

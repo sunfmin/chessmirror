@@ -72,6 +72,6 @@ extension Score {
     }
 
     /// The same number as a percentage, which is the unit every line in this app is drawn in —
-    /// 10% intercept, 10% record, 20% enqueue (docs/adr/0027).
+    /// 10% record — where 把关 also stops the player — and 10% enqueue (docs/adr/0027, 0046).
     public var winPercent: Double { winChance * 100 }
 }

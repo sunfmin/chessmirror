@@ -18,7 +18,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
                                 uciMoves: ["f2f3", "e7e5"]))
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(10)
+    session.till(at: 10)
     session.findsPunishment = true
     session.play(try #require(game.state.move(matching: "g2g4")))
     await session.settled()
@@ -48,7 +48,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     #expect(session.board.state == game.state)
     #expect(session.board.state.sideToMove == .white)
 
-    session.setIntercept(nil)
+    session.setTilling(false)
     session.play(try #require(game.state.move(matching: "e2e4")))
     await session.settled()
     #expect(session.game != game)
@@ -114,7 +114,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     defer { session.suspend() }
     #expect(!session.findsPunishment)
     session.findsPunishment = true
-    session.setIntercept(10)
+    session.till(at: 10)
     session.play(try #require(game.state.move(matching: "d2d4")))
 
     await session.settled()
@@ -123,7 +123,7 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     #expect(session.board.uciMoves == ["d2d4"])
     #expect(session.board.state.sideToMove == .black)
     session.restart(withSideToMove: .black)
-    session.setIntercept(nil)
+    session.setTilling(false)
     session.setController(.engine, for: .white)
     #expect(session.game.uciMoves == game.uciMoves)
     #expect(session.lines.intercept == 10)

@@ -323,12 +323,11 @@ func theFactsOfAGameRoundTripThroughTheirTags() throws {
 
     let on = PGN(
         game: game, seats: [.white: .hand, .black: .engine], origin: .recognised,
-        lines: JudgementLines(intercept: 7), preferredIntercept: 7,
+        lines: JudgementLines(tilling: true, record: 7, enqueue: 7),
         carrying: [.init("Date", "2026.09.16")]
     )
     let readOn = try PGN(parsing: on.text)
-    #expect(readOn.intercept == 7)
-    #expect(readOn.interceptPreference == nil, "on, so nothing to come back to")
+    #expect(readOn.intercept == 7, "把关 on, stopping the player at the 记录线")
     #expect(readOn.origin == .recognised)
     #expect(readOn.handColours == [.white])
     #expect(readOn.tag("Date") == "2026.09.16", "what the file carried is kept")
@@ -336,11 +335,11 @@ func theFactsOfAGameRoundTripThroughTheirTags() throws {
 
     let off = PGN(
         game: game, seats: [.white: .engine, .black: .hand], origin: .fresh,
-        lines: .standard, preferredIntercept: 37
+        lines: .standard, carrying: [.init("InterceptPreference", "37.0")]
     )
     let readOff = try PGN(parsing: off.text)
     #expect(readOff.intercept == nil)
-    #expect(readOff.interceptPreference == 37, "off, at the line it comes back on at")
+    #expect(readOff.tag("InterceptPreference") == nil, "把关 has no line of its own to come back on at")
     #expect(readOff.origin == .fresh)
     #expect(readOff.handColours == [.black])
     #expect(readOff.tag("Date") != nil, "a date is written when none was carried")
@@ -351,7 +350,7 @@ func theFactsOfAGameRoundTripThroughTheirTags() throws {
     imported.setName("Round 3")
     let written = PGN(
         game: game, seats: [.white: .hand, .black: .engine], origin: .imported,
-        lines: .standard, preferredIntercept: nil, carrying: imported.tags
+        lines: .standard, carrying: imported.tags
     )
     let readImported = try PGN(parsing: written.text)
     #expect(readImported.tag("White") == "Carlsen")

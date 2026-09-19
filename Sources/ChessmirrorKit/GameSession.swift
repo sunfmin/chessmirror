@@ -157,10 +157,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var picture: RGBImage?
     public var shaky: Set<Square>
 
-    /// The 拦截线 this game was last played under, kept while 把关 is off so the switch comes back
-    /// on at the same line. Nil for a game that has never had one.
-    public private(set) var preferredIntercept: Double?
-
     /// Whether a Tactic may be named on the latest position (docs/adr/0023).
     ///
     /// Off at the start of every Game, never written to PGN, silent on a past Ply. Practice
@@ -230,7 +226,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         viewing: Int? = nil,
         /// The 棋力 to play at when the game itself does not say: what the player last picked.
         strength: Strength = .full,
-        /// The lines to judge by when the file does not say: the file's `Intercept` tag wins.
+        /// The lines to judge by. Whether 把关 is on is the file's word (`Intercept`) when it has one.
         lines: JudgementLines = .standard
     ) {
         self.game = game
@@ -245,12 +241,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         self.url = url
         self.tags = tags
         self.cursor = min(max(0, viewing ?? game.plies.count), game.plies.count)
-        // The file's word on the 拦截线 wins over the caller's: 把关 is a thing one game is
-        // played under, and a reopened game comes back under the line it was saved under.
-        let file = PGN(game: game, tags: tags)
+        // The file's word on 把关 wins over the caller's: it is a thing one game is played
+        // under, and a game saved with it on comes back with it on. *Where* it stops the player
+        // is the caller's 记录线 — the one number the player owns (docs/adr/0046) — and not the
+        // number the file was saved under, which stays on the judgements that stood under it.
         self.lines = lines
-        if let intercept = file.intercept { self.lines.intercept = intercept }
-        preferredIntercept = self.lines.intercept ?? file.interceptPreference
+        if PGN(game: game, tags: tags).intercept != nil { self.lines.tilling = true }
     }
 
     // ------------------------------------------------------------------ ways in
@@ -269,10 +265,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         picture: RGBImage? = nil,
         shaky: Set<Square> = [],
         engine: (any Engine)? = nil,
-        library: GameLibrary? = nil
+        library: GameLibrary? = nil,
+        lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
-            game: game, orientation: orientation, origin: .recognised, picture: picture, shaky: shaky
+            game: game, orientation: orientation, origin: .recognised, picture: picture, shaky: shaky,
+            lines: lines
         )
         session.attach(engine: engine, library: library)
         return session
@@ -396,10 +394,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         _ entry: GameLibrary.Entry,
         engine: (any Engine)? = nil,
         library: GameLibrary? = nil,
-        strength: Strength = .full
+        strength: Strength = .full,
+        /// The player's lines as they are now. The file says whether 把关 is on; where it stops
+        /// the player is the 记录线 handed in here (docs/adr/0046).
+        lines: JudgementLines = .standard
     ) -> GameSession? {
         guard !entry.isDownloading else { return nil }
-        let session = GameSession(entry: entry, library: library, strength: strength)
+        let session = GameSession(entry: entry, library: library, strength: strength, lines: lines)
         session.attach(engine: engine, library: library)
         session.seatEngineOpponent()
         return session
@@ -416,7 +417,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         picture: RGBImage?,
         shaky: Set<Square>,
         engine: (any Engine)?,
-        library: GameLibrary?
+        library: GameLibrary?,
+        lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
             game: game,
@@ -424,7 +426,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             orientation: orientation,
             origin: origin,
             picture: picture,
-            shaky: shaky
+            shaky: shaky,
+            lines: lines
         )
         session.attach(engine: engine, library: library)
         return session
@@ -433,7 +436,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Reopens a saved game, at the position it began in, facing the person holding the phone
     /// when the file says who that is, and the side about to move otherwise.
     private convenience init(
-        entry: GameLibrary.Entry, library: GameLibrary? = nil, strength: Strength = .full
+        entry: GameLibrary.Entry, library: GameLibrary? = nil, strength: Strength = .full,
+        lines: JudgementLines = .standard
     ) {
         let pgn = entry.pgn
         let game = pgn?.game ?? Game(startFEN: PGN.standardStartFEN)!
@@ -454,7 +458,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             url: entry.url,
             tags: pgn?.tags ?? [],
             viewing: 0,
-            strength: strength
+            strength: strength,
+            lines: lines
         )
     }
 
@@ -706,19 +711,18 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public var isAtLatest: Bool { cursor >= game.plies.count }
 
-    /// The three lines this game is judged by (docs/adr/0027). Per game rather than global: the
-    /// 拦截线 is 把关's switch as well as its dial, and 把关 is a thing one game is played under.
-    /// Written through `setLines` and `setIntercept`, which is where what follows a change lives.
+    /// The lines this game is judged by (docs/adr/0027, 0046). Per game rather than global: the
+    /// numbers are the player's, and whether 把关 reads them is a thing one game is played under.
+    /// Written through `setLines` and `setTilling`, which is where what follows a change lives.
     public private(set) var lines: JudgementLines = .standard
 
     /// 正着: whether a move by hand is measured before it is allowed to stand.
     ///
-    /// The switch and the dial are one control, because they are one question — "how much am I
-    /// allowed to give away before I am stopped" — and off is the answer "anything" (docs/adr/0027).
-    /// It is a *per game* setting and it sits beside 谁执白 and 引擎想多久 rather than in the
-    /// app's settings: any position can be tilled, including one reached by playing on from a
-    /// 错题 or read off a photograph.
-    public var isTilling: Bool { lines.intercept != nil }
+    /// A switch and nothing else: where it stops the player is the 记录线, the same number that
+    /// decides what is written down (docs/adr/0046). The switch is a *per game* setting and it
+    /// sits beside 谁执白 and 引擎想多久 rather than in the app's settings: any position can be
+    /// tilled, including one reached by playing on from a 错题 or read off a photograph.
+    public var isTilling: Bool { lines.tilling }
     /// Whether the deck is dealt and a card may ask the engine: never under 把关. A card is an
     /// opinion about the position in front of the player, and 把关 says nothing about what to
     /// play (docs/adr/0031, 0040). The one rule, read here by the screen that deals and by the
@@ -731,31 +735,26 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return punishment
     }
 
-    /// Moves the 拦截线, or switches 正着 off with nil. **The only dial 正着 has on the judgement
-    /// of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how much slack the
-    /// coach cuts are two different questions, and answering both with one knob makes it
-    /// impossible to say who improved (docs/adr/0009).
+    /// Switches 把关 on or off. It stops the player at the 记录线, **the only dial 把关 has on the
+    /// judgement of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how
+    /// much slack the coach cuts are two different questions, and answering both with one knob
+    /// makes it impossible to say who improved (docs/adr/0009).
     public func setTilling(_ enabled: Bool) {
-        setIntercept(enabled ? (preferredIntercept ?? JudgementLines.defaultIntercept) : nil)
-    }
-
-    public func setIntercept(_ line: Double?) {
         var moved = lines
-        moved.intercept = line
+        moved.tilling = enabled
         setLines(moved)
     }
 
-    /// All three lines at once — what a game opened from the library starts under. The same
-    /// consequences as moving the 拦截线 alone: a refusal made under the old lines is forgotten,
-    /// the file says the new ones, and the search starts over.
+    /// The lines and the switch at once — what a game opened from the library starts under. The
+    /// same consequences as flipping the switch alone: a refusal made under the old lines is
+    /// forgotten, the file says the new ones, and the search starts over.
     public func setLines(_ new: JudgementLines) {
         guard !isOccupied else { return }
-        if let line = new.intercept, !line.isFinite || !JudgementLines.interceptRange.contains(line) { return }
+        guard new.isDrawn else { return }
         guard lines != new else { return }
         let interceptMoved = lines.intercept != new.intercept
         lines = new
-        if interceptMoved, let line = new.intercept {
-            preferredIntercept = line
+        if interceptMoved, new.tilling {
             analysis = nil
             setFindingTactics(false)
         }
@@ -2344,8 +2343,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// session names no tag; what it holds is the facts.
     public var pgn: PGN {
         PGN(
-            game: game, seats: controllers, origin: origin, lines: lines,
-            preferredIntercept: preferredIntercept, carrying: tags
+            game: game, seats: controllers, origin: origin, lines: lines, carrying: tags
         )
     }
 
