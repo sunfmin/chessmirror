@@ -163,3 +163,38 @@ private func read(_ store: PositionSearches, _ game: Game, using engine: Scripte
     #expect(await read(store, game, using: engine) == shallow, "and the entry is as it was")
     #expect(engine.searchCount == 2)
 }
+
+/// Contract: a search nobody is waiting for does not hold up one somebody is. Searches run one
+/// at a time, and an everyday search runs on after its readers leave so the position has its
+/// answer — which is right while the engine has nothing else to do. With a reader queued behind
+/// it, it is ten seconds of a phone's engine spent on a board that is off the screen while the
+/// board that is on it shows no number at all: 「做练习题的时候，局势一直是 50% 50%」.
+@Test func aSearchNobodyWaitsForYieldsToOneSomebodyIs() async throws {
+    let left = try #require(Game(startFEN: PGN.standardStartFEN))
+    let arrived = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let line = [Line(score: .centipawns(30), uciMoves: ["e7e5"], san: ["e5"])]
+    let answer = Analysis(depth: 20, lines: line)
+    let abandoned = AsyncStream<Analysis>.makeStream()
+    let stopped = Mutex(false)
+    abandoned.continuation.onTermination = { _ in stopped.withLock { $0 = true } }
+    let engine = ScriptedEngine([answer], controlled: { game, _ in
+        game.state.fen == left.state.fen ? abandoned.stream : nil
+    })
+    let store = PositionSearches()
+
+    // A reader starts the first position's search and walks away from it mid-search.
+    let leaving = Task { await read(store, left, using: engine) }
+    await until { engine.searchCount == 1 }
+    abandoned.continuation.yield(Analysis(depth: 8, lines: line))
+    leaving.cancel()
+    _ = await leaving.value
+
+    // The next position is answered now, not when the abandoned search runs out its clock.
+    let asking = Task { await read(store, arrived, using: engine) }
+    await until { engine.searchCount == 2 }
+    #expect(engine.searchCount == 2, "the waiting search starts")
+    #expect(stopped.withLock { $0 }, "and the abandoned one is told to stop")
+    // Let go of the abandoned search either way, so a failure here is a failure and not a hang.
+    abandoned.continuation.finish()
+    #expect(await asking.value == answer)
+}

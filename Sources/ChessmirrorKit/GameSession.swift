@@ -892,11 +892,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
     /// The number for the position on screen: the live bounded search of it when 正着 has one,
     /// else the curve's number for it. No recommended move is exposed here.
+    ///
+    /// While a move is being weighed it is the number of the position the move was played from.
+    /// The position it made has no number until the weighing ends — that is what the weighing is
+    /// — and a bar with no number draws a level game: on a phone, ten seconds and more of half
+    /// and half over a position that is nothing like it. The table, while weighing, can only be
+    /// that position's: the search that fills it was stopped when the move was played.
     private var tillingScore: Score? {
         if let table = interceptTable, table.fen == viewed.state.fen {
             return table.analysis.best?.score
         }
-        return historyScore(atPly: cursor)
+        if let known = historyScore(atPly: cursor) { return known }
+        guard isWeighing else { return nil }
+        return interceptTable?.analysis.best?.score ?? historyScore(atPly: cursor - 1)
     }
     /// The 试招 refused at the position on the board that no move has absorbed yet, oldest
     /// first. Read out of the Game, which is where a refusal is written the moment it happens.
