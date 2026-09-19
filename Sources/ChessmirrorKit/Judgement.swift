@@ -1,16 +1,16 @@
 import Foundation
 
-/// The three lines drawn on the win-probability scale, and what each of them buys (docs/adr/0027).
+/// The lines drawn on the win-probability scale, and what each of them buys (docs/adr/0027, 0046).
 ///
-/// Separate because they answer different questions, and one control answering all three would
-/// make it impossible to say which of them the player actually wanted moved:
+/// Two numbers, and a switch that reads the first of them:
 ///
-/// - **拦截线** is what 正着 stops the player for and rolls the board back over. It is the only
-///   dial 正着 has on the judgement of a move — the engine's 棋力 shapes the opponent it plays and
-///   never what a move costs (docs/adr/0038), because how strong the opponent is and how much
-///   slack the coach cuts are two questions, and answering them with one knob makes it impossible
-///   to say who improved (docs/adr/0009).
-/// - **记录线** is what gets written into the game as a mistake worth remembering.
+/// - **记录线** is what gets written into the game as a mistake worth remembering — and, while
+///   把关 is on, what the player is stopped for and the board rolled back over. One number for
+///   both, because they are one question: "what counts as a mistake". A 把关 that refused at five
+///   while the book wrote down at ten turned back moves nobody would call a mistake, and left the
+///   player two dials to reconcile (docs/adr/0046). It is still the only dial 把关 has on the
+///   judgement of a move — the engine's 棋力 shapes the opponent it plays and never what a move
+///   costs (docs/adr/0038, 0009).
 /// - **入列线** is what earns a place in the player's future practice time. It never sits *below*
 ///   the 记录线 — practice time is spent on things that were written down — and a player who wants
 ///   a wide book and a narrow queue raises it, because a mistake can be worth remembering without
@@ -18,32 +18,41 @@ import Foundation
 ///
 /// Percentage points of win probability, from the mover's own point of view.
 public struct JudgementLines: Hashable, Sendable, Codable {
-    /// Where 正着 takes the move back. Nil for 正着 switched off, which is the ordinary game.
-    public var intercept: Double?
-    /// Where a move gets written down.
+    /// Whether 把关 is on: a move costing the 记录线 or more is taken back. Off is the ordinary game.
+    public var tilling: Bool
+    /// Where a move gets written down, and where 把关 takes it back.
     public var record: Double
     /// Where a written-down move also earns practice time.
     public var enqueue: Double
 
-    public init(intercept: Double? = nil, record: Double = 10, enqueue: Double = 10) {
-        self.intercept = intercept
+    public init(tilling: Bool = false, record: Double = 10, enqueue: Double = 10) {
+        self.tilling = tilling
         self.record = record
         self.enqueue = enqueue
     }
 
-    /// 10 / 10, with 正着 off. The numbers a person who has never touched this gets.
+    /// 10 / 10, with 把关 off. The numbers a person who has never touched this gets.
     ///
-    /// Both at ten: what is worth writing down is worth practising. They were five, which is
-    /// where 正着 intercepts, and a book that took every five-point slip filled with moves nobody
-    /// would call a mistake — 「10% 的错题才会进入错题本」. 正着 still stops the player at five
-    /// (`defaultIntercept`): a move taken back under ten is a correction at the board, not a 错题.
-    /// They are still two lines and either moves on its own (docs/adr/0027) — a player who wants
-    /// the book kept wider than the queue raises one of them — but the pair a phone ships with
-    /// agree.
+    /// Both at ten: what is worth writing down is worth practising, and — 把关 reading the same
+    /// line — what is worth writing down is what is worth stopping the player for. They were
+    /// five, and a book that took every five-point slip filled with moves nobody would call a
+    /// mistake — 「10% 的错题才会进入错题本」. They are still two lines and either moves on its own
+    /// (docs/adr/0027) — a player who wants the book kept wider than the queue raises one of
+    /// them — but the pair a phone ships with agree.
     public static let standard = JudgementLines()
 
-    public static let defaultIntercept = 5.0
-    public static let interceptRange = 0.0...100.0
+    /// The scale a line is drawn on. A line off it is not a line.
+    public static let scale = 0.0...100.0
+
+    /// The 拦截线: where 把关 takes the move back, which is the 记录线 while it is on. Nil for 把关
+    /// switched off. Derived, never set — what a judgement is stamped with (`Ply.Judgement
+    /// .intercept`) and what the file says in its `Intercept` tag.
+    public var intercept: Double? { tilling ? record : nil }
+
+    /// Whether every line is a finite number on the scale.
+    public var isDrawn: Bool {
+        [record, enqueue].allSatisfy { $0.isFinite && Self.scale.contains($0) }
+    }
 
     public func records(_ drop: Double?) -> Bool {
         guard let drop else { return false }

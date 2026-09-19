@@ -22,10 +22,11 @@ through your own iCloud Drive.
   the same game, exit, or take the next question, without a separate Continue button. The verdict
   is one row: 过了 or 没过 in the colour it means, the explanation only when the move failed, and
   one full-width button — 下一题, or 退出 at the end of the queue.
-- The two standing lines, 记录线 and 入列线, both default to 5%, which is where 耕棋 intercepts.
-  Either moves on its own in 关于 → 判决线.
-- **耕棋 / No Slips:** a 0–100% interception slider, defaulting to 5%, with a separate on/off switch.
-  The board's No Slips label toggles interception directly and remembers the selected threshold.
+- The two standing lines, 记录线 and 入列线, both default to 10%. Either moves on its own in
+  关于 → 判决线.
+- **把关 / No Slips:** an on/off switch with no number of its own — it stops the player at the
+  记录线, so a move it refuses is exactly a move that would have been written down.
+  The board's No Slips label toggles interception directly.
   Feedback remains visible while off; answers are explicit multi-move reveals, never a single
   recommendation arrow or a separate practice/analysis eye switch.
   Refused moves return to their original position and become PGN comments on the eventual move.
@@ -135,8 +136,8 @@ separate; schedules and the mistake index are derived. No Slips stores `[%tried 
 optional `notfound` suffix for assisted attempts, the 应招 after a bar (`[%tried Nf3 -23% | Nxe4
 Nxe4 d5]`), and `[%hint N]`. A refusal nothing has absorbed yet — the player left before finding a
 move — is written under `[%pending <plies> …]`, carrying the position it happened at and moving
-onto the move that takes it when one is played. The `Intercept` tag stores
-the game's threshold. Import review stores local depth in `ReviewDepth` and ordering provenance
+onto the move that takes it when one is played. The `Intercept` tag says
+No Slips was on, and the 记录线 it was stopping the player at. Import review stores local depth in `ReviewDepth` and ordering provenance
 in `ReviewSift`. `TrackedSide` identifies the imported side included in the personal mistake book
 without replacing the PGN's `White` and `Black` player names.
 

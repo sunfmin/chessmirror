@@ -37,7 +37,7 @@ public struct PGN: Hashable, Sendable {
     // ------------------------------------------- the facts a game carries in its tags
     //
     // The one place a fact about a game is given its tag name. A session writes its game through
-    // `init(game:seats:origin:lines:preferredIntercept:carrying:)` and reads the facts back
+    // `init(game:seats:origin:lines:carrying:)` and reads the facts back
     // through the properties below, and never names a tag itself; the library's list, the 错题本
     // and the 连正榜 read the same properties off the same file, which is how the row under the
     // board and the ladder come to agree about whose moves are whose.
@@ -51,7 +51,7 @@ public struct PGN: Hashable, Sendable {
     /// each in the tag it lives in, over whatever the file carried before (`carrying`).
     public init(
         game: Game, seats: [PieceColour: Controller], origin: GameOrigin,
-        lines: JudgementLines, preferredIntercept: Double?, carrying tags: [Tag] = []
+        lines: JudgementLines, carrying tags: [Tag] = []
     ) {
         var written = PGN(game: game, tags: tags)
         // Event carries the app's name, which is what PGN's "which set of games is this" tag is
@@ -71,10 +71,9 @@ public struct PGN: Hashable, Sendable {
         }
         written.setTag("Result", to: game.resultToken)
         written.setTag(Self.interceptTag, to: lines.intercept.map(String.init(describing:)))
-        written.setTag(
-            Self.interceptPreferenceTag,
-            to: lines.intercept == nil ? preferredIntercept.map(String.init(describing:)) : nil
-        )
+        // The line 把关 would come back on at, from when it had a dial of its own. It has none
+        // now (docs/adr/0046), so a file that carried one stops carrying it.
+        written.setTag(Self.interceptPreferenceTag, to: nil)
         written.setTag(GameOrigin.tagName, to: origin.tagValue)
         if written.tag("Date") == nil {
             written.tags.append(Self.dateTag())
@@ -82,15 +81,12 @@ public struct PGN: Hashable, Sendable {
         self = written
     }
 
-    /// The 拦截线 the game was saved under: 把关 was on, at this line.
-    public var intercept: Double? { line(Self.interceptTag) }
-
-    /// The 拦截线 to come back on at, kept while 把关 is off. Nil when it is on (`intercept` says).
-    public var interceptPreference: Double? { line(Self.interceptPreferenceTag) }
-
-    private func line(_ name: String) -> Double? {
-        guard let value = tag(name).flatMap(Double.init), value.isFinite,
-              JudgementLines.interceptRange.contains(value) else { return nil }
+    /// The 拦截线 the game was saved under: 把关 was on, stopping the player at this line. A game
+    /// reopened comes back with 把关 on and stops at the player's 记录线 as it is now; the number
+    /// here is the account of the moves already played (docs/adr/0046).
+    public var intercept: Double? {
+        guard let value = tag(Self.interceptTag).flatMap(Double.init), value.isFinite,
+              JudgementLines.scale.contains(value) else { return nil }
         return value
     }
 

@@ -328,7 +328,7 @@
 "lines" = "Grenzen";
 "lines.record" = "Aufschreiben";
 "lines.enqueue" = "Üben";
-"lines.explained" = "Wie viel ein Zug verschenken muss, um zu zählen. Über der ersten wird er in die Partie geschrieben, über der zweiten kostet er auch Übungszeit — die sollte also höher liegen. Nahe am Ausgleich entspricht ein Bauer etwa 10%.";
+"lines.explained" = "Wie viel ein Zug verschenken muss, um zu zählen. Über der ersten wird er in die Partie geschrieben — und bei eingeschaltetem Ohne Patzer zurückgenommen —, über der zweiten kostet er auch Übungszeit — die sollte also höher liegen. Nahe am Ausgleich entspricht ein Bauer etwa 10%.";
 
 /* ------------------------------------------------------------ das Heft */
 "book" = "Fehlerheft";
@@ -377,7 +377,6 @@
 "till.start" = "Ohne Patzer starten";
 "till.name" = "Ohne Patzer";
 "till.practice" = "Üben";
-"till.intercept" = "Eingriffsgrenze";
 "till.off" = "Aus";
 "till.judging" = "Berechnung";
 "till.refused" = "%@ kostet %d%%. Versuche es erneut.";

@@ -29,7 +29,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     let engine = ScriptedEngine([analysis(0, "e2e4", "e4")], isEndless: true)
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(5)
+    session.till(at: 5)
     session.play(try #require(start.state.move(matching: "e2e4")))
     #expect(session.isWeighing)
     #expect(session.standing == .weighing)
@@ -48,7 +48,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(5)
+    session.till(at: 5)
     await session.waitForPreparedInterception()
 
     session.play(try #require(start.state.move(matching: "e2e4")))
@@ -112,7 +112,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.setIntercept(5)
+    session.till(at: 5)
     await session.waitForPreparedInterception()
 
     session.play(try #require(start.state.move(matching: "e2e4")))
@@ -127,7 +127,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     // The second-best move is weighed from the same search too: its own Line's Score.
     let again = GameSession.fresh(start, engine: engine)
     defer { again.suspend() }
-    again.setIntercept(5)
+    again.till(at: 5)
     await again.waitForPreparedInterception()
     again.play(try #require(start.state.move(matching: "d2d4")))
     await again.settled()

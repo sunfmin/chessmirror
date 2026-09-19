@@ -328,7 +328,7 @@
 "lines" = "Seuils";
 "lines.record" = "La noter";
 "lines.enqueue" = "La travailler";
-"lines.explained" = "Ce qu'un coup doit céder pour compter. Au-delà du premier il est noté dans la partie ; au-delà du second il prend aussi du temps de travail, donc celui-ci doit être plus haut. Près de l'égalité, un pion vaut à peu près 10%.";
+"lines.explained" = "Ce qu'un coup doit céder pour compter. Au-delà du premier il est noté dans la partie — et, avec Sans faute activé, il est repris ; au-delà du second il prend aussi du temps de travail, donc celui-ci doit être plus haut. Près de l'égalité, un pion vaut à peu près 10%.";
 
 /* ------------------------------------------------------------ le carnet */
 "book" = "Erreurs";
@@ -378,7 +378,6 @@
 "till.start" = "Commencer sans faute";
 "till.name" = "Sans faute";
 "till.practice" = "Pratique";
-"till.intercept" = "Seuil de refus";
 "till.off" = "Désactivé";
 "till.judging" = "Calcul en cours";
 "till.refused" = "%@ coûte %d%%. Réessayez.";

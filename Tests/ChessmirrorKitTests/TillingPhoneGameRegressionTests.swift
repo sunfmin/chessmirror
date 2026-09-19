@@ -20,7 +20,7 @@ import Testing
         let position = try #require(Game(startFEN: PGN.standardStartFEN,
                                         uciMoves: Array(pgn.game.uciMoves.prefix(index))))
         let session = GameSession.fresh(position, engine: engine)
-        session.setIntercept(10)
+        session.till(at: 10)
         await session.waitForPreparedInterception()
         var reference: Analysis?
         for await snapshot in engine.analyse(position, budget: .depth(20), lines: 1) {

@@ -73,7 +73,7 @@ import Testing
     /// everything here has been written down, and only some of it is still owed.
     @Test func theEnrolLineSaysWhichOnesAreOwed() throws {
         let game = try played()
-        let lines = JudgementLines(intercept: nil, record: 10, enqueue: 20)
+        let lines = JudgementLines(record: 10, enqueue: 20)
         let slips = game.slips(by: [.white], lines: lines)
         #expect(
             slips.map { $0.isWorthDrilling(lines) } == [true, false],

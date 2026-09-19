@@ -3,10 +3,10 @@ import Foundation
 
 /// Where the player's two standing lines are kept (docs/adr/0027).
 ///
-/// The kit's `JudgementLines` holds all three; this is the app's half of the two that belong to
-/// the *player* rather than to a game — 记录线, what gets written down, and 入列线, what earns a
-/// place in future practice time. The third, 拦截线, is 正着's switch and dial and is set per
-/// game, so it is not here.
+/// The kit's `JudgementLines` holds them beside 把关's switch; this is the app's half, the two
+/// numbers that belong to the *player* rather than to a game — 记录线, what gets written down and
+/// what 把关 stops the player for (docs/adr/0046), and 入列线, what earns a place in future
+/// practice time. The switch is set per game, so it is not here.
 ///
 /// Modelled on `LanguageSetting` for the same reason (docs/adr/0012): a line that has to be drawn
 /// again on every device is a line that is only half drawn. Both stores, always — iCloud's is the
@@ -30,10 +30,10 @@ import Foundation
         }
     }
 
-    /// The two of them as the kit reads them, with 正着 off — which is what an ordinary game is.
-    /// A 正着 game takes this and sets its own `intercept` on top.
+    /// The two of them as the kit reads them, with 把关 off — which is what an ordinary game is.
+    /// A 把关 game takes this and switches `tilling` on.
     var lines: JudgementLines {
-        JudgementLines(intercept: nil, record: record, enqueue: enqueue)
+        JudgementLines(tilling: false, record: record, enqueue: enqueue)
     }
 
     /// The values either line is offered, because tenths of a percent are not a thing anybody

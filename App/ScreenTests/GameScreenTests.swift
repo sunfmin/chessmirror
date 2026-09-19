@@ -971,7 +971,7 @@ struct GameScreenScreenshots {
         for ply in [0, 2, 4, 6] { game.setJudgement(stood, atPly: ply) }
         game.setTried([.init(san: "Nh3", drop: 12)], atPly: 4)
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
-        session.setIntercept(5)
+        session.setTilling(true)
         return session
     }
 

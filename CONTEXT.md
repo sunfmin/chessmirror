@@ -67,22 +67,25 @@ allowed to jump the queue.
 **老毛病 (Habit)**: _retired._ The word named a screen that sorted mistakes into five kinds.
 错题 are not sorted into kinds at all — the book is one flat list. Do not reuse it.
 
-### 三条线 — the thresholds
+### 判决线 — the thresholds
 
-All three are a 掉幅, and they are separate on purpose.
-
-**拦截线 (Intercept line)**:
-The 掉幅 at which 把关 stops the player and takes the move back. The only dial 把关 has on the
-judgement of a move — the engine's 棋力 shapes the opponent it plays, never what a move costs.
+Both are a 掉幅, both are the player's, and they are separate on purpose.
 
 **记录线 (Record line)**:
-The 掉幅 at which a move is written down at all.
+The 掉幅 at which a move is written down at all — and, while 把关 is on, at which the player is
+stopped and the move taken back. One number for both, because both ask what counts as a mistake.
+The only dial 把关 has on the judgement of a move — the engine's 棋力 shapes the opponent it
+plays, never what a move costs.
+
+**拦截线 (Intercept line)**:
+Where 把关 stopped the player for a given move: the 记录线 at the time, written on the judgement
+as the line it stood under. _Not a setting_ — it was one, with a slider of its own, until the two
+were made one number. Do not reintroduce a separate dial for it.
 
 **入列线 (Enrol line)**:
 The 掉幅 at which a 错题 starts taking up the player's future practice time. Never below the
 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be
-worth remembering without being worth drilling. Both ship at ten. 把关 stops the player at five:
-a move taken back under ten is a correction at the board, not a 错题 for the book.
+worth remembering without being worth drilling. Both ship at ten.
 
 ### 日课 — the day's practice
 
@@ -113,7 +116,7 @@ _Avoid_: 进度, 统计, 状态
 ### 把关 — the game that will not let you slip
 
 **把关 (No Slips)**:
-A game against the engine in which any move costing more than the 拦截线 is refused and taken
+A game against the engine in which any move costing the 记录线 or more is refused and taken
 back, with nothing said about what to play instead. Only sound moves stand. The switch and the
 door are named for what the app does — somebody is at the gate — because 正着, the word for the
 move, read as nonsense on a switch: 「正着 开」.

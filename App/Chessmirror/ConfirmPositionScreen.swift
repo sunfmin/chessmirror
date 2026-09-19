@@ -487,7 +487,8 @@ struct ConfirmPositionScreen: View {
             picture: proposal.picture,
             shaky: proposal.shaky,
             engine: engine.service,
-            library: library
+            library: library,
+            lines: JudgementSetting.shared.lines
         )
         // Replaces the stack rather than adding to it: going back from a game in progress belongs
         // in the library, not in the editor of a position already being played.

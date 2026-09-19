@@ -328,7 +328,7 @@
 "lines" = "Limiares";
 "lines.record" = "Anotar";
 "lines.enqueue" = "Praticar";
-"lines.explained" = "Quanto uma jogada tem de dar para contar. Acima do primeiro fica escrita na partida; acima do segundo também ocupa tempo de prática, por isso esse deve ser mais alto. Perto da igualdade, um peão é mais ou menos 10%.";
+"lines.explained" = "Quanto uma jogada tem de dar para contar. Acima do primeiro fica escrita na partida — e, com Sem erros ligado, é devolvida; acima do segundo também ocupa tempo de prática, por isso esse deve ser mais alto. Perto da igualdade, um peão é mais ou menos 10%.";
 
 /* ------------------------------------------------------------ o caderno */
 "book" = "Erros";
@@ -378,7 +378,6 @@
 "till.start" = "Começar sem erros";
 "till.name" = "Sem erros";
 "till.practice" = "Prática";
-"till.intercept" = "Limite de rejeição";
 "till.off" = "Desligado";
 "till.judging" = "Calculando";
 "till.refused" = "%@ perde %d%%. Tente novamente.";

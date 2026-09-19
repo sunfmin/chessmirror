@@ -241,7 +241,7 @@ struct BookEntryScreen: View {
         guard let entry = entry(for: encounter),
             let session = GameSession.opened(
                 entry, engine: engine.service, library: library,
-                strength: StrengthSetting.shared.strength
+                strength: StrengthSetting.shared.strength, lines: JudgementSetting.shared.lines
             )
         else { return }
         session.walkOnArrival(toPly: encounter.arrivalPly)

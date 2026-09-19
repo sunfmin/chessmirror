@@ -37,7 +37,7 @@ struct RulingTests {
 
         let ruling = Ruling(weighed, san: san, played: played,
                             from: Standpoint(game: before, cursor: 0),
-                            lines: JudgementLines(intercept: 5))
+                            lines: JudgementLines(tilling: true, record: 5, enqueue: 5))
 
         #expect(ruling.verdict == .stands(MoveChange(before: .centipawns(30), after: .centipawns(20))))
         #expect(!ruling.takesTheMoveBack)
@@ -60,7 +60,7 @@ struct RulingTests {
 
         let ruling = Ruling(weighed, san: san, played: played,
                             from: Standpoint(game: before, cursor: 2),
-                            lines: JudgementLines(intercept: 5))
+                            lines: JudgementLines(tilling: true, record: 5, enqueue: 5))
 
         #expect(ruling.verdict == .refused(.init(san: "Bc4", drop: weighed.drop, depth: weighed.depth, line: ["Nf6", "d3"])), "the refusal is the 试招 as written")
         #expect(ruling.takesTheMoveBack)
@@ -73,7 +73,7 @@ struct RulingTests {
     /// Two refusals at one position, then a move that stands: the move carries both, in order.
     @Test func theMoveThatStandsTakesEveryRefusalInTheOrderTheyHappened() throws {
         let start = try opening()
-        let lines = JudgementLines(intercept: 5)
+        let lines = JudgementLines(tilling: true, record: 5, enqueue: 5)
         var game = start
         var cursor = 0
         for uci in ["f2f3", "g2g4"] {
@@ -102,7 +102,7 @@ struct RulingTests {
 
         let standpoint = Standpoint(game: before, cursor: 2)
         let ruling = Ruling(nil, san: san, played: played, from: standpoint,
-                            lines: JudgementLines(intercept: 5))
+                            lines: JudgementLines(tilling: true, record: 5, enqueue: 5))
 
         #expect(ruling.verdict == .unjudged)
         #expect(ruling.takesTheMoveBack, "the move comes off the board")
@@ -122,13 +122,13 @@ struct RulingTests {
         let verdict = DrillVerdict(played: "g4", intent: Intent.read(try #require(start.state.move(matching: "g2g4")), in: start),
                                    drop: 30, passed: false, reply: ["d5"])
 
-        let refused = Ruling(verdict, in: attempted, startingScore: .centipawns(30), lines: JudgementLines(intercept: 5))
+        let refused = Ruling(verdict, in: attempted, startingScore: .centipawns(30), lines: JudgementLines(tilling: true, record: 5, enqueue: 5))
         #expect(refused.verdict == .refused(.init(san: "g4", drop: 30, line: ["d5"])))
         #expect(refused.cursor == 0)
         #expect(refused.game.plies.isEmpty, "back to the position alone")
         #expect(refused.game.pendingTries(atPly: 0) == [.init(san: "g4", drop: 30, line: ["d5"])])
 
-        let stood = Ruling(verdict, in: attempted, startingScore: .centipawns(30), lines: JudgementLines(intercept: 50))
+        let stood = Ruling(verdict, in: attempted, startingScore: .centipawns(30), lines: JudgementLines(tilling: true, record: 50, enqueue: 50))
         #expect(stood.verdict == .stands(MoveChange(before: .centipawns(30), after: .centipawns(-500))))
         #expect(stood.cursor == 1)
         #expect(stood.game == attempted, "the drill's judgement is left as it wrote it")

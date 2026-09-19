@@ -730,25 +730,6 @@ struct GameScreen: View {
             ))
             .toggleStyle(SettingToggleStyle(label: localized("till.name")))
             .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
-            if let intercept = session.lines.intercept {
-                HStack(spacing: 12) {
-                    Text(localized("till.intercept"))
-                        .foregroundStyle(Palette.inkSoft)
-                    Slider(value: Binding(
-                        get: { session.lines.intercept ?? JudgementLines.defaultIntercept },
-                        set: { session.setIntercept($0) }
-                    ), in: JudgementLines.interceptRange, step: 1)
-                    .accessibilityLabel(localized("till.intercept"))
-                    .accessibilityValue("\(Int(intercept))%")
-                    .disabled(session.isOccupied)
-                    Text("\(Int(intercept))%")
-                        .font(.footnote.weight(.medium))
-                        .monospacedDigit()
-                        .foregroundStyle(Palette.analysis)
-                        .frame(width: 38, alignment: .trailing)
-                }
-                .frame(minHeight: 36)
-            }
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))

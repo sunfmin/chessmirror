@@ -211,7 +211,7 @@ import Testing
     /// 把关 keeps the finder off, and arriving does not claim a switch it could not throw.
     @Test func arrivingWhileTillingOpensNothing() throws {
         let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
-        session.setIntercept(JudgementLines.defaultIntercept)
+        session.setTilling(true)
         session.arriveAtFinder()
         #expect(!session.isFindingTactics)
         session.leaveFinder()
