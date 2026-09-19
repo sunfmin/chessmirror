@@ -236,3 +236,58 @@ func foreignVariationsAreKept() throws {
     #expect(pgn.game.variations(atPly: 2).first?.map(\.isTrunk) == [false, false, false], "and its asides are 树枝")
     #expect(pgn.game.siblings(atPly: 2).map(\.san) == ["Nf3", "Bc4"], "so the written line is numbered first")
 }
+
+/// Contract: a game against the engine is answered wherever the player's move lands. Going back
+/// and playing the move that is already on the record carries on down that line — and the line
+/// has the opponent's reply on it, so that is what the board shows next. It used to stop one move
+/// short, on the engine's turn with the engine saying nothing: 「对手方不自动走棋，虽然设置的还是引擎」.
+@MainActor
+@Test("replaying the move on the record is answered by the reply on the record")
+func replayingTheRecordedMoveIsAnswered() throws {
+    let session = GameSession.playing(try game(["e2e4", "e7e5", "g1f3", "b8c6"]))
+    defer { session.suspend() }
+    session.jump(toPly: 2)
+    session.play(try #require(session.viewed.state.move(matching: "g1f3")))
+
+    #expect(session.cursor == 4, "the opponent's reply is played, not left for the player")
+    #expect(session.game.plies.map(\.san) == ["e4", "e5", "Nf3", "Nc6"], "down the line that was there")
+    #expect(!session.game.hasBranches)
+    #expect(session.isHandTurn)
+}
+
+/// The same through 把关: the move is weighed first, and the reply follows once it stands.
+@MainActor
+@Test("a replayed move that was weighed is answered too")
+func aWeighedReplayIsAnswered() async throws {
+    let line = try game(["e2e4", "e7e5", "g1f3", "b8c6"])
+    let before = try #require(line.rewound(to: 2))
+    let after = try #require(line.rewound(to: 3))
+    let engine = ScriptedEngine([], byPosition: [
+        before.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(20), uciMoves: ["g1f3"], san: ["Nf3"])
+        ]),
+        after.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(-20), uciMoves: ["b8c6"], san: ["Nc6"])
+        ]),
+    ])
+    let session = GameSession.playing(line, engine: engine)
+    defer { session.suspend() }
+    session.jump(toPly: 2)
+    session.play(try #require(session.viewed.state.move(matching: "g1f3")))
+    await session.settled()
+
+    #expect(session.cursor == 4)
+    #expect(session.game.plies.map(\.san) == ["e4", "e5", "Nf3", "Nc6"])
+    #expect(!session.game.hasBranches)
+}
+
+/// Browsing is not playing: stepping onto the engine's turn in the middle of a record moves
+/// nothing, or a game could not be read.
+@MainActor
+@Test("browsing onto the opponent's turn plays nothing")
+func browsingOntoTheOpponentsTurnPlaysNothing() throws {
+    let session = GameSession.playing(try game(["e2e4", "e7e5", "g1f3", "b8c6"]))
+    defer { session.suspend() }
+    session.jump(toPly: 1)
+    #expect(session.cursor == 1)
+}

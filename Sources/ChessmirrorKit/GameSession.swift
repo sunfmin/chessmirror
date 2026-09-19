@@ -1779,6 +1779,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .stands(let change):
             if let change { measuredMove = (game.uciMoves, game.state.fen, change) }
             save()
+            answerFromTheRecord()
             retune()
         case .refused(let refusal):
             // Written down by the ruling at the position it happened at, rather than when a move
@@ -1863,7 +1864,26 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         landedUnjudged = (game.uciMoves, game.state.fen)
         refused = nil
         save()
+        answerFromTheRecord()
         retune()
+    }
+
+    /// The opponent's reply, when the move just played already had one on the record.
+    ///
+    /// Going back and playing the move that is standing there carries on down the line that
+    /// exists (`Game.play(_:atPly:)`) rather than branching — which leaves the eye in the middle
+    /// of the record with the engine's seat to move. The engine only *plays* from the latest
+    /// position (`isEngineTurn`), because browsing onto its turn must not move anything; so
+    /// nobody answered, and a game set to play the engine sat there as if it were not. The answer
+    /// is already written down: the reply that was made to this move from this position. It is
+    /// played off the record, the way a walk plays one — no search, no 分支, and the line the
+    /// player is replaying stays the line. A move that is *not* the one on the record branches,
+    /// lands at the latest position, and gets a fresh reply the ordinary way.
+    private func answerFromTheRecord() {
+        guard !isAtLatest, controller(for: viewed.state.sideToMove) == .engine else { return }
+        cursor += 1
+        adoptViewedAnalysis()
+        Sounds.current.play(.move)
     }
 
     // ------------------------------------------------------------------ a study
