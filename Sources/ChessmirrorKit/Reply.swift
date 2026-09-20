@@ -31,7 +31,7 @@ public enum Reply {
     }
 
     /// The same for any wrong move on the strip: the move, then what answers it.
-    public static func moves(of wrong: GameSession.WrongMove, reply: [String]? = nil) -> [String] {
+    public static func moves(of wrong: RecordReading.WrongMove, reply: [String]? = nil) -> [String] {
         [wrong.san] + (reply ?? wrong.line)
     }
 

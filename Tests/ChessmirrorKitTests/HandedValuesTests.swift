@@ -34,7 +34,7 @@ import Testing
     /// was played from (docs/adr/0036). A fresh game is both hands, so Black's 试招 counts too.
     @Test func slipsAreKeyedOnThePositionTheyWereMadeAt() throws {
         let session = GameSession.fresh(try played())
-        let byPosition = session.slipByPosition
+        let byPosition = session.reading.slipByPosition
         #expect(Set(byPosition.keys) == [0, 1, 2])
         #expect(byPosition[0]?.ply == 1, "the opening cell carries the first move's 试招")
         #expect(byPosition[2]?.wrong.map(\.san) == ["Nf3"], "the move that stood, on the cell before it")

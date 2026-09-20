@@ -40,14 +40,14 @@ import Testing
     @Test func aTileWalkedToListsThePositionsOwnAttempts() throws {
         let session = GameSession.fresh(try refusedThenStood())
         defer { session.suspend() }
-        let slip = try #require(session.slips.first)
+        let slip = try #require(session.reading.slips.first)
         session.jump(toPly: slip.positionPly)
         #expect(session.cursor == 0)
-        #expect(session.visibleAttempts.map(\.san) == ["f3"], "the opening's own refusal")
+        #expect(session.reading.attempts.map(\.san) == ["f3"], "the opening's own refusal")
         #expect(session.refusedPosition == session.viewed)
-        #expect(session.visibleWrongs.map(\.san) == ["f3"])
-        #expect(session.visibleWrongs.first?.triedIndex == 0)
-        #expect(session.visibleWrongs.first?.stood == false)
+        #expect(session.reading.wrongs.map(\.san) == ["f3"])
+        #expect(session.reading.wrongs.first?.triedIndex == 0)
+        #expect(session.reading.wrongs.first?.stood == false)
 
         session.readReply(at: 0)
         let reading = try #require(session.replyReading)
@@ -61,12 +61,12 @@ import Testing
         let session = GameSession.fresh(try refusedThenStood())
         defer { session.suspend() }
         session.jump(toPly: 1)
-        #expect(session.visibleAttempts.map(\.san) == ["f3"])
+        #expect(session.reading.attempts.map(\.san) == ["f3"])
         #expect(session.refusedPosition == session.game.rewound(to: 0))
-        #expect(session.visibleWrongs.map(\.san) == ["f3"])
+        #expect(session.reading.wrongs.map(\.san) == ["f3"])
         session.jump(toPly: 2)
-        #expect(session.visibleAttempts.isEmpty, "e5 took nothing, and the position after it has nothing of its own")
-        #expect(session.visibleWrongs.isEmpty)
+        #expect(session.reading.attempts.isEmpty, "e5 took nothing, and the position after it has nothing of its own")
+        #expect(session.reading.wrongs.isEmpty)
     }
 
     /// An imported game's 错招 stood. At its own position it is a chip like a refusal's, its 应招
@@ -74,14 +74,14 @@ import Testing
     @Test func aMoveThatStoodTooExpensivelyIsListedAndAnswered() throws {
         let session = GameSession.fresh(try reviewed(), engine: ScriptedEngine([]))
         defer { session.suspend() }
-        let slip = try #require(session.slips.first)
+        let slip = try #require(session.reading.slips.first)
         #expect(slip.ply == 3)
         session.jump(toPly: slip.positionPly)
         #expect(session.cursor == 2)
-        #expect(session.visibleAttempts.isEmpty, "nothing was ever refused in an imported game")
+        #expect(session.reading.attempts.isEmpty, "nothing was ever refused in an imported game")
 
-        let wrong = try #require(session.visibleWrongs.first)
-        #expect(session.visibleWrongs.count == 1)
+        let wrong = try #require(session.reading.wrongs.first)
+        #expect(session.reading.wrongs.count == 1)
         #expect(wrong.stood)
         #expect(wrong.source == .stood(ply: 3))
         #expect(wrong.san == "Nf3")
@@ -101,7 +101,7 @@ import Testing
 
         // Not at the position after it: there the badge says what the move cost.
         session.jump(toPly: 3)
-        #expect(session.visibleWrongs.isEmpty)
+        #expect(session.reading.wrongs.isEmpty)
     }
 
     /// A move that stood in a game nobody reviewed has no Line kept: pressing it asks the shared
@@ -119,7 +119,7 @@ import Testing
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
         session.jump(toPly: 2)
-        let wrong = try #require(session.visibleWrongs.first)
+        let wrong = try #require(session.reading.wrongs.first)
         #expect(wrong.stood)
         #expect(wrong.line.isEmpty)
 

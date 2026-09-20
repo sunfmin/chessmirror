@@ -12,12 +12,12 @@ import ChessmirrorKitTesting
         Game.Ply.Tried(san: san, drop: 12, notFound: false, depth: depth, line: line)
     }
 
-    private func wrong(_ san: String, at index: Int = 0) -> GameSession.WrongMove {
-        GameSession.WrongMove(tried(san), at: index)
+    private func wrong(_ san: String, at index: Int = 0) -> RecordReading.WrongMove {
+        RecordReading.WrongMove(tried(san), at: index)
     }
 
     private func reading(
-        _ move: GameSession.WrongMove, at index: Int, in position: Game
+        _ move: RecordReading.WrongMove, at index: Int, in position: Game
     ) -> GameSession.ReplyReading {
         GameSession.ReplyReading(
             index: index, move: move, position: position, line: [], isAsking: true
@@ -93,7 +93,7 @@ import ChessmirrorKitTesting
         var strip = StripReply()
         let before = wrong("Qh5")
         strip.open(reading(before, at: 0, in: try opening()))
-        let after = GameSession.WrongMove(tried("Qh5", depth: 20, line: ["g6"]), at: 0)
+        let after = RecordReading.WrongMove(tried("Qh5", depth: 20, line: ["g6"]), at: 0)
         strip.rewrite(
             as: GameSession.ReplyReading(
                 index: 0, move: after, position: try opening(), line: ["Qh5", "g6"], isAsking: false

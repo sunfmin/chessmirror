@@ -48,6 +48,13 @@ what it cost. The answer to 「这一局我哪儿走错了」, and what a game's
 walks to. Not a 错题: a 错题 is the position, and this is one game's account of reaching it.
 _Avoid_: 错误, 失误, 招法
 
+**记录读数 (Record reading)**:
+What one game's record says about the player's 错招, read at one position: the 错招 themselves,
+the 试招 refused at the position on the board, and which of them a chip shows. A reading of the
+Game and the 判决线 and nothing else — no engine, no live search, no screen — so it is had from a
+file as readily as from a game being played (`RecordReading`).
+_Avoid_: 分析, 统计, summary
+
 **分数曲线 (Score curve)**:
 The record's Scores as one shape: a level per position of a game, high where White is doing well,
 nil where nobody has scored it, drawn under the record strip once two positions are known

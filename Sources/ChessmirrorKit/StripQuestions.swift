@@ -34,7 +34,7 @@ struct StripReply {
 
     /// The answer arrived. Dropped when the reading it was asked for is no longer the one open:
     /// an answer to a question nobody is asking any more is not an answer.
-    mutating func fill(_ line: [String], of move: GameSession.WrongMove, at index: Int) {
+    mutating func fill(_ line: [String], of move: RecordReading.WrongMove, at index: Int) {
         guard reading?.index == index, reading?.move == move else { return }
         reading?.isAsking = false
         reading?.line = line

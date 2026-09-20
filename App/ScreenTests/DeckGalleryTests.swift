@@ -209,7 +209,7 @@ struct DeckGallery {
         try #require(session.refused != nil)
         session.play(try #require(game.state.move(matching: "e2e4")))
         await hop()
-        try #require(session.visibleAttempts.first?.line == ["d5", "Nf3"])
+        try #require(session.reading.attempts.first?.line == ["d5", "Nf3"])
         let rendered = await ScreenImage.write("no-slips-returned-reply", interact: { window in
             let before = ScreenImage.words(in: window)
             #expect(!before.contains { $0.contains("Nf3") }, "the answer waits to be asked for")
@@ -235,7 +235,7 @@ struct DeckGallery {
         #expect(rendered.says("d5"))
         #expect(rendered.says(localized("noSlips.returned")))
         #expect(session.game.uciMoves == ["e2e4"])
-        #expect(session.visibleAttempts.first?.line == ["d5", "Nf3"])
+        #expect(session.reading.attempts.first?.line == ["d5", "Nf3"])
     }
     @Test func viewingAMateRequiresAnExplicitPressAndResetsAfterMoving() async throws {
         let game = try #require(Game(startFEN:

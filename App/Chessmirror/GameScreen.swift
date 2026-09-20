@@ -328,7 +328,7 @@ struct GameScreen: View {
     ///
     /// Shut while a 惩罚 exercise is open. That exercise is the same answer with the finding left
     /// to the player, and a chip that would hand it over is the exercise not being one.
-    private func wrongToken(_ wrong: GameSession.WrongMove, index: Int) -> some View {
+    private func wrongToken(_ wrong: RecordReading.WrongMove, index: Int) -> some View {
         let isOn = session.replyReading?.index == index
         let rest = wrong.stood ? AnyShapeStyle(Palette.alarm.opacity(0.12)) : AnyShapeStyle(Palette.chipRest)
         return Button {
@@ -884,8 +884,8 @@ struct GameScreen: View {
     /// is not a second list but the upper one *at the position on the board*, so walking to a 错题
     /// slides its moves out, and a position where nothing was refused has none to show.
     @ViewBuilder private var wrongMoves: some View {
-        let slips = session.slips
-        let attempts = session.visibleWrongs
+        let slips = session.reading.slips
+        let attempts = session.reading.wrongs
         let exercise = session.activePunishment
         let answered = session.punishment?.revealedMove
         if !slips.isEmpty || !attempts.isEmpty || exercise != nil || answered != nil {
@@ -956,7 +956,7 @@ struct GameScreen: View {
                 .padding(.vertical, 4)
             }
             .scrollIndicators(.hidden)
-            if let next = session.nextSlip {
+            if let next = session.reading.next {
                 Button {
                     jumpTo(slip: next)
                 } label: {
@@ -1051,7 +1051,7 @@ struct GameScreen: View {
 
     /// The wrong moves made at the position on the board, newest first, under the positions
     /// they belong to — the lower register of the same strip.
-    private func wrongTokens(_ wrongs: [GameSession.WrongMove]) -> some View {
+    private func wrongTokens(_ wrongs: [RecordReading.WrongMove]) -> some View {
         // Whether anything here was taken back. A row of refusals is led by an ✕; a row that is
         // only the move that stood — an imported game's — by a mark that says it was played.
         let returned = wrongs.contains { !$0.stood }
@@ -1120,7 +1120,7 @@ struct GameScreen: View {
     private var moveStrip: some View {
         // Walked once for the whole strip: the marks are a lookup per half, and the walk behind
         // them is a rules probe per Ply.
-        let slips = session.slipByPosition
+        let slips = session.reading.slipByPosition
         // Whether the record has a line of costs to draw at all: none when nothing in the game
         // has been measured, so a game nobody judged is the strip exactly as it was.
         let costs = session.game.hasCosts
@@ -1182,7 +1182,7 @@ struct GameScreen: View {
     /// The position the game began in, at the head of its own record. It is a place in the game
     /// like any other, and without it there is no way back to it in one tap.
     private var openingCell: some View {
-        let slip = session.slipByPosition[0]
+        let slip = session.reading.slipByPosition[0]
         let on = session.cursor == 0
         // One name for one place. It used to say 「从这里开始走」 while the game had no moves in it,
         // which is an instruction standing where every other cell in the strip names a place.

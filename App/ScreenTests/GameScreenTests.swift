@@ -870,7 +870,7 @@ struct GameScreenScreenshots {
         }) {
             screen(session, engine: engine)
         }
-        let landed = try #require(session.visibleAttempts.first)
+        let landed = try #require(session.reading.attempts.first)
         #expect(landed.depth == 28)
         #expect(landed.drop > 40, "a mate in one is worse than the everyday search made it")
         #expect(rendered.says(localized("game.depth", 28)))
@@ -946,7 +946,7 @@ struct GameScreenScreenshots {
         let engine = ScriptedEngine([])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
-        let slip = try #require(session.slips.first)
+        let slip = try #require(session.reading.slips.first)
         session.jump(toPly: slip.positionPly)
         #expect(session.cursor == 2)
 
@@ -1213,7 +1213,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says(localized("review.offer")))
         #expect(rendered.says(localized("review.start")))
         #expect(!rendered.says(localized("slips.here", 1)), "no 错招 can be named before the Review")
-        #expect(session.slips.isEmpty)
+        #expect(session.reading.slips.isEmpty)
     }
 
     /// While the Review runs, the row is how far it has got — positions settled out of positions
