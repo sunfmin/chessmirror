@@ -217,7 +217,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Analyses already paid for, keyed by the FEN they were found from. A swipe onto another
     /// card of the same position is not a new question, and walking back to a Ply that has
     /// already been asked about is not one either.
-    @ObservationIgnored private var analysisByFen: [String: Analysis] = [:]
+    @ObservationIgnored private var analysisByFen = RecentAnalyses()
 
     private var controllers: [PieceColour: Controller]
     /// The 棋力 the engine plays its own moves at (docs/adr/0038). A fact about the game rather
