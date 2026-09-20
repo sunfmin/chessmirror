@@ -200,7 +200,7 @@ public struct MistakeBook: Sendable {
                     (
                         stop.position,
                         Encounter(
-                            game: entry.url, ply: stop.ply, when: entry.modified, played: wrong.san,
+                            game: entry.url, ply: stop.ply, when: entry.when, played: wrong.san,
                             wanted: stop.wanted, cost: wrong.drop, origin: entry.origin,
                             attempt: wrong.attempt, notFound: wrong.notFound
                         )

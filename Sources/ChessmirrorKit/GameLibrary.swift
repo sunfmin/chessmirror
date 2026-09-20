@@ -39,6 +39,15 @@ import Foundation
             return GameLibrary.fallbackName(for: url)
         }
 
+        /// When this game was played, as the file says, falling back to when the file was last
+        /// written. A 遭遇's own time (`MistakeBook.encounters`): 「最近一次是三天前」 is a
+        /// statement about the game, and reading it off the file's modification date made it a
+        /// statement about the last time anything touched the file — a re-save, a rename, a
+        /// Review landing — which is not when the player fell for anything.
+        public var when: Date {
+            pgn.flatMap { PGN.playedDay($0.tag("Date")) } ?? modified
+        }
+
         /// The position a row draws. Where the game stands, except for a 练习 file, which draws
         /// the 错题 it was asked about — the position it started from. A drill answered right has
         /// moved on from that position, and a row drawing where it ended says nothing about which
@@ -362,7 +371,13 @@ import Foundation
     /// Updates one row in place rather than re-reading the folder, so that autosaving after
     /// every move does not turn into a directory scan after every move.
     private func refreshEntry(at url: URL, with pgn: PGN) {
-        let entry = Entry(url: url, pgn: pgn, modified: Date())
+        // The file's own date, the same one `gather` reads. Stamping `Date()` here made the row
+        // disagree with the folder by a few milliseconds, which is a different key in the 错题本's
+        // cache and one game walked again for nothing.
+        let modified =
+            (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+            ?? Date()
+        let entry = Entry(url: url, pgn: pgn, modified: modified)
         if let index = entries.firstIndex(where: { $0.url == url }) {
             entries[index] = entry
         } else {

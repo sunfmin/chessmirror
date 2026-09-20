@@ -391,6 +391,20 @@ public struct PGN: Hashable, Sendable {
         return known.isEmpty ? nil : known.joined(separator: ".")
     }
 
+    /// The day a game was played, as a Date, from the same tag `playedOn` reads for the screen.
+    ///
+    /// Nil for a file that does not say, or says only a year or a month: a 遭遇 dated 「2026 年的
+    /// 某一天」 would sort and read worse than the honest fallback its caller has. PGN has no
+    /// clock in this tag, so this is the day at midnight — the resolution the format offers.
+    public static func playedDay(_ tag: String?, calendar: Calendar = .current) -> Date? {
+        guard let text = playedOn(tag) else { return nil }
+        let parts = text.split(separator: ".").map(String.init)
+        guard parts.count == 3, let year = Int(parts[0]), let month = Int(parts[1]),
+              let day = Int(parts[2])
+        else { return nil }
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+    }
+
     /// Today in PGN's `YYYY.MM.DD`.
     public static func dateTag(_ date: Date = Date(), calendar: Calendar = .current) -> Tag {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)

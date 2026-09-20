@@ -63,6 +63,34 @@ import Foundation
         self.lines = lines
     }
 
+    /// How many chains of following have been started. A library followed twice leaves the first
+    /// chain stale, and this is how it knows to stop.
+    private var following = 0
+
+    /// Follows a library: the book is brought up to date now, and again whenever the games
+    /// change.
+    ///
+    /// **Freshness belongs to the index.** It used to belong to a view modifier on the library
+    /// screen, which meant the book was as current as that screen was recent: an app that opened
+    /// somewhere else — a drill, a game, a shared file — read a book nobody had rebuilt, and
+    /// nothing in `book`'s type said so. Following is idempotent; the last call wins.
+    public func follow(_ library: GameLibrary) {
+        following += 1
+        let registration = following
+        update(from: library.entries)
+        withObservationTracking {
+            _ = library.entries
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, registration == following else { return }
+                follow(library)
+            }
+        }
+    }
+
+    /// Stops following, for a caller that wants the book to stand still.
+    public func unfollow() { following += 1 }
+
     /// Brings the book into line with a set of games, walking only what has changed.
     public func update(from entries: [GameLibrary.Entry], lines: JudgementLines? = nil) {
         let changedLines = lines.map { $0 != self.lines } ?? false

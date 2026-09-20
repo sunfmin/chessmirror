@@ -381,3 +381,37 @@ private func reviewedButClean() -> PGN {
     #expect(positions(index.book) == positions(afterwards))
     #expect(!positions(index.book).contains(struck))
 }
+
+/// Contract: the book follows the games. Freshness is the index's own — it used to be a view
+/// modifier on one screen, so how current the book was depended on where the app had been.
+@MainActor
+@Test func theBookFollowsTheLibrary() async throws {
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let library = GameLibrary(folder: GameFolder(url: directory))
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let index = MistakeIndex(log: log)
+
+    index.follow(library)
+    #expect(index.book.isEmpty, "nothing is in the folder yet")
+
+    let fixture = try game(seed: 7, at: now, plies: 4)
+    #expect(library.write(try #require(fixture.pgn), to: directory.appending(path: "game.pgn")))
+    // No screen, no `update` call: the write moved the library, and the book followed.
+    for _ in 0..<40 where index.book.isEmpty {
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(!index.book.isEmpty)
+
+    index.unfollow()
+    #expect(library.write(try #require(fixture.pgn), to: directory.appending(path: "again.pgn")))
+    let held = index.book.mistakes.first?.recurrence
+    for _ in 0..<10 {
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(index.book.mistakes.first?.recurrence == held, "unfollowed, the book stands still")
+}
