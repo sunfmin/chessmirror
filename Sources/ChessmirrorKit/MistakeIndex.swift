@@ -126,18 +126,14 @@ import Foundation
         // practised.
         let entries = log.entries()
         let dismissed = PracticeLog.dismissed(in: entries)
-        var byPosition: [PositionKey: [Encounter]] = [:]
-        for (_, entry) in cached {
-            for (key, encounter) in entry.found where !dismissed.contains(key) {
-                byPosition[key, default: []].append(encounter)
-            }
-        }
-        book = MistakeBook(
-            mistakes: byPosition.map { Mistake(position: $0.key, encounters: $0.value) }
-        )
+        // Assembled where every book is assembled (`MistakeBook.book`): this used to be a second
+        // copy of the same loop, and the one the app actually ran.
+        book = MistakeBook.book(of: cached.values.flatMap(\.found), dismissed: dismissed)
         var plies: [URL: Set<Int>] = [:]
-        for encounter in byPosition.values.joined() {
-            plies[encounter.game, default: []].insert(encounter.ply)
+        for mistake in book.mistakes {
+            for encounter in mistake.encounters {
+                plies[encounter.game, default: []].insert(encounter.ply)
+            }
         }
         wrongByGame = plies.mapValues(\.count)
         ladder = Ladder.sum(cached.map { (game: $0.key, credits: $0.value.credits) })

@@ -211,20 +211,36 @@ public struct MistakeBook: Sendable {
         return found
     }
 
-    /// The whole book, from a set of games and the positions the player has struck off.
+    /// The book from 遭遇 already walked: one 错题 per position, the struck-off left out.
+    ///
+    /// **The one place a book is made.** The walk is the expensive half and has two callers with
+    /// different needs — a whole library at once here, one file at a time in `MistakeIndex`,
+    /// which keeps what it walked — but what a book *is* cannot differ between them. It did: the
+    /// app assembled its book in the index and this function was left running for the tests
+    /// alone, so a change to how 遭遇 become 错题 had to be made twice and only one of the two
+    /// was covered.
+    public static func book(
+        of found: [(PositionKey, Encounter)], dismissed: Set<PositionKey> = []
+    ) -> MistakeBook {
+        var byPosition: [PositionKey: [Encounter]] = [:]
+        for (key, encounter) in found where !dismissed.contains(key) {
+            byPosition[key, default: []].append(encounter)
+        }
+        return MistakeBook(
+            mistakes: byPosition.map { Mistake(position: $0.key, encounters: $0.value) }
+        )
+    }
+
+    /// The whole book, from a set of games and the positions the player has struck off: the walk
+    /// and the assembly in one call, for a caller with no cache to keep.
     public static func derive(
         from entries: [GameLibrary.Entry],
         dismissed: Set<PositionKey> = [],
         lines: JudgementLines = .standard
     ) -> MistakeBook {
-        var byPosition: [PositionKey: [Encounter]] = [:]
-        for entry in entries {
-            for (key, encounter) in encounters(in: entry, lines: lines) where !dismissed.contains(key) {
-                byPosition[key, default: []].append(encounter)
-            }
-        }
-        return MistakeBook(
-            mistakes: byPosition.map { Mistake(position: $0.key, encounters: $0.value) }
+        book(
+            of: entries.flatMap { encounters(in: $0, lines: lines) },
+            dismissed: dismissed
         )
     }
 }
