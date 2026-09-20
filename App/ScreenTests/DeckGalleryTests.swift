@@ -74,12 +74,12 @@ struct DeckGallery {
             size: CGSize(width: width, height: 850)) {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says(localized("till.name")))
+        #expect(rendered.says(localized("noSlips.name")))
         #expect(rendered.says(localized("game.depth", 20)))
         #expect(rendered.says(localized("standing.bar")))
         #expect(GameScreen.boardSide(in: CGSize(width: width, height: 600)) == CGFloat(width))
     }
-    @Test func standingTillingLabelTogglesWithoutOpeningSettings() async throws {
+    @Test func standingNoSlipsLabelTogglesWithoutOpeningSettings() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let engine = ScriptedEngine([Analysis(depth: 20, lines: [
             Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
@@ -87,24 +87,24 @@ struct DeckGallery {
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
         session.setNoSlips(true)
-        let rendered = await ScreenImage.write("tilling-toggle-off", interact: { window in
+        let rendered = await ScreenImage.write("no-slips-toggle-off", interact: { window in
             let before = ScreenImage.words(in: window)
-            #expect(ScreenImage.activate(localized("till.name"), in: window))
+            #expect(ScreenImage.activate(localized("noSlips.name"), in: window))
             await ScreenImage.settle()
             #expect(!session.isNoSlipsOn)
             #expect(ScreenImage.words(in: window) != before)
             #expect(ScreenImage.words(in: window).contains { $0.contains(localized("standing.bar")) })
-            #expect(ScreenImage.activate(localized("till.name"), in: window))
+            #expect(ScreenImage.activate(localized("noSlips.name"), in: window))
             await ScreenImage.settle()
             #expect(session.lines.intercept == session.lines.record, "back on, at the 记录线")
-            #expect(ScreenImage.activate(localized("till.name"), in: window))
+            #expect(ScreenImage.activate(localized("noSlips.name"), in: window))
             await ScreenImage.settle()
             #expect(!session.isNoSlipsOn)
         }) {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says(localized("till.name")))
-        #expect(rendered.says(localized("till.off")))
+        #expect(rendered.says(localized("noSlips.name")))
+        #expect(rendered.says(localized("noSlips.off")))
         #expect(!rendered.says(localized("screen.opinion")))
         #expect(!rendered.says("练习"))
         #expect(session.game.uciMoves == game.uciMoves)
@@ -136,10 +136,10 @@ struct DeckGallery {
             #expect(ScreenImage.activate(localized("punish.toggle"), in: window))
             await ScreenImage.settle()
             #expect(!session.findsPunishment)
-            #expect(ScreenImage.activate(localized("till.name"), in: window))
+            #expect(ScreenImage.activate(localized("noSlips.name"), in: window))
             await ScreenImage.settle()
             #expect(!session.isNoSlipsOn)
-            #expect(ScreenImage.activate(localized("till.name"), in: window))
+            #expect(ScreenImage.activate(localized("noSlips.name"), in: window))
             await ScreenImage.settle()
             #expect(session.lines.intercept == session.lines.record, "back on, at the 记录线")
             #expect(ScreenImage.activate(localized("game.settings.collapse", PieceColour.black.label), in: window))
@@ -154,7 +154,7 @@ struct DeckGallery {
         #expect(GameScreen.boardSide(in: CGSize(width: 440, height: 600)) == 440)
     }
 
-    @Test func tillingShowsOnlyCompactReturnedAttempts() async throws {
+    @Test func noSlipsShowsOnlyCompactReturnedAttempts() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let afterD4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["d2d4"]))
         let engine = ScriptedEngine([Analysis(depth: 20, lines: [
@@ -173,10 +173,10 @@ struct DeckGallery {
         session.play(try #require(game.state.move(matching: "e2e4")))
         await hop()
         try #require(session.game.plies.count == 1)
-        let rendered = await ScreenImage.write("tilling-cost-history") {
+        let rendered = await ScreenImage.write("no-slips-cost-history") {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says(localized("till.returned")))
+        #expect(rendered.says(localized("noSlips.returned")))
         #expect(rendered.says("d4"))
         #expect(!rendered.says("1. d4"))
         #expect(!rendered.says("1. e4"))
@@ -210,7 +210,7 @@ struct DeckGallery {
         session.play(try #require(game.state.move(matching: "e2e4")))
         await hop()
         try #require(session.visibleAttempts.first?.line == ["d5", "Nf3"])
-        let rendered = await ScreenImage.write("tilling-returned-reply", interact: { window in
+        let rendered = await ScreenImage.write("no-slips-returned-reply", interact: { window in
             let before = ScreenImage.words(in: window)
             #expect(!before.contains { $0.contains("Nf3") }, "the answer waits to be asked for")
             #expect(!before.contains { $0.contains(localized("tried.reply")) })
@@ -233,7 +233,7 @@ struct DeckGallery {
         #expect(rendered.says(localized("tried.reply")))
         #expect(rendered.says("Nf3"))
         #expect(rendered.says("d5"))
-        #expect(rendered.says(localized("till.returned")))
+        #expect(rendered.says(localized("noSlips.returned")))
         #expect(session.game.uciMoves == ["e2e4"])
         #expect(session.visibleAttempts.first?.line == ["d5", "Nf3"])
     }
@@ -271,16 +271,16 @@ struct DeckGallery {
         #expect(session.game.uciMoves == ["b3b8"])
         #expect(!rendered.says("Rd8#"), "new positions require a new explicit reveal")
     }
-    @Test(.speaking(.chinese)) func tillingChinese() async throws { try await localizedTilling() }
-    @Test(.speaking(.english)) func tillingEnglish() async throws { try await localizedTilling() }
-    @Test(.speaking(.japanese)) func tillingJapanese() async throws { try await localizedTilling() }
-    @Test(.speaking(.korean)) func tillingKorean() async throws { try await localizedTilling() }
-    @Test(.speaking(.french)) func tillingFrench() async throws { try await localizedTilling() }
-    @Test(.speaking(.german)) func tillingGerman() async throws { try await localizedTilling() }
-    @Test(.speaking(.spanish)) func tillingSpanish() async throws { try await localizedTilling() }
-    @Test(.speaking(.portuguese)) func tillingPortuguese() async throws { try await localizedTilling() }
+    @Test(.speaking(.chinese)) func noSlipsChinese() async throws { try await localizedNoSlips() }
+    @Test(.speaking(.english)) func noSlipsEnglish() async throws { try await localizedNoSlips() }
+    @Test(.speaking(.japanese)) func noSlipsJapanese() async throws { try await localizedNoSlips() }
+    @Test(.speaking(.korean)) func noSlipsKorean() async throws { try await localizedNoSlips() }
+    @Test(.speaking(.french)) func noSlipsFrench() async throws { try await localizedNoSlips() }
+    @Test(.speaking(.german)) func noSlipsGerman() async throws { try await localizedNoSlips() }
+    @Test(.speaking(.spanish)) func noSlipsSpanish() async throws { try await localizedNoSlips() }
+    @Test(.speaking(.portuguese)) func noSlipsPortuguese() async throws { try await localizedNoSlips() }
 
-    private func localizedTilling() async throws {
+    private func localizedNoSlips() async throws {
         let language = Speech.language
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let engine = ScriptedEngine([Analysis(depth: 20, lines: [
@@ -289,10 +289,10 @@ struct DeckGallery {
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
         session.setNoSlips(true)
-        let rendered = await ScreenImage.write("tilling-\(language.rawValue)") {
+        let rendered = await ScreenImage.write("no-slips-\(language.rawValue)") {
             screen(session, engine: engine, opening: .tactics)
         }
-        #expect(rendered.says(localized("till.name")))
+        #expect(rendered.says(localized("noSlips.name")))
         #expect(rendered.says(localized("game.depth", 20)))
         #expect(!rendered.says("e4"), "the prepared answer must stay hidden")
 
@@ -332,14 +332,14 @@ struct DeckGallery {
         if language != .chinese { #expect(!tactic.says("这一步有没有一记赢子的")) }
     }
 
-    @Test func tillingStartsWithoutAnalysisAnswers() async throws {
+    @Test func noSlipsStartsWithoutAnalysisAnswers() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let engine = ScriptedEngine([Analysis(depth: 20, lines: [
             Line(score: .centipawns(500), uciMoves: ["e2e4"], san: ["e4"])
         ])])
         let session = GameSession.fresh(game, engine: engine)
         session.setNoSlips(true)
-        let rendered = await ScreenImage.write("tilling-no-hints") {
+        let rendered = await ScreenImage.write("no-slips-no-hints") {
             screen(session, engine: engine, opening: .tactics)
         }
         #expect(rendered.says("把关"))
@@ -368,7 +368,7 @@ struct DeckGallery {
         session.play(try #require(game.state.move(matching: "d2d4")))
         await session.settled()
         try #require(session.activePunishment != nil)
-        let rendered = await ScreenImage.write("tilling-opponent-reply") {
+        let rendered = await ScreenImage.write("no-slips-opponent-reply") {
             screen(session, engine: engine, opening: .tactics)
         }
         #expect(rendered.says("替对手走一步"))

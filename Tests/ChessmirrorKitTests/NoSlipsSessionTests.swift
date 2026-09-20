@@ -130,7 +130,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.till(at: 5)
+    session.noSlips(at: 5)
     await session.waitForPreparedInterception()
     for _ in 0..<2 {
         session.play(try #require(start.state.move(matching: "f2f3")))
@@ -168,7 +168,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.till(at: 5)
+    session.noSlips(at: 5)
     await session.waitForPreparedInterception()
     session.play(try #require(start.state.move(matching: "f2f3")))
     await session.settled()
@@ -321,7 +321,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 /// Contract: 把关 is a switch and nothing else. On, it stops the player at the 记录线; off, the
 /// file says nothing of it, a real PGN file round trip comes back off, and the game never changes.
 @MainActor
-@Test func tillingIsASwitchThatReadsTheRecordLine() throws {
+@Test func noSlipsIsASwitchThatReadsTheRecordLine() throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, lines: JudgementLines(record: 15, enqueue: 20))
     session.setNoSlips(true)
@@ -391,7 +391,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine], engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     try #require((session.searchProgress?.depth ?? 0) > 0)
     let started = ContinuousClock.now
@@ -453,7 +453,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ], isPartial: true)])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
     await session.settled()
@@ -473,7 +473,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     let searches = engine.searchCount
     session.play(try #require(game.state.move(matching: "d8h4")))
@@ -498,7 +498,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
 
@@ -521,7 +521,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     session.play(try #require(session.game.state.move(matching: "f2f3")))
     await session.settled()
     #expect(session.refused?.san == "f3")
@@ -544,7 +544,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
 
     await session.waitForPreparedInterception()
     #expect(session.searchProgress?.depth == 20)
@@ -567,18 +567,18 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
     let session = GameSession.fresh(game)
-    session.till(at: line)
+    session.noSlips(at: line)
     #expect(session.isNoSlipsOn)
     let pgn = try PGN(parsing: session.pgn.text)
     let opened = try #require(GameSession.opened(GameLibrary.Entry(
-        url: URL(filePath: "/games/tilling.pgn"), pgn: pgn, modified: Date()
+        url: URL(filePath: "/games/no-slips.pgn"), pgn: pgn, modified: Date()
     )))
     #expect(pgn.intercept == line, "the file says where the moves in it were stopped")
     #expect(opened.isNoSlipsOn)
     #expect(opened.lines.intercept == JudgementLines.standard.record, "and the player says where the next is")
-    opened.till(at: .nan)
+    opened.noSlips(at: .nan)
     #expect(opened.lines == JudgementLines(noSlips: true), "a line off the scale is not a line")
-    opened.till(at: 101)
+    opened.noSlips(at: 101)
     #expect(opened.lines == JudgementLines(noSlips: true))
     opened.setNoSlips(false)
     #expect(!opened.isNoSlipsOn)
@@ -588,7 +588,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 /// Contract: real Stockfish judges Fool's Mate → session restores the board → a legal retry
 /// stands → PGN retains the refused move once. The disabled setting must allow the same blunder.
 @MainActor
-@Test func tillingRejectsMateAndPreservesTheRetry() async throws {
+@Test func noSlipsRejectsMateAndPreservesTheRetry() async throws {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -596,7 +596,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3", "e7e5"]))
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     let blunder = try #require(game.state.move(matching: "g2g4"))
     session.play(blunder)
     #expect(session.isWeighing)
@@ -627,14 +627,14 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 }
 
 @MainActor
-@Test func suspendingTillingRestoresTheUnjudgedPosition() async throws {
+@Test func suspendingNoSlipsRestoresTheUnjudgedPosition() async throws {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1)
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, engine: engine)
-    session.till(at: 10)
+    session.noSlips(at: 10)
     session.play(try #require(game.state.move(matching: "e2e4")))
     #expect(session.game != game)
     session.suspend()

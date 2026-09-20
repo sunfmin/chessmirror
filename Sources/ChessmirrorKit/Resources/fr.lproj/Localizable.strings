@@ -375,29 +375,17 @@
 "daily.left.one" = "%d restante";
 "daily.done" = "Terminé pour aujourd'hui";
 "daily.none" = "Rien à travailler aujourd'hui";
-"till.start" = "Commencer sans faute";
 "noSlips.start" = "Commencer sans faute";
-"till.name" = "Sans faute";
 "noSlips.name" = "Sans faute";
-"till.practice" = "Pratique";
 "noSlips.practice" = "Pratique";
-"till.off" = "Désactivé";
 "noSlips.off" = "Désactivé";
-"till.judging" = "Calcul en cours";
 "noSlips.judging" = "Calcul en cours";
-"till.refused" = "%@ coûte %d%%. Réessayez.";
 "noSlips.refused" = "%@ coûte %d%%. Réessayez.";
-"till.hint" = "Indice %d";
 "noSlips.hint" = "Indice %d";
-"till.reveal" = "Révéler la réponse";
 "noSlips.reveal" = "Révéler la réponse";
-"till.relax" = "Assouplir à %d%%";
 "noSlips.relax" = "Assouplir à %d%%";
-"till.shot" = "Il y a une possibilité tactique.";
 "noSlips.shot" = "Il y a une possibilité tactique.";
-"till.quiet" = "Aucune tactique confirmée. Améliorez votre position.";
 "noSlips.quiet" = "Aucune tactique confirmée. Améliorez votre position.";
-"till.notFound" = "Non trouvée";
 "noSlips.notFound" = "Non trouvée";
 "punish.toggle" = "Trouver la réponse adverse";
 "punish.prompt" = "Jouez pour l’adversaire et trouvez sa meilleure réponse.";
@@ -480,7 +468,6 @@
 "discovery.mateFound" = "Mat trouvé";
 "discovery.tacticFound" = "Occasion tactique trouvée";
 "board.faceToFace" = "Face à face";
-"till.returned" = "Reprise";
 "noSlips.returned" = "Reprise";
 "book.recorded" = "%d ajoutés au carnet d’erreurs";
 "standing.change" = "Variation de probabilité pour ce coup %@";
@@ -500,7 +487,6 @@
 
 "strength" = "Force";
 "strength.full" = "Pleine force";
-"till.tally" = "Série %d";
 "noSlips.tally" = "Série %d";
 "ladder" = "Palmarès des séries";
 "ladder.run" = "Plus longue série";

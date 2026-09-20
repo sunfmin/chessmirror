@@ -346,29 +346,17 @@
 "daily.left" = "残り %d 問";
 "daily.done" = "今日の分は終わり";
 "daily.none" = "今日は練習する問題がありません";
-"till.start" = "ミスなし対局を開始";
 "noSlips.start" = "ミスなし対局を開始";
-"till.name" = "ミスなし対局";
 "noSlips.name" = "ミスなし対局";
-"till.practice" = "練習";
 "noSlips.practice" = "練習";
-"till.off" = "オフ";
 "noSlips.off" = "オフ";
-"till.judging" = "計算中";
 "noSlips.judging" = "計算中";
-"till.refused" = "%@ で %d%% 低下。指し直してください。";
 "noSlips.refused" = "%@ で %d%% 低下。指し直してください。";
-"till.hint" = "ヒント %d";
 "noSlips.hint" = "ヒント %d";
-"till.reveal" = "答えを表示";
 "noSlips.reveal" = "答えを表示";
-"till.relax" = "%d%% に緩和";
 "noSlips.relax" = "%d%% に緩和";
-"till.shot" = "戦術的なチャンスがあります。";
 "noSlips.shot" = "戦術的なチャンスがあります。";
-"till.quiet" = "戦術は確認されていません。局面の改善を考えましょう。";
 "noSlips.quiet" = "戦術は確認されていません。局面の改善を考えましょう。";
-"till.notFound" = "見つからず";
 "noSlips.notFound" = "見つからず";
 "punish.toggle" = "相手の反撃を見つける";
 "punish.prompt" = "相手の立場で最善の応手を指してください。";
@@ -451,7 +439,6 @@
 "discovery.mateFound" = "メイトを発見";
 "discovery.tacticFound" = "戦術のチャンスを発見";
 "board.faceToFace" = "対面";
-"till.returned" = "差し戻し";
 "noSlips.returned" = "差し戻し";
 "book.recorded" = "間違い帳に %d 件追加しました";
 "standing.change" = "この手の勝率変化 %@";
@@ -471,7 +458,6 @@
 
 "strength" = "棋力";
 "strength.full" = "全力";
-"till.tally" = "連続 %d";
 "noSlips.tally" = "連続 %d";
 "ladder" = "連続番付";
 "ladder.run" = "最長連続";

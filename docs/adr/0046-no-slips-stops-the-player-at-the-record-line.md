@@ -26,7 +26,7 @@ engine's 棋力 shapes the opponent and never what a move costs
 
 - **The slider is gone from the game screen.** 把关 there is on or off. Where it stops the player
   is changed where the 记录线 is changed, in 关于, and the footer under the two pickers says so.
-- `JudgementLines` holds `tilling`, `record` and `enqueue`. `intercept` is derived — the 记录线
+- `JudgementLines` holds `noSlips`, `record` and `enqueue`. `intercept` is derived — the 记录线
   while 把关 is on, nil while it is off — and cannot be set, so a game stopping the player
   somewhere the book does not write down is not a state the kit can be in.
 - **Nothing already written is rewritten.** A judgement keeps the line it stood under

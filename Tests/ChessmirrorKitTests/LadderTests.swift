@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-/// Contract: the 正着榜 is read out of the games (docs/adr/0038). Every move that stood under 正着
+/// Contract: the 连正榜 is read out of the games (docs/adr/0038). Every move that stood under 正着
 /// is credited to the rung the engine was on when it was played; a 连正 is a run at one rung,
 /// ended by a 试招 or by a change of rung; a stretch at no rung is credited nowhere. Only the
 /// longest run is kept per rung: a count of everything that stood was the length of the game.

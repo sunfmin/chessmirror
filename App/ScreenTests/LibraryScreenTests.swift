@@ -25,7 +25,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("mistake-recorded", interact: { window in
             #expect(ScreenImage.activate(localized("library.fromStart"), in: window))
             await ScreenImage.settle()
-            #expect(ScreenImage.words(in: window).contains { $0.contains(localized("till.name")) })
+            #expect(ScreenImage.words(in: window).contains { $0.contains(localized("noSlips.name")) })
             #expect(!ScreenImage.words(in: window).contains(message))
             #expect(library.write(pgn, to: directory.appending(path: "game.pgn")))
             await ScreenImage.settle()
@@ -73,7 +73,7 @@ struct LibraryScreenScreenshots {
         #expect(rendered.says("走出第一步，这局就会记在这里"), "an empty library says so")
     }
 
-    /// The 正着榜 above the games (docs/adr/0038): a row per rung that has been stood at, each
+    /// The 连正榜 above the games (docs/adr/0038): a row per rung that has been stood at, each
     /// with its longest 连正.
     @Test("the ladder shows a row per rung, with its longest run")
     func theLadderAboveTheGames() async throws {

@@ -56,7 +56,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     let engine = ScriptedEngine([], isEndless: true, byPosition: [game.state.fen: analysis(0, "e2e4", "e4")])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
 
     session.play(try #require(game.state.move(matching: "d2d4")))
@@ -71,7 +71,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
 
     session.jumpToStart()
     #expect(session.cursor == 1, "the record is not browsed while a move is weighed")
-    session.till(at: 30)
+    session.noSlips(at: 30)
     #expect(session.lines.intercept == 10, "nor is the 拦截线 moved under the judgement")
     session.setController(.engine, for: .black)
     #expect(session.controller(for: .black) == .hand, "nor a seat handed over")
@@ -160,7 +160,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     ])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     session.findsPunishment = true
     await session.waitForPreparedInterception()
 

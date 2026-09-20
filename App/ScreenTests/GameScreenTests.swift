@@ -423,7 +423,7 @@ struct GameScreenScreenshots {
 
         #expect(!session.isProbingTactics)
         #expect(rendered.says(localized("search.reached")))
-        #expect(!rendered.says(localized("till.judging")))
+        #expect(!rendered.says(localized("noSlips.judging")))
         #expect(rendered.says(localized("game.depth", 26)), "the Depth is a figure of its own")
         #expect(rendered.says(localized("standing.bar")))
     }
@@ -903,7 +903,7 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-stood-reply", interact: { window in
             let before = ScreenImage.words(in: window)
             #expect(before.contains { $0.contains(localized("wrong.stood")) }, "the row says the move was played")
-            #expect(!before.contains { $0.contains(localized("till.returned")) }, "nothing here was taken back")
+            #expect(!before.contains { $0.contains(localized("noSlips.returned")) }, "nothing here was taken back")
             #expect(!before.contains { $0.contains(localized("tried.reply")) }, "the answer waits to be asked for")
             #expect(ScreenImage.activate("Nf3", in: window), "the move that stood must be pressable")
             await ScreenImage.settle()

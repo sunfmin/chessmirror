@@ -132,7 +132,7 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.till(at: 5)
+    session.noSlips(at: 5)
     await session.waitForPreparedInterception()
     for uci in ["f2f3", "g2g4"] {
         session.play(try #require(start.state.move(matching: uci)))

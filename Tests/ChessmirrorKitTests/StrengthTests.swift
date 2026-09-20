@@ -37,7 +37,7 @@ import ChessmirrorKitTesting
             Self.start, controllers: [.white: .hand, .black: .engine], engine: engine,
             strength: strength
         )
-        session.till(at: 5)
+        session.noSlips(at: 5)
         await session.waitForPreparedInterception()
         session.play(try #require(Self.start.state.move(matching: "e2e4")))
         await session.settled()
