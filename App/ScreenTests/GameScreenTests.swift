@@ -176,7 +176,7 @@ struct GameScreenScreenshots {
         )
 
         let rendered = await ScreenImage.write("game-recognised") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
         #expect(session.unconfirmedSquares.count == 3, "the shaky squares stay ringed on the board")
@@ -331,7 +331,7 @@ struct GameScreenScreenshots {
         session.step(by: -1)
 
         let rendered = await ScreenImage.write("game-replayed") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
         #expect(session.game.plies.count == 7, "the new move is the end of the line on the board")
@@ -346,7 +346,7 @@ struct GameScreenScreenshots {
         // Swiping the strip onto the other line puts the game back as it was imported.
         session.cycleFork(by: 1)
         let swiped = await ScreenImage.write("game-replayed-swiped") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
         #expect(session.game.plies.map(\.san).suffix(2) == ["c3", "Nf6"], "the original line is the game again")
         #expect(swiped.says("第 7 步 c3"), "and back on the strip")
@@ -418,7 +418,7 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-card-searching", interact: { window in
             #expect(ScreenImage.activate(localized("discovery.view"), in: window))
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
 
         #expect(!session.isProbingTactics)
@@ -452,7 +452,7 @@ struct GameScreenScreenshots {
             #expect(!ScreenImage.words(in: window).contains { $0.contains("没人守的车") })
             #expect(ScreenImage.activate(localized("discovery.view"), in: window))
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         await hop()
 
@@ -602,7 +602,7 @@ struct GameScreenScreenshots {
         // Dealt to 要害 — the card that acts is not the news — and the search that finds the mate
         // is that card's own Stint, arriving a hop later.
         _ = await ScreenImage.write("game-news-takes-the-eye") {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         await hop()
 
@@ -1148,15 +1148,12 @@ struct GameScreenScreenshots {
 
     /// The screen as the app pushes it: inside a navigation stack, with the engine and the library
     /// in the environment. The engine is the only thing that is not the app's own.
-    /// The screen, and — when a test is photographing something that lives on one card of the
-    /// deck — the card to open on. The app decides that for itself from the position; a test says
-    /// so, the same way it says which game and which engine (docs/adr/0025).
     private func screen(
-        _ session: GameSession, engine: any Engine, opening: GameScreen.Card? = nil,
+        _ session: GameSession, engine: any Engine,
         library: GameLibrary? = nil
     ) -> some View {
         NavigationStack {
-            GameScreen(session: session, path: .constant([]), opening: opening)
+            GameScreen(session: session, path: .constant([]))
         }
         .environment(EngineHost(engine))
         .environment(library ?? GameLibrary())

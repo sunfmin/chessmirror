@@ -36,7 +36,7 @@ struct DeckGallery {
             let flipped = BoardView(pieces: [:], orientation: .blackAtBottom, isFaceToFace: true)
             #expect(flipped.pieceRotation(for: .white) == 180)
             #expect(flipped.pieceRotation(for: .black) == 0)
-        }) { screen(session, engine: engine, opening: .tactics) }
+        }) { screen(session, engine: engine) }
         #expect(rendered.says(localized("board.faceToFace")))
         #expect(!rendered.says("1. e4"))
         let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
@@ -55,7 +55,7 @@ struct DeckGallery {
         defer { session.suspend() }
         let value = String(format: "%+.1f%%", Score.centipawns(score).winPercent - 50)
         let rendered = await ScreenImage.write("standing-change-\(score)", size: CGSize(width: 320, height: 850)) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("standing.change", value)))
         #expect(rendered.says(localized("record.curve")))
@@ -72,7 +72,7 @@ struct DeckGallery {
         defer { session.suspend() }
         let rendered = await ScreenImage.write("standing-layout-\(width)",
             size: CGSize(width: width, height: 850)) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("noSlips.name")))
         #expect(rendered.says(localized("game.depth", 20)))
@@ -101,7 +101,7 @@ struct DeckGallery {
             await ScreenImage.settle()
             #expect(!session.isNoSlipsOn)
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("noSlips.name")))
         #expect(rendered.says(localized("noSlips.off")))
@@ -147,7 +147,7 @@ struct DeckGallery {
             #expect(!ScreenImage.words(in: window).contains(localized("punish.toggle")))
             #expect(ScreenImage.activate(localized("game.settings.expand", PieceColour.black.label), in: window))
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("punish.toggle")))
         #expect(rendered.says(localized("game.settings.collapse", PieceColour.black.label)))
@@ -174,7 +174,7 @@ struct DeckGallery {
         await hop()
         try #require(session.game.plies.count == 1)
         let rendered = await ScreenImage.write("no-slips-cost-history") {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("noSlips.returned")))
         #expect(rendered.says("d4"))
@@ -228,7 +228,7 @@ struct DeckGallery {
             await ScreenImage.settle()
             #expect(ScreenImage.words(in: window).contains { $0.contains("Nf3") })
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("tried.reply")))
         #expect(rendered.says("Nf3"))
@@ -266,7 +266,7 @@ struct DeckGallery {
             session.play(move)
             await ScreenImage.settle()
         }) {
-            screen(session, engine: engine, opening: .mate)
+            screen(session, engine: engine)
         }
         #expect(session.game.uciMoves == ["b3b8"])
         #expect(!rendered.says("Rd8#"), "new positions require a new explicit reveal")
@@ -290,7 +290,7 @@ struct DeckGallery {
         defer { session.suspend() }
         session.setNoSlips(true)
         let rendered = await ScreenImage.write("no-slips-\(language.rawValue)") {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("noSlips.name")))
         #expect(rendered.says(localized("game.depth", 20)))
@@ -305,7 +305,7 @@ struct DeckGallery {
         let mateSession = GameSession.fresh(mateGame, engine: mateEngine)
         defer { mateSession.suspend() }
         let mate = await ScreenImage.write("mate-\(language.rawValue)") {
-            screen(mateSession, engine: mateEngine, opening: .mate)
+            screen(mateSession, engine: mateEngine)
         }
         let news = try #require(mateSession.mateNews)
         #expect(mate.says(localized("discovery.mateFound")))
@@ -323,7 +323,7 @@ struct DeckGallery {
         defer { tacticSession.suspend() }
         tacticSession.setFindingTactics(true)
         let tactic = await ScreenImage.write("tactics-\(language.rawValue)") {
-            screen(tacticSession, engine: tacticEngine, opening: .tactics)
+            screen(tacticSession, engine: tacticEngine)
         }
         let shot = try #require(tacticSession.tactic)
         #expect(tactic.says(localized("discovery.tacticFound")))
@@ -340,7 +340,7 @@ struct DeckGallery {
         let session = GameSession.fresh(game, engine: engine)
         session.setNoSlips(true)
         let rendered = await ScreenImage.write("no-slips-no-hints") {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says("把关"))
         #expect(!rendered.says("提示 1"))
@@ -369,7 +369,7 @@ struct DeckGallery {
         await session.settled()
         try #require(session.activePunishment != nil)
         let rendered = await ScreenImage.write("no-slips-opponent-reply") {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says("替对手走一步"))
         #expect(rendered.says("揭示答案"))
@@ -410,7 +410,7 @@ struct DeckGallery {
             await ScreenImage.settle()
             #expect(session.cursor == 3, "and again, to the refusal nothing has absorbed")
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("slips.here", 3)))
         // And the marks are on the *positions*, which is the thing that went wrong first: the 24%
@@ -449,10 +449,10 @@ struct DeckGallery {
     }
 
     private func screen(
-        _ session: GameSession, engine: any Engine, opening: GameScreen.Card
+        _ session: GameSession, engine: any Engine
     ) -> some View {
         NavigationStack {
-            GameScreen(session: session, path: .constant([]), opening: opening)
+            GameScreen(session: session, path: .constant([]))
         }
         .environment(EngineHost(engine))
         .environment(GameLibrary())
@@ -484,7 +484,7 @@ struct DeckGallery {
         await hop()
 
         let rendered = await ScreenImage.write("deck-01-mate") {
-            screen(session, engine: engine, opening: .mate)
+            screen(session, engine: engine)
         }
         #expect(rendered.says(localized("discovery.mateFound")))
         #expect(rendered.says(localized("discovery.view")))
@@ -513,7 +513,7 @@ struct DeckGallery {
         session.attach(engine: engine, library: nil)
 
         let rendered = await ScreenImage.write("deck-02-tactics") {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         await hop()
         #expect(rendered.says("战术"))
