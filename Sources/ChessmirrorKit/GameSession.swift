@@ -107,6 +107,35 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Whether a move of either kind is being walked.
     public var isThinking: Bool { thinking != nil }
 
+    // ------------------------------------------------------------------ what happened
+
+    /// Something that happened on the board, for whoever makes the noise about it.
+    ///
+    /// The session says *what happened* and nothing about what it sounds like. It used to reach
+    /// for the app's speaker itself, fourteen times, from the middle of deciding whether a move
+    /// stands — so which noise a refusal makes was a line of the judgement, and the only way a
+    /// test could hear a game was to swap a global out from under it.
+    public enum Event: Hashable, Sendable {
+        /// A move landed on the board — by hand, asked for, or the engine's own — and this is
+        /// what it did to the game. A move being weighed has landed: it is on the board, and
+        /// whether it stands is said by what follows.
+        case landed(Move, outcome: Outcome)
+        /// A move did not stand: 把关 took it back, or the rules would not play it.
+        case refused
+        /// A move was played over another, and what followed moved in beside it as a 分支
+        /// (docs/adr/0043). Said after the `landed` of the move that did it.
+        case forked
+        /// The record stepped without a move being played: browsed, switched to another 分支,
+        /// a move taken off the end, a reply played off the record.
+        case stepped
+    }
+
+    /// Who is listening. One listener, set by the screen the session is on; a session nobody is
+    /// listening to is a silent one, which is what a test and a session off screen both want.
+    @ObservationIgnored public var onEvent: (@MainActor (Event) -> Void)?
+
+    private func emit(_ event: Event) { onEvent?(event) }
+
     // --------------------------------------------------------- shared position search
 
     /// The shared search has finished; its answer remains available without more work.
@@ -1535,7 +1564,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard wanted != cursor else { return }
         cursor = wanted
         adoptViewedAnalysis()
-        Sounds.current.play(.move)
+        emit(.stepped)
         retune()
     }
 
@@ -1557,7 +1586,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard cursor != 0 else { return }
         cursor = 0
         adoptViewedAnalysis()
-        Sounds.current.play(.move)
+        emit(.stepped)
         retune()
     }
 
@@ -1568,7 +1597,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard wanted != cursor else { return }
         cursor = wanted
         adoptViewedAnalysis()
-        Sounds.current.play(.move)
+        emit(.stepped)
         retune()
     }
 
@@ -1611,7 +1640,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard game.promoteVariation(index, atPly: ply) else { return }
         cursor = keepStanding ? (standing <= ply ? ply : ply + 1) : ply + 1
         adoptViewedAnalysis()
-        Sounds.current.play(.move)
+        emit(.stepped)
         save()
         retune()
     }
@@ -1794,7 +1823,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let position = viewed
         var played = position
         guard played.apply(move), let landed = played.plies.last else {
-            Sounds.current.play(.refused)
+            emit(.refused)
             return
         }
         stopSearching()
@@ -1805,14 +1834,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // strip disappears and comes back. `played` is the prefix the engine weighs.
         var shown = game
         guard shown.play(move, atPly: cursor) else {
-            Sounds.current.play(.refused)
+            emit(.refused)
             return
         }
         game = shown
         cursor += 1
         analysis = nil
         refused = nil
-        Sounds.current.play(move, outcome: game.state.outcome)
+        emit(.landed(move, outcome: game.state.outcome))
         beginWeighing(from: standpoint, task: Task { [weak self] in
             await self?.settle(move, san: landed.san, from: position, to: played)
         })
@@ -1865,7 +1894,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // such move — and the refusal used to go with them (docs/adr/0037).
             refused = refusal
             save()
-            Sounds.current.play(.refused)
+            emit(.refused)
             if findsPunishment { exercise(Punishment(position: played, engine: engine)) }
         }
     }
@@ -1886,7 +1915,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             game = practice.game
             cursor = game.plies.count
             analysis = nil
-            Sounds.current.play(move, outcome: game.state.outcome)
+            emit(.landed(move, outcome: game.state.outcome))
             beginWeighing(from: nil, task: Task { [weak self] in
                 await practice.settled()
                 guard let self, !Task.isCancelled else { return }
@@ -1924,13 +1953,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             game.setStrength(strength, atPly: game.plies.count - 1)
         } else {
             guard game.play(move, atPly: cursor) else {
-                Sounds.current.play(.refused)
+                emit(.refused)
                 return
             }
             cursor += 1
         }
-        Sounds.current.play(move, outcome: viewed.state.outcome)
-        if branching { Sounds.current.play(.check) }
+        emit(.landed(move, outcome: viewed.state.outcome))
+        if branching { emit(.forked) }
         // The invariant: the Analysis that described the position before this move is stale,
         // the game is written to its file, and the engine is asked what it makes of the new
         // position — whoever moved.
@@ -1958,7 +1987,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard !isAtLatest, controller(for: viewed.state.sideToMove) == .engine else { return }
         cursor += 1
         adoptViewedAnalysis()
-        Sounds.current.play(.move)
+        emit(.stepped)
     }
 
     // ------------------------------------------------------------------ a study
@@ -2070,7 +2099,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard isAtLatest, !game.plies.isEmpty else { return }
         stopSearching()
         game.undo()
-        Sounds.current.play(.move)
+        emit(.stepped)
         // If undoing leaves the engine on the clock while the player is not, undo its move
         // too — otherwise it replies instantly and the player is exactly where they were.
         if controller(for: game.state.sideToMove) == .engine,

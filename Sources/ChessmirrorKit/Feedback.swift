@@ -53,10 +53,14 @@ extension Feedback {
 
 /// The Feedback everything plays through.
 ///
-/// Global because a sound is not something a Game should have to be handed in order to have —
+/// Global because a sound is not something a screen should have to be handed in order to make —
 /// threading a speaker through every construction site would grow exactly the ritual that
 /// `GameSession.open` exists to remove. Settable because that is the seam: the app installs its
 /// own on the way up, and a test installs a recording one.
+///
+/// **The kit's own code does not reach for it.** A session says what happened
+/// (`GameSession.Event`) and the screen it is on turns that into a noise; this is what that
+/// screen plays through.
 @MainActor public enum Sounds {
     public static var current: any Feedback = SilentFeedback()
 }

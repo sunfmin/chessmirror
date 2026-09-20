@@ -243,9 +243,16 @@ struct GameScreen: View {
             // is not cancelled a line later. From here the session follows the engine host itself —
             // the engine arriving, the app leaving and coming back — and this screen wires nothing.
             session.appear(on: engine, library: library)
+            // What happens on the board is the session's to say and this screen's to make a
+            // noise about. Read off `Sounds.current` when the event arrives rather than now, so
+            // whichever Feedback is installed at that moment is the one that plays.
+            session.onEvent = { Sounds.current.hear($0) }
             deal()
         }
-        .onDisappear { session.disappear() }
+        .onDisappear {
+            session.onEvent = nil
+            session.disappear()
+        }
         .onChange(of: isSoundOn) { _, isOn in Sounds.current.isSoundOn = isOn }
         // The setting travels between devices (docs/adr/0012), so it can change while this
         // screen is the one on show — and a toggle that disagrees with the sound is worse than
