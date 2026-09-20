@@ -39,6 +39,15 @@ import Foundation
             return GameLibrary.fallbackName(for: url)
         }
 
+        /// When this game was played, as the file says, falling back to when the file was last
+        /// written. A 遭遇's own time (`MistakeBook.encounters`): 「最近一次是三天前」 is a
+        /// statement about the game, and reading it off the file's modification date made it a
+        /// statement about the last time anything touched the file — a re-save, a rename, a
+        /// Review landing — which is not when the player fell for anything.
+        public var when: Date {
+            pgn.flatMap { PGN.playedDay($0.tag(PGN.Tags.date)) } ?? modified
+        }
+
         /// The position a row draws. Where the game stands, except for a 练习 file, which draws
         /// the 错题 it was asked about — the position it started from. A drill answered right has
         /// moved on from that position, and a row drawing where it ended says nothing about which
@@ -56,7 +65,7 @@ import Foundation
             // As much of the date as the file knows, and nothing where it knows none
             // (`PGN.playedOn`).
             var parts = [origin.label]
-            if let played = PGN.playedOn(pgn.tag("Date")) { parts.append(played) }
+            if let played = PGN.playedOn(pgn.tag(PGN.Tags.date)) { parts.append(played) }
             // A 错题 answered wrong and walked away from is a file with no move in it and a 试招
             // on the first position (docs/adr/0047). "0 回合 · 未结束" is true of it and says
             // nothing; what happened is the move that was taken back.
@@ -74,7 +83,7 @@ import Foundation
     public private(set) var entries: [Entry] = []
 
     /// The tag a game's own name lives in.
-    public nonisolated static let nameTag = "Name"
+    public nonisolated static let nameTag = PGN.Tags.name
 
     public func sortedByName(_ list: [Entry]) -> [Entry] {
         list.sorted { Self.reads($0.title, before: $1.title) }
@@ -171,7 +180,7 @@ import Foundation
                     current.game == original.game else { return completed(.superseded) }
                 var result = current
                 result.game = judged.game
-                result.setTag("ReviewSift", to: judged.tag("ReviewSift"))
+                result.setTag(PGN.Tags.reviewSift, to: judged.tag(PGN.Tags.reviewSift))
                 completed(write(result, to: entry.url) ? .reviewed(result) : .failed)
             } catch {
                 // No partial scores are saved; asking again starts the job over.
@@ -236,6 +245,11 @@ import Foundation
 
         return urls
             .filter { $0.pathExtension.lowercased() == "pgn" }
+            // One form per file. A game is identified by its URL — the 错题本 caches its walk
+            // under it, a row's count is looked up by it — and a directory listing resolves the
+            // links in a path where `appending(path:)` does not, so a game saved and the same
+            // game listed could be two keys for one file.
+            .map { $0.resolvingSymlinksInPath() }
             .map { url in
                 // A game another device saved is a name here before it is bytes. Asking for it
                 // is enough — the folder says when it has landed, and the list is built again.
@@ -273,8 +287,18 @@ import Foundation
             url = directory.appending(path: "chessmirror-\(stamp)-\(suffix).pgn")
             suffix += 1
         }
-        return url
+        // In the form the listing will give it back in (`gather`), so the file a session saves
+        // to and the row it comes back as are one key.
+        return url.resolvingSymlinksInPath()
     }
+
+    /// Waits for the saves already asked for to land.
+    ///
+    /// A write to iCloud is chained and detached — `write` says the save was *taken*, not that
+    /// the bytes are down — so anything that has to read the folder back needs a way to wait for
+    /// it. Without one the coordinated half of this file could only be exercised by a person
+    /// with an iCloud account and a second device.
+    public func written() async { await writeChain?.value }
 
     @discardableResult
     public func write(_ pgn: PGN, to url: URL) -> Bool {
@@ -362,8 +386,14 @@ import Foundation
     /// Updates one row in place rather than re-reading the folder, so that autosaving after
     /// every move does not turn into a directory scan after every move.
     private func refreshEntry(at url: URL, with pgn: PGN) {
-        let entry = Entry(url: url, pgn: pgn, modified: Date())
-        if let index = entries.firstIndex(where: { $0.url == url }) {
+        // The file's own date, the same one `gather` reads. Stamping `Date()` here made the row
+        // disagree with the folder by a few milliseconds, which is a different key in the 错题本's
+        // cache and one game walked again for nothing.
+        let modified =
+            (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+            ?? Date()
+        let entry = Entry(url: url.resolvingSymlinksInPath(), pgn: pgn, modified: modified)
+        if let index = entries.firstIndex(where: { $0.url == entry.url }) {
             entries[index] = entry
         } else {
             entries.insert(entry, at: 0)

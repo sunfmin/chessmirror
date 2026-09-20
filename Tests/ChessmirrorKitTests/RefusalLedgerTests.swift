@@ -101,19 +101,19 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     session.play(try #require(twoPliesIn.state.move(matching: "f1c4")))
     await session.settled()
 
-    #expect(session.visibleAttempts.map(\.san) == ["Bc4"])
-    #expect(session.visibleAttempts == session.game.pendingTries(atPly: 2))
+    #expect(session.reading.attempts.map(\.san) == ["Bc4"])
+    #expect(session.reading.attempts == session.game.pendingTries(atPly: 2))
     #expect(session.refusedPosition == session.viewed)
 
     session.jumpToStart()
-    #expect(session.visibleAttempts.isEmpty)
+    #expect(session.reading.attempts.isEmpty)
     #expect(session.pendingAttempts.isEmpty)
     session.jump(toPly: 2)
-    #expect(session.visibleAttempts.map(\.san) == ["Bc4"])
+    #expect(session.reading.attempts.map(\.san) == ["Bc4"])
     #expect(session.refusedPosition == session.viewed)
     // The one that stands at Ply 3 has taken nothing: the refusal is still pending at 2.
     session.jump(toPly: 3)
-    #expect(session.visibleAttempts.isEmpty)
+    #expect(session.reading.attempts.isEmpty)
 }
 
 /// Two refusals at one position, then a move that stands: the move carries both, in the order
@@ -139,7 +139,7 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
         await session.settled()
     }
     #expect(session.game.pendingTries(atPly: 0).map(\.san) == ["f3", "g4"])
-    #expect(session.visibleAttempts.map(\.san) == ["f3", "g4"])
+    #expect(session.reading.attempts.map(\.san) == ["f3", "g4"])
 
     session.play(try #require(start.state.move(matching: "e2e4")))
     await session.settled()
@@ -147,5 +147,5 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     #expect(session.game.uciMoves == ["e2e4"])
     #expect(session.game.plies[0].tried.map(\.san) == ["f3", "g4"])
     #expect(session.game.pendingTried.isEmpty)
-    #expect(session.visibleAttempts.map(\.san) == ["f3", "g4"])
+    #expect(session.reading.attempts.map(\.san) == ["f3", "g4"])
 }

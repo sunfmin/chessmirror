@@ -1,3 +1,4 @@
+import ChessmirrorKitTesting
 import Foundation
 import Testing
 

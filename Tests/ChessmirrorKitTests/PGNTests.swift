@@ -442,3 +442,52 @@ func theFactsOfAGameRoundTripThroughTheirTags() throws {
     #expect(!row.detail.contains(localized("library.entry.unfinished")))
     #expect(row.shownFEN == question)
 }
+
+/// Contract: what this app writes, this app can cut apart and read back.
+///
+/// Where one game ends used to be decided in the importer and what a tag is called in four
+/// places; both are here now, and this holds them to each other — a file with a bracket inside a
+/// tag value and arrows inside a comment, which is what the two lexers used to disagree about.
+@MainActor
+@Test func filesThisAppWritesSurviveBeingCutApart() throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    // Imported, because that is the game whose roster names a real person — the app writes its
+    // own two names for a game it seated itself.
+    let first = PGN(
+        game: game, seats: [.white: .hand, .black: .engine], origin: .imported,
+        lines: JudgementLines(noSlips: true),
+        carrying: [
+            PGN.Tag(PGN.Tags.white, "De La Bourdonnais (1834)"),
+            PGN.Tag(PGN.Tags.name, "带括号的一局"),
+        ]
+    )
+    let second = PGN(
+        game: game, seats: [.black: .hand, .white: .engine], origin: .practised,
+        lines: JudgementLines(noSlips: true),
+        carrying: [PGN.Tag(PGN.Tags.chapterName, "第二章 {不是注释}")]
+    )
+
+    let blocks = PGN.split(first.text + "\n\n" + second.text)
+    #expect(blocks.count == 2, "a bracket in a tag value does not start a game")
+
+    let readBack = try blocks.map { try PGN(parsing: $0) }
+    #expect(readBack[0].playerName(.white) == "De La Bourdonnais (1834)")
+    #expect(readBack[0].name == "带括号的一局")
+    #expect(readBack[0].origin == .imported)
+    #expect(readBack[1].origin == .practised)
+    #expect(readBack[1].tag(PGN.Tags.chapterName) == "第二章 {不是注释}")
+    #expect(readBack[0].game.uciMoves == game.uciMoves)
+    #expect(readBack[1].intercept != nil, "把关 was on, and the file still says so")
+}
+
+/// The roster is read through one door, so nobody picks between White and Black by hand.
+@Test func theRosterIsReadByColour() throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN))
+    let pgn = PGN(
+        game: game,
+        tags: [PGN.Tag(PGN.Tags.white, "手动"), PGN.Tag(PGN.Tags.black, "Stockfish 18")]
+    )
+    #expect(pgn.playerName(.white) == "手动")
+    #expect(pgn.playerName(.black) == "Stockfish 18")
+    #expect(pgn.handColours == [.white])
+}

@@ -109,10 +109,21 @@ public struct DrillVerdict: Hashable, Sendable {
     /// How long the player took over the move, in seconds. Nil until they have moved.
     public private(set) var seconds: Double?
 
-    /// How many rungs of the hint ladder were opened before the move (docs/adr/0031). Zero until
-    /// there is a ladder to open; recorded from the start because it is the thing that makes a
-    /// pass with three hints readable as different from a pass with none.
-    public var hintsOpened = 0
+    /// How many cards were opened before the move (docs/adr/0025, 0047) — 杀 and 战术 are dealt
+    /// in practice, and opening one is counted as help rather than refused. The number the
+    /// 练习日志 writes on this attempt, and the thing that makes a pass with two cards open
+    /// readable as different from a pass with none.
+    ///
+    /// Written only through `noteHelp()`. It was a bare `var` naming a 提示层 that ADR 0042
+    /// retired, which left the one number the log has about help settable by anybody.
+    public private(set) var hintsOpened = 0
+
+    /// One card opened. Counted while the question is still open: help after the verdict is not
+    /// help with the answer.
+    public func noteHelp() {
+        guard !isSettled, !isJudging else { return }
+        hintsOpened += 1
+    }
 
     public var isSettled: Bool { verdict != nil }
     /// Whose move it is here, which is the side that has to find something.

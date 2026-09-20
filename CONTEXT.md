@@ -33,6 +33,14 @@ The one place a positive number is honest, and it is settled only after the move
 A reading of the Game with no screen at present (docs/adr/0040).
 _Avoid_: 抓住, 反击
 
+**牌堆 (Deck)**:
+The findings under the record: 杀招 and 战术, two cards in one order that never changes, each
+shut until it is pressed (docs/adr/0025). A card with nothing behind it takes up no room, and
+none of them are dealt in a 把关 game — a card is an opinion about what to play. A 练习 is dealt
+them 把关 or not, and pressing one is counted as help rather than refused (docs/adr/0047). What
+is on the table is a reading of the position (`Deck`); how much room it gets is the screen's.
+_Avoid_: 提示 as the name of a card, 卡片列表, panel
+
 **要害 (Vital)**: _retired._ The word named a card that no longer exists. Do not reuse it.
 
 ### 错题 — the mistake book
@@ -47,6 +55,13 @@ One move in one game that the player got wrong: the position it was played from,
 what it cost. The answer to 「这一局我哪儿走错了」, and what a game's own record strip marks and
 walks to. Not a 错题: a 错题 is the position, and this is one game's account of reaching it.
 _Avoid_: 错误, 失误, 招法
+
+**记录读数 (Record reading)**:
+What one game's record says about the player's 错招, read at one position: the 错招 themselves,
+the 试招 refused at the position on the board, and which of them a chip shows. A reading of the
+Game and the 判决线 and nothing else — no engine, no live search, no screen — so it is had from a
+file as readily as from a game being played (`RecordReading`).
+_Avoid_: 分析, 统计, summary
 
 **分数曲线 (Score curve)**:
 The record's Scores as one shape: a level per position of a game, high where White is doing well,

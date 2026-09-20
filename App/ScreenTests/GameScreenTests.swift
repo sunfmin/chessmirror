@@ -10,7 +10,7 @@ import ChessmirrorKitTesting
 /// Serialized and on the main actor because there is one screen: two of these rendering at once
 /// would be two key windows, and whichever drew second would be photographing the other one.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct GameScreenScreenshots {
     /// The Italian, eight plies in, White to move — a position anyone who plays reads at a glance,
     /// which is what a screenshot is for.
@@ -716,7 +716,7 @@ struct GameScreenScreenshots {
     /// The live screen rather than a card, because the live screen is the one every player sees:
     /// whose move it is, the record's own controls, and the button that hands the move over. If a
     /// table went missing, this is where it shows.
-    @Test("the same screen, in French", .speaking(.french))
+    @Test("the same screen, in French", .drawing(in: .french))
     func gameInFrench() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
@@ -870,7 +870,7 @@ struct GameScreenScreenshots {
         }) {
             screen(session, engine: engine)
         }
-        let landed = try #require(session.visibleAttempts.first)
+        let landed = try #require(session.reading.attempts.first)
         #expect(landed.depth == 28)
         #expect(landed.drop > 40, "a mate in one is worse than the everyday search made it")
         #expect(rendered.says(localized("game.depth", 28)))
@@ -881,7 +881,7 @@ struct GameScreenScreenshots {
     }
 
     /// A 试招 from an older file carries no depth: the reading shows none, and offers the 复判.
-    @Test("the reading, in English, for a move judged at no known depth", .speaking(.english))
+    @Test("the reading, in English, for a move judged at no known depth", .drawing(in: .english))
     func rejudgeOfferedInEnglish() async throws {
         let engine = ScriptedEngine([])
         let session = GameSession.fresh(try Self.refusedG4(depth: nil), engine: engine)
@@ -946,7 +946,7 @@ struct GameScreenScreenshots {
         let engine = ScriptedEngine([])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
-        let slip = try #require(session.slips.first)
+        let slip = try #require(session.reading.slips.first)
         session.jump(toPly: slip.positionPly)
         #expect(session.cursor == 2)
 
@@ -1002,7 +1002,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("本步胜率变化 +0.0%"), "VoiceOver still gets the number")
     }
 
-    @Test("the strip says Best move, in English", .speaking(.english))
+    @Test("the strip says Best move, in English", .drawing(in: .english))
     func theStripSaysBestInEnglish() async throws {
         let (session, engine) = try Self.bestMovePlayed()
         defer { session.suspend() }
@@ -1038,7 +1038,7 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("正着 4"), "and no count of everything that stood")
     }
 
-    @Test("the tally, in English", .speaking(.english))
+    @Test("the tally, in English", .drawing(in: .english))
     func theTallyInEnglish() async throws {
         let session = try Self.tallied()
         let rendered = await ScreenImage.write("game-tally-english") {
@@ -1213,7 +1213,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says(localized("review.offer")))
         #expect(rendered.says(localized("review.start")))
         #expect(!rendered.says(localized("slips.here", 1)), "no 错招 can be named before the Review")
-        #expect(session.slips.isEmpty)
+        #expect(session.reading.slips.isEmpty)
     }
 
     /// While the Review runs, the row is how far it has got — positions settled out of positions
@@ -1300,7 +1300,7 @@ struct GameScreenScreenshots {
 /// the screen once per ply, which is unusable and was invisible to every test that only read
 /// words. So this one reads pixels.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct BoardStandsStill {
     private static let italian = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5", "c2c3", "g8f6"]
 

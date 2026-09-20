@@ -435,103 +435,6 @@ public enum PGNImport {
 
     // -------------------------------------------------------------- splitting
 
-    /// One block per game in a multi-game PGN, each kept byte-for-byte so the
-    /// single-game parser can have it whole.
-    ///
-    /// The split point is a tag line — a line starting `[` — that comes after the
-    /// current game's tags have ended. Two things end them: movetext, which is every
-    /// non-tag line, and a blank line following the tags (a chapter with no moves is
-    /// just tags, then the next chapter's tags). A `[` inside a comment or a
-    /// variation must never split: `{[%cal …]}` keeps its brackets, so the `()` and
-    /// `{}` depths are tracked and only a `[` at depth zero can start a game.
-    /// Blank lines are kept — they are the whitespace the parser already skips — but
-    /// blocks that end up empty are dropped.
-    public static func split(_ text: String) -> [String] {
-        var blocks: [String] = []
-        var current: [String] = []
-        var seenTag = false
-        var tagsClosed = false
-        var hasMovetext = false
-        var parens = 0
-        var braces = 0
-
-        func closeBlock() {
-            let block = current.joined(separator: "\n")
-            if !block.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                blocks.append(block)
-            }
-            current = []
-            seenTag = false
-            tagsClosed = false
-            hasMovetext = false
-            parens = 0
-            braces = 0
-        }
-
-        for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
-            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            if line.isEmpty {
-                if seenTag { tagsClosed = true }
-                current.append(String(rawLine))
-                continue
-            }
-            if line.first == "[", parens == 0, braces == 0, hasMovetext || tagsClosed {
-                closeBlock()
-            }
-            // Depth first or after the split test? Before: the `(` of this line is
-            // this game's, and a `[` deeper into the line is this game's too.
-            let effects = bracketEffects(in: line)
-            parens += effects.parens
-            braces += effects.braces
-            if line.first == "[" {
-                seenTag = true
-            } else {
-                hasMovetext = true
-            }
-            current.append(String(rawLine))
-        }
-        closeBlock()
-        return blocks
-    }
-
-    /// How a line changes the `()` and `{}` depths, which is all the splitter needs
-    /// to know about it.
-    ///
-    /// Quote- and comment-aware, because both happily contain the brackets that would
-    /// fool it: a tag value like `[White "De La Bourdonnais (1834)"]` must not open a
-    /// variation, and a comment is where lichess puts arrows — `{[%cal Gd2d4]}` — so
-    /// everything inside `{…}` is dead to the counters except the closing brace.
-    private static func bracketEffects(in line: String) -> (parens: Int, braces: Int) {
-        var parens = 0
-        var braces = 0
-        var inQuotes = false
-        var previous: Character?
-        for character in line {
-            if braces > 0 {
-                if character == "}" { braces -= 1 }
-            } else if inQuotes {
-                if character == "\"", previous != "\\" { inQuotes = false }
-            } else {
-                switch character {
-                case "\"":
-                    inQuotes = true
-                case "(":
-                    parens += 1
-                case ")":
-                    parens -= 1
-                case "{":
-                    braces += 1
-                case "}":
-                    braces -= 1
-                default:
-                    break
-                }
-            }
-            previous = character
-        }
-        return (parens, braces)
-    }
-
     // --------------------------------------------------------------- reading
 
     /// Every game in a multi-game PGN, parsed, with the chapters that would not
@@ -539,7 +442,7 @@ public enum PGNImport {
     public static func chapters(in text: String) -> (chapters: [ImportChapter], unreadable: Int) {
         var chapters: [ImportChapter] = []
         var unreadable = 0
-        for (index, block) in split(text).enumerated() {
+        for (index, block) in PGN.split(text).enumerated() {
             guard let pgn = try? PGN(parsing: block) else {
                 unreadable += 1
                 continue
@@ -568,19 +471,19 @@ public enum PGNImport {
     static let namelessEvents: Set<String> = ["Chessmirror", "?", ""]
 
     public static func name(for pgn: PGN, chapter ordinal: Int) -> String {
-        if let chapterName = pgn.tag("ChapterName"), !chapterName.isEmpty { return chapterName }
+        if let chapterName = pgn.tag(PGN.Tags.chapterName), !chapterName.isEmpty { return chapterName }
         // A lichess or chess.com game before the Event check, because its Event is "Rated Blitz
         // game" or "Live Chess" — true of a million of them, and a name every game in an
         // import would share. Who played and when is what tells one of somebody's Tuesday
         // games from the next.
         if siteGameID(of: pgn) != nil, let played = playersAndDate(of: pgn) { return played }
-        if let event = pgn.tag("Event"), !event.isEmpty, !Self.namelessEvents.contains(event) {
+        if let event = pgn.tag(PGN.Tags.event), !event.isEmpty, !Self.namelessEvents.contains(event) {
             return event
         }
-        let white = pgn.tag("White") ?? "?"
-        let black = pgn.tag("Black") ?? "?"
+        let white = pgn.playerName(.white) ?? "?"
+        let black = pgn.playerName(.black) ?? "?"
         if white != "?" || black != "?" { return localized("import.name.players", white, black) }
-        if let date = pgn.tag("Date"), !date.isEmpty, date != "????.??.??" { return date }
+        if let date = PGN.playedOn(pgn.tag(PGN.Tags.date)) { return date }
         return localized("import.name.chapter", ordinal)
     }
 
@@ -591,14 +494,14 @@ public enum PGNImport {
         var name = player.trimmingCharacters(in: .whitespacesAndNewlines)
         if name.hasPrefix("@") { name.removeFirst() }
         guard !name.isEmpty else { return nil }
-        if pgn.tag("White")?.caseInsensitiveCompare(name) == .orderedSame { return .white }
-        if pgn.tag("Black")?.caseInsensitiveCompare(name) == .orderedSame { return .black }
+        if pgn.playerName(.white)?.caseInsensitiveCompare(name) == .orderedSame { return .white }
+        if pgn.playerName(.black)?.caseInsensitiveCompare(name) == .orderedSame { return .black }
         return nil
     }
 
     /// How a game went for one side, in a word — nil for a game with no result yet.
     public static func verdict(for side: PieceColour, in pgn: PGN) -> String? {
-        switch pgn.tag("Result") {
+        switch pgn.tag(PGN.Tags.result) {
         case "1-0": localized(side == .white ? "import.row.won" : "import.row.lost")
         case "0-1": localized(side == .black ? "import.row.won" : "import.row.lost")
         case "1/2-1/2": localized("import.row.drawn")
@@ -608,11 +511,11 @@ public enum PGNImport {
 
     /// When a game was played, as the file says it: the day, and the time when there is one.
     public static func playedAt(_ pgn: PGN) -> String? {
-        let date = [pgn.tag("UTCDate"), pgn.tag("Date")]
+        let date = [pgn.tag(PGN.Tags.utcDate), pgn.tag(PGN.Tags.date)]
             .compactMap { $0 }
             .first { !$0.isEmpty && $0 != "????.??.??" }
         guard var when = date else { return nil }
-        if let time = pgn.tag("UTCTime"), time.count >= 5 { when += " \(time.prefix(5))" }
+        if let time = pgn.tag(PGN.Tags.utcTime), time.count >= 5 { when += " \(time.prefix(5))" }
         return when
     }
 
@@ -622,15 +525,15 @@ public enum PGNImport {
     /// play each other more than once an evening, and two rows a person cannot tell apart are
     /// two rows they cannot choose between.
     private static func playersAndDate(of pgn: PGN) -> String? {
-        let white = pgn.tag("White") ?? "?"
-        let black = pgn.tag("Black") ?? "?"
+        let white = pgn.playerName(.white) ?? "?"
+        let black = pgn.playerName(.black) ?? "?"
         guard white != "?" || black != "?" else { return nil }
         var name = localized("import.name.players", white, black)
-        let date = [pgn.tag("UTCDate"), pgn.tag("Date")]
+        let date = [pgn.tag(PGN.Tags.utcDate), pgn.tag(PGN.Tags.date)]
             .compactMap { $0 }
             .first { !$0.isEmpty && $0 != "????.??.??" }
         if let date { name += " · \(date)" }
-        if let time = pgn.tag("UTCTime"), time.count >= 5 { name += " \(time.prefix(5))" }
+        if let time = pgn.tag(PGN.Tags.utcTime), time.count >= 5 { name += " \(time.prefix(5))" }
         return name
     }
 
@@ -648,12 +551,12 @@ public enum PGNImport {
     /// The game this file is on the site it came from, as `site:id` — nil for a file no site
     /// gave an id to. lichess writes its URL into `Site`; chess.com writes it into `Link`.
     private static func siteGameID(of pgn: PGN) -> String? {
-        if let site = pgn.tag("Site"), let url = URL(string: site),
+        if let site = pgn.tag(PGN.Tags.site), let url = URL(string: site),
             let id = lichessGameID(from: url)
         {
             return "lichess:\(id)"
         }
-        if let link = pgn.tag("Link"), let url = URL(string: link),
+        if let link = pgn.tag(PGN.Tags.link), let url = URL(string: link),
             let host = url.host?.lowercased(),
             host == "chess.com" || host.hasSuffix(".chess.com"),
             let id = url.pathComponents.last, id.allSatisfy(\.isNumber), !id.isEmpty
@@ -816,13 +719,13 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
                 var gathered = 0
                 for month in months.prefix(PGNImport.chessComMonthsBack) {
                     let pgn = try await fetching.fetch(PGNImport.chessComMonthURL(archive: month))
-                    let blocks = PGNImport.split(pgn).reversed()
+                    let blocks = PGN.split(pgn).reversed()
                     text += blocks.joined(separator: "\n\n") + "\n\n"
                     gathered += blocks.count
                     if gathered >= many { break }
                 }
                 guard gathered > 0 else { throw PGNImport.Error.noGames(.chessCom, typed) }
-                return PGNImport.split(text).prefix(many).joined(separator: "\n\n")
+                return PGN.split(text).prefix(many).joined(separator: "\n\n")
             }
         case .chessease:
             phase = .failed(.notAPlayer(.chessease))

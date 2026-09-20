@@ -82,7 +82,7 @@ struct RejudgeTests {
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
         session.jumpToLatest()
-        #expect(session.visibleAttempts.map(\.san) == ["g4"])
+        #expect(session.reading.attempts.map(\.san) == ["g4"])
 
         session.rejudge(at: 0)
         await session.settled()

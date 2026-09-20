@@ -108,7 +108,7 @@ import ChessmirrorKitTesting
         let session = GameSession.fresh(game)
         defer { session.suspend() }
         session.jumpToLatest()
-        #expect(session.visibleAttempts.map(\.san) == ["g4"])
+        #expect(session.reading.attempts.map(\.san) == ["g4"])
         session.readReply(at: 0)
         let reading = try #require(session.replyReading)
         #expect(reading.position.uciMoves == ["f2f3", "e7e5"])

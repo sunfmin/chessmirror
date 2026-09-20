@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import ChessmirrorKitTesting
 import Testing
 
 private func square(_ name: String) throws -> Square {

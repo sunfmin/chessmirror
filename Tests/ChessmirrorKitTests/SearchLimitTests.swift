@@ -1,5 +1,7 @@
-@testable import ChessmirrorKit
+import ChessmirrorKitTesting
 import Testing
+
+@testable import ChessmirrorKit
 
 /// Contract: the 搜索预算 is time, depth and which end stops the search; every live search reads
 /// the one the app set; a 复判 goes past it by a fixed rule; and it survives the store as one

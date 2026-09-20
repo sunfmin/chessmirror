@@ -21,8 +21,6 @@ public struct Daily: Hashable, Sendable {
         public let dueAt: Date?
         /// How many times it has been failed under the schedule.
         public let lapses: Int
-        /// How many times it has been practised under the schedule.
-        public let goes: Int
         /// The last go, which is what ARTS sequences the day by (docs/adr/0030). Nil for a
         /// position nobody has practised.
         public let last: Go?
@@ -44,22 +42,38 @@ public struct Daily: Hashable, Sendable {
         public var position: PositionKey { mistake.position }
         public var isNew: Bool { memory == nil }
 
+        /// 掌握: the app does not expect to need this one for a long time — its next go is half
+        /// a year after the last (docs/adr/0030). A reading, never a state: nothing is suspended
+        /// and nothing is deleted on the strength of it, an item that reads as settled simply
+        /// does not come up.
+        ///
+        /// **Read off the card rather than worked out again.** It was `Daily.isSettled(card:
+        /// fsrs:)` — you needed the whole day in hand to ask about one position, and a second
+        /// FSRS to ask it with, which could be a different FSRS from the one that scheduled the
+        /// card. The gap between the last go and the next one *is* the interval FSRS decided on,
+        /// so the card already carries the answer.
+        public var isSettled: Bool {
+            guard let dueAt, let last else { return false }
+            return dueAt.timeIntervalSince(last.at) >= Daily.settledInterval * 86_400
+        }
+
         public init(
-            mistake: Mistake, memory: FSRS.Memory?, dueAt: Date?, lapses: Int, goes: Int,
-            last: Go? = nil
+            mistake: Mistake, memory: FSRS.Memory?, dueAt: Date?, lapses: Int, last: Go? = nil
         ) {
             self.mistake = mistake
             self.memory = memory
             self.dueAt = dueAt
             self.lapses = lapses
-            self.goes = goes
             self.last = last
         }
     }
 
     /// Today's queue, in the order it should be worked.
     public let cards: [Card]
-    /// Everything eligible for practice, today's or not — what a label like 掌握 is read off.
+    /// Everything eligible for practice, today's or not, each carrying its schedule. Today's
+    /// queue is a slice of this; the rest is how anybody asks what the log has decided about a
+    /// position that is *not* knocking — that a 计划外 go moved nothing, that the same log gives
+    /// the same dates for ever (docs/adr/0029, 0032).
     public let all: [Card]
 
     public var remaining: Int { cards.count }
@@ -73,21 +87,9 @@ public struct Daily: Hashable, Sendable {
     /// `Mistake.isMorePressing` puts them in — 复发 before cost (docs/adr/0028).
     public static let newPerDay = 10
 
-    /// 掌握 is not a state anything stores. It is a reading of one number: the next go is half a
-    /// year away (docs/adr/0030). Nothing is suspended and nothing is deleted on the strength of
-    /// it — an item that reads as settled simply does not come up.
+    /// How far off a next go has to be for the position to read as 掌握: half a year, in days
+    /// (`Card.isSettled`).
     public static let settledInterval = 180.0
-
-    /// 顽固: failed this many times and still coming back. A label so somebody can see it, and
-    /// nothing else — the app does not get to decide that a position is a lost cause.
-    public static let stubbornLapses = 3
-
-    public func isSettled(_ card: Card, fsrs: FSRS = FSRS()) -> Bool {
-        guard let memory = card.memory else { return false }
-        return fsrs.interval(memory) >= Self.settledInterval
-    }
-
-    public func isStubborn(_ card: Card) -> Bool { card.lapses >= Self.stubbornLapses }
 
     // ------------------------------------------------------------------ working it out
 
@@ -102,9 +104,11 @@ public struct Daily: Hashable, Sendable {
         lines: JudgementLines = .standard,
         newPerDay: Int = Daily.newPerDay,
         now: Date = Date(),
-        calendar: Calendar = .current,
-        fsrs: FSRS = FSRS()
+        calendar: Calendar = .current
     ) -> Daily {
+        // One FSRS, with the weights it ships with. It was a parameter for two years and nothing
+        // ever passed one: a seam with no second adapter is a seam that only costs.
+        let fsrs = FSRS()
         // 计划外 goes are recorded and then ignored here: practising something because you felt
         // like it is not evidence about when the schedule should have asked (docs/adr/0032).
         var history: [PositionKey: [Card.Go]] = [:]
@@ -140,7 +144,6 @@ public struct Daily: Hashable, Sendable {
                 memory: memory,
                 dueAt: memory.flatMap { standing in last.map { fsrs.due(standing, after: $0) } },
                 lapses: lapses,
-                goes: gone.count,
                 last: gone.last
             )
         }
@@ -152,23 +155,12 @@ public struct Daily: Hashable, Sendable {
         // ARTS orders what FSRS has already decided is due: missed before held, and among the
         // held, the ones that came slowly for *this* position before the ones that came quickly
         // (docs/adr/0030). How overdue a card is only breaks a tie — the day was FSRS's decision
-        // and this does not relitigate it.
-        let references = ARTS.references(scheduled)
-        func priority(_ card: Card) -> Double {
-            ARTS.priority(
-                lastPassed: card.last?.passed,
-                seconds: card.last?.seconds ?? 0,
-                reference: references.seconds(for: card.position)
-            ) ?? 0
-        }
-        let due = all
-            .filter { card in card.dueAt.map { $0 < endOfDay } ?? false }
-            .sorted { one, other in
-                let mine = priority(one)
-                let theirs = priority(other)
-                if mine != theirs { return mine > theirs }
-                return (one.dueAt ?? .distantPast) < (other.dueAt ?? .distantPast)
-            }
+        // and this does not relitigate it. The order is ARTS's own (`ARTS.order`); which cards
+        // are due today is this function's.
+        let due = ARTS.order(
+            all.filter { card in card.dueAt.map { $0 < endOfDay } ?? false },
+            scheduled: scheduled
+        )
 
         // How many have already been let in today, so that a day's intake is a day's intake
         // however many times the app is opened.

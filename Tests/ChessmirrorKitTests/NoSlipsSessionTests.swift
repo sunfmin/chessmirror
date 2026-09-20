@@ -107,7 +107,7 @@ import ChessmirrorKitTesting
     #expect(session.cursor == 2, "with the eye left where the move was played")
 
     // The row under the board: a 错题 at that position, marked at that position.
-    let slip = try #require(session.slips.first)
+    let slip = try #require(session.reading.slips.first)
     #expect(slip.positionPly == 2)
     #expect(slip.wrong.map(\.san) == ["Bc4"])
 
@@ -204,7 +204,7 @@ import ChessmirrorKitTesting
     game.setTried([.init(san: "f3", drop: 20)], atPly: 0)
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    let tried = try #require(session.visibleAttempts.first)
+    let tried = try #require(session.reading.attempts.first)
     #expect(tried.line.isEmpty)
     #expect(await session.reply(for: tried) == ["e5", "d4"])
     #expect(engine.positions.filter { $0 == after.state.fen }.count == 1)

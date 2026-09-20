@@ -201,6 +201,21 @@ func theSameLogGivesTheSameDay() {
     #expect(first.all.map(\.dueAt) == again.all.map(\.dueAt), "the dates too, to the second")
 }
 
+@Test("掌握 is read off one card, with no day around it and no second FSRS")
+func masteryIsReadOffTheCardItself() {
+    let one = mistake(1)
+    let last = Daily.Card.Go(at: now, passed: true, seconds: 10)
+    func card(due: TimeInterval?, last: Daily.Card.Go?) -> Daily.Card {
+        Daily.Card(
+            mistake: one, memory: nil, dueAt: due.map { now.addingTimeInterval($0) },
+            lapses: 0, last: last
+        )
+    }
+    #expect(card(due: 200 * day, last: last).isSettled, "the next go is over half a year off")
+    #expect(!card(due: 179 * day, last: last).isSettled, "and a day short of it is not")
+    #expect(!card(due: nil, last: nil).isSettled, "a position nobody has practised is not 掌握")
+}
+
 @Test("a long run of right answers reads as 掌握, and is not a state anybody stored")
 func masteryIsAReadingOfTheInterval() {
     let book = MistakeBook(mistakes: [mistake(1)])
@@ -215,19 +230,19 @@ func masteryIsAReadingOfTheInterval() {
     }
     let daily = Daily.forToday(book: book, attempts: attempts, now: now, calendar: utc)
     let card = try! #require(daily.all.first)
-    #expect(daily.isSettled(card), "seven straight passes is half a year away")
-    #expect(!daily.isStubborn(card))
+    #expect(card.isSettled, "seven straight passes is half a year away")
     #expect(daily.isEmpty, "and it simply does not come up")
 }
 
-@Test("a position failed three times is labelled, not suspended and not deleted")
-func stubbornOnesAreOnlyLabelled() {
+@Test("a position failed over and over is not suspended, not deleted and never 掌握")
+func repeatedFailuresKeepComingBack() {
     let book = MistakeBook(mistakes: [mistake(1)])
     let attempts = (1...3).map { each in
         go(1, at: now.addingTimeInterval(-Double(4 - each) * day), passed: false)
     }
     let daily = Daily.forToday(book: book, attempts: attempts, now: now, calendar: utc)
     let card = try! #require(daily.all.first)
-    #expect(daily.isStubborn(card))
+    #expect(card.lapses == 3, "every miss is counted")
+    #expect(!card.isSettled, "and nothing about missing it reads as 掌握")
     #expect(daily.cards.contains { $0.position == card.position }, "it keeps coming back")
 }

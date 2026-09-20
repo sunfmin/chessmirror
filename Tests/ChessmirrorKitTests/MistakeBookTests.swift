@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import ChessmirrorKitTesting
 import Foundation
 import Testing
 
@@ -240,7 +241,9 @@ func aRefusalNothingAbsorbedEntersTheBook() throws {
     #expect(book.mistakes.count == 1)
     #expect(mistake.encounters.map(\.played) == ["Be3"])
     #expect(mistake.worstCost > 16 && mistake.worstCost < 17)
-    #expect(mistake.lastSeen == now)
+    // The day the game says it was played, not the day the file was last written: a re-save or
+    // a Review landing is not another time the player fell for this.
+    #expect(mistake.lastSeen == PGN.playedDay("2026.09.16"))
     #expect(mistake.encounters.first?.wanted == nil, "no Review, so nothing is claimed about it")
     // The position is the one the refused move was played from — White to move, twelve Plies in,
     // which is the board that was on the screen when 正着 gave the move back.

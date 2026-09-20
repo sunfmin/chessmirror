@@ -34,7 +34,7 @@ import Testing
     /// was played from (docs/adr/0036). A fresh game is both hands, so Black's 试招 counts too.
     @Test func slipsAreKeyedOnThePositionTheyWereMadeAt() throws {
         let session = GameSession.fresh(try played())
-        let byPosition = session.slipByPosition
+        let byPosition = session.reading.slipByPosition
         #expect(Set(byPosition.keys) == [0, 1, 2])
         #expect(byPosition[0]?.ply == 1, "the opening cell carries the first move's 试招")
         #expect(byPosition[2]?.wrong.map(\.san) == ["Nf3"], "the move that stood, on the cell before it")
@@ -184,37 +184,24 @@ import Testing
     // ------------------------------------------------------------------ the finder's switch
 
     /// The swipe onto 杀 or 战术 is the asking: arriving turns the finder on, leaving turns it off.
-    @Test func arrivingOpensTheFinderAndLeavingClosesIt() throws {
+    @Test func arrivingOpensTheFinder() throws {
         let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
         session.arriveAtFinder()
         #expect(session.isFindingTactics)
-        session.leaveFinder()
+        // And it stays on: a card under the record is not somewhere anybody leaves
+        // (docs/adr/0025). Only a hand on the switch or 把关 puts it back.
+        session.arriveAtFinder()
+        #expect(session.isFindingTactics)
+        session.setFindingTactics(false)
         #expect(!session.isFindingTactics)
     }
 
-    /// A switch somebody pressed by hand is theirs: a swipe away does not put it back.
-    @Test func leavingKeepsAFinderSomebodyPressedOn() throws {
-        let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
-        session.setFindingTactics(true)
-        session.arriveAtFinder()
-        session.leaveFinder()
-        #expect(session.isFindingTactics, "the hand turned it on, the swipe leaves it")
-
-        session.setFindingTactics(false)
-        session.arriveAtFinder()
-        session.setFindingTactics(false)
-        session.arriveAtFinder()
-        session.leaveFinder()
-        #expect(!session.isFindingTactics, "pressed off by hand and opened again by arrival: the arrival's to close")
-    }
 
     /// 把关 keeps the finder off, and arriving does not claim a switch it could not throw.
     @Test func arrivingWhileNoSlipsOpensNothing() throws {
         let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
         session.setNoSlips(true)
         session.arriveAtFinder()
-        #expect(!session.isFindingTactics)
-        session.leaveFinder()
         #expect(!session.isFindingTactics)
     }
 }

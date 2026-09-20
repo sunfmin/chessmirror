@@ -9,7 +9,7 @@ import ChessmirrorKitTesting
 /// Practising one 错题, photographed: the position with nothing said about it, and the settlement
 /// after the move (docs/adr/0029).
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct DrillScreenshots {
     @Test func practiceRevealsTheSameMultiMoveAnswer() async throws {
         let game = try #require(Game(startFEN: "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"))

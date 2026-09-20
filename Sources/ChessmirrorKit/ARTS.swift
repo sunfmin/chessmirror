@@ -79,6 +79,36 @@ public enum ARTS {
         )
     }
 
+    /// The order one day is worked in: the due cards, sequenced.
+    ///
+    /// **Here rather than at the caller.** The formula was here and the order was in
+    /// `Daily.forToday` — the sort, the tie-break and the "a position with no go at all is
+    /// worth nothing" fallback — so the two decisions that can put the queue in the wrong order
+    /// lived where this file's tests could not reach them. Higher priority first, and among
+    /// equals the one that came due first, because a day worked from the top should clear the
+    /// oldest debt first (docs/adr/0030).
+    ///
+    /// `scheduled` is every 日课 go ever taken, which is what the references are averaged over —
+    /// not just today's cards, and not the 计划外 ones (docs/adr/0032).
+    public static func order(
+        _ cards: [Daily.Card], scheduled: [(at: Date, attempt: PracticeLog.Attempt)]
+    ) -> [Daily.Card] {
+        let references = references(scheduled)
+        func rank(_ card: Daily.Card) -> Double {
+            priority(
+                lastPassed: card.last?.passed,
+                seconds: card.last?.seconds ?? 0,
+                reference: references.seconds(for: card.position)
+            ) ?? 0
+        }
+        return cards.sorted { one, other in
+            let mine = rank(one)
+            let theirs = rank(other)
+            if mine != theirs { return mine > theirs }
+            return (one.dueAt ?? .distantPast) < (other.dueAt ?? .distantPast)
+        }
+    }
+
     /// What one position's last go is worth in the queue. Higher goes first.
     ///
     /// Nil for a position with no go at all: a new one has no response time to sequence by, and

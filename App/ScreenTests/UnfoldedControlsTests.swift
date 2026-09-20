@@ -13,7 +13,7 @@ import ChessmirrorKitTesting
 /// make room for anything else; this reads the pixels to hold it to that, and reads the words to
 /// see what the cards and the controls actually say while it is open.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct UnfoldedControls {
     private static let opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"
 

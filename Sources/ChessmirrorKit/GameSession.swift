@@ -18,7 +18,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Written into the PGN so the distinction survives a relaunch. Not a standard tag;
     /// PGN has no opinion about where a position came from, and readers ignore what they do
     /// not know.
-    public static let tagName = "Source"
+    public static let tagName = PGN.Tags.source
 
     public var tagValue: String { rawValue }
     public var label: String {
@@ -56,7 +56,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // The 错题 list is walked out of the Game, and a refusal is written into it without
             // touching a single move — so a cache keyed on the moves alone would go on saying the
             // game had nothing wrong in it while the row under the board showed otherwise.
-            storedSlips = nil
+            storedReading = nil
         }
     }
     public var orientation: Orientation
@@ -79,7 +79,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     @ObservationIgnored private var storedViewed: Game?
     /// The 错招 walked out of the Game once, with the key they were walked under. Reading them is
     /// a rules probe per Ply, and the record strip asks on every draw.
-    @ObservationIgnored private var storedSlips: (key: String, slips: [Slip])?
+    @ObservationIgnored private var storedReading: (key: String, reading: RecordReading)?
     /// The Analysis of the position being looked at, replaced each time the engine reports a
     /// deeper one, and cleared the moment anything makes it stale.
     public private(set) var analysis: Analysis?
@@ -220,6 +220,27 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
     /// True while the short search that confirms a Tactic is running.
     public var isProbingTactics: Bool { finder.isProbing }
+
+    /// 牌堆 — what the deck under the record shows right now (`Deck`, docs/adr/0025): which of
+    /// the two cards have a finding behind them, what each row says, and whether anything is
+    /// still being looked for. The screen draws this; it does not work it out.
+    public var deck: Deck {
+        Deck.dealt(
+            isDealt: dealsCards, mate: mateNews != nil, tactic: tactic != nil,
+            isSearching: isSearching || isProbingTactics
+        )
+    }
+
+    /// The open card's line as numbered arrows on the position on screen. Nothing for a card
+    /// nobody can see: arrows from a card that is not on the table are arrows about a question
+    /// nobody asked (docs/adr/0025).
+    public func arrows(for card: Deck.Card?) -> [MoveArrow] {
+        guard let card, dealsCards else { return [] }
+        switch card {
+        case .tactics: return tacticArrows
+        case .mate: return mateNews?.arrows ?? []
+        }
+    }
     /// Analyses already paid for, keyed by the FEN they were found from. A swipe onto another
     /// card of the same position is not a new question, and walking back to a Ply that has
     /// already been asked about is not one either.
@@ -282,8 +303,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // under, and a game saved with it on comes back with it on. *Where* it stops the player
         // is the caller's 记录线 — the one number the player owns (docs/adr/0046) — and not the
         // number the file was saved under, which stays on the judgements that stood under it.
-        self.lines = lines
-        if PGN(game: game, tags: tags).intercept != nil { self.lines.noSlips = true }
+        self.ownLines = lines
+        if PGN(game: game, tags: tags).intercept != nil { self.ownLines.noSlips = true }
     }
 
     // ------------------------------------------------------------------ ways in
@@ -347,8 +368,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public static func practising(
         _ drill: Drill, engine: (any Engine)? = nil, library: GameLibrary? = nil
     ) -> GameSession {
-        // The drill's 线 are the session's: the attempt is judged and ruled under one value, and
-        // the screen's toggle and the 错招 row read the same one.
+        // The drill's 线 are the session's — read through `lines` for as long as the drill is
+        // here, so there is one value and not two kept in step. The initial value below is what
+        // the file is written under before anybody has played (`pgn`, docs/adr/0046).
         let session = GameSession(
             game: drill.game,
             controllers: [drill.mover: .hand, drill.mover.opposite: .engine],
@@ -365,8 +387,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func notePracticeHelp() {
-        guard let practice, !practice.isSettled, !practice.isJudging else { return }
-        practice.hintsOpened += 1
+        practice?.noteHelp()
     }
 
     // ------------------------------------------------------------- the Review of an import
@@ -409,7 +430,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                     game.startFEN == reviewed.game.startFEN else { return }
                 game = reviewed.game
                 tags = reviewed.tags
-                reviewNews = .done(slips: slips.count)
+                reviewNews = .done(slips: reading.slips.count)
             case .superseded:
                 return
             case .failed:
@@ -653,20 +674,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
-    /// Arriving at 杀 or 战术: the swipe is the asking (docs/adr/0025), so the finder goes on if it
-    /// was not on already, and remembers that it was the arrival that did it.
+    /// Arriving at 杀 or 战术: the swipe is the asking (docs/adr/0025), so the finder goes on if
+    /// it was not on already.
+    ///
+    /// There is no leaving. The finder was a place you could swipe away from when it had a deck
+    /// of its own; it is a card under the record now, and a card is not somewhere you leave —
+    /// the switch stays where the arrival put it until somebody moves it or 把关 takes it.
     public func arriveAtFinder() {
         guard !isFindingTactics else { return }
         setFindingTactics(true)
-        finder.rememberArrival()
-    }
-
-    /// Leaving the finder's cards puts back only what arriving turned on. A switch somebody
-    /// pressed by hand is theirs and stays as they left it — including on the strip, where it
-    /// goes on colouring the mate's dot for the rest of the game.
-    public func leaveFinder() {
-        guard finder.openedByArrival else { return }
-        setFindingTactics(false)
     }
 
     /// What the strip under the board should say while the finder is on.
@@ -772,7 +788,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The lines this game is judged by (docs/adr/0027, 0046). Per game rather than global: the
     /// numbers are the player's, and whether 把关 reads them is a thing one game is played under.
     /// Written through `setLines` and `setNoSlips`, which is where what follows a change lives.
-    public private(set) var lines: JudgementLines = .standard
+    ///
+    /// **A 练习 keeps no second copy.** While one is on, the drill's 线 *are* the session's: the
+    /// drill judges and rules the attempt under them (`Drill.lines`), and a session that kept its
+    /// own value beside them could be switched to 把关 off while the drill went on refusing —
+    /// 练习 is played under 把关, and a switch that can say otherwise makes ADR 0047 a suggestion.
+    public var lines: JudgementLines { practice?.lines ?? ownLines }
+
+    /// The 线 for a game nobody is practising. Read through `lines`, never around it.
+    private var ownLines: JudgementLines = .standard
 
     /// 把关: whether a move by hand is measured before it is allowed to stand.
     ///
@@ -814,6 +838,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         activity = .exercising(exercise)
     }
 
+    /// Whether the 线 may be moved right now.
+    ///
+    /// Not while a move is being weighed, and never in a 练习: a drill owns the 线 it judges and
+    /// rules its attempt under, and it is played under 把关 (docs/adr/0047). Said here rather than
+    /// only on the screen that draws the switch, so a screen that offers it by accident offers a
+    /// switch that does nothing rather than taking a drill out of 把关.
+    public var acceptsLines: Bool { !isOccupied && practice == nil }
+
     /// Switches 把关 on or off. It stops the player at the 记录线, **the only dial 把关 has on the
     /// judgement of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how
     /// much slack the coach cuts are two different questions, and answering both with one knob
@@ -828,11 +860,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// same consequences as flipping the switch alone: a refusal made under the old lines is
     /// forgotten, the file says the new ones, and the search starts over.
     public func setLines(_ new: JudgementLines) {
-        guard !isOccupied else { return }
+        guard acceptsLines else { return }
         guard new.isDrawn else { return }
         guard lines != new else { return }
         let interceptMoved = lines.intercept != new.intercept
-        lines = new
+        ownLines = new
         // A game going under 把关 puts its cards away; a practice session keeps them, because
         // what it deals is not decided by the switch (`dealsCards`).
         if interceptMoved, !dealsCards {
@@ -1044,140 +1076,29 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// first. Read out of the Game, which is where a refusal is written the moment it happens.
     public var pendingAttempts: [Game.Ply.Tried] { game.pendingTries(atPly: cursor) }
 
-    /// Where the wrong moves on the strip are read from: the position on the board first — what
-    /// is still pending there, else what the move played *from* it took with it — and only when
-    /// the position has nothing of its own, the move that has just landed on it, which is the one
-    /// the eye is on at the end of a live game. Never a whole-game list.
-    ///
-    /// The position first, because a position is what the strip's cells, its marks and the 错题
-    /// tiles all count (docs/adr/0036, 0037): walking to a 错题 puts the board on the position
-    /// the move was played from, and the moves listed under it have to be that position's. They
-    /// used to be read one Ply behind — off the move that had landed — so a tile walked to showed
-    /// nothing, and the next arrow showed what the tile had promised.
-    private enum WrongsAt: Equatable {
-        /// Refusals still pending at the cursor.
-        case pending
-        /// The move at this index of `plies`: its 试招, and itself when it stood too expensively.
-        case ply(Int)
-        case nothing
+    /// 记录读数 — everything this game's record says about the player's 错招 at the position on
+    /// the board (`RecordReading`): the 错招 themselves, the 试招 refused here, and which of them
+    /// a chip should show. Held rather than recomputed, because the walk behind `slips` is the
+    /// expensive half and the eye moves far more often than the game changes.
+    public var reading: RecordReading {
+        // Keyed on what the answer depends on: the game, and the two lines that decide what
+        // counts. A refusal changes the game; moving the record line changes the answer.
+        let key = "\(game.uciMoves.joined(separator: " "))|\(lines.record)|\(lines.enqueue)"
+        if let stored = storedReading, stored.key == key {
+            if stored.reading.cursor == cursor { return stored.reading }
+            let moved = stored.reading.moved(to: cursor)
+            storedReading = (key, moved)
+            return moved
+        }
+        let made = RecordReading(game: game, mine: mine, lines: lines, cursor: cursor)
+        storedReading = (key, made)
+        return made
     }
 
-    private var wrongsAt: WrongsAt {
-        if !pendingAttempts.isEmpty { return .pending }
-        if game.plies.indices.contains(cursor),
-            !game.plies[cursor].tried.isEmpty || stoodWrong(atPly: cursor) != nil
-        {
-            return .ply(cursor)
-        }
-        if cursor > 0, game.plies.indices.contains(cursor - 1) { return .ply(cursor - 1) }
-        return .nothing
-    }
-
-    /// Only the attempts relevant to the position being read (`wrongsAt`): what is still pending
-    /// here, else the 试招 the move played from here took with it, else what the move that has
-    /// just landed took with it.
-    public var visibleAttempts: [Game.Ply.Tried] {
-        switch wrongsAt {
-        case .pending: return pendingAttempts
-        case .ply(let index): return game.plies[index].tried
-        case .nothing: return []
-        }
-    }
-
-    /// One wrong move at the position on the board, as the strip lists it: a 试招 把关 took
-    /// back, or the move that stood there too expensively. Two kinds under one chip, because an
-    /// imported game has only the second — nothing was ever refused in it — and its 错招 want the
-    /// same chip and the same 应招 as a refusal's (docs/adr/0034, 0036).
-    public struct WrongMove: Hashable, Sendable {
-        public enum Source: Hashable, Sendable {
-            /// Which of `visibleAttempts`.
-            case tried(Int)
-            /// The move that stood, at the Ply it took, counting from one.
-            case stood(ply: Int)
-        }
-
-        public let source: Source
-        public let san: String
-        /// What it cost, in percentage points of win probability (docs/adr/0027).
-        public let drop: Double
-        /// The Depth it was judged at, when one was written down.
-        public let depth: Int?
-        /// The 应招 kept for it: a 试招's own, or the Review's Line from the position the move
-        /// that stood made. Empty when nothing was written down, and then asked for
-        /// (`reply(for:)`).
-        public let line: [String]
-
-        public init(source: Source, san: String, drop: Double, depth: Int?, line: [String]) {
-            self.source = source
-            self.san = san
-            self.drop = drop
-            self.depth = depth
-            self.line = Array(line.prefix(Reply.limit))
-        }
-
-        init(_ tried: Game.Ply.Tried, at index: Int) {
-            self.init(
-                source: .tried(index), san: tried.san, drop: tried.drop, depth: tried.depth,
-                line: tried.line
-            )
-        }
-
-        /// True for the move that stood, rather than one taken back.
-        public var stood: Bool {
-            if case .stood = source { return true }
-            return false
-        }
-
-        /// Which of `visibleAttempts` this is, for a 试招.
-        public var triedIndex: Int? {
-            if case .tried(let index) = source { return index }
-            return nil
-        }
-    }
-
-    /// Every wrong move at the position being read, oldest first: the 试招 in the order they were
-    /// refused, then the move that finally stood if it was too expensive too — the list a 错题
-    /// tile counts (`Slip.wrong`), for the position the board is on. The move that stood is
-    /// listed only at its own position: at the position after it, the badge already says what
-    /// it cost.
-    public var visibleWrongs: [WrongMove] {
-        var wrongs = visibleAttempts.enumerated().map { WrongMove($1, at: $0) }
-        switch wrongsAt {
-        case .pending:
-            if let stood = stoodWrong(atPly: cursor) { wrongs.append(stood) }
-        case .ply(let index) where index == cursor:
-            if let stood = stoodWrong(atPly: cursor) { wrongs.append(stood) }
-        default:
-            break
-        }
-        return wrongs
-    }
-
-    /// The move that stood at `index` of `plies`, when it was the player's own and cost at or
-    /// over the 记录线 — the 错招 an imported game is made of, since nothing was refused in it.
-    /// By the same rule the 错题 tiles use (`slips`), so the chip and the tile never disagree
-    /// about whether a move was wrong.
-    private func stoodWrong(atPly index: Int) -> WrongMove? {
-        guard game.plies.indices.contains(index), let slip = slipByPosition[index],
-            let wrong = slip.wrong.first(where: { !$0.wasTried })
-        else { return nil }
-        return WrongMove(
-            source: .stood(ply: index + 1), san: wrong.san, drop: wrong.drop,
-            depth: game.plies[index].judgement?.depth ?? game.reviewDepth,
-            line: game.reviewLine(atPly: index + 1)
-        )
-    }
-
-    /// The position the wrong moves on show were played in — the one their 应招 is drawn from.
-    ///
-    /// The same branch `visibleAttempts` takes, because they are one question: the moves belong
     /// to a position, and this is it. Nil only when there is nothing to show.
     public var refusedPosition: Game? {
-        switch wrongsAt {
-        case .pending: return viewed
-        case .ply(let index): return index == cursor ? viewed : game.rewound(to: index)
-        case .nothing: return nil
-        }
+        guard let ply = reading.wrongsPly else { return nil }
+        return ply == cursor ? viewed : game.rewound(to: ply)
     }
 
     /// The position a 试招 made. It is the one its 应招 comes back from, and the one the board no
@@ -1188,7 +1109,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// The same for any wrong move on the strip — for one that stood, the position the game
     /// went on from.
-    public func position(after wrong: WrongMove) -> Game? {
+    public func position(after wrong: RecordReading.WrongMove) -> Game? {
         position(afterPlaying: wrong.san)
     }
 
@@ -1213,7 +1134,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// The same door for any wrong move on the strip: a move that stood in a reviewed game
     /// carries the Review's Line, and one in a game nobody reviewed asks the same search.
-    public func reply(for wrong: WrongMove) async -> [String] {
+    public func reply(for wrong: RecordReading.WrongMove) async -> [String] {
         await reply(kept: wrong.line, afterPlaying: wrong.san)
     }
 
@@ -1240,9 +1161,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             public let isYours: Bool
         }
 
-        /// Which of `visibleWrongs` is open.
+        /// Which of `reading.wrongs` is open.
         public let index: Int
-        public let move: WrongMove
+        public let move: RecordReading.WrongMove
         /// The position the move was played in, which the arrows are walked from.
         public let position: Game
         /// The 试招 followed by its 应招. Empty until there is an answer: one arrow for a move
@@ -1279,7 +1200,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             replyOnStrip.close()
             return
         }
-        let wrongs = visibleWrongs
+        let wrongs = reading.wrongs
         guard activePunishment == nil, wrongs.indices.contains(index),
             let position = refusedPosition
         else { return }
@@ -1310,7 +1231,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// A 复判 under way: which 试招 on the strip is being judged again, and how deep both ends
     /// have got (CONTEXT.md, 复判; docs/adr/0041).
     public struct Rejudging: Equatable, Sendable {
-        /// Which of `visibleWrongs`.
+        /// Which of `reading.wrongs`.
         public let index: Int
         public let tried: Game.Ply.Tried
         /// The shallower of the two ends so far — zero before either has said anything.
@@ -1331,14 +1252,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case ready
     }
 
-    /// The 试招 at `index` of `visibleWrongs`, when that is what it is. A move that stood is
+    /// The 试招 at `index` of `reading.wrongs`, when that is what it is. A move that stood is
     /// judged by the game it stands in, and a 复判 is for a move that was taken back.
     private func triedToRejudge(at index: Int) -> (tried: Game.Ply.Tried, at: Int)? {
-        let wrongs = visibleWrongs
+        let wrongs = reading.wrongs
         guard wrongs.indices.contains(index), let at = wrongs[index].triedIndex,
-            visibleAttempts.indices.contains(at)
+            reading.attempts.indices.contains(at)
         else { return nil }
-        return (visibleAttempts[at], at)
+        return (reading.attempts[at], at)
     }
 
     public func rejudgeOffer(at index: Int) -> RejudgeOffer {
@@ -1388,17 +1309,17 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             found.tried == was
         else { return }
         let at = found.at
-        var attempts = visibleAttempts
+        var attempts = reading.attempts
         attempts[at] = deeper
-        switch wrongsAt {
+        switch reading.place {
         case .pending: game.setPendingTried(attempts, atPly: cursor)
         case .ply(let ply): game.setTried(attempts, hints: game.plies[ply].hints, atPly: ply)
         case .nothing: return
         }
-        if let reading = replyReading, reading.index == index, reading.move == WrongMove(was, at: at) {
+        if let reading = replyReading, reading.index == index, reading.move == RecordReading.WrongMove(was, at: at) {
             replyOnStrip.rewrite(
                 as: ReplyReading(
-                    index: index, move: WrongMove(deeper, at: at), position: reading.position,
+                    index: index, move: RecordReading.WrongMove(deeper, at: at), position: reading.position,
                     line: Reply.moves(of: deeper), isAsking: false
                 )
             )
@@ -1741,31 +1662,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     // ------------------------------------------------------------- finding the 错招
 
-    /// Every 错招 in this Game, oldest first (docs/adr/0036).
-    ///
-    /// The player's own moves that cost at or over the 记录线, each carrying the position it was
-    /// played from. This is the list the record strip marks and the strip under it walks: the
-    /// answer to 「这一局我哪儿走错了」，which is a question about one game and not about the
-    /// schedule.
-    public var slips: [Slip] {
-        // Keyed on what the answer depends on: the game, and the two lines that decide what
-        // counts. A refusal changes the game; moving the record line changes the answer.
-        let key = "\(game.uciMoves.joined(separator: " "))|\(lines.record)|\(lines.enqueue)"
-        if let storedSlips, storedSlips.key == key { return storedSlips.slips }
-        let slips = game.slips(by: mine, lines: lines)
-        storedSlips = (key, slips)
-        return slips
-    }
-
-    /// The 错招 by the *position* they were made at, which is what the record strip's cells are:
-    /// a cell's cursor is the position it takes the board to, so a mistake at Ply `n` is marked on
-    /// the cell at `n - 1` (docs/adr/0036). Zero is the opening cell.
-    public var slipByPosition: [Int: Slip] {
-        Dictionary(slips.map { ($0.positionPly, $0) }, uniquingKeysWith: { first, _ in first })
-    }
-
-    /// The record's Scores, one level per position, for the curve under the strip: the same
-    /// numbers `historyScore` gives one at a time, as one value with the rule for whether there
     /// is a curve to draw.
     public var curve: ScoreCurve {
         ScoreCurve(scores: (0...game.plies.count).map { historyScore(atPly: $0) })
@@ -1773,16 +1669,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// 连正 for the sides the player is moving, read out of the game (CONTEXT.md).
     public var noSlips: Game.NoSlips { game.noSlips(by: mine) }
-
-    /// The next 错招 from where the eye is: the one after it when it is standing on one, the
-    /// first at or after it otherwise. Nil at the end of the game.
-    public var nextSlip: Slip? {
-        let all = slips
-        if let here = all.firstIndex(where: { $0.ply - 1 == cursor }) {
-            return all.dropFirst(here + 1).first
-        }
-        return all.first { $0.ply - 1 >= cursor }
-    }
 
     // ------------------------------------------------------------------ moves
 

@@ -11,7 +11,7 @@ import Testing
 /// Serialized and on the main actor for the same reason the game screen tests are: there is
 /// one screen, and two of these rendering at once would be photographing the wrong window.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct ImportScreenScreenshots {
     @Test(arguments: [PieceColour.white, .black])
     func openingAGameRequiresChoosingTheTrackedSide(side: PieceColour) async throws {

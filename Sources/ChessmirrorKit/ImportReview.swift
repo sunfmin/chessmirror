@@ -77,7 +77,7 @@ public enum ImportReview {
         var result = pgn
         result.game.applyReview(pgn.game.plies.indices.map { scores[$0 + 1] },
                                 startEvaluation: scores[0], depth: depth)
-        result.setTag("ReviewSift", to: plan.usesImportedScores ? "imported-eval-7-priority" : "full-local")
+        result.setTag(PGN.Tags.reviewSift, to: plan.usesImportedScores ? "imported-eval-7-priority" : "full-local")
         return result
     }
 }

@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import ChessmirrorKitTesting
 import Foundation
 import Testing
 
@@ -102,7 +103,7 @@ func notALinkIsNil() {
 
 @Test("a multi-game PGN splits into one parseable block per chapter")
 func studySplitsPerChapter() throws {
-    let blocks = PGNImport.split(twoChapterStudy)
+    let blocks = PGN.split(twoChapterStudy)
     #expect(blocks.count == 2)
     for block in blocks {
         let pgn = try PGN(parsing: block)
@@ -122,7 +123,7 @@ func splitsWithoutBlankLines() throws {
 
         1. d4 *
         """
-    let blocks = PGNImport.split(text)
+    let blocks = PGN.split(text)
     #expect(blocks.count == 2)
     #expect(try PGN(parsing: blocks[0]).tag("ChapterName") == "1")
     #expect(try PGN(parsing: blocks[1]).tag("ChapterName") == "2")
@@ -139,7 +140,7 @@ func emptyChapterStillSplits() throws {
 
         1. d4 *
         """
-    let blocks = PGNImport.split(text)
+    let blocks = PGN.split(text)
     #expect(blocks.count == 2)
     let empty = try PGN(parsing: blocks[0])
     #expect(empty.game.plies.isEmpty)
@@ -158,7 +159,7 @@ func commentBracketsDoNotSplit() throws {
         [%cal Gb1c3]
         2... Nc6) 2... Nc6 *
         """
-    let blocks = PGNImport.split(text)
+    let blocks = PGN.split(text)
     #expect(blocks.count == 1, "the [ lines sit at depth one; they are content, not tags")
     let pgn = try PGN(parsing: blocks[0])
     #expect(pgn.game.plies.map(\.san) == ["e4", "e5", "Nf3", "Nc6"])
@@ -166,8 +167,8 @@ func commentBracketsDoNotSplit() throws {
 
 @Test("trailing newlines and whitespace-only text split into nothing")
 func blankTextSplitsIntoNothing() {
-    #expect(PGNImport.split("") == [])
-    #expect(PGNImport.split("\n\n  \n") == [])
+    #expect(PGN.split("") == [])
+    #expect(PGN.split("\n\n  \n") == [])
 }
 
 // ---------------------------------------------------------------- reading

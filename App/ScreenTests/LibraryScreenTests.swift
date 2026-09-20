@@ -11,7 +11,7 @@ import ChessmirrorKitTesting
 /// Serialized and on the main actor for the same reason the game screen tests are — there is one
 /// screen, and two of these rendering at once would be photographing the wrong window.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct LibraryScreenScreenshots {
     @Test func savedMistakeShowsFeedback() async throws {
         let directory = tempDir()
@@ -440,7 +440,7 @@ struct LibraryScreenScreenshots {
 /// The 错题本, photographed: one position, two occasions, and the sentence only that identity can
 /// produce (docs/adr/0028).
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct BookScreenshots {
     private func tempDir() -> URL {
         URL(filePath: NSTemporaryDirectory())
