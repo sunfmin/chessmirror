@@ -387,8 +387,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func notePracticeHelp() {
-        guard let practice, !practice.isSettled, !practice.isJudging else { return }
-        practice.hintsOpened += 1
+        practice?.noteHelp()
     }
 
     // ------------------------------------------------------------- the Review of an import
@@ -675,20 +674,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
-    /// Arriving at 杀 or 战术: the swipe is the asking (docs/adr/0025), so the finder goes on if it
-    /// was not on already, and remembers that it was the arrival that did it.
+    /// Arriving at 杀 or 战术: the swipe is the asking (docs/adr/0025), so the finder goes on if
+    /// it was not on already.
+    ///
+    /// There is no leaving. The finder was a place you could swipe away from when it had a deck
+    /// of its own; it is a card under the record now, and a card is not somewhere you leave —
+    /// the switch stays where the arrival put it until somebody moves it or 把关 takes it.
     public func arriveAtFinder() {
         guard !isFindingTactics else { return }
         setFindingTactics(true)
-        finder.rememberArrival()
-    }
-
-    /// Leaving the finder's cards puts back only what arriving turned on. A switch somebody
-    /// pressed by hand is theirs and stays as they left it — including on the strip, where it
-    /// goes on colouring the mate's dot for the rest of the game.
-    public func leaveFinder() {
-        guard finder.openedByArrival else { return }
-        setFindingTactics(false)
     }
 
     /// What the strip under the board should say while the finder is on.

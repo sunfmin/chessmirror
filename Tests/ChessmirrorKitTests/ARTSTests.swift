@@ -189,3 +189,97 @@ func theSameLogGivesTheSameOrder() {
     #expect(first == again)
     #expect(first.first == position(1), "the miss, whatever order the rows arrived in")
 }
+
+// ------------------------------------------------------------------- the order
+
+/// Contract: the order a day is worked in is ARTS's, tie-break and fallback included.
+///
+/// The formula lived here and the order lived in `Daily.forToday`, which is where the two things
+/// that can put a queue in the wrong order — the sort's tie-break, and what a card with no go at
+/// all is worth — sat out of reach of this file's tests.
+@MainActor
+@Suite struct ARTSOrderTests {
+    private let quick = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -"
+    private let slow = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -"
+    private let missed = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -"
+    private let fresh = "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -"
+
+    private func card(_ fen: String, due: TimeInterval, last: Daily.Card.Go?) -> Daily.Card {
+        Daily.Card(
+            mistake: Mistake(position: PositionKey(fen), encounters: []),
+            memory: nil,
+            dueAt: Date(timeIntervalSince1970: due),
+            lapses: 0,
+            goes: last == nil ? 0 : 1,
+            last: last
+        )
+    }
+
+    private func go(_ passed: Bool, seconds: Double, at when: TimeInterval) -> Daily.Card.Go {
+        Daily.Card.Go(at: Date(timeIntervalSince1970: when), passed: passed, seconds: seconds)
+    }
+
+    private func attempt(
+        _ fen: String, passed: Bool, seconds: Double, at when: TimeInterval
+    ) -> (at: Date, attempt: PracticeLog.Attempt) {
+        (
+            at: Date(timeIntervalSince1970: when),
+            attempt: PracticeLog.Attempt(
+                position: PositionKey(fen), seconds: seconds, passed: passed,
+                played: "e4", cost: 0, hints: 0, source: .daily
+            )
+        )
+    }
+
+    @Test("a miss jumps the queue, a slow right answer waits, a fast one waits longest")
+    func theDayIsOrdered() {
+        // Each position's reference is its own history of right answers, so 「慢」 and 「快」 are
+        // slow and fast *for this position*: both took ten seconds when they were known.
+        let history = [
+            attempt(quick, passed: true, seconds: 10, at: 0),
+            attempt(quick, passed: true, seconds: 2, at: 10),
+            attempt(slow, passed: true, seconds: 10, at: 0),
+            attempt(slow, passed: true, seconds: 60, at: 10),
+            attempt(missed, passed: false, seconds: 120, at: 10),
+        ]
+        let cards = [
+            card(quick, due: 100, last: go(true, seconds: 2, at: 10)),
+            card(fresh, due: 200, last: nil),
+            card(missed, due: 300, last: go(false, seconds: 120, at: 10)),
+            card(slow, due: 400, last: go(true, seconds: 60, at: 10)),
+        ]
+
+        let order = ARTS.order(cards, scheduled: history).map(\.position)
+        #expect(
+            order == [PositionKey(missed), PositionKey(slow), PositionKey(fresh), PositionKey(quick)]
+        )
+        #expect(order.first == PositionKey(missed), "a miss ignores the clock and jumps the queue")
+        #expect(
+            order[1] == PositionKey(slow),
+            "a right answer that came slowly is ahead of one nobody has answered"
+        )
+        #expect(order.last == PositionKey(quick), "an answer that came fast waits its turn")
+    }
+
+    @Test("a card with no go at all sits where a punctual right answer would")
+    func theFallbackIsZero() {
+        // Nil priority means 「没证据」, not 「最不急」: a new card ranks with an answer that came
+        // in exactly its own reference time, and the day's order does not push it to the end.
+        let history = [
+            attempt(quick, passed: true, seconds: 10, at: 0),
+            attempt(quick, passed: true, seconds: 10, at: 10),
+        ]
+        let punctual = card(quick, due: 400, last: go(true, seconds: 10, at: 10))
+        let new = card(fresh, due: 100, last: nil)
+        #expect(ARTS.order([punctual, new], scheduled: history).map(\.position)
+            == [PositionKey(fresh), PositionKey(quick)], "equal rank, so the older debt first")
+    }
+
+    @Test("cards that rank the same are worked oldest debt first")
+    func theTieIsBrokenByWhenItCameDue() {
+        let later = card(quick, due: 900, last: nil)
+        let earlier = card(slow, due: 100, last: nil)
+        let order = ARTS.order([later, earlier], scheduled: []).map(\.position)
+        #expect(order == [PositionKey(slow), PositionKey(quick)])
+    }
+}

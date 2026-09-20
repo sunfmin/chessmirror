@@ -25,9 +25,6 @@ struct TacticsFinder {
     /// engine's opinion either, so it may be read out where a Score may not (docs/adr/0025). What
     /// is *not* kept is a Score, a Depth or a candidate list: nothing else in here reaches a screen.
     private(set) var probedAnalysis: Analysis?
-    /// Whether it was arriving at the finder's cards that turned the finder on, rather than a
-    /// person pressing its switch. Only what a swipe turned on does a swipe turn off again.
-    private(set) var openedByArrival = false
 
     /// Throws the switch on. Nothing is named yet: the caller has a position to probe first.
     mutating func turnOn() {
@@ -38,16 +35,11 @@ struct TacticsFinder {
     /// is not a switch somebody's swipe may throw back — that is what arriving is for.
     mutating func turnOff() {
         isOn = false
-        openedByArrival = false
         forget()
     }
 
     /// Records that the switch went on because somebody swiped onto the finder's cards, so that
     /// swiping away again puts it back. Called after the switch has been thrown: a switch that
-    /// refused to move was not opened by the arrival either.
-    mutating func rememberArrival() {
-        openedByArrival = isOn
-    }
 
     /// The position on screen has changed. A shot found here was found for *this* position, and
     /// so was the search that confirmed it.

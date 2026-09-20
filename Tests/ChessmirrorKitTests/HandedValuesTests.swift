@@ -184,37 +184,24 @@ import Testing
     // ------------------------------------------------------------------ the finder's switch
 
     /// The swipe onto 杀 or 战术 is the asking: arriving turns the finder on, leaving turns it off.
-    @Test func arrivingOpensTheFinderAndLeavingClosesIt() throws {
+    @Test func arrivingOpensTheFinder() throws {
         let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
         session.arriveAtFinder()
         #expect(session.isFindingTactics)
-        session.leaveFinder()
+        // And it stays on: a card under the record is not somewhere anybody leaves
+        // (docs/adr/0025). Only a hand on the switch or 把关 puts it back.
+        session.arriveAtFinder()
+        #expect(session.isFindingTactics)
+        session.setFindingTactics(false)
         #expect(!session.isFindingTactics)
     }
 
-    /// A switch somebody pressed by hand is theirs: a swipe away does not put it back.
-    @Test func leavingKeepsAFinderSomebodyPressedOn() throws {
-        let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
-        session.setFindingTactics(true)
-        session.arriveAtFinder()
-        session.leaveFinder()
-        #expect(session.isFindingTactics, "the hand turned it on, the swipe leaves it")
-
-        session.setFindingTactics(false)
-        session.arriveAtFinder()
-        session.setFindingTactics(false)
-        session.arriveAtFinder()
-        session.leaveFinder()
-        #expect(!session.isFindingTactics, "pressed off by hand and opened again by arrival: the arrival's to close")
-    }
 
     /// 把关 keeps the finder off, and arriving does not claim a switch it could not throw.
     @Test func arrivingWhileNoSlipsOpensNothing() throws {
         let session = GameSession.fresh(try #require(Game(startFEN: PGN.standardStartFEN)))
         session.setNoSlips(true)
         session.arriveAtFinder()
-        #expect(!session.isFindingTactics)
-        session.leaveFinder()
         #expect(!session.isFindingTactics)
     }
 }

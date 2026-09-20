@@ -152,23 +152,12 @@ public struct Daily: Hashable, Sendable {
         // ARTS orders what FSRS has already decided is due: missed before held, and among the
         // held, the ones that came slowly for *this* position before the ones that came quickly
         // (docs/adr/0030). How overdue a card is only breaks a tie — the day was FSRS's decision
-        // and this does not relitigate it.
-        let references = ARTS.references(scheduled)
-        func priority(_ card: Card) -> Double {
-            ARTS.priority(
-                lastPassed: card.last?.passed,
-                seconds: card.last?.seconds ?? 0,
-                reference: references.seconds(for: card.position)
-            ) ?? 0
-        }
-        let due = all
-            .filter { card in card.dueAt.map { $0 < endOfDay } ?? false }
-            .sorted { one, other in
-                let mine = priority(one)
-                let theirs = priority(other)
-                if mine != theirs { return mine > theirs }
-                return (one.dueAt ?? .distantPast) < (other.dueAt ?? .distantPast)
-            }
+        // and this does not relitigate it. The order is ARTS's own (`ARTS.order`); which cards
+        // are due today is this function's.
+        let due = ARTS.order(
+            all.filter { card in card.dueAt.map { $0 < endOfDay } ?? false },
+            scheduled: scheduled
+        )
 
         // How many have already been let in today, so that a day's intake is a day's intake
         // however many times the app is opened.
