@@ -651,6 +651,56 @@ struct GameScreenScreenshots {
 
     /// The searches behind a reveal run in tasks of their own, so their answers are known a hop
     /// later — which is as true of the screen as it is of this test.
+    // ------------------------------------------------------------------ the way in
+    //
+    // What the screen opens as, pinned: every strip shut and no finding opened, whatever the
+    // position. The code that was documented as guessing otherwise had come to guess nothing.
+
+    /// A board with nothing played on it opens with both players' controls shut.
+    @Test("a fresh board opens with nobody's controls unfolded")
+    func aFreshBoardOpensShut() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        let engine = ScriptedEngine([])
+        let session = GameSession.fresh(game, engine: engine)
+        let rendered = await ScreenImage.write("game-opens-fresh") { screen(session, engine: engine) }
+
+        #expect(rendered.count(of: "的设置") == 2, "one way in to each side's settings")
+        #expect(!rendered.says("收起"), "and neither of them is open")
+    }
+
+    /// So does a game under way.
+    @Test("a game under way opens with nobody's controls unfolded")
+    func aGameUnderWayOpensShut() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let engine = ScriptedEngine([])
+        let session = GameSession.fresh(game, engine: engine)
+        let rendered = await ScreenImage.write("game-opens-under-way") { screen(session, engine: engine) }
+
+        #expect(rendered.count(of: "的设置") == 2)
+        #expect(!rendered.says("收起"))
+    }
+
+    /// A mate the finder comes back with is said on its own row and left shut: the line is not
+    /// read out, and not drawn, until somebody presses it.
+    @Test("a mate already found is announced, and not opened")
+    func aMateAlreadyFoundIsAnnouncedAndNotOpened() async throws {
+        let opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"
+        let game = try #require(Game(startFEN: opera))
+        let engine = ScriptedEngine([], byPosition: [
+            game.state.fen: Analysis(depth: 10, lines: [
+                Line(score: .mate(in: 2), uciMoves: ["b3b8", "d7b8", "d1d8"], san: ["Qb8+", "Nxb8", "Rd8#"])
+            ])
+        ])
+        let session = GameSession.fresh(game, engine: engine)
+        var rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
+        await hop()
+        rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
+
+        #expect(session.mateNews != nil)
+        #expect(rendered.says("发现杀招"))
+        #expect(!rendered.says("Qb8"), "the line stays behind the press")
+    }
+
     private func hop() async {
         for _ in 0..<20 {
             await Task.yield()

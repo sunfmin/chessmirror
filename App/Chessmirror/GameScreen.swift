@@ -17,8 +17,8 @@ import SwiftUI
 struct GameScreen: View {
     let session: GameSession
     @Binding var path: [Step]
-    /// Which card of the deck to open on. Nil means the position decides, which is what the app
-    /// does; a screenshot test passes one in to photograph a card that is not the one on top.
+    /// Which finding counts as the one in front when the screen arrives. The app passes nothing;
+    /// a screenshot test names one. Neither opens it — a finding opens when it is pressed.
     var opening: Card?
     var practiceNext: (() -> Void)?
 
@@ -37,11 +37,14 @@ struct GameScreen: View {
     /// their answer stands for as long as the screen does. Never derived from the game: an unfold
     /// that answers to the moves is an unfold that opens and shuts under your thumb, and the board
     /// walks up and down the screen every time it does.
+    ///
+    /// That includes the way in. There used to be a guess made here on appearing — a board with
+    /// nothing played on it was to open the side to move — and what it had come to do was set
+    /// this to nil, which it already was. A fresh board and a game under way both open with every
+    /// strip shut, and only a thumb opens one.
     @State private var unfolded: PieceColour?
-    /// Whether the opening guess below has been made yet. Once, on the way in — not on every
-    /// appearance, or coming back from a Review would shut what somebody had just opened.
-    @State private var hasGuessedUnfold = false
-    /// Whether the deck has been dealt yet. Once, for the same reason.
+    /// Whether the deck has been dealt yet. Once, on the way in — not on every appearance, or
+    /// coming back from a Review would ask the engine again for what is already on the table.
     @State private var hasDealt = false
     /// Whether a thumb is on 让引擎走 right now. The engine is thinking for exactly as long as it is —
     /// which is why this is read off the session rather than kept here as well. A screen holding
@@ -65,40 +68,18 @@ struct GameScreen: View {
         let moves: [Move]
     }
 
-    /// A guess at what to open, made once and then never again.
+    /// Deals the deck, once: the finder is asked about the position, and nothing is opened.
     ///
-    /// A board with nothing played on it opens the side to move, because that is the side every
-    /// unanswered question is about — who is playing it, and whether it really is the one to move.
-    /// A game already under way opens nothing. After this, only a thumb changes it.
-    private func guessUnfold() {
-        guard !hasGuessedUnfold else { return }
-        hasGuessedUnfold = true
-        unfolded = nil
-    }
-
-    /// Which card the deck opens on: the news when there is news, and the work this position is
-    /// for otherwise.
-    ///
-    /// A mate is the one thing on this screen allowed to speak first, so 杀招 is where the deck
-    /// opens when a search has already found one — a coloured tab is not a prompt (docs/adr/0025).
-    private var opensOn: Card {
-        if let opening { return opening }
-        // News before work: a mate on the board is the reason 「直接给予提示」 was asked for.
-        return .tactics
-    }
-
-    /// Deals the deck, once.
-    ///
-    /// Arriving is what asks the engine, and with both remaining cards being questions for it,
-    /// dealing is no longer an arrival: the deck has to open on *something*, and a card that
-    /// happened to be first is not somebody asking (docs/adr/0023). So the opening card is dealt
-    /// at rest, with its own press on it, and only news arrives by itself — a mate is the one
-    /// thing on this screen allowed to speak first, and a screen that was opened straight onto a
-    /// card was opened there by somebody.
+    /// The deck is a list of findings now, each shut until it is pressed, so there is no card
+    /// "on top" for the position to choose. It used to be chosen — the news when there was news,
+    /// the work otherwise — by a rule that had come to give the same answer either way. What
+    /// dealing still does is the arriving: both findings are questions for the finder, and
+    /// arriving is what asks it (docs/adr/0023, 0025). A mate it finds is said on its own row
+    /// — 「发现杀招」 — and opened by whoever presses it.
     private func deal() {
         guard !hasDealt else { return }
         hasDealt = true
-        card = opensOn
+        card = opening ?? .tactics
         if session.dealsCards { arrive(at: card) }
     }
 
@@ -237,7 +218,6 @@ struct GameScreen: View {
             .background(Palette.parchment)
         }
         .onAppear {
-            guessUnfold()
             // The engine first, and then the deck: **dealing a card is an arrival**, and an arrival
             // spends a Stint. The session retunes before it returns, so the Stint the deal starts
             // is not cancelled a line later. From here the session follows the engine host itself —
