@@ -210,7 +210,6 @@ func theSameLogGivesTheSameOrder() {
             memory: nil,
             dueAt: Date(timeIntervalSince1970: due),
             lapses: 0,
-            goes: last == nil ? 0 : 1,
             last: last
         )
     }
