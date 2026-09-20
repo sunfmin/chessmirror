@@ -60,15 +60,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public private(set) var cursor: Int {
         didSet {
             storedViewed = nil
-            // A shot found here was found for *this* position, so it goes with the cursor. One
-            // home for that, rather than three places that each remember.
-            tactic = nil
-            isProbingTactics = false
-            probedAnalysis = nil
-            // And a 应招 being read was being read at *this* position: the board moving on is
-            // the question being put away (docs/adr/0034) — and so is a 复判 of it.
-            closeReply()
-            cancelRejudge()
+            // Everything on screen was about *this* position: the shot the finder named, the
+            // 应招 somebody opened on the strip, the 复判 they set going. The eye moving on is
+            // all of it being put away (docs/adr/0034). The cursor says that it happened; what
+            // it means is each of their business, not the cursor's.
+            letGoOfThePosition()
         }
     }
     /// The Game rebuilt where the cursor stands, kept until either the Game or the cursor
@@ -188,16 +184,27 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var picture: RGBImage?
     public var shaky: Set<Square>
 
+    /// The tactics finder, which keeps its own four facts and the rules that move them together.
+    /// The session owns the engine it probes with, and nothing else about it.
+    private var finder = TacticsFinder()
+
+    /// The eye has moved to another position. Whatever was found, opened or set going about the
+    /// one it left is about a board that is no longer on screen, and each of them knows what
+    /// that means for it: the finder drops its shot, the strip puts its 应招 away, the 复判
+    /// yields unwritten.
+    private func letGoOfThePosition() {
+        finder.forget()
+        replyOnStrip.close()
+        rejudgeOnStrip.cancel()
+    }
+
     /// Whether a Tactic may be named on the latest position (docs/adr/0023).
     ///
     /// Off at the start of every Game, never written to PGN, silent on a past Ply. Practice
     /// can stay on: then the board has no Score and no candidate Lines, only the shot.
-    public private(set) var isFindingTactics = false
+    public var isFindingTactics: Bool { finder.isOn }
     /// The shot the finder currently names, if the last probe found one.
-    public private(set) var tactic: Tactic?
-    /// Whether it was arriving at the finder's cards that turned the finder on, rather than a
-    /// person pressing its switch. Only what a swipe turned on does a swipe turn off again.
-    private var finderOpenedByArrival = false
+    public var tactic: Tactic? { finder.tactic }
 
     /// The finder's line as numbered arrows on the position on screen, yours where the hand is
     /// moving that colour. Empty when the finder has named nothing.
@@ -206,14 +213,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return MoveArrow.walk(tactic.line, from: viewed) { controller(for: $0) == .hand }
     }
     /// True while the short search that confirms a Tactic is running.
-    public private(set) var isProbingTactics = false
-    /// The probe's own Analysis, kept only so a mate it happened to see can be reported.
-    ///
-    /// The finder's search is not advice — it is bounded, it was asked a question about shots, and
-    /// practice is allowed to keep it (docs/adr/0023). A mate in it is news, and news is not the
-    /// engine's opinion either, so it may be read out where a Score may not (docs/adr/0025). What
-    /// is *not* kept is a Score, a Depth or a candidate list: nothing else in here reaches a screen.
-    private var probedAnalysis: Analysis?
+    public var isProbingTactics: Bool { finder.isProbing }
     /// Analyses already paid for, keyed by the FEN they were found from. A swipe onto another
     /// card of the same position is not a new question, and walking back to a Ply that has
     /// already been asked about is not one either.
@@ -593,29 +593,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func setFindingTactics(_ on: Bool) {
         guard !isNoSlipsOn || !on else { return }
         guard isFindingTactics != on else { return }
-        isFindingTactics = on
         if !on {
-            finderOpenedByArrival = false
-            tactic = nil
-            isProbingTactics = false
-            probedAnalysis = nil
+            finder.turnOff()
             // An advice Stint already paid for this position must not be taken down just because
             // the finder card was left. Retune only when there is nothing in hand to keep.
             if searchTask != nil || analysis != nil { return }
             retune()
             return
         }
+        finder.turnOn()
         // Finding opportunities must not restart a move already on the clock.
         if thinking != nil { return }
         if recallCachedAnalysis(), let found = analysis {
-            tactic = Tactic.confirmed(in: viewed, analysis: found)
-            probedAnalysis = found
+            finder.confirm(in: viewed, analysis: found)
             return
         }
         if let found = analysis {
             noteProgress(found)
-            tactic = Tactic.confirmed(in: viewed, analysis: found)
-            probedAnalysis = found
+            finder.confirm(in: viewed, analysis: found)
             return
         }
         retune()
@@ -626,14 +621,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func arriveAtFinder() {
         guard !isFindingTactics else { return }
         setFindingTactics(true)
-        finderOpenedByArrival = isFindingTactics
+        finder.rememberArrival()
     }
 
     /// Leaving the finder's cards puts back only what arriving turned on. A switch somebody
     /// pressed by hand is theirs and stays as they left it — including on the strip, where it
     /// goes on colouring the mate's dot for the rest of the game.
     public func leaveFinder() {
-        guard finderOpenedByArrival else { return }
+        guard finder.openedByArrival else { return }
         setFindingTactics(false)
     }
 
@@ -643,13 +638,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// included: the finder is a card of its own now, and swiping onto it is the asking
     /// (docs/adr/0025, amending 0023).
     public var tacticPrompt: String? {
-        guard isFindingTactics, !viewed.isOver else { return nil }
-        if isProbingTactics, tactic == nil { return localized("finder.checking") }
-        if let tactic {
-            let whose = localized(isHandTurn ? "finder.ours" : "finder.theirs")
-            return "\(whose)：\(tactic.sentence)"
-        }
-        return localized("finder.none")
+        guard !viewed.isOver else { return nil }
+        return finder.prompt(ourTurn: isHandTurn)
     }
 
     /// The mate anybody can see from the position on screen, whoever it belongs to
@@ -667,7 +657,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// question is not answered before it is asked (docs/adr/0025, amending 0023).
     public var mateNews: MateNews? {
         guard !viewed.isOver else { return nil }
-        guard let source = analysis ?? probedAnalysis else { return nil }
+        guard let source = analysis ?? finder.probedAnalysis else { return nil }
         return MateNews.read(source, in: viewed, hands: mine)
     }
 
@@ -946,8 +936,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func settled() async {
         if case .weighing(_, let task) = activity { await task.value }
         await measuring?.value
-        await rejudgeTask?.value
-        await replyTask?.value
+        await rejudgeOnStrip.pending?.value
+        await replyOnStrip.pending?.value
         await punishment?.settled()
     }
     func waitForPreparedInterception() async { await searchTask?.value }
@@ -1227,9 +1217,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
+    private var replyOnStrip = StripReply()
     /// The 应招 open on the strip, if one is (`readReply(at:)`).
-    public private(set) var replyReading: ReplyReading?
-    private var replyTask: Task<Void, Never>?
+    public var replyReading: ReplyReading? { replyOnStrip.reading }
 
     /// Reads the 应招 of a 试招 on the strip, or puts it away again if it is the one open.
     ///
@@ -1238,38 +1228,34 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// 惩罚 exercise is open: that exercise is the same answer with the finding left to the
     /// player, and a reading that would hand it over is the exercise not being one.
     public func readReply(at index: Int) {
-        if replyReading?.index == index {
-            closeReply()
+        if replyOnStrip.isOpen(at: index) {
+            replyOnStrip.close()
             return
         }
         let wrongs = visibleWrongs
         guard activePunishment == nil, wrongs.indices.contains(index),
             let position = refusedPosition
         else { return }
-        closeReply()
         let wrong = wrongs[index]
         let hasAnswer = !wrong.line.isEmpty
-        replyReading = ReplyReading(
-            index: index, move: wrong, position: position,
-            line: hasAnswer ? Reply.moves(of: wrong) : [], isAsking: !hasAnswer
+        replyOnStrip.open(
+            ReplyReading(
+                index: index, move: wrong, position: position,
+                line: hasAnswer ? Reply.moves(of: wrong) : [], isAsking: !hasAnswer
+            )
         )
         guard !hasAnswer else { return }
-        replyTask = Task { [weak self] in
-            guard let self else { return }
-            let answer = await reply(for: wrong)
-            guard !Task.isCancelled, replyReading?.index == index, replyReading?.move == wrong
-            else { return }
-            replyReading?.isAsking = false
-            replyReading?.line = answer.isEmpty ? [] : Reply.moves(of: wrong, reply: answer)
-        }
-    }
-
-    /// Puts the 应招 away. A question asked once is not a layer left on: the board goes back to
-    /// the position and says nothing about what the player might have tried.
-    private func closeReply() {
-        replyTask?.cancel()
-        replyTask = nil
-        replyReading = nil
+        replyOnStrip.ask(
+            Task { [weak self] in
+                guard let self else { return }
+                let answer = await self.reply(for: wrong)
+                guard !Task.isCancelled else { return }
+                replyOnStrip.fill(
+                    answer.isEmpty ? [] : Reply.moves(of: wrong, reply: answer),
+                    of: wrong, at: index
+                )
+            }
+        )
     }
 
     // ------------------------------------------------------------------ 复判
@@ -1284,8 +1270,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         public internal(set) var depth: Int
     }
 
-    public private(set) var rejudging: Rejudging?
-    private var rejudgeTask: Task<Void, Never>?
+    private var rejudgeOnStrip = StripRejudge()
+    /// The 复判 under way, if one is (`rejudge(at:)`).
+    public var rejudging: Rejudging? { rejudgeOnStrip.rejudging }
 
     /// What the strip may offer for one 试招.
     public enum RejudgeOffer: Equatable, Sendable {
@@ -1310,7 +1297,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func rejudgeOffer(at index: Int) -> RejudgeOffer {
         guard let engine, let found = triedToRejudge(at: index) else { return .none }
         if (found.tried.depth ?? 0) >= PositionSearches.deeperDepth { return .none }
-        if rejudging != nil || isOccupied || isThinking || isSearching || engine.isPaused {
+        if rejudgeOnStrip.isBusy || isOccupied || isThinking || isSearching || engine.isPaused {
             return .waiting
         }
         return .ready
@@ -1325,33 +1312,32 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             let before = refusedPosition, let tried = triedToRejudge(at: index)?.tried
         else { return }
         guard let played = position(after: tried) else { return }
-        rejudging = Rejudging(index: index, tried: tried, depth: 0)
-        rejudgeTask = Task { [weak self] in
-            guard let self else { return }
-            // The same 细判 as the one that refused the move, at the deeper budget: one act, so
-            // the depth the number is worth and the 应招 beside it are read by the one rule.
-            let weighed = await engine.weigh(played, from: before, budget: PositionSearches.deeper) {
-                rejudging?.depth = $0.depth
+        rejudgeOnStrip.begin(Rejudging(index: index, tried: tried, depth: 0))
+        rejudgeOnStrip.ask(
+            Task { [weak self] in
+                guard let self else { return }
+                // The same 细判 as the one that refused the move, at the deeper budget: one act,
+                // so the depth the number is worth and the 应招 beside it are read by one rule.
+                let weighed = await engine.weigh(played, from: before, budget: PositionSearches.deeper) {
+                    rejudgeOnStrip.note(depth: $0.depth)
+                }
+                guard !Task.isCancelled else { return }
+                finishRejudge(
+                    weighed.map {
+                        .init(san: tried.san, drop: $0.drop, notFound: tried.notFound, depth: $0.depth, line: $0.reply)
+                    },
+                    at: index
+                )
             }
-            guard !Task.isCancelled else { return }
-            finishRejudge(
-                weighed.map {
-                    .init(san: tried.san, drop: $0.drop, notFound: tried.notFound, depth: $0.depth, line: $0.reply)
-                },
-                at: index
-            )
-        }
+        )
     }
 
     /// Writes the deeper number where the 试招 is — pending at the position, or on the move that
     /// carried it — and brings an open reading of it up to date. Nothing is written when the
     /// game has moved on from under it.
     private func finishRejudge(_ deeper: Game.Ply.Tried?, at index: Int) {
-        defer {
-            rejudgeTask = nil
-            rejudging = nil
-        }
-        guard let deeper, let was = rejudging?.tried, let found = triedToRejudge(at: index),
+        defer { rejudgeOnStrip.finish() }
+        guard let deeper, let was = rejudgeOnStrip.tried, let found = triedToRejudge(at: index),
             found.tried == was
         else { return }
         let at = found.at
@@ -1363,18 +1349,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .nothing: return
         }
         if let reading = replyReading, reading.index == index, reading.move == WrongMove(was, at: at) {
-            replyReading = ReplyReading(
-                index: index, move: WrongMove(deeper, at: at), position: reading.position,
-                line: Reply.moves(of: deeper), isAsking: false
+            replyOnStrip.rewrite(
+                as: ReplyReading(
+                    index: index, move: WrongMove(deeper, at: at), position: reading.position,
+                    line: Reply.moves(of: deeper), isAsking: false
+                )
             )
         }
         save()
-    }
-
-    private func cancelRejudge() {
-        rejudgeTask?.cancel()
-        rejudgeTask = nil
-        rejudging = nil
     }
 
     public var isFaceToFace = false
@@ -1910,7 +1892,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     private func commit(_ move: Move, by mover: Mover) {
         guard !isWeighing else { return }
         // A move played is the game moving on: a 复判 of a 试招 here yields to it, unwritten.
-        cancelRejudge()
+        rejudgeOnStrip.cancel()
         if let practice, !practice.isSettled {
             guard isAtLatest, game.state.fen == practice.game.state.fen else { return }
             stopSearching()
@@ -2189,9 +2171,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard let engine, !position.isOver, !engine.isPaused else { return }
 
         if isEngineTurn {
-            isProbingTactics = false
-            tactic = nil
-            probedAnalysis = nil
+            finder.forget()
             continueAfterProbe()
             return
         }
@@ -2203,9 +2183,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             probeTactics(on: position, using: engine)
             return
         }
-        tactic = nil
-        isProbingTactics = false
-        probedAnalysis = nil
+        finder.forget()
         continueAfterProbe()
     }
 
@@ -2221,14 +2199,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// post-mortem (docs/adr/0023). The table is left warm on purpose.
     private func probeTactics(on position: Game, using engine: any Engine) {
         if recallCachedAnalysis(), let found = analysis {
-            tactic = Tactic.confirmed(in: position, analysis: found)
-            probedAnalysis = found
-            isProbingTactics = false
+            finder.confirm(in: position, analysis: found)
+            finder.settle()
             continueAfterProbe()
             return
         }
-        tactic = Tactic.proposed(in: position)
-        isProbingTactics = true
+        finder.propose(in: position)
         searchTask = Task { [weak self] in
             var last: Analysis?
             for await snapshot in engine.analysePosition(position) {
@@ -2242,11 +2218,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 last = snapshot
             }
             guard let self, !Task.isCancelled else { return }
-            if let last {
-                tactic = Tactic.confirmed(in: position, analysis: last)
-                probedAnalysis = last
-            }
-            isProbingTactics = false
+            if let last { finder.confirm(in: position, analysis: last) }
+            finder.settle()
             // The stream has ended. Leave the handle down, or 正在算 stays on a probe that
             // is already over, and the next card thinks the engine is still busy.
             searchTask = nil
@@ -2385,8 +2358,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             }
         }
         stopSearching()
-        closeReply()
-        cancelRejudge()
+        // Not the finder: suspending is not the eye moving, and a shot named for the position
+        // still on screen is still named for it.
+        replyOnStrip.close()
+        rejudgeOnStrip.cancel()
         // Whatever it was, it is over: the task is cancelled, the exercise skipped, the search
         // taken down. One assignment, because the activity owns what each of those kept.
         activity = .reading
@@ -2429,10 +2404,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if thinking != nil { return }
         analysis = snapshot
         analysisByFen[viewed.state.fen] = snapshot
-        if isFindingTactics {
-            tactic = Tactic.confirmed(in: viewed, analysis: snapshot)
-            probedAnalysis = snapshot
-        }
+        if isFindingTactics { finder.confirm(in: viewed, analysis: snapshot) }
         // The Score stays here, on a snapshot belonging to a screen, and is not written into
         // the Game. It used to be — "provisional, a Review will overwrite it" — but a Game is
         // a file, and a file that mixes one search's incidental Depth with a Review's uniform
