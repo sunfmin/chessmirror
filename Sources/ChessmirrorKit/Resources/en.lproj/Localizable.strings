@@ -192,7 +192,7 @@
 /* ---------------------------------------------------------------- the library */
 
 "library.engineStarting" = "Engine starting";
-"library.tagline" = "Photograph the board, and play on.";
+"library.tagline" = "Turn the moves you got wrong into positions you practise again, and play a game that will not let a wrong move stand.";
 "library.photograph" = "Photograph a board";
 "library.fromAlbum" = "From albums";
 "library.paste" = "Paste a screenshot";

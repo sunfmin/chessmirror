@@ -186,7 +186,7 @@
 /* ---------------------------------------------------------------- 首页 */
 
 "library.engineStarting" = "引擎启动中";
-"library.tagline" = "对着棋盘拍一张，接着往下下。";
+"library.tagline" = "把下错的招变成重练的题，下一盘不让错招站住的棋。";
 "library.photograph" = "拍棋盘";
 "library.fromAlbum" = "从相册选";
 "library.paste" = "粘贴截图";

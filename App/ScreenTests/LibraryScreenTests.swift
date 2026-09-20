@@ -67,10 +67,140 @@ struct LibraryScreenScreenshots {
                 .environment(LanguageSetting.shared)
         }
 
-        #expect(rendered.says("拍棋盘"), "the camera is still there, and still first")
+        #expect(rendered.says("拍棋盘"), "the camera is still there, one tap away")
         #expect(rendered.says("从开局摆起"))
         #expect(rendered.says("导入棋局"))
         #expect(rendered.says("走出第一步，这局就会记在这里"), "an empty library says so")
+    }
+
+    /// What the app is for goes first: 把关 and 日课, and a line under the name that says it.
+    /// The three ways of handing it a picture are 进料 — how a position gets in, not what
+    /// anybody opened the app to do — so they come after.
+    @Test("the first screen leads with 开始把关 and 日课, and the ways in come after")
+    func theScreenLeadsWithWhatItIsFor() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let rendered = await ScreenImage.write("library-leads") {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library(in: tempDir))
+                .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
+                .environment(LanguageSetting.shared)
+        }
+
+        #expect(rendered.says("把下错的招变成重练的题"), "the subtitle says what the app is for")
+        let noSlips = try #require(rendered.words.firstIndex { $0.contains("开始把关") })
+        let daily = try #require(rendered.words.firstIndex { $0.contains("日课") })
+        let camera = try #require(rendered.words.firstIndex { $0.contains("拍棋盘") })
+        let fromStart = try #require(rendered.words.firstIndex { $0.contains("从开局摆起") })
+        let importing = try #require(rendered.words.firstIndex { $0.contains("导入棋局") })
+        #expect(noSlips < daily, "把关 first, 日课 second")
+        #expect(daily < camera, "and both before the ways in")
+        #expect(camera < fromStart)
+        #expect(fromStart < importing)
+    }
+
+    /// 日课 with something due says how much, at the top of the screen.
+    @Test("日课 with a question due says how many are left")
+    func dailyDueSaysHowMany() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = library(in: tempDir)
+        let index = try bookOfOne(library: library, in: tempDir)
+        #expect(index.daily.remaining == 1)
+
+        let rendered = await ScreenImage.write("library-daily-due") {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+        }
+
+        #expect(rendered.says(localized("daily.left", plural: 1)))
+        let daily = try #require(rendered.words.firstIndex { $0.contains("日课") })
+        let camera = try #require(rendered.words.firstIndex { $0.contains("拍棋盘") })
+        #expect(daily < camera)
+    }
+
+    /// Done is a state the screen shows, not a row it removes: a door that disappears once it is
+    /// done is a door nobody learns is there.
+    @Test("日课 with nothing left still stands on the screen, saying it is done")
+    func dailyDoneStaysOnTheScreen() async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = library(in: tempDir)
+        let log = PracticeLog(url: tempDir.appending(path: "p.jsonl"))
+        let index = try bookOfOne(library: library, in: tempDir, log: log)
+        let question = try #require(index.book.mistakes.first)
+        log.append(
+            .drilled(
+                PracticeLog.Attempt(
+                    position: question.position, seconds: 5, passed: true, played: "Nf3",
+                    cost: 0, hints: 0, source: .daily
+                )
+            )
+        )
+        index.update(from: library.entries)
+        #expect(index.daily.remaining == 0)
+        #expect(!index.book.isEmpty)
+
+        let rendered = await ScreenImage.write("library-daily-done") {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+        }
+
+        #expect(rendered.says(localized("daily")), "the door is still there")
+        #expect(rendered.says(localized("daily.done")))
+        #expect(!rendered.says(localized("daily.none")), "the book is not empty, so it is done")
+    }
+
+    /// The smallest phone this app runs on, and the largest type anybody can set. Both doors and
+    /// all three ways in still say their names: a screen that leads with two things has to lead
+    /// with them on a 320-point screen too.
+    @Test(arguments: [DynamicTypeSize.large, .accessibility5])
+    func theSmallPhoneSaysEverything(_ type: DynamicTypeSize) async throws {
+        let tempDir = tempDir()
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let library = library(in: tempDir)
+        let index = try bookOfOne(library: library, in: tempDir)
+
+        let rendered = await ScreenImage.write(
+            "library-small-\(type == .large ? "type" : "biggest")",
+            size: CGSize(width: 320, height: 568)
+        ) {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+                .dynamicTypeSize(type)
+        }
+
+        #expect(rendered.says("开始把关"))
+        #expect(rendered.says("日课"))
+        #expect(rendered.says("拍棋盘"))
+        #expect(rendered.says("从开局摆起"))
+        #expect(rendered.says("导入棋局"))
+        #expect(rendered.says("错题本"))
+    }
+
+    /// A library holding one game with one 错题 in it, and the index that found it.
+    private func bookOfOne(
+        library: GameLibrary, in tempDir: URL, log: PracticeLog? = nil
+    ) throws -> MistakeIndex {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+        game.applyReview([.centipawns(-400)], startEvaluation: .centipawns(0), depth: 20)
+        let pgn = PGN(game: game, tags: [PGN.Tag("White", Controller.hand.playerName)])
+        #expect(library.write(pgn, to: tempDir.appending(path: "mistake.pgn")))
+        let index = MistakeIndex(log: log ?? PracticeLog(url: tempDir.appending(path: "p.jsonl")))
+        index.update(from: library.entries)
+        #expect(index.book.mistakes.count == 1)
+        return index
     }
 
     /// The 连正榜 above the games (docs/adr/0038): a row per rung that has been stood at, each
