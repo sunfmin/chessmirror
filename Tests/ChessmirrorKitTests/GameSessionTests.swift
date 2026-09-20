@@ -145,3 +145,80 @@ func aFreshOpeningFacesAnEngineOpponent() throws {
     #expect(!session.isWalkingRecord)
     #expect(session.isHandTurn, "then the board is handed back")
 }
+
+// ------------------------------------------------------------------ the seats a file wrote
+
+/// A directory of its own, so a test that writes a game is not reading another's.
+@MainActor private func temporaryLibrary() throws -> (library: GameLibrary, directory: URL) {
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    return (GameLibrary(folder: GameFolder(url: directory)), directory)
+}
+
+/// One game the player had Black in, against the engine, with a 试招 of theirs in it.
+@MainActor private func gamePlayedAsBlack() throws -> PGN {
+    var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    game.recordTried(Game.Ply.Tried(san: "Qh4", drop: 30, line: []), atPly: 1)
+    return PGN(
+        game: game, seats: [.white: .engine, .black: .hand], origin: .recognised,
+        lines: JudgementLines(noSlips: true)
+    )
+}
+
+/// Contract: the roster is the seating plan, and opening a record does not touch the file.
+///
+/// A game the player had Black in — the engine on White, which is what a photographed position
+/// with White to move comes to — used to reopen with the seats swapped: the person was handed the
+/// engine's colour, the engine was handed theirs, and the save that came with the swap rewrote the
+/// roster. The 错题本 counts a game's mistakes over the colours the roster names (docs/adr/0028),
+/// so the game's 错题 changed owner and left the book.
+@MainActor @Test("a reopened record keeps the seats the file wrote")
+func aReopenedRecordKeepsItsSeats() throws {
+    let (library, directory) = try temporaryLibrary()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let url = directory.appending(path: "chessmirror-as-black.pgn")
+    library.write(try gamePlayedAsBlack(), to: url)
+
+    let before = try String(contentsOf: url, encoding: .utf8)
+    let entry = GameLibrary.Entry(url: url, pgn: try PGN(parsing: before), modified: Date())
+    #expect(MistakeBook.derive(from: [entry]).mistakes.count == 1, "the 试招 is a 错题 of the player's")
+
+    let session = try #require(
+        GameSession.opened(entry, engine: silentEngine(), library: library)
+    )
+    #expect(session.controller(for: .black) == .hand, "Black was theirs and stays theirs")
+    #expect(session.controller(for: .white) == .engine)
+    #expect(session.mine == [.black])
+
+    let after = try String(contentsOf: url, encoding: .utf8)
+    #expect(after == before, "opening a record writes nothing")
+    let reread = GameLibrary.Entry(url: url, pgn: try PGN(parsing: after), modified: Date())
+    #expect(
+        MistakeBook.derive(from: [reread]).mistakes.count == 1,
+        "and the game's 错题 are still the player's after it has been opened"
+    )
+}
+
+/// An import knows whose game it is from its own tag rather than from the roster, and the seat
+/// follows that: the reader plays their own side, and the opponent's moves are already written.
+@MainActor @Test("an import tracked as Black is read from Black's chair")
+func anImportTrackedAsBlackSitsAsBlack() throws {
+    var imported = PGN(
+        game: try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"])),
+        tags: [
+            PGN.Tag("White", "Someone"), PGN.Tag("Black", "Me"),
+            PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue),
+        ]
+    )
+    imported.track(.black)
+    let session = try #require(GameSession.opened(
+        GameLibrary.Entry(
+            url: URL(filePath: "/games/chessmirror-import-as-black.pgn"), pgn: imported,
+            modified: Date(timeIntervalSince1970: 1_786_000_600)
+        ),
+        engine: silentEngine()
+    ))
+    #expect(session.controller(for: .black) == .hand)
+    #expect(session.controller(for: .white) == .engine)
+    #expect(session.orientation == .blackAtBottom)
+}

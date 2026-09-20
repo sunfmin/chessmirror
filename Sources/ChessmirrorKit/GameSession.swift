@@ -411,11 +411,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// moves are there to be walked through, and the last position is the one thing about a
     /// finished game you already know. 下一步 is the first tap either way.
     ///
-    /// The Controllers are not stored in PGN — nothing in the format has anywhere to put them — so
-    /// a reopened game starts with the side about to move in hand, the other side on the engine,
-    /// and in practice: no arrow, no number, nobody whispering an answer. Reading faces the play:
-    /// the person who opens a record plays its first move, and the engine answers it — as soon as
-    /// it has finished loading, if the record got opened first.
+    /// In the seat the file gave it (`seats(named:startingSideToMove:)`): the roster says which
+    /// side was played by hand, and that side is still the player's when the record comes back.
+    /// A record that names neither side, or both, faces the play instead — the person who opens it
+    /// plays its first move, and the engine answers it, as soon as it has finished loading if the
+    /// record got opened first. Either way it opens in practice: no arrow, no number, nobody
+    /// whispering an answer.
+    ///
+    /// Opening writes nothing. The seats are settled as the session is made rather than switched
+    /// afterwards, because switching one saves the file — and a record that rewrites its own
+    /// roster the moment it is looked at is a record whose 错题 change hands (docs/adr/0028).
     ///
     /// Nil — refused, not failed — while the file is still on the way from iCloud. Opening it
     /// would give an empty board wearing the real game's file name, and the autosave after the
@@ -433,7 +438,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard !entry.isDownloading else { return nil }
         let session = GameSession(entry: entry, library: library, strength: strength, lines: lines)
         session.attach(engine: engine, library: library)
-        session.seatEngineOpponent()
         return session
     }
 
@@ -476,9 +480,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let facing = hands.count == 1 ? hands.first! : game.startingSideToMove
         self.init(
             game: game,
-            // The other side is handed to the engine by `opened`. Practice is not set here or
-            // there: it is where every Game starts.
-            controllers: [.white: .hand, .black: .hand],
+            // Seated here rather than by `opened`, because seating through `setController` writes
+            // the file — and opening a record must not change it before the player has touched it.
+            controllers: Self.seats(named: hands, startingSideToMove: game.startingSideToMove),
             // A record that names the player's side (an import tracked as Black, a game where the
             // engine had White) opens with that side at the bottom: it is their game, seen from
             // their chair. Any other record faces the side about to move: reading begins where
@@ -556,6 +560,26 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The side about to move is the person's; the other side is the engine's.
     private func seatEngineOpponent() {
         setController(.engine, for: game.startingSideToMove.opposite)
+    }
+
+    /// The seats a saved record comes back to.
+    ///
+    /// **The file's word first.** A record names who played each side — `手动` against the
+    /// engine's name — and the 错题本 counts a game's mistakes over exactly those colours
+    /// (`PGN.handColours`, docs/adr/0028). Seating by the side that happens to move first instead
+    /// put the player's own colour on the engine whenever the two differ — a photographed position
+    /// with White to move in a game the player has Black in, an import tracked as Black, a game
+    /// whose first move was handed over — and then wrote the flipped roster back to the file, so
+    /// the game's 错题 changed owner and left the book.
+    ///
+    /// A file that names one side leaves that side in hand and gives the engine the other. A file
+    /// that names both, or names none, has nothing to say about who is playing now: then the side
+    /// about to move is the person's, which is where reading a record begins.
+    static func seats(
+        named hands: Set<PieceColour>, startingSideToMove: PieceColour
+    ) -> [PieceColour: Controller] {
+        let mine = hands.count == 1 ? hands.first! : startingSideToMove
+        return [mine: .hand, mine.opposite: .engine]
     }
 
     public func controller(for colour: PieceColour) -> Controller {
