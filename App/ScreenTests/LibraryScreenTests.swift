@@ -59,9 +59,14 @@ struct LibraryScreenScreenshots {
             to: directory.appending(path: "played.pgn")
         ))
         for (number, name) in ["练习甲", "练习乙", "练习丙"].enumerated() {
-            let position = try #require(Game(
+            var position = try #require(Game(
                 startFEN: "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
             ))
+            // The first one is a question answered wrong and walked away from: no move in the
+            // file at all, and a 试招 on the position it asked about (docs/adr/0047).
+            if number == 0 {
+                position.recordTried(Game.Ply.Tried(san: "Qh4", drop: 12.4, depth: 20), atPly: 0)
+            }
             #expect(library.write(
                 PGN(
                     game: position, seats: [.black: .hand, .white: .engine],
@@ -78,7 +83,12 @@ struct LibraryScreenScreenshots {
             #expect(!shut.contains { $0.contains("练习甲") }, "and the day's drills are not")
             #expect(ScreenImage.activate(localized("library.practice"), in: window))
             await ScreenImage.settle()
-            #expect(ScreenImage.words(in: window).contains { $0.contains("练习甲") })
+            let open = ScreenImage.words(in: window)
+            #expect(open.contains { $0.contains("练习甲") })
+            #expect(
+                open.contains { $0.contains("Qh4") },
+                "and the one with no move in it says what was taken back"
+            )
         }) {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))

@@ -715,9 +715,9 @@ struct GameList: View {
                 // from. A game is a position before it is anything else, and a shelf of boards
                 // is what a 棋谱 collection looks like; where it came from is the first word of
                 // the line under the name. The glyph stays for a file with no position in it.
-                if let pgn = entry.pgn {
+                if let pgn = entry.pgn, let fen = entry.shownFEN {
                     BoardView(
-                        pieces: PositionDraft(fen: pgn.game.state.fen)?.pieces ?? [:],
+                        pieces: PositionDraft(fen: fen)?.pieces ?? [:],
                         orientation: pgn.handColours == [.black] ? .blackAtBottom : .whiteAtBottom,
                         coordinates: false,
                         isInteractive: false

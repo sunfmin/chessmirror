@@ -82,6 +82,7 @@
 "library.entry.moves" = "%d jugadas";
 "library.entry.moves.one" = "%d jugada";
 "library.entry.unfinished" = "Sin terminar";
+"library.entry.tried" = "Intentó %@";
 "library.entry.branches.one" = "%d variante";
 
 "check.take.notHere" = "esta jugada no captura nada en %@";

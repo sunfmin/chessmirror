@@ -93,6 +93,7 @@
 "library.entry.unreadable" = "无法读取";
 "library.entry.moves" = "%d 回合";
 "library.entry.unfinished" = "未结束";
+"library.entry.tried" = "试招 %@";
 
 
 /* ---------------------------------------------------------------- 说了干什么，棋盘认不认 */

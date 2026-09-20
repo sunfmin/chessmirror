@@ -95,6 +95,7 @@
 "library.entry.moves" = "%d moves";
 "library.entry.moves.one" = "%d move";
 "library.entry.unfinished" = "Unfinished";
+"library.entry.tried" = "Tried %@";
 "library.entry.branches.one" = "%d branch";
 
 

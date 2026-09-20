@@ -399,3 +399,46 @@ func theFactsOfAGameRoundTripThroughTheirTags() throws {
     let known = GameLibrary.Entry(url: URL(filePath: "/games/monday.pgn"), pgn: dated, modified: Date())
     #expect(known.detail.contains("2026.09.20"))
 }
+
+/// A 练习 row draws the 错题 it was asked about, not where the drill ended up: the 错题 is the
+/// position, and a drill answered right has walked two moves away from it (docs/adr/0047).
+@MainActor
+@Test func aPractisedRowDrawsTheQuestionRatherThanTheAnswer() throws {
+    let question = "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
+    let answered = try #require(Game(startFEN: question, uciMoves: ["b8c6", "f1b5"]))
+    let drill = PGN(
+        game: answered, seats: [.black: .hand, .white: .engine], origin: .practised,
+        lines: JudgementLines(noSlips: true)
+    )
+    let row = GameLibrary.Entry(url: URL(filePath: "/games/drill.pgn"), pgn: drill, modified: Date())
+    #expect(row.shownFEN == question, "the board on the row is the question that was asked")
+    #expect(row.detail.contains(GameOrigin.practised.label))
+
+    let played = try #require(Game(startFEN: question, uciMoves: ["b8c6", "f1b5"]))
+    let ordinary = PGN(
+        game: played, seats: [.black: .hand, .white: .engine], origin: .fresh,
+        lines: JudgementLines(noSlips: true)
+    )
+    let other = GameLibrary.Entry(url: URL(filePath: "/games/monday.pgn"), pgn: ordinary, modified: Date())
+    #expect(other.shownFEN == played.state.fen, "an ordinary game still draws where it stands")
+}
+
+/// The file a wrong answer leaves has no move in it (docs/adr/0047). The row says what was
+/// played and taken back, rather than counting to zero.
+@MainActor
+@Test func aPractisedRowWithNoMoveSaysWhatWasTried() throws {
+    let question = "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
+    var refused = try #require(Game(startFEN: question))
+    refused.recordTried(Game.Ply.Tried(san: "Qh4", drop: 12.4, depth: 20), atPly: 0)
+    let drill = PGN(
+        game: refused, seats: [.black: .hand, .white: .engine], origin: .practised,
+        lines: JudgementLines(noSlips: true)
+    )
+    let row = GameLibrary.Entry(url: URL(filePath: "/games/drill.pgn"), pgn: drill, modified: Date())
+
+    #expect(row.detail.contains("Qh4"))
+    #expect(row.detail.contains(GameOrigin.practised.label))
+    #expect(!row.detail.contains(localized("library.entry.moves", plural: 0)), "and does not count to zero")
+    #expect(!row.detail.contains(localized("library.entry.unfinished")))
+    #expect(row.shownFEN == question)
+}

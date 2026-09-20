@@ -82,6 +82,7 @@
 "library.entry.moves" = "%d Züge";
 "library.entry.moves.one" = "%d Zug";
 "library.entry.unfinished" = "Unbeendet";
+"library.entry.tried" = "Versucht: %@";
 "library.entry.branches.one" = "%d Variante";
 
 "check.take.notHere" = "dieser Zug schlägt nichts auf %@";

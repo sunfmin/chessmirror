@@ -80,6 +80,7 @@
 "library.entry.unreadable" = "읽을 수 없음";
 "library.entry.moves" = "%d수";
 "library.entry.unfinished" = "미완";
+"library.entry.tried" = "시도 %@";
 
 "check.take.notHere" = "이 수는 %@에서 아무것도 잡지 않는다";
 "check.take.won" = "%@에서 잡아 기물을 벌었다";
