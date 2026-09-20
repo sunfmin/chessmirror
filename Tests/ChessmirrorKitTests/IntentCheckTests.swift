@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import ChessmirrorKitTesting
 import Testing
 
 /// One case per verb where the claim holds, and one where it does not (docs/adr/0031).

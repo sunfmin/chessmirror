@@ -15,7 +15,7 @@ import ChessmirrorKitTesting
 /// beside it is White-relative either way. So this reads the pixels at both ends of the bar, in both
 /// orientations — the one place on this screen where colour is the whole of the statement.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct EvalBarSides {
     /// The Italian, eight plies in.
     private static let italian = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5", "c2c3", "g8f6"]

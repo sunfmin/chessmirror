@@ -9,3 +9,6 @@ App/Chessmirror/Chessmirror.entitlements
 
 # Screenshots written by the ScreenTests, for looking at rather than keeping.
 App/out/
+
+# The codegraph index, rebuilt from the source it describes.
+.codegraph/

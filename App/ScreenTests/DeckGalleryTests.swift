@@ -15,7 +15,7 @@ import ChessmirrorKitTesting
 /// So the assertions here are deliberately thin: each says only that the card it named is the card
 /// that drew and that the thing it exists to show is on it. The pictures are the point.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct DeckGallery {
     @Test(arguments: [320, 440]) func faceToFaceRotatesOnlyTheTopPlayersPieces(_ width: Int) async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -271,14 +271,14 @@ struct DeckGallery {
         #expect(session.game.uciMoves == ["b3b8"])
         #expect(!rendered.says("Rd8#"), "new positions require a new explicit reveal")
     }
-    @Test(.speaking(.chinese)) func noSlipsChinese() async throws { try await localizedNoSlips() }
-    @Test(.speaking(.english)) func noSlipsEnglish() async throws { try await localizedNoSlips() }
-    @Test(.speaking(.japanese)) func noSlipsJapanese() async throws { try await localizedNoSlips() }
-    @Test(.speaking(.korean)) func noSlipsKorean() async throws { try await localizedNoSlips() }
-    @Test(.speaking(.french)) func noSlipsFrench() async throws { try await localizedNoSlips() }
-    @Test(.speaking(.german)) func noSlipsGerman() async throws { try await localizedNoSlips() }
-    @Test(.speaking(.spanish)) func noSlipsSpanish() async throws { try await localizedNoSlips() }
-    @Test(.speaking(.portuguese)) func noSlipsPortuguese() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .chinese)) func noSlipsChinese() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .english)) func noSlipsEnglish() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .japanese)) func noSlipsJapanese() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .korean)) func noSlipsKorean() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .french)) func noSlipsFrench() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .german)) func noSlipsGerman() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .spanish)) func noSlipsSpanish() async throws { try await localizedNoSlips() }
+    @Test(.drawing(in: .portuguese)) func noSlipsPortuguese() async throws { try await localizedNoSlips() }
 
     private func localizedNoSlips() async throws {
         let language = Speech.language

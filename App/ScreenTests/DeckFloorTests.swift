@@ -9,7 +9,7 @@ import ChessmirrorKitTesting
 /// Contract: the board keeps the entire viewport width regardless of height or text size.
 /// Settings start closed; bottom analysis tabs remain reachable without shrinking the board.
 @MainActor
-@Suite(.serialized, .speaking(.chinese))
+@Suite(.serialized, .drawing(in: .chinese))
 struct DeckFloor {
     @Test func boardAlwaysUsesTheFullWidth() {
         #expect(GameScreen.boardSide(in: .zero) == 0)
