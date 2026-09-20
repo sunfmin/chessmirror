@@ -95,7 +95,7 @@ private func tried(_ san: String, _ drop: Double = 20) -> Game.Ply.Tried {
     ])
     let session = GameSession.fresh(played, engine: engine)
     defer { session.suspend() }
-    session.setTilling(true)
+    session.setNoSlips(true)
     session.jump(toPly: 2)
     await session.waitForPreparedInterception()
     session.play(try #require(twoPliesIn.state.move(matching: "f1c4")))

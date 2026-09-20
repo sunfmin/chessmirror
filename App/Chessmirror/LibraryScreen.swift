@@ -297,9 +297,9 @@ struct LibraryScreen: View {
             .background(Palette.ink, in: RoundedRectangle(cornerRadius: 14))
 
             Button {
-                start(Game(startFEN: PGN.standardStartFEN), tilling: true)
+                start(Game(startFEN: PGN.standardStartFEN), noSlips: true)
             } label: {
-                Label(localized("till.start"), systemImage: "leaf")
+                Label(localized("noSlips.start"), systemImage: "leaf")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(18)
@@ -428,7 +428,7 @@ struct LibraryScreen: View {
         .buttonStyle(.plain)
     }
 
-    /// The 正着榜 (docs/adr/0038): one row per rung the player has stood a move at, the longest
+    /// The 连正榜 (docs/adr/0038): one row per rung the player has stood a move at, the longest
     /// 连正 on each row opening the game it was made in. Nothing at all until something has stood,
     /// because an empty ladder is not a thing to look at.
     @ViewBuilder private var ladderBoard: some View {
@@ -592,10 +592,10 @@ struct LibraryScreen: View {
         }
     }
 
-    private func start(_ game: Game?, tilling: Bool = false) {
+    private func start(_ game: Game?, noSlips: Bool = false) {
         guard let game else { return }
         var lines = judgement.lines
-        lines.tilling = tilling
+        lines.noSlips = noSlips
         let session = GameSession.playing(
             game, engine: engine.service, library: library,
             strength: StrengthSetting.shared.strength, lines: lines

@@ -151,7 +151,7 @@ import ChessmirrorKitTesting
         #expect(session.game.plies[0].judgement?.intercept == 10)
 
         // With 正着 off, the figures stand as they were.
-        session.setTilling(false)
+        session.setNoSlips(false)
         #expect(session.noSlips.longestRun == 1)
     }
 }

@@ -1,18 +1,18 @@
 import Foundation
 
 extension Game {
-    /// One of the player's own moves as 正着 reads it: whether it stood, whether a 试招 came
-    /// before it, and the 棋力 it was played against (CONTEXT.md: 连正, 正着榜).
+    /// One of the player's own moves as 把关 reads it: whether it stood, whether a 试招 came
+    /// before it, and the 棋力 it was played against (CONTEXT.md: 连正, 连正榜).
     ///
-    /// The one walk under both readers of 正着. The row under the board counts these into a 连正
-    /// and the 正着榜 credits them to rungs; each keeps its own sum, and what a move *is*
+    /// The one walk under both readers of 把关. The row under the board counts these into a 连正
+    /// and the 连正榜 credits them to rungs; each keeps its own sum, and what a move *is*
     /// — stood or not, after a slip or not — is decided here and nowhere else. It was decided in
     /// both, and the two had already begun to disagree about a refusal waiting at the end.
     public struct OwnMove: Hashable, Sendable {
         /// Counting from one. One past the last move for the place a refusal is waiting at.
         public let ply: Int
-        /// Whether the move stood under 正着: judged, with the 拦截线 it stood under. A move
-        /// measured with 正着 off did not stand under anything.
+        /// Whether the move stood under 把关: judged, with the 拦截线 it stood under. A move
+        /// measured with 把关 off did not stand under anything.
         public let stood: Bool
         /// Whether a 试招 was refused at the position this move was played from — the one thing
         /// that ends a 连正.
@@ -54,16 +54,16 @@ extension Game {
 
     /// 连正, read out of one game (CONTEXT.md).
     ///
-    /// **Read, never counted on the side.** A move that stood under 正着 is one carrying a
+    /// **Read, never counted on the side.** A move that stood under 把关 is one carrying a
     /// judgement with the 拦截线 it stood under (`Ply.Judgement.intercept`), and a 试招 is written
     /// where it happened (docs/adr/0037) — so a reopened game shows the same figures as when it
     /// was left, and a session that kept its own tally was one more place for it to be wrong.
     ///
     /// Only the run. A count of every move that stood (正着数, retired) was the length of the game
-    /// whenever 正着 was on, which is a number the record already shows.
+    /// whenever 把关 was on, which is a number the record already shows.
     public struct NoSlips: Hashable, Sendable {
         /// 连正: the run of the player's moves that stood since the last 试招. Only a 试招 ends
-        /// it; switching 正着 off pauses it.
+        /// it; switching 把关 off pauses it.
         public let run: Int
         /// The game's longest 连正.
         public let longestRun: Int
@@ -76,7 +76,7 @@ extension Game {
         public static let none = NoSlips(run: 0, longestRun: 0)
     }
 
-    /// The 正着 figures of this game for the sides in `mine`.
+    /// The 把关 figures of this game for the sides in `mine`.
     public func noSlips(by mine: Set<PieceColour>) -> NoSlips {
         var run = 0
         var longest = 0

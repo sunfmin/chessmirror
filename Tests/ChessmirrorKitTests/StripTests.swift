@@ -64,10 +64,10 @@ struct StripTests {
         defer { session.suspend() }
         #expect(session.strip.tally == nil)
 
-        session.setTilling(true)
+        session.setNoSlips(true)
         #expect(session.strip.tally == Game.NoSlips(run: 0, longestRun: 0), "on, with nothing yet")
 
-        session.setTilling(false)
+        session.setNoSlips(false)
         #expect(session.strip.tally == nil, "off again with nothing stood, and the row is as it was")
 
         var stood = try opening(["e2e4", "e7e5"])

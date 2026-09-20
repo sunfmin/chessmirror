@@ -68,7 +68,7 @@ struct DeckGallery {
             Line(score: .centipawns(35), uciMoves: ["e2e4"], san: ["e4"])
         ])])
         let session = GameSession.fresh(game, engine: engine)
-        session.setTilling(true)
+        session.setNoSlips(true)
         defer { session.suspend() }
         let rendered = await ScreenImage.write("standing-layout-\(width)",
             size: CGSize(width: width, height: 850)) {
@@ -86,12 +86,12 @@ struct DeckGallery {
         ])])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
-        session.setTilling(true)
+        session.setNoSlips(true)
         let rendered = await ScreenImage.write("tilling-toggle-off", interact: { window in
             let before = ScreenImage.words(in: window)
             #expect(ScreenImage.activate(localized("till.name"), in: window))
             await ScreenImage.settle()
-            #expect(!session.isTilling)
+            #expect(!session.isNoSlipsOn)
             #expect(ScreenImage.words(in: window) != before)
             #expect(ScreenImage.words(in: window).contains { $0.contains(localized("standing.bar")) })
             #expect(ScreenImage.activate(localized("till.name"), in: window))
@@ -99,7 +99,7 @@ struct DeckGallery {
             #expect(session.lines.intercept == session.lines.record, "back on, at the 记录线")
             #expect(ScreenImage.activate(localized("till.name"), in: window))
             await ScreenImage.settle()
-            #expect(!session.isTilling)
+            #expect(!session.isNoSlipsOn)
         }) {
             screen(session, engine: engine, opening: .tactics)
         }
@@ -117,7 +117,7 @@ struct DeckGallery {
         let session = GameSession.fresh(game,
             controllers: [.white: .hand, .black: engineOpponent ? .engine : .hand], engine: engine)
         defer { session.suspend() }
-        session.setTilling(true)
+        session.setNoSlips(true)
         let rendered = await ScreenImage.write(engineOpponent ? "game-settings-inline-engine" : "game-settings-inline", interact: { window in
             let before = ScreenImage.words(in: window)
             #expect(!before.contains(localized("punish.toggle")))
@@ -138,7 +138,7 @@ struct DeckGallery {
             #expect(!session.findsPunishment)
             #expect(ScreenImage.activate(localized("till.name"), in: window))
             await ScreenImage.settle()
-            #expect(!session.isTilling)
+            #expect(!session.isNoSlipsOn)
             #expect(ScreenImage.activate(localized("till.name"), in: window))
             await ScreenImage.settle()
             #expect(session.lines.intercept == session.lines.record, "back on, at the 记录线")
@@ -165,7 +165,7 @@ struct DeckGallery {
         ])])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
-        session.setTilling(true)
+        session.setNoSlips(true)
         await hop()
         session.play(try #require(game.state.move(matching: "d2d4")))
         await session.settled()
@@ -202,7 +202,7 @@ struct DeckGallery {
         ])])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
-        session.setTilling(true)
+        session.setNoSlips(true)
         await hop()
         session.play(try #require(game.state.move(matching: "d2d4")))
         await session.settled()
@@ -288,7 +288,7 @@ struct DeckGallery {
         ])])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
-        session.setTilling(true)
+        session.setNoSlips(true)
         let rendered = await ScreenImage.write("tilling-\(language.rawValue)") {
             screen(session, engine: engine, opening: .tactics)
         }
@@ -338,7 +338,7 @@ struct DeckGallery {
             Line(score: .centipawns(500), uciMoves: ["e2e4"], san: ["e4"])
         ])])
         let session = GameSession.fresh(game, engine: engine)
-        session.setTilling(true)
+        session.setNoSlips(true)
         let rendered = await ScreenImage.write("tilling-no-hints") {
             screen(session, engine: engine, opening: .tactics)
         }
@@ -363,7 +363,7 @@ struct DeckGallery {
         ])])
         let session = GameSession.fresh(game, engine: engine)
         defer { session.suspend() }
-        session.setTilling(true)
+        session.setNoSlips(true)
         session.findsPunishment = true
         session.play(try #require(game.state.move(matching: "d2d4")))
         await session.settled()

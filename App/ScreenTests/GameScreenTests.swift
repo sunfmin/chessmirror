@@ -857,7 +857,7 @@ struct GameScreenScreenshots {
         let session = GameSession.fresh(try Self.refusedG4(), engine: engine)
         defer { session.suspend() }
         session.jumpToLatest()
-        session.setTilling(true)
+        session.setNoSlips(true)
         await hop()
         #expect(session.isSearching, "正着 is preparing its interception of the next move")
         let rendered = await ScreenImage.write("game-rejudge-waiting", interact: { window in
@@ -971,7 +971,7 @@ struct GameScreenScreenshots {
         for ply in [0, 2, 4, 6] { game.setJudgement(stood, atPly: ply) }
         game.setTried([.init(san: "Nh3", drop: 12)], atPly: 4)
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
-        session.setTilling(true)
+        session.setNoSlips(true)
         return session
     }
 

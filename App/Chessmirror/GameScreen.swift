@@ -174,7 +174,7 @@ struct GameScreen: View {
                                     in: RoundedRectangle(cornerRadius: 8))
                 }
                 .accessibilityLabel(localized("board.faceToFace"))
-                .accessibilityValue(localized(session.isFaceToFace ? "screen.on" : "till.off"))
+                .accessibilityValue(localized(session.isFaceToFace ? "screen.on" : "noSlips.off"))
                 flip.frame(width: 44, height: 44)
                 Menu {
                     // 复盘 is not here. It was a destination, then a switch in the navigation bar,
@@ -282,18 +282,18 @@ struct GameScreen: View {
         let strip = session.strip
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 12) {
-                tillingSwitch
+                noSlipsSwitch
                     .fixedSize(horizontal: true, vertical: false)
                 // How far the game has gone without a slip, and how far since the last one:
                 // 连正, read off the game rather than counted (CONTEXT.md). On the row that
                 // names 把关 and on no row of its own.
                 if let tally = strip.tally {
-                    Text(localized("till.tally", tally.run))
+                    Text(localized("noSlips.tally", tally.run))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                         .fixedSize(horizontal: true, vertical: false)
                         .contentTransition(.numericText())
-                        .accessibilityLabel(localized("till.tally", tally.run))
+                        .accessibilityLabel(localized("noSlips.tally", tally.run))
                 }
                 Spacer(minLength: 8)
                 if engine.unavailableReason != nil, !viewed.isOver {
@@ -305,7 +305,7 @@ struct GameScreen: View {
                             .font(.caption.weight(.medium))
                             .foregroundStyle(Palette.ink)
                     case .weighing:
-                        Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
+                        Text(localized("noSlips.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
                     case .refused(let refusal):
                         // What the take-back has to say, in the one place the eye is already
                         // reading: what the move cost and that it is not standing. The sentence
@@ -412,7 +412,7 @@ struct GameScreen: View {
                 Text(localized("tried.reply")).font(.caption).foregroundStyle(Palette.inkSoft)
                 if reading.isAsking {
                     ProgressView().controlSize(.mini)
-                    Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
+                    Text(localized("noSlips.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
                 }
                 Spacer(minLength: 0)
                 rejudgeControl(reading)
@@ -436,7 +436,7 @@ struct GameScreen: View {
     @ViewBuilder private func rejudgeControl(_ reading: GameSession.ReplyReading) -> some View {
         if let running = session.rejudging, running.index == reading.index {
             ProgressView().controlSize(.mini)
-            Text(running.depth > 0 ? localized("game.depth", running.depth) : localized("till.judging"))
+            Text(running.depth > 0 ? localized("game.depth", running.depth) : localized("noSlips.judging"))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.inkSoft)
         } else {
@@ -464,22 +464,22 @@ struct GameScreen: View {
     }
 
     /// Interception is the page's only mode switch. Assessment and explicit answers are separate.
-    private var tillingSwitch: some View {
-        Button { session.setTilling(!session.isTilling) } label: {
+    private var noSlipsSwitch: some View {
+        Button { session.setNoSlips(!session.isNoSlipsOn) } label: {
             HStack(spacing: 4) {
-                Image(systemName: session.isTilling ? "checkmark.shield" : "shield")
-                Text(localized("till.name"))
-                Text(localized(session.isTilling ? "screen.on" : "till.off"))
+                Image(systemName: session.isNoSlipsOn ? "checkmark.shield" : "shield")
+                Text(localized("noSlips.name"))
+                Text(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
             }
             .font(.caption)
-            .foregroundStyle(session.isTilling ? Palette.analysis : Palette.inkSoft)
+            .foregroundStyle(session.isNoSlipsOn ? Palette.analysis : Palette.inkSoft)
             .frame(minHeight: 30)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(localized("till.name"))
-        .accessibilityValue(localized(session.isTilling ? "screen.on" : "till.off"))
-        .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
+        .accessibilityLabel(localized("noSlips.name"))
+        .accessibilityValue(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
+        .disabled(session.isOccupied || (!engine.isReady && !session.isNoSlipsOn))
     }
 
     // ------------------------------------------------------------------ the two sides
@@ -724,12 +724,12 @@ struct GameScreen: View {
             }
 
             Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.vertical, 5)
-            Toggle(localized("till.name"), isOn: Binding(
-                get: { session.isTilling },
-                set: { session.setTilling($0) }
+            Toggle(localized("noSlips.name"), isOn: Binding(
+                get: { session.isNoSlipsOn },
+                set: { session.setNoSlips($0) }
             ))
-            .toggleStyle(SettingToggleStyle(label: localized("till.name")))
-            .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
+            .toggleStyle(SettingToggleStyle(label: localized("noSlips.name")))
+            .disabled(session.isOccupied || (!engine.isReady && !session.isNoSlipsOn))
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))
@@ -756,7 +756,7 @@ struct GameScreen: View {
                     HStack(spacing: 4) {
                         Circle().fill(configuration.isOn ? Palette.analysis : Palette.inkSoft.opacity(0.45))
                             .frame(width: 5, height: 5)
-                        Text(localized(configuration.isOn ? "screen.on" : "till.off"))
+                        Text(localized(configuration.isOn ? "screen.on" : "noSlips.off"))
                     }
                     .font(.caption)
                     .foregroundStyle(configuration.isOn ? Palette.analysis : Palette.inkSoft)
@@ -769,7 +769,7 @@ struct GameScreen: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(label)
-            .accessibilityValue(localized(configuration.isOn ? "screen.on" : "till.off"))
+            .accessibilityValue(localized(configuration.isOn ? "screen.on" : "noSlips.off"))
         }
     }
 
@@ -967,7 +967,7 @@ struct GameScreen: View {
                 Text(localized(exercise.wasIncorrect ? "punish.again" : "punish.prompt"))
                 if exercise.isJudging { ProgressView() }
                 HStack(spacing: 10) {
-                    Button(localized("till.reveal")) { exercise.reveal() }
+                    Button(localized("noSlips.reveal")) { exercise.reveal() }
                     Button(localized("punish.skip")) { exercise.skip() }
                 }
             }
@@ -1097,7 +1097,7 @@ struct GameScreen: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Palette.alarm)
                 .frame(width: 18)
-                .accessibilityLabel(localized(returned ? "till.returned" : "wrong.stood"))
+                .accessibilityLabel(localized(returned ? "noSlips.returned" : "wrong.stood"))
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     ForEach(Array(wrongs.reversed().enumerated()), id: \.offset) { offset, wrong in
@@ -1532,7 +1532,7 @@ struct GameScreen: View {
                     if let progress = session.standingProgress {
                         HStack(spacing: 6) {
                             if isCardSearching(kind) { ProgressView().controlSize(.mini) }
-                            Text(localized(isCardSearching(kind) ? "till.judging" : "search.reached"))
+                            Text(localized(isCardSearching(kind) ? "noSlips.judging" : "search.reached"))
                             Text(localized("game.depth", progress.depth))
                         }
                         .font(.caption2)

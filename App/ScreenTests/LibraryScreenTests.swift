@@ -194,7 +194,7 @@ struct LibraryScreenScreenshots {
 
         #expect(JudgementSetting.shared.lines.record == 10)
         #expect(JudgementSetting.shared.lines.enqueue == 10)
-        #expect(!JudgementSetting.shared.lines.tilling, "把关 is not a standing setting")
+        #expect(!JudgementSetting.shared.lines.noSlips, "把关 is not a standing setting")
 
         let rendered = await ScreenImage.write("about-lines") {
             AboutScreen()

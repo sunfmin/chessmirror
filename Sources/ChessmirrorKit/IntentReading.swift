@@ -3,7 +3,7 @@
 ///
 /// Nobody declares one any more — the player is never asked, and this is never written to a
 /// file. What survives is the vocabulary, because the app still has to say what a move does:
-/// the tactics card's sentence, 正着's hint layers and a drill's feedback are all written in
+/// the tactics card's sentence, 把关's hint layers and a drill's feedback are all written in
 /// these words.
 ///
 /// The shape is still the point. A verb with a target can be drawn on the board — an arrow and
@@ -479,7 +479,7 @@ extension Rules {
 /// the order they would be worth saying and keeps the first one this agrees with, which is what
 /// makes 「占 d5」 a fact about the board rather than a label somebody chose. The note is the other
 /// half of why it survived the drills: 「f7 的守子没有增加」 is a sentence a player can go and look
-/// at, and it is the sentence 正着 and a practice answer both need.
+/// at, and it is the sentence 把关 and a practice answer both need.
 public struct IntentCheck: Hashable, Sendable {
     public enum Verdict: Hashable, Sendable {
         /// The claim is true of the position the move made.

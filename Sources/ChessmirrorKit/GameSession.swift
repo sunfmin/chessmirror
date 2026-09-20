@@ -246,7 +246,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // is the caller's 记录线 — the one number the player owns (docs/adr/0046) — and not the
         // number the file was saved under, which stays on the judgements that stood under it.
         self.lines = lines
-        if PGN(game: game, tags: tags).intercept != nil { self.lines.tilling = true }
+        if PGN(game: game, tags: tags).intercept != nil { self.lines.noSlips = true }
     }
 
     // ------------------------------------------------------------------ ways in
@@ -560,7 +560,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Turns the tactics finder on, or back off. Takes effect now: a shot left standing after
     /// the switch is thrown is the one thing the live board must not keep drawing.
     public func setFindingTactics(_ on: Bool) {
-        guard !isTilling || !on else { return }
+        guard !isNoSlipsOn || !on else { return }
         guard isFindingTactics != on else { return }
         isFindingTactics = on
         if !on {
@@ -713,21 +713,21 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// The lines this game is judged by (docs/adr/0027, 0046). Per game rather than global: the
     /// numbers are the player's, and whether 把关 reads them is a thing one game is played under.
-    /// Written through `setLines` and `setTilling`, which is where what follows a change lives.
+    /// Written through `setLines` and `setNoSlips`, which is where what follows a change lives.
     public private(set) var lines: JudgementLines = .standard
 
-    /// 正着: whether a move by hand is measured before it is allowed to stand.
+    /// 把关: whether a move by hand is measured before it is allowed to stand.
     ///
     /// A switch and nothing else: where it stops the player is the 记录线, the same number that
     /// decides what is written down (docs/adr/0046). The switch is a *per game* setting and it
     /// sits beside 谁执白 and 引擎想多久 rather than in the app's settings: any position can be
-    /// tilled, including one reached by playing on from a 错题 or read off a photograph.
-    public var isTilling: Bool { lines.tilling }
+    /// played under 把关, including one reached by playing on from a 错题 or read off a photograph.
+    public var isNoSlipsOn: Bool { lines.noSlips }
     /// Whether the deck is dealt and a card may ask the engine: never under 把关. A card is an
     /// opinion about the position in front of the player, and 把关 says nothing about what to
     /// play (docs/adr/0031, 0040). The one rule, read here by the screen that deals and by the
     /// session that answers, so the two cannot disagree about whether a card is on the table.
-    public var dealsCards: Bool { !isTilling }
+    public var dealsCards: Bool { !isNoSlipsOn }
     public var findsPunishment = false
     public private(set) var punishment: Punishment?
     public var activePunishment: Punishment? {
@@ -739,9 +739,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// judgement of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how
     /// much slack the coach cuts are two different questions, and answering both with one knob
     /// makes it impossible to say who improved (docs/adr/0009).
-    public func setTilling(_ enabled: Bool) {
+    public func setNoSlips(_ enabled: Bool) {
         var moved = lines
-        moved.tilling = enabled
+        moved.noSlips = enabled
         setLines(moved)
     }
 
@@ -754,7 +754,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard lines != new else { return }
         let interceptMoved = lines.intercept != new.intercept
         lines = new
-        if interceptMoved, new.tilling {
+        if interceptMoved, new.noSlips {
             analysis = nil
             setFindingTactics(false)
         }
@@ -765,7 +765,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         retune()
     }
 
-    /// True while 正着 is working out what the move just played costs. The board shows the move
+    /// True while 把关 is working out what the move just played costs. The board shows the move
     /// during this: it has been played, and whether it is allowed to stand is the question.
     ///
     /// One of the four facts `phase` is read from; ask `phase` unless the question is this fact.
@@ -783,7 +783,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public enum Phase: Hashable, Sendable {
         /// Nothing is in flight: the board is the player's, or the record is being read.
         case reading
-        /// 正着 is working out what the move just played costs (`isWeighing`).
+        /// 把关 is working out what the move just played costs (`isWeighing`).
         case weighing
         /// The record is being walked forward to a Ply, one move at a time (`isWalkingRecord`).
         case walking
@@ -834,7 +834,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
-    /// The move 正着 has just taken back, for the screen to say one sentence about. Cleared by
+    /// The move 把关 has just taken back, for the screen to say one sentence about. Cleared by
     /// the next move, because it is about a board that is no longer there.
     public private(set) var refused: Game.Ply.Tried?
 
@@ -889,7 +889,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         refusalPosition = fen
         refused = refusalByPosition[fen]
     }
-    /// The number for the position on screen: the live bounded search of it when 正着 has one,
+    /// The number for the position on screen: the live bounded search of it when 把关 has one,
     /// else the curve's number for it. No recommended move is exposed here.
     ///
     /// While a move is being weighed it is the number of the position the move was played from.
@@ -897,7 +897,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// — and a bar with no number draws a level game: on a phone, ten seconds and more of half
     /// and half over a position that is nothing like it. The table, while weighing, can only be
     /// that position's: the search that fills it was stopped when the move was played.
-    private var tillingScore: Score? {
+    private var noSlipsScore: Score? {
         if let table = interceptTable, table.fen == viewed.state.fen {
             return table.analysis.best?.score
         }
@@ -949,7 +949,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
-    /// One wrong move at the position on the board, as the strip lists it: a 试招 正着 took
+    /// One wrong move at the position on the board, as the strip lists it: a 试招 把关 took
     /// back, or the move that stood there too expensively. Two kinds under one chip, because an
     /// imported game has only the second — nothing was ever refused in it — and its 错招 want the
     /// same chip and the same 应招 as a refusal's (docs/adr/0034, 0036).
@@ -1046,7 +1046,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// The position a 试招 made. It is the one its 应招 comes back from, and the one the board no
-    /// longer shows, because 正着 has already taken the move back.
+    /// longer shows, because 把关 has already taken the move back.
     public func position(after tried: Game.Ply.Tried) -> Game? {
         position(afterPlaying: tried.san)
     }
@@ -1285,7 +1285,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The game as it stood when a move last landed through `commit` with no judgement on it —
     /// the one move `measureLatestMoveChange` is owed a judgement for. A move that was already
     /// in the file when the game was opened keeps whatever it has: filling those in is the
-    /// explicit migration (`fillMissingTillingJudgements`), never something a screen starts.
+    /// explicit migration (`fillMissingNoSlipsJudgements`), never something a screen starts.
     private var landedUnjudged: (moves: [String], fen: String)?
 
     /// Only a newly played move gets a change badge; navigating the record is not a move.
@@ -1298,7 +1298,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// What the bar shows, by one priority: where the move just played landed, then the position
     /// on screen, then the standing Analysis.
     public var feedbackScore: Score? {
-        moveChange?.after ?? tillingScore ?? analysis?.best?.score
+        moveChange?.after ?? noSlipsScore ?? analysis?.best?.score
     }
 
     /// The app's number for the position after `ply` moves — what the curve draws — by one
@@ -1307,7 +1307,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// has nothing else for), then what a Review wrote (docs/adr/0016). The record first,
     /// because the badge is written from the same weighing as the record and never disagrees
     /// with it. The live search of the position on screen does not enter here: reading an older
-    /// move is reading history, and the live number belongs to `tillingScore`.
+    /// move is reading history, and the live number belongs to `noSlipsScore`.
     public func historyScore(atPly ply: Int) -> Score? {
         guard (0...game.plies.count).contains(ply) else { return nil }
         if ply > 0, let judgement = game.plies[ply - 1].judgement {
@@ -1351,7 +1351,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let tally = noSlips
         return Strip(
             voice: standing,
-            tally: isTilling || tally.longestRun > 0 ? tally : nil,
+            tally: isNoSlipsOn || tally.longestRun > 0 ? tally : nil,
             depth: phase != .exercising && finish == nil ? (searchProgress?.depth ?? 0) : nil,
             bar: bar
         )
@@ -1406,7 +1406,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// Explicit legacy migration only; never started automatically by the game screen.
-    public func fillMissingTillingJudgements() async {
+    public func fillMissingNoSlipsJudgements() async {
         guard !isOccupied, let engine else { return }
         let original = game
         for index in original.plies.indices {
@@ -1666,11 +1666,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// Who is putting a move down. The three ways in differ by whose move it is — which decides
-    /// whether 正着 weighs it and whether a rung is written on it.
+    /// whether 把关 weighs it and whether a rung is written on it.
     private enum Mover {
         /// A person, on their own turn.
         case hand
-        /// The engine, asked for one move by a held button. Weighed like a hand move where 正着
+        /// The engine, asked for one move by a held button. Weighed like a hand move where 把关
         /// is on, and no rung is written on it: it was played for the player, not against them.
         case asked
         /// The engine's own Controller. Lands only at the latest position, with the rung it was
@@ -1689,10 +1689,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             commit(move, by: .hand)
             return
         }
-        // 正着 measures a move before it is allowed to stand, wherever it is played. It used to
+        // 把关 measures a move before it is allowed to stand, wherever it is played. It used to
         // measure only a move played at the end of the game — "a move played back down the game is
         // somebody taking one back" — and a saved game reopens at its *first* position, so playing
-        // the first move again was the one move 正着 never looked at. It looked exactly like 正着
+        // the first move again was the one move 把关 never looked at. It looked exactly like 把关
         // being switched off while switched on.
         // A move nobody can weigh — no engine attached, or a game that is over — lands as it is.
         guard engine != nil, !viewed.isOver else {
@@ -2186,7 +2186,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             }
         } else {
             // The one search the board itself starts: the position in front of the player, for
-            // 正着 and the badge to read. The engine's opinion of it is not shown, and no search
+            // 把关 and the badge to read. The engine's opinion of it is not shown, and no search
             // whose only product is advice is started for the board (docs/adr/0040); a card
             // that asks gets one (`adviseForCard`).
             prepareInterception(on: position, using: engine)

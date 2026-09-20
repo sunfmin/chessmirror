@@ -90,7 +90,7 @@ extension Game {
         }
         // And the refusals no move has absorbed, written at the position they happened at rather
         // than onto a move (docs/adr/0037). **The commonest 错题 there is**: the player reaches
-        // for something, 正着 takes it back, and they put the phone down — the game ends with the
+        // for something, 把关 takes it back, and they put the phone down — the game ends with the
         // refusal as the last thing in it, and no move ever comes along to carry it. The side to
         // move there is the side that got it wrong, named by the Ply a move played there would
         // take.
@@ -113,7 +113,7 @@ extension Encounter {
     /// The Ply to open the game at to read this one.
     ///
     /// A move that stood opens on the position *after* it, with the blunder on the board — that
-    /// is what reading a game wants (docs/adr/0036). A move 正着 took back never stood, so there
+    /// is what reading a game wants (docs/adr/0036). A move 把关 took back never stood, so there
     /// is no position after it: the board it belongs to is the one it was played from, which is
     /// also the one to try again from.
     public var arrivalPly: Int { attempt == nil ? ply : ply - 1 }

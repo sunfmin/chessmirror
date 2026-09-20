@@ -287,7 +287,7 @@ public struct PGN: Hashable, Sendable {
             if !ply.line.isEmpty {
                 comment.append("[%line \(ply.line.joined(separator: " "))]")
             }
-            // What 正着 took back here, and how many hints were open when the move that stands
+            // What 把关 took back here, and how many hints were open when the move that stands
             // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
             // they were played, because a reader that only knows `[%eval]` skips them the same
             // way it already skips everything else in a comment.
@@ -512,7 +512,7 @@ public struct PGN: Hashable, Sendable {
             }
         }
         // And a judgement written before the 拦截线 travelled with it stood under the file's
-        // 拦截线, when the file has one: 正着 was on when the game was saved, which is the best
+        // 拦截线, when the file has one: 把关 was on when the game was saved, which is the best
         // account there is of whether it was on when the move was played.
         if let intercept = (tags.first { $0.name == Self.interceptTag }?.value).flatMap(Double.init) {
             for index in game.plies.indices {
@@ -638,7 +638,7 @@ private struct Scanner {
 
     /// Every `[%tried San -23%]` in one comment, in the order they were written. All of them
     /// rather than the first, which is the one way this differs from every other token here: a
-    /// position 正着 stopped somebody at three times has three of them. The 应招 rides after a bar
+    /// position 把关 stopped somebody at three times has three of them. The 应招 rides after a bar
     /// in the same token, so the two can never be read apart from each other (docs/adr/0034).
     private static func tried(in comment: String) -> [Game.Ply.Tried] {
         attempts(of: "tried", in: comment).map(\.tried)

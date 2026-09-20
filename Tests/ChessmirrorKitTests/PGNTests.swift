@@ -323,7 +323,7 @@ func theFactsOfAGameRoundTripThroughTheirTags() throws {
 
     let on = PGN(
         game: game, seats: [.white: .hand, .black: .engine], origin: .recognised,
-        lines: JudgementLines(tilling: true, record: 7, enqueue: 7),
+        lines: JudgementLines(noSlips: true, record: 7, enqueue: 7),
         carrying: [.init("Date", "2026.09.16")]
     )
     let readOn = try PGN(parsing: on.text)

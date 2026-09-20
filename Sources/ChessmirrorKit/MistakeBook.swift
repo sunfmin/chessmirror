@@ -43,7 +43,7 @@ public struct Encounter: Hashable, Sendable, Identifiable {
     public let wanted: String?
     /// What it cost, in percentage points of win probability (docs/adr/0027).
     public let cost: Double
-    /// Where the game came from, so 正着 and a rated game can be told apart in the history
+    /// Where the game came from, so 把关 and a rated game can be told apart in the history
     /// without being used to split the item.
     public let origin: GameOrigin
 
@@ -169,9 +169,9 @@ public struct MistakeBook: Sendable {
     ///   contributes none of these — a drop needs two Scores from one depth and an unreviewed
     ///   game has neither (docs/adr/0016). An unreviewed game is not a game with nothing wrong in
     ///   it, it is a game nobody has looked at.
-    /// - **A move 正着 took back**, whose cost was measured when it was refused and written into
+    /// - **A move 把关 took back**, whose cost was measured when it was refused and written into
     ///   the file with it (docs/adr/0027). These need no Review, because the measurement already
-    ///   happened; a 正着 game therefore fills the book while it is being played. Whether the
+    ///   happened; a 把关 game therefore fills the book while it is being played. Whether the
     ///   refusal rode onto the move that finally stood or is still waiting at the position it
     ///   happened at (docs/adr/0037) makes no difference to the book: both are one occasion of
     ///   getting one position wrong.

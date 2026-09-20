@@ -175,8 +175,8 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     #expect(!session.isOnClock(.white))
     #expect(session.isHandTurn, "and the hand is Black's for it")
     #expect(!session.canPlayBestMove)
-    session.setTilling(false)
-    #expect(session.isTilling, "正着 is not switched off under an exercise")
+    session.setNoSlips(false)
+    #expect(session.isNoSlipsOn, "正着 is not switched off under an exercise")
 
     exercise.skip()
     await exercise.settled()

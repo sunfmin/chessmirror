@@ -42,7 +42,7 @@ public struct Slip: Hashable, Sendable, Identifiable {
     /// The worst of them — the number this position is worth stopping for.
     public var drop: Double { wrong.first?.drop ?? 0 }
 
-    /// Whether any of them was a move 正着 took back.
+    /// Whether any of them was a move 把关 took back.
     public var wasTried: Bool { wrong.contains { $0.wasTried } }
 
     /// The position this happened at, counted in Plies played — which is what the record strip's
@@ -68,7 +68,7 @@ extension Game {
     /// finally played is one place in the game and one stop on the way through it; the strip of
     /// 已退回 attempts belongs to the position, and this is a list of positions.
     ///
-    /// The cost of a move that stood comes from the `[%judged]` 正着 wrote with it, or from a
+    /// The cost of a move that stood comes from the `[%judged]` 把关 wrote with it, or from a
     /// Review when there is one. A Review is *not* required — this is one game's account of
     /// itself, and every judgement in it came from the same bounded search of the same position —
     /// which is not the same question as the 错题本's, where scores from different games are
