@@ -100,7 +100,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case asked
     }
 
-    public private(set) var thinking: Thinking?
+    public var thinking: Thinking? {
+        if case .thinking(let whose) = activity { whose } else { nil }
+    }
 
     /// Whether a move of either kind is being walked.
     public var isThinking: Bool { thinking != nil }
@@ -678,7 +680,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         game = fresh
         cursor = 0
         analysis = nil
-        thinking = nil
+        stopThinking()
         shaky = []
         retune()
         return true
@@ -729,10 +731,23 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// session that answers, so the two cannot disagree about whether a card is on the table.
     public var dealsCards: Bool { !isNoSlipsOn }
     public var findsPunishment = false
+    /// The exercise last put on the board, kept once it is finished so its answer can still be
+    /// read. Whether it is *on* the board is the activity's to say (`activePunishment`).
     public private(set) var punishment: Punishment?
     public var activePunishment: Punishment? {
-        guard let punishment, !punishment.isFinished else { return nil }
-        return punishment
+        if case .exercising(let exercise) = activity { exercise } else { nil }
+    }
+
+    /// Puts an exercise on the board in place of the game, until it says it is finished. One
+    /// with nothing to find — a position with no legal reply — is finished as it is made.
+    private func exercise(_ exercise: Punishment) {
+        punishment = exercise
+        guard !exercise.isFinished else { return }
+        exercise.onFinish = { [weak self, weak exercise] in
+            guard let self, let exercise, activePunishment === exercise else { return }
+            activity = .reading
+        }
+        activity = .exercising(exercise)
     }
 
     /// Switches 把关 on or off. It stops the player at the 记录线, **the only dial 把关 has on the
@@ -768,18 +783,70 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// True while 把关 is working out what the move just played costs. The board shows the move
     /// during this: it has been played, and whether it is allowed to stand is the question.
     ///
-    /// One of the four facts `phase` is read from; ask `phase` unless the question is this fact.
-    public private(set) var isWeighing = false
+    /// Ask `phase` unless the question is this fact.
+    public var isWeighing: Bool {
+        if case .weighing = activity { true } else { false }
+    }
+
+    /// What the session is doing, with what belongs to the doing of it. **The stored truth**:
+    /// `phase` is its face, and `thinking`, `isWeighing`, `isWalkingRecord` and
+    /// `activePunishment` are each one case of it read out.
+    ///
+    /// It used to be four stored facts read in a priority order, which left every combination of
+    /// them representable — a move being weighed while the engine thought — and left what a
+    /// weighing owns (the 原局 to put back, the task doing it, the flag saying so) as three fields
+    /// to set and clear together by hand. A case carries what is its own, so leaving the case is
+    /// letting go of all of it.
+    private enum Activity {
+        case reading
+        /// The 原局 to put back if the move does not stand, and the task weighing it. A drill's
+        /// attempt has no 原局 here: the drill keeps its own and puts it back itself.
+        case weighing(standpoint: Standpoint?, task: Task<Void, Never>)
+        case walking
+        case exercising(Punishment)
+        case thinking(Thinking)
+    }
+
+    private var activity: Activity = .reading
+
+    /// Starts the engine walking a move. Refused while the board is spoken for or the record is
+    /// on its way somewhere: those are not things a search may take the board from.
+    private func think(_ whose: Thinking) -> Bool {
+        switch activity {
+        case .reading, .thinking:
+            activity = .thinking(whose)
+            return true
+        case .weighing, .walking, .exercising:
+            return false
+        }
+    }
+
+    /// The engine is no longer walking a move. Nothing else is touched: a move being weighed or
+    /// an exercise on the board is not the engine thinking, and is not ended by this.
+    private func stopThinking() {
+        if case .thinking = activity { activity = .reading }
+    }
+
+    /// A move is on the board and being weighed. It ends whatever the engine was walking, which
+    /// the caller has already taken the search of, and replaces a weighing still in flight.
+    private func beginWeighing(from standpoint: Standpoint?, task: Task<Void, Never>) {
+        if case .weighing(_, let running) = activity { running.cancel() }
+        activity = .weighing(standpoint: standpoint, task: task)
+    }
+
+    /// The weighing is over, whichever way: the board is the player's again.
+    private func endWeighing() {
+        if case .weighing = activity { activity = .reading }
+    }
 
     /// What the session is doing, which is one thing at a time.
     ///
-    /// The session keeps four facts about itself — a move being weighed, an exercise on the board,
-    /// the record being walked, the engine thinking — and every mutator used to guard on its own
-    /// handful of them, every screen `disabled` used to spell out its own combination, and the two
-    /// drifted: which of the four the player's hands have to wait for was answered in fifteen
-    /// places. Now it is answered here, once, and the readers ask the one question they have:
-    /// is the board spoken for (`isOccupied`), may the record be browsed (`canBrowse`), and whose
-    /// clock it is (`isOnClock`).
+    /// Every mutator used to guard on its own handful of the session's facts, every screen
+    /// `disabled` used to spell out its own combination, and the two drifted: which of them the
+    /// player's hands have to wait for was answered in fifteen places. Now it is answered here,
+    /// once, and the readers ask the one question they have: is the board spoken for
+    /// (`isOccupied`), may the record be browsed (`canBrowse`), and whose clock it is
+    /// (`isOnClock`).
     public enum Phase: Hashable, Sendable {
         /// Nothing is in flight: the board is the player's, or the record is being read.
         case reading
@@ -793,14 +860,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case thinking(Thinking)
     }
 
-    /// Weighing first, because it is the one the others wait on: an exercise is set only after a
-    /// judgement, a walk and a thought are both stopped by a move being played.
+    /// The activity, without what it carries.
     public var phase: Phase {
-        if isWeighing { return .weighing }
-        if activePunishment != nil { return .exercising }
-        if isWalkingRecord { return .walking }
-        if let thinking { return .thinking(thinking) }
-        return .reading
+        switch activity {
+        case .reading: .reading
+        case .weighing: .weighing
+        case .walking: .walking
+        case .exercising: .exercising
+        case .thinking(let whose): .thinking(whose)
+        }
     }
 
     /// The board is spoken for — a move being weighed, or an exercise standing in for the game —
@@ -838,7 +906,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// the next move, because it is about a board that is no longer there.
     public private(set) var refused: Game.Ply.Tried?
 
-    private var weighing: Task<Void, Never>?
     /// The session's own measurement of the move just played, for the change badge.
     private var measuring: Task<Void, Never>?
     /// Waits until everything that is judging a move has said its piece: a move being weighed
@@ -848,7 +915,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// to instead of polling the session's state: a verdict arrives when the engine has answered
     /// and not a moment sooner, and the state after this is the state the screen would draw.
     public func settled() async {
-        await weighing?.value
+        if case .weighing(_, let task) = activity { await task.value }
         await measuring?.value
         await rejudgeTask?.value
         await replyTask?.value
@@ -857,7 +924,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     func waitForPreparedInterception() async { await searchTask?.value }
     /// The 原局 the move now being weighed was played from (`Standpoint`): what a refusal, a
     /// weighing nobody finished, or leaving the screen puts back. Nil when nothing is being weighed.
-    private var standpoint: Standpoint?
+    private var standpoint: Standpoint? {
+        if case .weighing(let standpoint, _) = activity { standpoint } else { nil }
+    }
 
     /// How long a move that is about to be taken back is left on the board.
     ///
@@ -1555,7 +1624,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Whether the record is being walked forward right now. The board is not the player's while
     /// it is: a tap landing halfway through a fast-forward plays a move from a position that is on
     /// its way off the screen.
-    public private(set) var isWalkingRecord = false
+    public var isWalkingRecord: Bool {
+        if case .walking = activity { true } else { false }
+    }
 
     /// Asks for the record to be walked to `ply` when the screen arrives, rather than cut to it.
     ///
@@ -1589,13 +1660,18 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             jump(toPly: wanted)
             return
         }
-        isWalkingRecord = true
-        defer { isWalkingRecord = false }
+        // A move the engine was walking is ended rather than left running under the walk: the
+        // board is on its way somewhere, and the retune where it stops starts what is wanted there.
+        if isThinking { stopSearching() }
+        activity = .walking
         while cursor < wanted, !Task.isCancelled {
             cursor += 1
             adoptViewedAnalysis()
             try? await Task.sleep(for: step)
         }
+        // Whatever happened to the task, the walk is over; a session suspended meanwhile has
+        // already said so, and is left as it put itself.
+        if isWalkingRecord { activity = .reading }
         guard !Task.isCancelled else { return }
         retune()
     }
@@ -1722,7 +1798,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         stopSearching()
-        standpoint = Standpoint(game: game, cursor: cursor)
+        let standpoint = Standpoint(game: game, cursor: cursor)
         // What the board and the record show while the engine thinks: the move in the game it
         // was played in, with the line it was played over kept beside it as a 分支
         // (docs/adr/0043) — the shape the ruling lands if the move stands, so nothing on the
@@ -1735,14 +1811,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         game = shown
         cursor += 1
         analysis = nil
-        thinking = nil
         refused = nil
-        isWeighing = true
         Sounds.current.play(move, outcome: game.state.outcome)
-        weighing?.cancel()
-        weighing = Task { [weak self] in
+        beginWeighing(from: standpoint, task: Task { [weak self] in
             await self?.settle(move, san: landed.san, from: position, to: played)
-        }
+        })
     }
 
     /// Join the baseline and resulting position's shared searches. Completion at either
@@ -1768,9 +1841,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // halfway through taking one back.
         if ruling.takesTheMoveBack { await holdTheMoveOnTheBoard() }
         guard !Task.isCancelled else { return }
-        isWeighing = false
-        self.standpoint = nil
-        weighing = nil
+        endWeighing()
         land(ruling, played: played, engine: engine)
     }
 
@@ -1795,7 +1866,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             refused = refusal
             save()
             Sounds.current.play(.refused)
-            if findsPunishment { punishment = Punishment(position: played, engine: engine) }
+            if findsPunishment { exercise(Punishment(position: played, engine: engine)) }
         }
     }
 
@@ -1815,14 +1886,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             game = practice.game
             cursor = game.plies.count
             analysis = nil
-            thinking = nil
-            isWeighing = true
             Sounds.current.play(move, outcome: game.state.outcome)
-            weighing = Task { [weak self] in
+            beginWeighing(from: nil, task: Task { [weak self] in
                 await practice.settled()
                 guard let self, !Task.isCancelled else { return }
-                isWeighing = false
-                weighing = nil
+                endWeighing()
                 // The drill rules its own attempt, under its own 线, and its refusal goes through
                 // the same door as 把关's: into the Game, at the position it happened at
                 // (docs/adr/0037). A drill that could not be judged is a move that stands unmeasured.
@@ -1834,7 +1902,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                     return
                 }
                 land(ruling, played: practice.game, engine: engine)
-            }
+            })
             return
         }
         if mover == .asked, isAtLatest {
@@ -1939,9 +2007,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         askedBest = analysis?.bestMove
         isAskReleased = false
         let position = viewed
+        guard think(.asked) else { return }
         stopSearching()
         searchProgress = nil
-        thinking = .asked
         searchTask = Task { [weak self] in
             // The shared bounded search: how deep it gets is how long the button is held, up to
             // the ten seconds or depth twenty the position is worth. One line is not asked for
@@ -1981,7 +2049,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     private func finishAskedMove(in position: Game) {
-        thinking = nil
+        stopThinking()
         isAskReleased = false
         let uci = askedBest
         askedBest = nil
@@ -2043,7 +2111,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // The move has been handed to `colour`; the board turns so they face the person playing.
         orientation = .facing(colour)
         analysis = nil
-        thinking = nil
+        stopThinking()
         save()
         retune()
     }
@@ -2075,7 +2143,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         restoreRefusalForViewedPosition()
         stopSearching()
         measureLatestMove()
-        thinking = nil
+        stopThinking()
         thinkingBest = nil
 
         let position = viewed
@@ -2157,7 +2225,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard let engine, !position.isOver, !engine.isPaused else { return }
 
         if isEngineTurn {
-            thinking = .own
+            guard think(.own) else { return }
             // No clock of its own (docs/adr/0039): the engine's move is bounded the way every
             // live position search is, and a rung is the one dial on how well it plays.
             let strength = strength
@@ -2179,7 +2247,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                     last = snapshot
                 }
                 guard let self, !Task.isCancelled else { return }
-                thinking = nil
+                stopThinking()
                 if let uci = last?.bestMove, let move = position.state.move(matching: uci) {
                     playByEngine(move)
                 }
@@ -2248,7 +2316,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard thinking == .own else { return }
         let position = viewed
         stopSearching()
-        thinking = nil
+        stopThinking()
         if let uci = thinkingBest, let move = position.state.move(matching: uci) {
             playByEngine(move)
         }
@@ -2271,22 +2339,23 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             cursor = game.plies.count
         }
         punishment?.skip()
-        weighing?.cancel()
-        weighing = nil
-        // A move nobody finished weighing is put back the way a ruling puts it back: the 原局,
-        // whole, with nothing written (docs/adr/0035). The same code the ruling runs, so the two
-        // cannot drift.
-        if let standpoint {
-            let ruling = Ruling.unjudged(standpoint)
-            game = ruling.game
-            cursor = ruling.cursor
+        if case .weighing(let standpoint, let task) = activity {
+            task.cancel()
+            // A move nobody finished weighing is put back the way a ruling puts it back: the
+            // 原局, whole, with nothing written (docs/adr/0035). The same code the ruling runs,
+            // so the two cannot drift.
+            if let standpoint {
+                let ruling = Ruling.unjudged(standpoint)
+                game = ruling.game
+                cursor = ruling.cursor
+            }
         }
-        standpoint = nil
-        isWeighing = false
         stopSearching()
         closeReply()
         cancelRejudge()
-        thinking = nil
+        // Whatever it was, it is over: the task is cancelled, the exercise skipped, the search
+        // taken down. One assignment, because the activity owns what each of those kept.
+        activity = .reading
     }
 
     private func noteProgress(_ snapshot: Analysis) {
