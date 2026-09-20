@@ -33,6 +33,14 @@ The one place a positive number is honest, and it is settled only after the move
 A reading of the Game with no screen at present (docs/adr/0040).
 _Avoid_: 抓住, 反击
 
+**牌堆 (Deck)**:
+The findings under the record: 杀招 and 战术, two cards in one order that never changes, each
+shut until it is pressed (docs/adr/0025). A card with nothing behind it takes up no room, and
+none of them are dealt in a 把关 game — a card is an opinion about what to play. A 练习 is dealt
+them 把关 or not, and pressing one is counted as help rather than refused (docs/adr/0047). What
+is on the table is a reading of the position (`Deck`); how much room it gets is the screen's.
+_Avoid_: 提示 as the name of a card, 卡片列表, panel
+
 **要害 (Vital)**: _retired._ The word named a card that no longer exists. Do not reuse it.
 
 ### 错题 — the mistake book

@@ -220,6 +220,27 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
     /// True while the short search that confirms a Tactic is running.
     public var isProbingTactics: Bool { finder.isProbing }
+
+    /// 牌堆 — what the deck under the record shows right now (`Deck`, docs/adr/0025): which of
+    /// the two cards have a finding behind them, what each row says, and whether anything is
+    /// still being looked for. The screen draws this; it does not work it out.
+    public var deck: Deck {
+        Deck.dealt(
+            isDealt: dealsCards, mate: mateNews != nil, tactic: tactic != nil,
+            isSearching: isSearching || isProbingTactics
+        )
+    }
+
+    /// The open card's line as numbered arrows on the position on screen. Nothing for a card
+    /// nobody can see: arrows from a card that is not on the table are arrows about a question
+    /// nobody asked (docs/adr/0025).
+    public func arrows(for card: Deck.Card?) -> [MoveArrow] {
+        guard let card, dealsCards else { return [] }
+        switch card {
+        case .tactics: return tacticArrows
+        case .mate: return mateNews?.arrows ?? []
+        }
+    }
     /// Analyses already paid for, keyed by the FEN they were found from. A swipe onto another
     /// card of the same position is not a new question, and walking back to a Ply that has
     /// already been asked about is not one either.

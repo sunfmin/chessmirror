@@ -161,6 +161,10 @@ struct CardButton: View {
     /// Whether this finding's line is the one on the board.
     func draws(_ kind: GameScreen.Card) -> Bool { open == kind && drawsLine }
 
+    /// The card whose line is on the board, when one is. What the session is asked for arrows
+    /// about (`GameSession.arrows(for:)`).
+    var drawn: GameScreen.Card? { drawsLine ? open : nil }
+
     /// Pressing a finding. The one pressed opens with its line drawn, and whatever was open
     /// shuts; pressing the one that is open shuts it. Says whether something is now open, which
     /// is what the screen needs to know to spend a Stint on it.
@@ -203,16 +207,9 @@ struct DeckView: View {
     /// the position, not about the piece somebody happened to have picked up.
     @Binding var selected: Square?
 
-    /// Every card, in one order, whatever the position.
-    ///
-    /// **The deck does not change shape.** Two cards that never move can be learnt; a card that
-    /// cannot answer here says so on its own face.
-    private var cards: [GameScreen.Card] { [.mate, .tactics] }
-
-    /// Findings are invitations, never navigation: absent results occupy no space.
-    private var findings: [GameScreen.Card] {
-        cards.filter { $0 == .mate ? session.mateNews != nil : session.tactic != nil }
-    }
+    /// Findings are invitations, never navigation: absent results occupy no space. Which they
+    /// are is the session's to say (`GameSession.deck`), not this view's.
+    private var findings: [GameScreen.Card] { session.deck.dealt.map(\.card) }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -245,11 +242,10 @@ struct DeckView: View {
     }
 
     private func discovery(_ kind: GameScreen.Card) -> some View {
-        let found = kind == .mate ? session.mateNews != nil : session.tactic != nil
-        let searching = session.isSearching || session.isProbingTactics
-        let title = found
-            ? localized(kind == .mate ? "discovery.mateFound" : "discovery.tacticFound")
-            : "\(kind.title) · \(localized(searching ? "discovery.checking" : "discovery.none"))"
+        let row = session.deck.row(kind)
+        let found = row?.isFound ?? false
+        let searching = session.deck.isSearching
+        let title = row?.title ?? kind.title
         return Button {
             guard found else { return }
             withAnimation(.snappy(duration: 0.22)) {
@@ -257,7 +253,7 @@ struct DeckView: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: kind == .mate ? "flag.fill" : "bolt.fill")
+                Image(systemName: kind.symbol)
                     .font(.caption)
                     .foregroundStyle(Palette.analysis)
                     .frame(width: 14)

@@ -1318,20 +1318,13 @@ struct GameScreen: View {
     /// deck is not on this screen at all: arrows from a card nobody can see are arrows about a
     /// question nobody asked (docs/adr/0025).
     private var deckArrows: [MoveArrow] {
-        guard session.dealsCards else { return [] }
-        if deck.draws(.tactics) { return session.tacticArrows }
-        if deck.draws(.mate) { return session.mateNews?.arrows ?? [] }
-        return []
+        session.arrows(for: deck.drawn)
     }
 
-    /// One finding of the deck under the record (docs/adr/0025).
-    ///
-    /// A kind rather than an index, because what the deck has to show comes from the position —
-    /// and a finding that is not there takes up no room. An index would point at a different
-    /// card every time the position changed shape.
-    enum Card: Hashable {
-        case mate, tactics
-    }
+    /// One finding of the deck under the record — the kit's (`Deck.Card`, docs/adr/0025). The
+    /// name stays here because the screen's open card, its animations and its tests all spell it
+    /// `GameScreen.Card`; what a card *is* is not the screen's to say.
+    typealias Card = ChessmirrorKit.Deck.Card
 
     // ------------------------------------------------------------------ the bar at the top
 
@@ -1598,19 +1591,4 @@ struct ForkRail: View {
 }
 
 extension GameScreen.Card {
-    var title: String {
-        switch self {
-        case .mate: localized("screen.mate")
-        case .tactics: localized("screen.tactics")
-        }
-    }
-
-    /// One line saying what the card answers, in the words of somebody who does not yet know the
-    /// name above it.
-    var subtitle: String {
-        switch self {
-        case .mate: localized("screen.mateSubtitle")
-        case .tactics: localized("screen.tacticsSubtitle")
-        }
-    }
 }
