@@ -769,7 +769,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
         session.suspend()
         unanswered.continuation.finish()
     }
-    session.setIntercept(JudgementLines.defaultIntercept)
+    session.setTilling(true)
     await session.waitForPreparedInterception()
     try #require(session.strip.bar?.score == .centipawns(300))
 
