@@ -21,9 +21,15 @@ struct DrillScreenshots {
         let log = temporaryLog()
         defer { try? FileManager.default.removeItem(at: log.url) }
         let drill = try #require(Drill(position: position, engine: engine, log: log))
+        // 练习 + 把关开 is the one cell where the two rules used to disagree: the hand is stopped
+        // here and the deck is dealt all the same, because a card pressed in a drill is what the
+        // 练习日志's `hints` counts (docs/adr/0047). The screen below is that cell — the drill
+        // forces the switch on, and the 杀 card is on it, open and counted.
+        #expect(drill.lines.noSlips)
         let rendered = await ScreenImage.write("drill-mate-answer", interact: { window in
             #expect(drill.hintsOpened == 0)
             #expect(!ScreenImage.words(in: window).contains("Rd8#"))
+            #expect(ScreenImage.words(in: window).contains { $0.contains(localized("discovery.mateFound")) })
             #expect(ScreenImage.activate(localized("discovery.view"), in: window))
             await ScreenImage.settle()
             #expect(drill.hintsOpened == 1)
