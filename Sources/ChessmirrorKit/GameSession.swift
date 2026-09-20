@@ -615,7 +615,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Turns the tactics finder on, or back off. Takes effect now: a shot left standing after
     /// the switch is thrown is the one thing the live board must not keep drawing.
     public func setFindingTactics(_ on: Bool) {
-        guard !isNoSlipsOn || !on else { return }
+        guard dealsCards || !on else { return }
         guard isFindingTactics != on else { return }
         if !on {
             finder.turnOff()
@@ -768,11 +768,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// sits beside 谁执白 and 引擎想多久 rather than in the app's settings: any position can be
     /// played under 把关, including one reached by playing on from a 错题 or read off a photograph.
     public var isNoSlipsOn: Bool { lines.noSlips }
-    /// Whether the deck is dealt and a card may ask the engine: never under 把关. A card is an
-    /// opinion about the position in front of the player, and 把关 says nothing about what to
-    /// play (docs/adr/0031, 0040). The one rule, read here by the screen that deals and by the
-    /// session that answers, so the two cannot disagree about whether a card is on the table.
-    public var dealsCards: Bool { !isNoSlipsOn }
+    /// Whether the deck is dealt and a card may ask the engine. The one rule, read here by the
+    /// screen that deals, by the session that answers and by the finder's own switch, so none of
+    /// the three can disagree about whether a card is on the table.
+    ///
+    /// **Never in a 把关 game**: a card is an opinion about the position in front of the player,
+    /// and 把关 says nothing about what to play (docs/adr/0031, 0040).
+    ///
+    /// **Always in a practice session**, 把关 or not. This used to read the switch alone, which
+    /// tied two unrelated things together: whether anybody is stopping your hand, and whether 杀
+    /// and 战术 may be looked at. A drill's help is counted rather than withheld — pressing a card
+    /// is a rung on the practice log's `hints` (docs/adr/0029) — so putting practice under 把关
+    /// would have taken the cards away and left that number with nothing to count.
+    public var dealsCards: Bool { practice != nil || !isNoSlipsOn }
     public var findsPunishment = false
     /// The exercise last put on the board, kept once it is finished so its answer can still be
     /// read. Whether it is *on* the board is the activity's to say (`activePunishment`).
@@ -812,7 +820,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard lines != new else { return }
         let interceptMoved = lines.intercept != new.intercept
         lines = new
-        if interceptMoved, new.noSlips {
+        // A game going under 把关 puts its cards away; a practice session keeps them, because
+        // what it deals is not decided by the switch (`dealsCards`).
+        if interceptMoved, !dealsCards {
             analysis = nil
             setFindingTactics(false)
         }

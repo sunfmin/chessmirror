@@ -350,3 +350,39 @@ func theLogSurvivesTheApp() throws {
     #expect(reopened.first?.attempt.hints == 1)
     #expect(reopened.first?.attempt.seconds == 12)
 }
+
+// ------------------------------------------------------------------ the cards
+
+/// Contract: 把关 takes a move back; whether 杀 and 战术 may be looked at is a different question
+/// (docs/adr/0047).
+///
+/// The two used to be one line — cards were dealt when the switch was off — so putting practice
+/// under 把关 would have taken the deck away with it, and `hintsOpened`, which counts a card being
+/// pressed, would have had nothing left to count.
+@MainActor
+@Test("a drill keeps its cards under 把关, and a game under 把关 has none")
+func practiceKeepsItsCardsUnderNoSlips() throws {
+    let (scripted, _) = try engine(
+        before: .centipawns(0), playing: "Qh4", after: .centipawns(133)
+    )
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let drill = try #require(Drill(
+        position: afterNf3, engine: scripted, log: log, lines: JudgementLines(noSlips: true)
+    ))
+    let session = GameSession.practising(drill, engine: scripted)
+    defer { session.suspend() }
+    #expect(session.isNoSlipsOn)
+    #expect(session.dealsCards, "practice is dealt its cards under 把关")
+    session.setFindingTactics(true)
+    #expect(session.isFindingTactics, "and the finder may run for them")
+
+    let game = GameSession.fresh(
+        try #require(Game(startFEN: PGN.standardStartFEN)), engine: scripted,
+        lines: JudgementLines(noSlips: true)
+    )
+    defer { game.suspend() }
+    #expect(!game.dealsCards, "a game under 把关 deals none")
+    game.setFindingTactics(true)
+    #expect(!game.isFindingTactics)
+}
