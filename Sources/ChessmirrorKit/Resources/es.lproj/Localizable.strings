@@ -163,7 +163,7 @@
 "camera.lens.standard" = "Normal";
 
 "library.engineStarting" = "Arrancando el motor";
-"library.tagline" = "Fotografía el tablero y sigue jugando.";
+"library.tagline" = "Convierte tus errores en ejercicios y juega una partida que no deja pasar ninguno.";
 "library.photograph" = "Fotografiar tablero";
 "library.fromAlbum" = "De los álbumes";
 "library.paste" = "Pegar captura";
@@ -375,18 +375,18 @@
 "daily.done" = "Listo por hoy";
 "daily.none" = "Nada que practicar hoy";
 "daily.left.one" = "queda %d";
-"till.start" = "Empezar sin errores";
-"till.name" = "Sin errores";
-"till.practice" = "Práctica";
-"till.off" = "Desactivado";
-"till.judging" = "Calculando";
-"till.refused" = "%@ pierde %d%%. Inténtalo de nuevo.";
-"till.hint" = "Pista %d";
-"till.reveal" = "Revelar respuesta";
-"till.relax" = "Ampliar a %d%%";
-"till.shot" = "Hay una oportunidad táctica.";
-"till.quiet" = "No hay táctica confirmada. Mejora tu posición.";
-"till.notFound" = "No encontrada";
+"noSlips.start" = "Empezar sin errores";
+"noSlips.name" = "Sin errores";
+"noSlips.practice" = "Práctica";
+"noSlips.off" = "Desactivado";
+"noSlips.judging" = "Calculando";
+"noSlips.refused" = "%@ pierde %d%%. Inténtalo de nuevo.";
+"noSlips.hint" = "Pista %d";
+"noSlips.reveal" = "Revelar respuesta";
+"noSlips.relax" = "Ampliar a %d%%";
+"noSlips.shot" = "Hay una oportunidad táctica.";
+"noSlips.quiet" = "No hay táctica confirmada. Mejora tu posición.";
+"noSlips.notFound" = "No encontrada";
 "punish.toggle" = "Encontrar la respuesta rival";
 "punish.prompt" = "Juega por tu rival y encuentra su mejor respuesta.";
 "punish.again" = "Hay una respuesta mejor. Inténtalo de nuevo.";
@@ -468,7 +468,7 @@
 "discovery.mateFound" = "Mate encontrado";
 "discovery.tacticFound" = "Oportunidad táctica encontrada";
 "board.faceToFace" = "Cara a cara";
-"till.returned" = "Devuelta";
+"noSlips.returned" = "Devuelta";
 "book.recorded" = "%d añadidos al cuaderno de errores";
 "standing.change" = "Cambio de probabilidad de esta jugada %@";
 "tried.reply" = "La respuesta que provoca";
@@ -487,7 +487,7 @@
 
 "strength" = "Fuerza";
 "strength.full" = "Toda la fuerza";
-"till.tally" = "Racha %d";
+"noSlips.tally" = "Racha %d";
 "ladder" = "Escalera de rachas";
 "ladder.run" = "Racha más larga";
 "standing.best" = "Mejor jugada";

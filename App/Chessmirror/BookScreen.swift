@@ -67,7 +67,7 @@ struct BookRow: View {
                     badge(Drop.cost(mistake.worstCost), Palette.alarm)
                     badge(localized("book.times", mistake.recurrence), Palette.analysis)
                     if mistake.encounters.contains(where: \.notFound) {
-                        badge(localized("till.notFound"), Palette.alarm)
+                        badge(localized("noSlips.notFound"), Palette.alarm)
                     }
                 }
             }

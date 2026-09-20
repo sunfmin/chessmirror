@@ -62,3 +62,57 @@ public struct Analysis: Hashable, Sendable, Codable {
         self.isPartial = isPartial
     }
 }
+
+/// The Analyses a session has already paid for, kept by the position they answer.
+///
+/// A swipe onto another card of the same position is not a new question, and walking back to a
+/// Ply that has already been asked about is not one either — so what a search found is handed
+/// back rather than searched for again.
+///
+/// **Bounded.** It used to be a plain dictionary that grew one entry per position looked at and
+/// was never pruned: a long game, or an afternoon of walking a record back and forth, left an
+/// Analysis and its candidate Lines in memory for every position the eye had ever been on, for
+/// as long as the session lived. Nothing about what the app shows depends on the bound — a miss
+/// is a search that runs again, which is what a position nobody has asked about already gets.
+struct RecentAnalyses {
+    /// How many positions are kept.
+    ///
+    /// A game's own line is usually shorter than this, so the ordinary case — walking a record
+    /// through and back — never evicts anything. It is also small enough that the whole cache is
+    /// a few hundred kilobytes: an Analysis is two Lines and their moves.
+    static let capacity = 64
+
+    private var byPosition: [String: Analysis] = [:]
+    /// The positions held, least recently used first. What goes when the cache is full is the
+    /// front of this — the position longest since read or written, which is the one least likely
+    /// to be come back to. Walking back and forth over the last few moves, the case the cache
+    /// exists for, keeps touching the same few and so keeps all of them.
+    private var order: [String] = []
+
+    var count: Int { byPosition.count }
+
+    subscript(fen: String) -> Analysis? {
+        mutating get {
+            guard let found = byPosition[fen] else { return nil }
+            touch(fen)
+            return found
+        }
+        set {
+            guard let newValue else {
+                byPosition[fen] = nil
+                order.removeAll { $0 == fen }
+                return
+            }
+            byPosition[fen] = newValue
+            touch(fen)
+            while order.count > Self.capacity {
+                byPosition[order.removeFirst()] = nil
+            }
+        }
+    }
+
+    private mutating func touch(_ fen: String) {
+        order.removeAll { $0 == fen }
+        order.append(fen)
+    }
+}

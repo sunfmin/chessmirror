@@ -19,14 +19,14 @@ import Foundation
 /// Percentage points of win probability, from the mover's own point of view.
 public struct JudgementLines: Hashable, Sendable, Codable {
     /// Whether 把关 is on: a move costing the 记录线 or more is taken back. Off is the ordinary game.
-    public var tilling: Bool
+    public var noSlips: Bool
     /// Where a move gets written down, and where 把关 takes it back.
     public var record: Double
     /// Where a written-down move also earns practice time.
     public var enqueue: Double
 
-    public init(tilling: Bool = false, record: Double = 10, enqueue: Double = 10) {
-        self.tilling = tilling
+    public init(noSlips: Bool = false, record: Double = 10, enqueue: Double = 10) {
+        self.noSlips = noSlips
         self.record = record
         self.enqueue = enqueue
     }
@@ -47,7 +47,7 @@ public struct JudgementLines: Hashable, Sendable, Codable {
     /// The 拦截线: where 把关 takes the move back, which is the 记录线 while it is on. Nil for 把关
     /// switched off. Derived, never set — what a judgement is stamped with (`Ply.Judgement
     /// .intercept`) and what the file says in its `Intercept` tag.
-    public var intercept: Double? { tilling ? record : nil }
+    public var intercept: Double? { noSlips ? record : nil }
 
     /// Whether every line is a finite number on the scale.
     public var isDrawn: Bool {

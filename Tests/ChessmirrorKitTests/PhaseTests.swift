@@ -56,7 +56,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     let engine = ScriptedEngine([], isEndless: true, byPosition: [game.state.fen: analysis(0, "e2e4", "e4")])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
 
     session.play(try #require(game.state.move(matching: "d2d4")))
@@ -71,7 +71,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
 
     session.jumpToStart()
     #expect(session.cursor == 1, "the record is not browsed while a move is weighed")
-    session.till(at: 30)
+    session.noSlips(at: 30)
     #expect(session.lines.intercept == 10, "nor is the 拦截线 moved under the judgement")
     session.setController(.engine, for: .black)
     #expect(session.controller(for: .black) == .hand, "nor a seat handed over")
@@ -160,7 +160,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     ])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     session.findsPunishment = true
     await session.waitForPreparedInterception()
 
@@ -175,11 +175,98 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     #expect(!session.isOnClock(.white))
     #expect(session.isHandTurn, "and the hand is Black's for it")
     #expect(!session.canPlayBestMove)
-    session.setTilling(false)
-    #expect(session.isTilling, "正着 is not switched off under an exercise")
+    session.setNoSlips(false)
+    #expect(session.isNoSlipsOn, "把关 is not switched off under an exercise")
 
     exercise.skip()
     await exercise.settled()
     #expect(session.phase == .reading)
     #expect(session.isOnClock(.white), "the board is White's again, where the move was refused")
+}
+
+// ------------------------------------------------------------------ one thing at a time
+//
+// The activity is one stored value, so two of these cannot both be true. What is left to say is
+// which way each meeting goes: the newcomer is refused, or what was in flight is ended.
+
+/// A walk ends a move the engine was asked for, rather than running under it: the thumb's search
+/// was about a position the board is leaving, and a move landing mid-walk would land on a
+/// position nobody asked about.
+@MainActor
+@Test func aWalkEndsAMoveBeingAskedFor() async throws {
+    let game = try opening(["e2e4", "e7e5", "g1f3", "b8c6"])
+    let engine = ScriptedEngine([analysis(20, "d2d4", "d4")], isEndless: true)
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.jump(toPly: 0)
+    session.beginAskedMove()
+    await Task.yield()
+    try #require(session.phase == .thinking(.asked))
+
+    let walk = Task { await session.walk(toPly: 4, step: .milliseconds(100)) }
+    try? await Task.sleep(for: .milliseconds(150))
+
+    #expect(session.phase == .walking)
+    #expect(session.thinking == nil, "the thought ended when the walk began")
+    session.endAskedMove()
+    await walk.value
+    #expect(session.game.uciMoves == ["e2e4", "e7e5", "g1f3", "b8c6"], "and no move of it landed")
+    #expect(session.cursor == 4)
+}
+
+/// The engine is not asked for a move while the record is on its way somewhere.
+@MainActor
+@Test func aMoveIsNotAskedForDuringAWalk() async throws {
+    let game = try opening(["e2e4", "e7e5", "g1f3", "b8c6"])
+    let engine = ScriptedEngine([analysis(20, "d2d4", "d4")], isEndless: true)
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.jump(toPly: 0)
+
+    let walk = Task { await session.walk(toPly: 4, step: .milliseconds(100)) }
+    try? await Task.sleep(for: .milliseconds(150))
+    session.beginAskedMove()
+
+    #expect(session.phase == .walking, "the walk is what the session is doing, and stays so")
+    #expect(session.thinking == nil)
+    await walk.value
+    #expect(session.phase == .reading)
+}
+
+/// Weighing takes the board from a thought, and the thought is over — not waiting underneath
+/// to come back when the verdict lands.
+@MainActor
+@Test func weighingEndsTheThoughtItInterrupts() async throws {
+    let game = try opening()
+    let engine = ScriptedEngine([analysis(20, "e2e4", "e4")], isEndless: true)
+    let session = GameSession.fresh(game, engine: engine)
+    defer { session.suspend() }
+    session.beginAskedMove()
+    await Task.yield()
+    try #require(session.phase == .thinking(.asked))
+
+    session.play(try #require(game.state.move(matching: "d2d4")))
+
+    #expect(session.phase != .thinking(.asked), "a hand move is not played under a held button")
+}
+
+/// Leaving mid-weighing lets go of everything the weighing owned at once: the 原局 is back, the
+/// task is cancelled, and the session is reading.
+@MainActor
+@Test func suspendingAWeighingLeavesNothingOfItBehind() async throws {
+    let game = try opening()
+    let engine = ScriptedEngine([analysis(20, "e2e4", "e4")], isEndless: true)
+    let session = GameSession.fresh(game, engine: engine)
+    session.noSlips(at: 10)
+
+    session.play(try #require(game.state.move(matching: "h2h4")))
+    try #require(session.phase == .weighing)
+    session.suspend()
+
+    #expect(session.phase == .reading)
+    #expect(!session.isWeighing)
+    #expect(session.game.plies.isEmpty, "the 原局 is back, with nothing written")
+    #expect(session.cursor == 0)
+    await session.settled()
+    #expect(session.phase == .reading, "and the cancelled task does not come back to say otherwise")
 }

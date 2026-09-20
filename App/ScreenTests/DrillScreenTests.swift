@@ -152,7 +152,7 @@ struct DrillScreenshots {
         #expect(rendered.says("该走 Nc6"), "and what to have played")
         #expect(!rendered.says("继续下"), "the board itself continues the game")
         #expect(rendered.says(localized("standing.bar")))
-        #expect(rendered.says(localized("till.name")))
+        #expect(rendered.says(localized("noSlips.name")))
         #expect(rendered.says("退出"))
         // 下一题 only appears when there is another one; this book has exactly this position.
         #expect(!rendered.says("下一题"))

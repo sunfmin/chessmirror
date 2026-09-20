@@ -163,7 +163,7 @@
 "camera.lens.standard" = "Normal";
 
 "library.engineStarting" = "Motor a arrancar";
-"library.tagline" = "Fotografa o tabuleiro e continua a jogar.";
+"library.tagline" = "Transforma os teus erros em exercícios e joga uma partida que não deixa passar nenhum.";
 "library.photograph" = "Fotografar tabuleiro";
 "library.fromAlbum" = "Dos álbuns";
 "library.paste" = "Colar captura";
@@ -375,18 +375,18 @@
 "daily.left.one" = "falta %d";
 "daily.done" = "Terminado por hoje";
 "daily.none" = "Nada para praticar hoje";
-"till.start" = "Começar sem erros";
-"till.name" = "Sem erros";
-"till.practice" = "Prática";
-"till.off" = "Desligado";
-"till.judging" = "Calculando";
-"till.refused" = "%@ perde %d%%. Tente novamente.";
-"till.hint" = "Dica %d";
-"till.reveal" = "Revelar resposta";
-"till.relax" = "Ampliar para %d%%";
-"till.shot" = "Há uma oportunidade tática.";
-"till.quiet" = "Nenhuma tática confirmada. Melhore sua posição.";
-"till.notFound" = "Não encontrada";
+"noSlips.start" = "Começar sem erros";
+"noSlips.name" = "Sem erros";
+"noSlips.practice" = "Prática";
+"noSlips.off" = "Desligado";
+"noSlips.judging" = "Calculando";
+"noSlips.refused" = "%@ perde %d%%. Tente novamente.";
+"noSlips.hint" = "Dica %d";
+"noSlips.reveal" = "Revelar resposta";
+"noSlips.relax" = "Ampliar para %d%%";
+"noSlips.shot" = "Há uma oportunidade tática.";
+"noSlips.quiet" = "Nenhuma tática confirmada. Melhore sua posição.";
+"noSlips.notFound" = "Não encontrada";
 "punish.toggle" = "Encontrar a resposta adversária";
 "punish.prompt" = "Jogue pelo adversário e encontre sua melhor resposta.";
 "punish.again" = "Há uma resposta melhor. Tente novamente.";
@@ -468,7 +468,7 @@
 "discovery.mateFound" = "Mate encontrado";
 "discovery.tacticFound" = "Oportunidade tática encontrada";
 "board.faceToFace" = "Frente a frente";
-"till.returned" = "Devolvida";
+"noSlips.returned" = "Devolvida";
 "book.recorded" = "%d adicionados ao caderno de erros";
 "standing.change" = "Variação da chance nesta jogada %@";
 "tried.reply" = "A resposta que ele provoca";
@@ -487,7 +487,7 @@
 
 "strength" = "Força";
 "strength.full" = "Força total";
-"till.tally" = "Sequência %d";
+"noSlips.tally" = "Sequência %d";
 "ladder" = "Escada de sequências";
 "ladder.run" = "Maior sequência";
 "standing.best" = "Melhor lance";

@@ -17,9 +17,6 @@ import SwiftUI
 struct GameScreen: View {
     let session: GameSession
     @Binding var path: [Step]
-    /// Which card of the deck to open on. Nil means the position decides, which is what the app
-    /// does; a screenshot test passes one in to photograph a card that is not the one on top.
-    var opening: Card?
     var practiceNext: (() -> Void)?
 
     @Environment(EngineHost.self) private var engine
@@ -37,12 +34,15 @@ struct GameScreen: View {
     /// their answer stands for as long as the screen does. Never derived from the game: an unfold
     /// that answers to the moves is an unfold that opens and shuts under your thumb, and the board
     /// walks up and down the screen every time it does.
+    ///
+    /// That includes the way in. There used to be a guess made here on appearing — a board with
+    /// nothing played on it was to open the side to move — and what it had come to do was set
+    /// this to nil, which it already was. A fresh board and a game under way both open with every
+    /// strip shut, and only a thumb opens one.
     @State private var unfolded: PieceColour?
-    /// Whether the opening guess below has been made yet. Once, on the way in — not on every
-    /// appearance, or coming back from a Review would shut what somebody had just opened.
-    @State private var hasGuessedUnfold = false
-    /// Whether the deck has been dealt yet. Once, for the same reason.
-    @State private var hasDealt = false
+    /// What the deck of findings under the record is showing. The deck keeps it, because it is
+    /// the deck's; this screen holds the object so the board can ask which line to draw.
+    @State private var deck = Deck()
     /// Whether a thumb is on 让引擎走 right now. The engine is thinking for exactly as long as it is —
     /// which is why this is read off the session rather than kept here as well. A screen holding
     /// its own copy of "a finger is down" is a screen that can be left holding it: a press that
@@ -50,56 +50,9 @@ struct GameScreen: View {
     /// full and held with nobody touching it.
     private var isAsking: Bool { session.thinking == .asked }
 
-    /// Which card of the deck under the record is showing.
-    ///
-    /// A kind rather than an index (see `Card`): the deck is dealt from the position, so an index
-    /// would point at a different card every time the position changed shape.
-    @State private var card: Card = .tactics
-    /// Whether the mate line is drawn on the board. Set by arriving at the news, because a mate
-    /// drawn is the whole of what the news is for, and cleared by leaving it.
-    @State private var showsMateLine = false
-    @State private var revealed: Set<Card> = []
-    @State private var showsTacticLine = false
     struct PromotionRequest: Identifiable {
         let id = UUID()
         let moves: [Move]
-    }
-
-    /// A guess at what to open, made once and then never again.
-    ///
-    /// A board with nothing played on it opens the side to move, because that is the side every
-    /// unanswered question is about — who is playing it, and whether it really is the one to move.
-    /// A game already under way opens nothing. After this, only a thumb changes it.
-    private func guessUnfold() {
-        guard !hasGuessedUnfold else { return }
-        hasGuessedUnfold = true
-        unfolded = nil
-    }
-
-    /// Which card the deck opens on: the news when there is news, and the work this position is
-    /// for otherwise.
-    ///
-    /// A mate is the one thing on this screen allowed to speak first, so 杀招 is where the deck
-    /// opens when a search has already found one — a coloured tab is not a prompt (docs/adr/0025).
-    private var opensOn: Card {
-        if let opening { return opening }
-        // News before work: a mate on the board is the reason 「直接给予提示」 was asked for.
-        return .tactics
-    }
-
-    /// Deals the deck, once.
-    ///
-    /// Arriving is what asks the engine, and with both remaining cards being questions for it,
-    /// dealing is no longer an arrival: the deck has to open on *something*, and a card that
-    /// happened to be first is not somebody asking (docs/adr/0023). So the opening card is dealt
-    /// at rest, with its own press on it, and only news arrives by itself — a mate is the one
-    /// thing on this screen allowed to speak first, and a screen that was opened straight onto a
-    /// card was opened there by somebody.
-    private func deal() {
-        guard !hasDealt else { return }
-        hasDealt = true
-        card = opensOn
-        if session.dealsCards { arrive(at: card) }
     }
 
     var body: some View {
@@ -125,7 +78,9 @@ struct GameScreen: View {
                 }
                 .chromeType()
 
-                if session.dealsCards, !findings.isEmpty { deck }
+                if session.dealsCards {
+                    DeckView(session: session, deck: deck, selected: $selected)
+                }
               }
               .frame(width: proxy.size.width)
               }
@@ -137,11 +92,7 @@ struct GameScreen: View {
         // the record walks to that Ply rather than being cut to it. Nothing happens for a game
         // opened any other way — there is no Ply to walk to.
         .task { await session.walkToArrival() }
-        .onChange(of: viewed.state.fen) { _, _ in
-            revealed.removeAll()
-            showsMateLine = false
-            showsTacticLine = false
-        }
+        .onChange(of: viewed.state.fen) { _, _ in deck.shut() }
         .onChange(of: session.thinking) { _, now in
             guard now == nil, session.dealsCards else { return }
             session.adviseForCard()
@@ -174,7 +125,7 @@ struct GameScreen: View {
                                     in: RoundedRectangle(cornerRadius: 8))
                 }
                 .accessibilityLabel(localized("board.faceToFace"))
-                .accessibilityValue(localized(session.isFaceToFace ? "screen.on" : "till.off"))
+                .accessibilityValue(localized(session.isFaceToFace ? "screen.on" : "noSlips.off"))
                 flip.frame(width: 44, height: 44)
                 Menu {
                     // 复盘 is not here. It was a destination, then a switch in the navigation bar,
@@ -237,15 +188,19 @@ struct GameScreen: View {
             .background(Palette.parchment)
         }
         .onAppear {
-            guessUnfold()
-            // The engine first, and then the deck: **dealing a card is an arrival**, and an arrival
-            // spends a Stint. The session retunes before it returns, so the Stint the deal starts
-            // is not cancelled a line later. From here the session follows the engine host itself —
-            // the engine arriving, the app leaving and coming back — and this screen wires nothing.
+            // From here the session follows the engine host itself — the engine arriving, the app
+            // leaving and coming back — and this screen wires nothing. The deck deals itself when
+            // it appears, which is after this: a view cannot appear before the one containing it.
             session.appear(on: engine, library: library)
-            deal()
+            // What happens on the board is the session's to say and this screen's to make a
+            // noise about. Read off `Sounds.current` when the event arrives rather than now, so
+            // whichever Feedback is installed at that moment is the one that plays.
+            session.onEvent = { Sounds.current.hear($0) }
         }
-        .onDisappear { session.disappear() }
+        .onDisappear {
+            session.onEvent = nil
+            session.disappear()
+        }
         .onChange(of: isSoundOn) { _, isOn in Sounds.current.isSoundOn = isOn }
         // The setting travels between devices (docs/adr/0012), so it can change while this
         // screen is the one on show — and a toggle that disagrees with the sound is worse than
@@ -282,18 +237,18 @@ struct GameScreen: View {
         let strip = session.strip
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 12) {
-                tillingSwitch
+                noSlipsSwitch
                     .fixedSize(horizontal: true, vertical: false)
                 // How far the game has gone without a slip, and how far since the last one:
                 // 连正, read off the game rather than counted (CONTEXT.md). On the row that
                 // names 把关 and on no row of its own.
                 if let tally = strip.tally {
-                    Text(localized("till.tally", tally.run))
+                    Text(localized("noSlips.tally", tally.run))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                         .fixedSize(horizontal: true, vertical: false)
                         .contentTransition(.numericText())
-                        .accessibilityLabel(localized("till.tally", tally.run))
+                        .accessibilityLabel(localized("noSlips.tally", tally.run))
                 }
                 Spacer(minLength: 8)
                 if engine.unavailableReason != nil, !viewed.isOver {
@@ -305,7 +260,7 @@ struct GameScreen: View {
                             .font(.caption.weight(.medium))
                             .foregroundStyle(Palette.ink)
                     case .weighing:
-                        Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
+                        Text(localized("noSlips.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
                     case .refused(let refusal):
                         // What the take-back has to say, in the one place the eye is already
                         // reading: what the move cost and that it is not standing. The sentence
@@ -337,9 +292,12 @@ struct GameScreen: View {
                         EmptyView()
                     }
                 }
-                // The search has to account for itself (docs/adr/0020).
+                // The search has to account for itself (docs/adr/0020) — and one that has said
+                // nothing yet accounts for itself in words: a depth of nought is not a report.
+                // The width is the depth label's either way, so the row does not jump when the
+                // first depth lands.
                 if let depth = strip.depth {
-                    Text(localized("game.depth", depth))
+                    Text(depth > 0 ? localized("game.depth", depth) : localized("noSlips.judging"))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -412,7 +370,7 @@ struct GameScreen: View {
                 Text(localized("tried.reply")).font(.caption).foregroundStyle(Palette.inkSoft)
                 if reading.isAsking {
                     ProgressView().controlSize(.mini)
-                    Text(localized("till.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
+                    Text(localized("noSlips.judging")).font(.caption).foregroundStyle(Palette.inkSoft)
                 }
                 Spacer(minLength: 0)
                 rejudgeControl(reading)
@@ -436,7 +394,7 @@ struct GameScreen: View {
     @ViewBuilder private func rejudgeControl(_ reading: GameSession.ReplyReading) -> some View {
         if let running = session.rejudging, running.index == reading.index {
             ProgressView().controlSize(.mini)
-            Text(running.depth > 0 ? localized("game.depth", running.depth) : localized("till.judging"))
+            Text(running.depth > 0 ? localized("game.depth", running.depth) : localized("noSlips.judging"))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.inkSoft)
         } else {
@@ -464,22 +422,22 @@ struct GameScreen: View {
     }
 
     /// Interception is the page's only mode switch. Assessment and explicit answers are separate.
-    private var tillingSwitch: some View {
-        Button { session.setTilling(!session.isTilling) } label: {
+    private var noSlipsSwitch: some View {
+        Button { session.setNoSlips(!session.isNoSlipsOn) } label: {
             HStack(spacing: 4) {
-                Image(systemName: session.isTilling ? "checkmark.shield" : "shield")
-                Text(localized("till.name"))
-                Text(localized(session.isTilling ? "screen.on" : "till.off"))
+                Image(systemName: session.isNoSlipsOn ? "checkmark.shield" : "shield")
+                Text(localized("noSlips.name"))
+                Text(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
             }
             .font(.caption)
-            .foregroundStyle(session.isTilling ? Palette.analysis : Palette.inkSoft)
+            .foregroundStyle(session.isNoSlipsOn ? Palette.analysis : Palette.inkSoft)
             .frame(minHeight: 30)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(localized("till.name"))
-        .accessibilityValue(localized(session.isTilling ? "screen.on" : "till.off"))
-        .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
+        .accessibilityLabel(localized("noSlips.name"))
+        .accessibilityValue(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
+        .disabled(session.isOccupied || (!engine.isReady && !session.isNoSlipsOn))
     }
 
     // ------------------------------------------------------------------ the two sides
@@ -724,12 +682,12 @@ struct GameScreen: View {
             }
 
             Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.vertical, 5)
-            Toggle(localized("till.name"), isOn: Binding(
-                get: { session.isTilling },
-                set: { session.setTilling($0) }
+            Toggle(localized("noSlips.name"), isOn: Binding(
+                get: { session.isNoSlipsOn },
+                set: { session.setNoSlips($0) }
             ))
-            .toggleStyle(SettingToggleStyle(label: localized("till.name")))
-            .disabled(session.isOccupied || (!engine.isReady && !session.isTilling))
+            .toggleStyle(SettingToggleStyle(label: localized("noSlips.name")))
+            .disabled(session.isOccupied || (!engine.isReady && !session.isNoSlipsOn))
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))
@@ -756,7 +714,7 @@ struct GameScreen: View {
                     HStack(spacing: 4) {
                         Circle().fill(configuration.isOn ? Palette.analysis : Palette.inkSoft.opacity(0.45))
                             .frame(width: 5, height: 5)
-                        Text(localized(configuration.isOn ? "screen.on" : "till.off"))
+                        Text(localized(configuration.isOn ? "screen.on" : "noSlips.off"))
                     }
                     .font(.caption)
                     .foregroundStyle(configuration.isOn ? Palette.analysis : Palette.inkSoft)
@@ -769,7 +727,7 @@ struct GameScreen: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(label)
-            .accessibilityValue(localized(configuration.isOn ? "screen.on" : "till.off"))
+            .accessibilityValue(localized(configuration.isOn ? "screen.on" : "noSlips.off"))
         }
     }
 
@@ -967,7 +925,7 @@ struct GameScreen: View {
                 Text(localized(exercise.wasIncorrect ? "punish.again" : "punish.prompt"))
                 if exercise.isJudging { ProgressView() }
                 HStack(spacing: 10) {
-                    Button(localized("till.reveal")) { exercise.reveal() }
+                    Button(localized("noSlips.reveal")) { exercise.reveal() }
                     Button(localized("punish.skip")) { exercise.skip() }
                 }
             }
@@ -1097,7 +1055,7 @@ struct GameScreen: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Palette.alarm)
                 .frame(width: 18)
-                .accessibilityLabel(localized(returned ? "till.returned" : "wrong.stood"))
+                .accessibilityLabel(localized(returned ? "noSlips.returned" : "wrong.stood"))
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     ForEach(Array(wrongs.reversed().enumerated()), id: \.offset) { offset, wrong in
@@ -1347,370 +1305,25 @@ struct GameScreen: View {
             .foregroundStyle(colour)
     }
 
-    /// 战术 — the shot, named in the verbs a player declares in.
-    ///
-    /// **The switch did become the card.** 战术发现器 has a press of its own on the card, but
-    /// arriving here is also a press: the swipe is the asking, and leaving turns it off again
-    /// unless somebody flipped it by hand (docs/adr/0025). 杀招 shares the same probe, so swiping
-    /// between the two does not stop it and start it again.
-    @ViewBuilder private var tacticsBody: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if session.isFindingTactics {
-                HStack(alignment: .top, spacing: 8) {
-                    tacticAnswer
-                    Button {
-                        withAnimation(.snappy(duration: 0.2)) { showsTacticLine.toggle() }
-                    } label: {
-                        Image(systemName: showsTacticLine ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
-                            .font(.subheadline)
-                            .foregroundStyle(showsTacticLine ? Palette.analysis : Palette.inkSoft)
-                            .frame(width: 30, height: 30)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(localized(showsTacticLine ? "screen.hideArrows" : "screen.showArrows"))
-                }
-                if let tactic = session.tactic {
-                    CardMoves(moves: tactic.line.enumerated().map { index, san in
-                        CardMoves.Move(step: index + 1, san: san,
-                            isYours: session.tacticArrows.first { $0.step == index + 1 }?.isYours ?? index.isMultiple(of: 2))
-                    })
-                    if tactic.line.count > MateNews.arrowLimit {
-                        CardNote(localized("screen.arrowLimit", MateNews.arrowLimit))
-                    }
-                }
-            } else {
-                // The deck has to open on one of its two cards and both of them are questions for
-                // the engine, so the card in front is dealt at rest and nobody has asked anything
-                // yet. It used to be able to say 「你自己关掉的」 as well, off a flag nothing ever
-                // set: a silence with one cause has one sentence (docs/adr/0040).
-                Text(localized("screen.finderIdle"))
-                    .font(.caption)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-    }
-
-    /// The finder's answer, under the chip that asked — the same place a scan writes.
-    @ViewBuilder private var tacticAnswer: some View {
-        if let prompt = session.tacticPrompt {
-            Button {
-                selected = nil
-            } label: {
-                Text(prompt)
-                    .font(.caption)
-                    .foregroundStyle(session.tactic == nil ? Palette.inkSoft : Palette.analysis)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .buttonStyle(.plain)
-            .disabled(session.tactic?.line.isEmpty != false)
-            .accessibilityLabel(prompt)
-        }
-    }
-
     // ------------------------------------------------------------------ the deck
 
-    /// One card of the deck under the record (docs/adr/0025).
+    /// The open finding's line, as numbered arrows. Nothing when nothing is open, or when the
+    /// deck is not on this screen at all: arrows from a card nobody can see are arrows about a
+    /// question nobody asked (docs/adr/0025).
+    private var deckArrows: [MoveArrow] {
+        guard session.dealsCards else { return [] }
+        if deck.draws(.tactics) { return session.tacticArrows }
+        if deck.draws(.mate) { return session.mateNews?.arrows ?? [] }
+        return []
+    }
+
+    /// One finding of the deck under the record (docs/adr/0025).
     ///
-    /// A kind rather than an index, because which card is dealt comes from the position — news
-    /// opens on 杀招 and everything else on 战术 — and a card that cannot answer here says so on
-    /// its own face rather than disappearing. An index would point at a different card every time
-    /// the position changed shape.
+    /// A kind rather than an index, because what the deck has to show comes from the position —
+    /// and a finding that is not there takes up no room. An index would point at a different
+    /// card every time the position changed shape.
     enum Card: Hashable {
         case mate, tactics
-    }
-
-    /// Every card, in one order, whatever the position.
-    ///
-    /// **The deck does not change shape.** Two cards that never move can be learnt; a card that
-    /// cannot answer here says so on its own face.
-    private var cards: [Card] {
-        [.mate, .tactics]
-    }
-
-    /// Findings are invitations, never navigation: absent results occupy no space.
-    private var findings: [Card] {
-        cards.filter { $0 == .mate ? session.mateNews != nil : session.tactic != nil }
-    }
-
-    private var deck: some View {
-        VStack(spacing: 8) {
-            ForEach(findings, id: \.self) { kind in
-                VStack(spacing: 0) {
-                    discovery(kind)
-                    if kind == card, revealed.contains(kind) {
-                        body(of: kind)
-                    }
-                }
-                .background(Palette.analysis.opacity(0.06))
-            }
-        }
-        .padding(.vertical, 8)
-    }
-
-    @ViewBuilder private func body(of kind: Card) -> some View {
-        if !revealed.contains(kind) {
-            discovery(kind)
-        } else {
-            switch kind {
-            case .mate: cardFrame(kind) { mateBody }
-            case .tactics: cardFrame(kind) { tacticsBody }
-            }
-        }
-    }
-
-    private func discovery(_ kind: Card) -> some View {
-        let found = kind == .mate ? session.mateNews != nil : session.tactic != nil
-        let searching = session.isSearching || session.isProbingTactics
-        let title = found
-            ? localized(kind == .mate ? "discovery.mateFound" : "discovery.tacticFound")
-            : "\(kind.title) · \(localized(searching ? "discovery.checking" : "discovery.none"))"
-        return Button {
-            guard found else { return }
-            withAnimation(.snappy(duration: 0.22)) {
-                let wasExpanded = kind == card && revealed.contains(kind)
-                card = kind
-                revealed.removeAll()
-                if !wasExpanded {
-                    session.notePracticeHelp()
-                    revealed.insert(kind)
-                }
-                showsMateLine = kind == .mate && revealed.contains(kind)
-                showsTacticLine = kind == .tactics && revealed.contains(kind)
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: kind == .mate ? "flag.fill" : "bolt.fill")
-                    .font(.caption)
-                    .foregroundStyle(Palette.analysis)
-                    .frame(width: 14)
-                Text(title)
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Palette.ink)
-                Spacer(minLength: 4)
-                if found {
-                    Image(systemName: kind == card && revealed.contains(kind) ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(Palette.inkSoft)
-                        .frame(width: 30, height: 30)
-                } else if searching {
-                    ProgressView().controlSize(.mini)
-                }
-            }
-            .frame(minHeight: 30)
-            .lineLimit(1)
-            .padding(.leading, 13)
-            .padding(.trailing, 8)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .leading) {
-                Rectangle().fill(Palette.analysis).frame(width: 3)
-            }
-            .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
-            .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!found)
-        .accessibilityLabel(found ? localized("discovery.view") : title)
-        .accessibilityValue(title)
-        .chromeType()
-    }
-
-    /// One card: one line saying what it answers, and then the thing itself. The name is on the
-    /// rail under the card, so it is not said again here.
-    private func cardFrame<Content: View>(
-        _ kind: Card, @ViewBuilder body: () -> Content
-    ) -> some View {
-            VStack(alignment: .leading, spacing: 8) {
-                body()
-                if revealed.contains(kind), kind == card, wantsAdvice(kind) {
-                    if let progress = session.standingProgress {
-                        HStack(spacing: 6) {
-                            if isCardSearching(kind) { ProgressView().controlSize(.mini) }
-                            Text(localized(isCardSearching(kind) ? "till.judging" : "search.reached"))
-                            Text(localized("game.depth", progress.depth))
-                        }
-                        .font(.caption2)
-                        .foregroundStyle(Palette.inkSoft)
-                        .padding(.horizontal, 16)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, 12)
-    }
-
-    /// A card's body: a scrolling column that fades at the bottom exactly when there is more of it
-    /// than fits.
-    ///
-    /// The fade used to be unconditional and was painted on the scroll view rather than in it, so
-    /// it never moved: the last line of the tallest cards stayed washed out even scrolled all the
-    /// way down, and a card whose whole body fitted wore a fade promising a paragraph that was not
-    /// there. So the viewport is asked instead — content against offset — and the column ends with
-    /// the fade's own height of padding, so nothing anybody has to read is ever under it.
-    private struct CardScroll<Content: View>: View {
-        private let content: Content
-        @State private var hasMore = false
-
-        init(@ViewBuilder content: () -> Content) {
-            self.content = content()
-        }
-
-        var body: some View {
-            ScrollView {
-                content
-                    .padding(.bottom, CardFade.height)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
-            .onScrollGeometryChange(for: Bool.self) { geometry in
-                geometry.contentSize.height - geometry.contentOffset.y
-                    - geometry.containerSize.height > 1
-            } action: { _, more in
-                hasMore = more
-            }
-            .overlay(alignment: .bottom) { if hasMore { CardFade() } }
-        }
-    }
-
-    private var mateInk: Color {
-        guard let news = session.mateNews else { return Palette.ink }
-        return news.isOurs ? Palette.mine : Palette.alarm
-    }
-
-    /// What arriving at a card does, and what leaving one undoes.
-    ///
-    /// **The card you are on is the card that acts.** Arriving turns its layer on — the scan, the
-    /// walk, the squares, the mate's arrows, the finder — and leaving turns that layer off again,
-    /// so the board is only ever drawing the one card in front of you and never the leftovers of
-    /// three you swiped past (docs/adr/0025).
-    ///
-    /// A swipe therefore spends a Stint where the card reads a Line — 杀招, 战术, 五步 —
-    /// the first time this position is asked about, even during Practice. What that search found
-    /// is kept, so paging to another card of the same Ply does not wind the clock again.
-    private func turn(to now: Card, from was: Card) {
-        selected = nil
-        leave(was, for: now)
-        arrive(at: now)
-    }
-
-    private func leave(_ was: Card, for now: Card) {
-        switch was {
-        case .mate:
-            showsMateLine = false
-            if !wantsFinder(now) { session.leaveFinder() }
-        case .tactics: if !wantsFinder(now) { session.leaveFinder() }
-        }
-    }
-
-    private func arrive(at now: Card) {
-        switch now {
-        case .mate:
-            showsMateLine = revealed.contains(.mate)
-            session.arriveAtFinder()
-        case .tactics: session.arriveAtFinder()
-        }
-        if wantsAdvice(now) { session.adviseForCard() }
-    }
-
-    /// Both cards read a Line, so both spend a Stint on arrival, even during Practice.
-    private func wantsAdvice(_ kind: Card) -> Bool {
-        switch kind {
-        case .mate, .tactics: true
-        }
-    }
-
-    /// Whether this card currently has a search in flight, so the frame can say 正在算 and the
-    /// depth. Neighbouring pages stay alive in a paged TabView; only the card in front speaks.
-    private func isCardSearching(_ kind: Card) -> Bool {
-        wantsAdvice(kind) && session.isAdvising
-    }
-
-    /// The two cards the finder answers for: the shot, and the mate that falls out of the same
-    /// probe. Swiping between them does not stop and restart it.
-    private func wantsFinder(_ kind: Card) -> Bool { kind == .mate || kind == .tactics }
-
-    // ------------------------------------------------------------------ 杀
-
-    /// The news: a mate somebody can already see, whoever it belongs to (docs/adr/0025).
-    ///
-    /// Not a switch and not an answer to anything — the one thing on this screen that arrives
-    /// unbidden. It says how forced it is because that is the difference between a mate a person
-    /// can follow and one they have to take on trust, and every clause of it was counted by the
-    /// rules code rather than asserted.
-    @ViewBuilder private var mateBody: some View {
-        if let news = session.mateNews {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(news.head)
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(mateInk)
-                    Spacer(minLength: 4)
-                    Button {
-                        withAnimation(.snappy(duration: 0.2)) { showsMateLine.toggle() }
-                    } label: {
-                        Image(systemName: showsMateLine ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
-                            .font(.subheadline)
-                            .foregroundStyle(showsMateLine ? mateInk : Palette.inkSoft)
-                            .frame(width: 30, height: 30)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(news.arrows.isEmpty)
-                    .accessibilityLabel(localized(showsMateLine ? "screen.hideArrows" : "screen.showArrows"))
-                    .accessibilityHint(localized("screen.arrowsExplained"))
-                }
-                CardLede(news.sentence)
-                if !news.san.isEmpty {
-                    // The numbers are the join: the figure on a chip is the figure on its arrow.
-                    CardMoves(
-                        moves: news.san.enumerated().map { index, san in
-                            CardMoves.Move(
-                                step: index + 1,
-                                san: san,
-                                isYours: news.arrows.first { $0.step == index + 1 }?.isYours ?? false
-                            )
-                        }
-                    )
-                }
-                if !news.isFullyDrawn {
-                    CardNote(localized("screen.arrowLimit", MateNews.arrowLimit))
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-        } else {
-            // No news is news, and it is three different pieces of it. A card that goes blank when
-            // there is no mate is a card that looks broken (docs/adr/0025).
-            VStack(alignment: .leading, spacing: 6) {
-                if viewed.isOver {
-                    Text(localized("screen.finished"))
-                } else if session.isProbingTactics || session.isSearching {
-                    EmptyView()
-                } else if session.isFindingTactics || session.analysis != nil {
-                    Text(localized("screen.noMate"))
-                } else {
-                    Text(localized("screen.mateIdle"))
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(Palette.inkSoft)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-        }
-    }
-
-    /// The mate line as numbered arrows, while its own card is the one on show.
-    private var mateArrows: [MoveArrow] {
-        guard showsMateLine, card == .mate, let news = session.mateNews else { return [] }
-        return news.arrows
     }
 
     // ------------------------------------------------------------------ the bar at the top
@@ -1829,9 +1442,7 @@ struct GameScreen: View {
             // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
             // A 应招 beats all of them while it is being read: it is the one line somebody has
             // just asked for, and the board can only carry one at a time.
-            plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 }
-                ?? (card == .tactics && revealed.contains(.tactics) && showsTacticLine && session.dealsCards
-                    ? session.tacticArrows : mateArrows),
+            plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 } ?? deckArrows,
             isInteractive: session.isHandTurn,
             onTap: tap
         )

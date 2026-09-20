@@ -63,7 +63,7 @@ func theLinesHaveDefaults() {
 
 @Test("把关 stops the player at the 记录线, and the 入列线 moves on its own")
 func theGateReadsTheRecordLine() {
-    var lines = JudgementLines(tilling: true, record: 10, enqueue: 25)
+    var lines = JudgementLines(noSlips: true, record: 10, enqueue: 25)
     #expect(lines.intercept == 10, "one number: what is written down is what is taken back")
     #expect(Ruling.intercepts(10, lines: lines))
     #expect(!Ruling.intercepts(9.9, lines: lines))
@@ -73,7 +73,7 @@ func theGateReadsTheRecordLine() {
     #expect(Ruling.intercepts(20, lines: lines), "moving the 记录线 moves where 把关 stops")
     #expect(!Ruling.intercepts(19, lines: lines))
 
-    lines.tilling = false
+    lines.noSlips = false
     #expect(lines.intercept == nil)
     #expect(!Ruling.intercepts(99, lines: lines), "and switching 把关 off changes neither line")
     #expect(lines.records(20))
@@ -86,9 +86,9 @@ func aLineIsDrawnOnTheScale() {
     #expect(JudgementLines.standard.isDrawn)
     #expect(!JudgementLines(record: .nan).isDrawn)
     #expect(!JudgementLines(record: 10, enqueue: 101).isDrawn)
-    #expect(!Ruling.intercepts(0, lines: JudgementLines(tilling: true, record: 0, enqueue: 0)))
-    #expect(Ruling.intercepts(0.1, lines: JudgementLines(tilling: true, record: 0, enqueue: 0)))
-    #expect(Ruling.intercepts(5, lines: JudgementLines(tilling: true, record: 5, enqueue: 5)))
+    #expect(!Ruling.intercepts(0, lines: JudgementLines(noSlips: true, record: 0, enqueue: 0)))
+    #expect(Ruling.intercepts(0.1, lines: JudgementLines(noSlips: true, record: 0, enqueue: 0)))
+    #expect(Ruling.intercepts(5, lines: JudgementLines(noSlips: true, record: 5, enqueue: 5)))
 }
 
 // -------------------------------------------------------------- the settlement

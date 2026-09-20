@@ -163,7 +163,7 @@
 "camera.lens.standard" = "Standard";
 
 "library.engineStarting" = "Moteur en démarrage";
-"library.tagline" = "Photographiez l'échiquier, et continuez la partie.";
+"library.tagline" = "Transformez vos erreurs en exercices, et jouez une partie qui n'en laisse passer aucune.";
 "library.photograph" = "Photographier";
 "library.fromAlbum" = "Depuis les albums";
 "library.paste" = "Coller une capture";
@@ -375,18 +375,18 @@
 "daily.left.one" = "%d restante";
 "daily.done" = "Terminé pour aujourd'hui";
 "daily.none" = "Rien à travailler aujourd'hui";
-"till.start" = "Commencer sans faute";
-"till.name" = "Sans faute";
-"till.practice" = "Pratique";
-"till.off" = "Désactivé";
-"till.judging" = "Calcul en cours";
-"till.refused" = "%@ coûte %d%%. Réessayez.";
-"till.hint" = "Indice %d";
-"till.reveal" = "Révéler la réponse";
-"till.relax" = "Assouplir à %d%%";
-"till.shot" = "Il y a une possibilité tactique.";
-"till.quiet" = "Aucune tactique confirmée. Améliorez votre position.";
-"till.notFound" = "Non trouvée";
+"noSlips.start" = "Commencer sans faute";
+"noSlips.name" = "Sans faute";
+"noSlips.practice" = "Pratique";
+"noSlips.off" = "Désactivé";
+"noSlips.judging" = "Calcul en cours";
+"noSlips.refused" = "%@ coûte %d%%. Réessayez.";
+"noSlips.hint" = "Indice %d";
+"noSlips.reveal" = "Révéler la réponse";
+"noSlips.relax" = "Assouplir à %d%%";
+"noSlips.shot" = "Il y a une possibilité tactique.";
+"noSlips.quiet" = "Aucune tactique confirmée. Améliorez votre position.";
+"noSlips.notFound" = "Non trouvée";
 "punish.toggle" = "Trouver la réponse adverse";
 "punish.prompt" = "Jouez pour l’adversaire et trouvez sa meilleure réponse.";
 "punish.again" = "Il existe une meilleure réponse. Réessayez.";
@@ -468,7 +468,7 @@
 "discovery.mateFound" = "Mat trouvé";
 "discovery.tacticFound" = "Occasion tactique trouvée";
 "board.faceToFace" = "Face à face";
-"till.returned" = "Reprise";
+"noSlips.returned" = "Reprise";
 "book.recorded" = "%d ajoutés au carnet d’erreurs";
 "standing.change" = "Variation de probabilité pour ce coup %@";
 "tried.reply" = "La réponse qu’il provoque";
@@ -487,7 +487,7 @@
 
 "strength" = "Force";
 "strength.full" = "Pleine force";
-"till.tally" = "Série %d";
+"noSlips.tally" = "Série %d";
 "ladder" = "Palmarès des séries";
 "ladder.run" = "Plus longue série";
 "standing.best" = "Meilleur coup";

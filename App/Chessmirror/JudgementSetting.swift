@@ -31,9 +31,9 @@ import Foundation
     }
 
     /// The two of them as the kit reads them, with 把关 off — which is what an ordinary game is.
-    /// A 把关 game takes this and switches `tilling` on.
+    /// A 把关 game takes this and switches `noSlips` on.
     var lines: JudgementLines {
-        JudgementLines(tilling: false, record: record, enqueue: enqueue)
+        JudgementLines(noSlips: false, record: record, enqueue: enqueue)
     }
 
     /// The values either line is offered, because tenths of a percent are not a thing anybody

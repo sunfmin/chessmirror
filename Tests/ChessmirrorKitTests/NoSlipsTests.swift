@@ -40,7 +40,7 @@ import ChessmirrorKitTesting
         #expect(game.noSlips(by: [.black]) == .none, "Black's moves were never judged")
     }
 
-    /// The walk under the row and under the 正着榜 is one walk: each of the player's own moves,
+    /// The walk under the row and under the 连正榜 is one walk: each of the player's own moves,
     /// with whether it stood, whether a 试招 came before it, and the rung it was played against.
     @Test func theRowAndTheLadderReadTheSameOwnMoves() throws {
         // 1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6, White to move.
@@ -135,7 +135,7 @@ import ChessmirrorKitTesting
         ])
         let session = GameSession.fresh(start, engine: engine)
         defer { session.suspend() }
-        session.till(at: 10)
+        session.noSlips(at: 10)
         await session.waitForPreparedInterception()
         #expect(session.noSlips == .none)
 
@@ -151,7 +151,7 @@ import ChessmirrorKitTesting
         #expect(session.game.plies[0].judgement?.intercept == 10)
 
         // With 正着 off, the figures stand as they were.
-        session.setTilling(false)
+        session.setNoSlips(false)
         #expect(session.noSlips.longestRun == 1)
     }
 }

@@ -43,9 +43,10 @@ public struct Strip: Hashable, Sendable {
     public let voice: Standing
     /// 连正, for as long as 把关 is on or has left something standing; nil otherwise.
     public let tally: Game.NoSlips?
-    /// How deep the search of the position has got — zero before it has said anything — for as
-    /// long as there is a position of the game's to search and the badge is on. Nil for a game
-    /// that is over, an exercise on the board, or a badge that is off: nothing to account for.
+    /// How deep the search of the position has got. Zero is a search in flight that has said
+    /// nothing yet, which a screen says in words — 「正在计算」 — and never as a depth of nought.
+    /// Nil when there is nothing to account for: a game that is over, an exercise on the board,
+    /// or a position nothing is searching and nothing has searched.
     public let depth: Int?
     /// Who is ahead, or how it ended. Nil when there is nothing to draw: the badge is off and the
     /// game is still being played.

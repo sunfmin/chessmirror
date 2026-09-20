@@ -25,7 +25,7 @@ import Foundation
     /// nothing, which is the whole point of the cache and the thing a test can hold it to.
     public private(set) var walkedLastTime = 0
 
-    /// The 正着榜 (docs/adr/0038). Derived from the same walk as the book, and cached with it:
+    /// The 连正榜 (docs/adr/0038). Derived from the same walk as the book, and cached with it:
     /// a game's credits are read once, under its file and date, and summed on every rebuild.
     public private(set) var ladder = Ladder(rows: [])
 

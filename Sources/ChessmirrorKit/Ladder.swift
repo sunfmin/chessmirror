@@ -1,6 +1,6 @@
 import Foundation
 
-/// The 正着榜: the best the player has done at each 棋力, read out of the games (docs/adr/0038).
+/// The 连正榜: the best the player has done at each 棋力, read out of the games (docs/adr/0038).
 ///
 /// One row per rung the player has stood a move at, in ladder order. Each row holds the longest
 /// 连正 ever made at that rung, with the game it was made in. Derived and never stored — a game's
@@ -62,9 +62,9 @@ public struct Ladder: Hashable, Sendable {
 
     /// One game's credits, one per rung it was played at.
     ///
-    /// The player's own moves that stood under 正着, each credited to the rung the engine was on
+    /// The player's own moves that stood under 把关, each credited to the rung the engine was on
     /// when it was played. A stretch against a human, or before any engine move has said what
-    /// rung it was, is at no rung and is credited nowhere; so are moves played with 正着 off,
+    /// rung it was, is at no rung and is credited nowhere; so are moves played with 把关 off,
     /// which stood under nothing. A 连正 is broken by a 试招, as on the row, and by a change of
     /// rung: a run is a run *at* a 棋力, and a run that crossed from 1400 to 2800 would belong to
     /// neither.

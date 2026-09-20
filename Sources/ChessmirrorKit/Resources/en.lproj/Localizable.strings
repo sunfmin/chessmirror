@@ -192,7 +192,7 @@
 /* ---------------------------------------------------------------- the library */
 
 "library.engineStarting" = "Engine starting";
-"library.tagline" = "Photograph the board, and play on.";
+"library.tagline" = "Turn the moves you got wrong into positions you practise again, and play a game that will not let a wrong move stand.";
 "library.photograph" = "Photograph a board";
 "library.fromAlbum" = "From albums";
 "library.paste" = "Paste a screenshot";
@@ -420,18 +420,18 @@
 "daily.left" = "%d to go";
 "daily.done" = "Done for today";
 "daily.none" = "Nothing to practise today";
-"till.start" = "Start No Slips";
-"till.name" = "No Slips";
-"till.practice" = "Practice";
-"till.off" = "Off";
-"till.judging" = "Calculating";
-"till.refused" = "%@ costs %d%%. Try again.";
-"till.hint" = "Hint %d";
-"till.reveal" = "Reveal answer";
-"till.relax" = "Relax to %d%%";
-"till.shot" = "There is a tactical opportunity.";
-"till.quiet" = "No confirmed tactic. Try improving your position.";
-"till.notFound" = "Not found";
+"noSlips.start" = "Start No Slips";
+"noSlips.name" = "No Slips";
+"noSlips.practice" = "Practice";
+"noSlips.off" = "Off";
+"noSlips.judging" = "Calculating";
+"noSlips.refused" = "%@ costs %d%%. Try again.";
+"noSlips.hint" = "Hint %d";
+"noSlips.reveal" = "Reveal answer";
+"noSlips.relax" = "Relax to %d%%";
+"noSlips.shot" = "There is a tactical opportunity.";
+"noSlips.quiet" = "No confirmed tactic. Try improving your position.";
+"noSlips.notFound" = "Not found";
 "punish.toggle" = "Practise the opponent’s reply after a mistake";
 "punish.prompt" = "Play for your opponent and find their strongest reply.";
 "punish.again" = "There is a stronger reply. Try again.";
@@ -515,7 +515,7 @@
 "book.recorded" = "Saved to mistake book · %d recorded";
 "standing.change" = "Win chance change this move %@";
 "board.faceToFace" = "Face to face";
-"till.returned" = "Returned";
+"noSlips.returned" = "Returned";
 "tried.reply" = "The reply it earns";
 "tried.reply.hint" = "Show the reply this move earns";
 "tried.reply.none" = "This move leaves no reply to show.";
@@ -532,7 +532,7 @@
 
 "strength" = "Strength";
 "strength.full" = "Full strength";
-"till.tally" = "Run %d";
+"noSlips.tally" = "Run %d";
 "ladder" = "Run ladder";
 "ladder.run" = "Longest run";
 "standing.best" = "Best move";

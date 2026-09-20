@@ -22,7 +22,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(played, engine: engine)
     defer { session.suspend() }
-    session.setTilling(true)
+    session.setNoSlips(true)
     await session.waitForPreparedInterception()
     session.jump(toPly: 0)
     await session.waitForPreparedInterception()
@@ -53,7 +53,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(played, engine: engine)
     defer { session.suspend() }
-    session.setTilling(true)
+    session.setNoSlips(true)
     await session.waitForPreparedInterception()
     session.jump(toPly: 0)
     await session.waitForPreparedInterception()
@@ -94,7 +94,7 @@ import ChessmirrorKitTesting
         ]),
     ])
     let session = GameSession.fresh(played, engine: engine)
-    session.setTilling(true)
+    session.setNoSlips(true)
     session.jump(toPly: 2)
     await session.waitForPreparedInterception()
     let twoPliesIn = try #require(played.rewound(to: 2))
@@ -130,7 +130,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.till(at: 5)
+    session.noSlips(at: 5)
     await session.waitForPreparedInterception()
     for _ in 0..<2 {
         session.play(try #require(start.state.move(matching: "f2f3")))
@@ -140,9 +140,9 @@ import ChessmirrorKitTesting
         #expect(session.refused?.san == "f3")
     }
     #expect(session.pendingAttempts.count == 2)
-    session.setTilling(false)
+    session.setNoSlips(false)
     await session.waitForPreparedInterception()
-    session.setTilling(true)
+    session.setNoSlips(true)
     await session.waitForPreparedInterception()
     session.jump(toPly: 0)
     await session.waitForPreparedInterception()
@@ -168,7 +168,7 @@ import ChessmirrorKitTesting
     ])
     let session = GameSession.fresh(start, engine: engine)
     defer { session.suspend() }
-    session.till(at: 5)
+    session.noSlips(at: 5)
     await session.waitForPreparedInterception()
     session.play(try #require(start.state.move(matching: "f2f3")))
     await session.settled()
@@ -238,7 +238,7 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
         return gate.stream
     })
     let session = GameSession.fresh(start, controllers: [.white: .hand, .black: .engine], engine: engine)
-    session.setTilling(enabled)
+    session.setNoSlips(enabled)
     defer { gate.continuation.finish(); session.suspend() }
     session.play(try #require(start.state.move(matching: "e2e4")))
     var request = requested.stream.makeAsyncIterator()
@@ -321,15 +321,15 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 /// Contract: 把关 is a switch and nothing else. On, it stops the player at the 记录线; off, the
 /// file says nothing of it, a real PGN file round trip comes back off, and the game never changes.
 @MainActor
-@Test func tillingIsASwitchThatReadsTheRecordLine() throws {
+@Test func noSlipsIsASwitchThatReadsTheRecordLine() throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, lines: JudgementLines(record: 15, enqueue: 20))
-    session.setTilling(true)
-    #expect(session.isTilling)
+    session.setNoSlips(true)
+    #expect(session.isNoSlipsOn)
     #expect(session.lines.intercept == 15, "it stops the player where the book writes down")
     #expect(session.pgn.tag("Intercept") == "15.0")
-    session.setTilling(false)
-    #expect(!session.isTilling)
+    session.setNoSlips(false)
+    #expect(!session.isNoSlipsOn)
     #expect(session.lines.record == 15, "and switching it off moves no line")
     #expect(session.game.uciMoves == game.uciMoves)
     let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
@@ -340,9 +340,9 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let saved = try PGN(parsing: String(contentsOf: file, encoding: .utf8))
     #expect(saved.tag("Intercept") == nil)
     let reopened = try #require(GameSession.opened(.init(url: file, pgn: saved, modified: Date())))
-    #expect(!reopened.isTilling)
-    reopened.setTilling(true)
-    #expect(reopened.isTilling)
+    #expect(!reopened.isNoSlipsOn)
+    reopened.setNoSlips(true)
+    #expect(reopened.isNoSlipsOn)
     #expect(reopened.lines.intercept == JudgementLines.standard.record)
     #expect(reopened.game == game)
 }
@@ -364,7 +364,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
         """)
     let entry = GameLibrary.Entry(url: URL(filePath: "/games/old.pgn"), pgn: saved, modified: Date())
     let opened = try #require(GameSession.opened(entry, lines: JudgementLines(record: 15, enqueue: 15)))
-    #expect(opened.isTilling, "the file's word on the switch")
+    #expect(opened.isNoSlipsOn, "the file's word on the switch")
     #expect(opened.lines.intercept == 15, "the player's word on the line")
     #expect(opened.game.plies[0].judgement?.intercept == 5, "what stood under five still says five")
     #expect(opened.pgn.tag("Intercept") == "15.0")
@@ -375,9 +375,9 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let quiet = try #require(GameSession.opened(
         GameLibrary.Entry(url: URL(filePath: "/games/off.pgn"), pgn: off, modified: Date())
     ))
-    #expect(!quiet.isTilling)
+    #expect(!quiet.isNoSlipsOn)
     #expect(quiet.pgn.tag("InterceptPreference") == nil, "a dial that is gone has nothing to come back to")
-    quiet.setTilling(true)
+    quiet.setNoSlips(true)
     #expect(quiet.lines.intercept == JudgementLines.standard.record)
 }
 
@@ -391,7 +391,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine], engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     try #require((session.searchProgress?.depth ?? 0) > 0)
     let started = ContinuousClock.now
@@ -419,11 +419,11 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     session.suspend()
     let oldGame = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: session.game.uciMoves))
     let legacy = GameSession.fresh(oldGame, controllers: [.white: .hand, .black: .engine])
-    legacy.setTilling(true)
+    legacy.setNoSlips(true)
     legacy.attach(engine: engine, library: nil)
     defer { legacy.suspend() }
     #expect(legacy.game.plies[0].judgement == nil)
-    await legacy.fillMissingTillingJudgements()
+    await legacy.fillMissingNoSlipsJudgements()
     #expect(legacy.game != oldGame)
     #expect(legacy.game.uciMoves == oldGame.uciMoves)
     // The same measurement, 最佳 included — but measured after the fact, so it stood under
@@ -436,7 +436,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     #expect(legacy.game.plies[0].judgement?.stoodUnderNoSlips == false)
     #expect(legacy.game.plies[1].judgement == nil, "only the person's moves are backfilled")
     let filled = legacy.game
-    await legacy.fillMissingTillingJudgements()
+    await legacy.fillMissingNoSlipsJudgements()
     #expect(legacy.game == filled)
 }
 
@@ -453,7 +453,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ], isPartial: true)])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
     await session.settled()
@@ -473,7 +473,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     let searches = engine.searchCount
     session.play(try #require(game.state.move(matching: "d8h4")))
@@ -498,7 +498,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "f2f3")))
 
@@ -521,7 +521,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     session.play(try #require(session.game.state.move(matching: "f2f3")))
     await session.settled()
     #expect(session.refused?.san == "f3")
@@ -544,7 +544,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     ])])
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
 
     await session.waitForPreparedInterception()
     #expect(session.searchProgress?.depth == 20)
@@ -567,28 +567,28 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
     let session = GameSession.fresh(game)
-    session.till(at: line)
-    #expect(session.isTilling)
+    session.noSlips(at: line)
+    #expect(session.isNoSlipsOn)
     let pgn = try PGN(parsing: session.pgn.text)
     let opened = try #require(GameSession.opened(GameLibrary.Entry(
-        url: URL(filePath: "/games/tilling.pgn"), pgn: pgn, modified: Date()
+        url: URL(filePath: "/games/no-slips.pgn"), pgn: pgn, modified: Date()
     )))
     #expect(pgn.intercept == line, "the file says where the moves in it were stopped")
-    #expect(opened.isTilling)
+    #expect(opened.isNoSlipsOn)
     #expect(opened.lines.intercept == JudgementLines.standard.record, "and the player says where the next is")
-    opened.till(at: .nan)
-    #expect(opened.lines == JudgementLines(tilling: true), "a line off the scale is not a line")
-    opened.till(at: 101)
-    #expect(opened.lines == JudgementLines(tilling: true))
-    opened.setTilling(false)
-    #expect(!opened.isTilling)
+    opened.noSlips(at: .nan)
+    #expect(opened.lines == JudgementLines(noSlips: true), "a line off the scale is not a line")
+    opened.noSlips(at: 101)
+    #expect(opened.lines == JudgementLines(noSlips: true))
+    opened.setNoSlips(false)
+    #expect(!opened.isNoSlipsOn)
     #expect(opened.pgn.tag("Intercept") == nil)
 }
 
 /// Contract: real Stockfish judges Fool's Mate → session restores the board → a legal retry
 /// stands → PGN retains the refused move once. The disabled setting must allow the same blunder.
 @MainActor
-@Test func tillingRejectsMateAndPreservesTheRetry() async throws {
+@Test func noSlipsRejectsMateAndPreservesTheRetry() async throws {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -596,7 +596,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3", "e7e5"]))
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.till(at: 10)
+    session.noSlips(at: 10)
     let blunder = try #require(game.state.move(matching: "g2g4"))
     session.play(blunder)
     #expect(session.isWeighing)
@@ -608,7 +608,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     #expect(session.refused!.drop >= 10)
 
     // Switching interception off lets a retry stand, while preserving the earlier refusal.
-    session.setTilling(false)
+    session.setNoSlips(false)
     session.play(try #require(game.state.move(matching: "e2e4")))
     await session.settled()
     #expect(session.game.uciMoves == ["f2f3", "e7e5", "e2e4"])
@@ -627,14 +627,14 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 }
 
 @MainActor
-@Test func suspendingTillingRestoresTheUnjudgedPosition() async throws {
+@Test func suspendingNoSlipsRestoresTheUnjudgedPosition() async throws {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1)
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, engine: engine)
-    session.till(at: 10)
+    session.noSlips(at: 10)
     session.play(try #require(game.state.move(matching: "e2e4")))
     #expect(session.game != game)
     session.suspend()
@@ -662,7 +662,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
         ]),
     ])
     let session = GameSession.fresh(game, engine: engine)
-    session.setTilling(true)
+    session.setNoSlips(true)
     await session.waitForPreparedInterception()
     session.play(try #require(game.state.move(matching: "d2d4")))
     await session.settled()
@@ -769,7 +769,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
         session.suspend()
         unanswered.continuation.finish()
     }
-    session.setIntercept(JudgementLines.defaultIntercept)
+    session.setNoSlips(true)
     await session.waitForPreparedInterception()
     try #require(session.strip.bar?.score == .centipawns(300))
 

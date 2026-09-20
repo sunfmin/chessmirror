@@ -4,7 +4,12 @@ import Foundation
 @Observable @MainActor public final class Punishment {
     public let position: Game
     public private(set) var isJudging = false
-    public private(set) var isFinished = false
+    public private(set) var isFinished = false {
+        didSet { if isFinished, !oldValue { onFinish?() } }
+    }
+    /// Told once, when the exercise finishes — answered, revealed or skipped. How the session
+    /// that put it on the board hears that the board is the game's again.
+    @ObservationIgnored var onFinish: (@MainActor () -> Void)?
     public private(set) var wasIncorrect = false
     public private(set) var revealedMove: String?
     /// Two percentage points at the interception depth allow equivalent replies without requiring PV identity.

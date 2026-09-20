@@ -33,7 +33,7 @@ public struct Game: Hashable, Sendable {
         /// no Review" are told apart by `reviewDepth`, which is where every other question about
         /// provenance is already answered.
         public var line: [String] = []
-        /// The moves 正着 refused before this one was allowed to stand, in the order they were
+        /// The moves 把关 refused before this one was allowed to stand, in the order they were
         /// played (docs/adr/0027).
         ///
         /// A comment on the move that stands rather than a 分支, because that is what they are:
@@ -61,7 +61,7 @@ public struct Game: Hashable, Sendable {
         public var judgement: Judgement?
         /// The 棋力 the engine played this move at, for a move the engine played under its own
         /// Controller; nil for a move by hand (docs/adr/0038). 满力 is written as such rather than
-        /// left blank, because a blank is a hand, and the 正着榜 has to tell the two apart.
+        /// left blank, because a blank is a hand, and the 连正榜 has to tell the two apart.
         public var strength: Strength?
 
         public struct Judgement: Hashable, Sendable {
@@ -94,7 +94,7 @@ public struct Game: Hashable, Sendable {
             public var stoodUnderNoSlips: Bool { intercept != nil }
         }
 
-        /// One move 正着 took back, and what it cost.
+        /// One move 把关 took back, and what it cost.
         public struct Tried: Hashable, Sendable {
             public let san: String
             /// Percentage points of win probability, from the mover's own side (docs/adr/0027).
@@ -209,7 +209,7 @@ public struct Game: Hashable, Sendable {
 
     public private(set) var pendingTried: [Pending] = []
 
-    /// Records the refusals made at a position, replacing whatever was there: a position 正着
+    /// Records the refusals made at a position, replacing whatever was there: a position 把关
     /// stopped the player at three times has three refusals, not six.
     public mutating func setPendingTried(_ tries: [Ply.Tried], atPly ply: Int) {
         pendingTried.removeAll { $0.ply == ply }
@@ -226,7 +226,7 @@ public struct Game: Hashable, Sendable {
 
     /// Writes one more refusal down at the position it happened at, after the ones already
     /// there (docs/adr/0037). The one door a refusal comes in by while no move stands to carry
-    /// it — 正着's and a drill's alike.
+    /// it — 把关's and a drill's alike.
     public mutating func recordTried(_ tried: Ply.Tried, atPly ply: Int) {
         setPendingTried(pendingTries(atPly: ply) + [tried], atPly: ply)
     }
@@ -671,7 +671,7 @@ public struct Game: Hashable, Sendable {
     }
 
     /// What the move at `ply` cost, by whatever number the Game already holds for it: the
-    /// judgement 正着 or the badge wrote on it first, else what a Review makes of it — the rule
+    /// judgement 把关 or the badge wrote on it first, else what a Review makes of it — the rule
     /// the 错招 list uses (docs/adr/0036). Nil for a move nobody has measured, which is not zero.
     public func cost(atPly ply: Int) -> Double? {
         guard ply > 0, plies.indices.contains(ply - 1) else { return nil }
@@ -749,7 +749,7 @@ public struct Game: Hashable, Sendable {
         plies[ply].hints = rungs
     }
 
-    /// Records what 正着 refused before the move at `ply` was allowed to stand.
+    /// Records what 把关 refused before the move at `ply` was allowed to stand.
     public mutating func setJudgement(_ judgement: Ply.Judgement, atPly ply: Int) {
         guard plies.indices.contains(ply) else { return }
         plies[ply].judgement = judgement
@@ -772,11 +772,11 @@ public struct Game: Hashable, Sendable {
     /// An engine move's own; for a move by hand, the 棋力 of the engine move that answered it —
     /// that is the opponent the move was played against — or, when nothing answered because the
     /// game ended there, of the engine move before it. Nil against a human, and nil for every
-    /// game saved before 棋力 was written down, which the 正着榜 credits to no rung.
+    /// game saved before 棋力 was written down, which the 连正榜 credits to no rung.
     ///
     /// This is the whole of what a "stretch" is (docs/adr/0038): a game can change 棋力 as it
     /// goes, and each move is credited to the rung in force when it was played. Nothing needs the
-    /// stretches listed out as ranges — the 正着榜 reads the rung move by move.
+    /// stretches listed out as ranges — the 连正榜 reads the rung move by move.
     public func strength(ofPly ply: Int) -> Strength? {
         guard plies.indices.contains(ply - 1) else { return nil }
         if let own = plies[ply - 1].strength { return own }

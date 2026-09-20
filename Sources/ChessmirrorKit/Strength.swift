@@ -18,7 +18,7 @@ public enum Strength: Hashable, Sendable {
     case elo(Int)
 
     /// The rungs on offer, weakest first and 满力 last. A short list of round numbers, because
-    /// this is picked with a thumb between moves and every rung is a row on the 正着榜.
+    /// this is picked with a thumb between moves and every rung is a row on the 连正榜.
     public static let ladder: [Strength] = [
         .elo(1400), .elo(1600), .elo(1800), .elo(2000), .elo(2200), .elo(2500), .elo(2800), .full,
     ]

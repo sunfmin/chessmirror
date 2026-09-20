@@ -20,7 +20,7 @@ import Testing
     @MainActor
     @Test func aRefusalSaysTheSamePointsItsChipShows() {
         let refusal = Game.Ply.Tried(san: "Qh4", drop: 22.5)
-        #expect(refusal.sentence == localized("till.refused", "Qh4", 23))
+        #expect(refusal.sentence == localized("noSlips.refused", "Qh4", 23))
         #expect(Drop.figure(refusal.drop) == "−23%")
     }
 }

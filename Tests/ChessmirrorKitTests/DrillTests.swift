@@ -159,7 +159,7 @@ func theDrillRulesItsOwnAttempt() async throws {
         )
         let log = temporaryLog()
         defer { try? FileManager.default.removeItem(at: log.url) }
-        let lines = JudgementLines(tilling: true, record: record, enqueue: record)
+        let lines = JudgementLines(noSlips: true, record: record, enqueue: record)
         let drill = try #require(Drill(position: afterNf3, engine: scripted, log: log, lines: lines))
         let session = GameSession.practising(drill, engine: scripted)
         defer { session.suspend() }

@@ -176,7 +176,7 @@ struct GameScreenScreenshots {
         )
 
         let rendered = await ScreenImage.write("game-recognised") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
         #expect(session.unconfirmedSquares.count == 3, "the shaky squares stay ringed on the board")
@@ -331,7 +331,7 @@ struct GameScreenScreenshots {
         session.step(by: -1)
 
         let rendered = await ScreenImage.write("game-replayed") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
 
         #expect(session.game.plies.count == 7, "the new move is the end of the line on the board")
@@ -346,7 +346,7 @@ struct GameScreenScreenshots {
         // Swiping the strip onto the other line puts the game back as it was imported.
         session.cycleFork(by: 1)
         let swiped = await ScreenImage.write("game-replayed-swiped") {
-            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true), opening: .tactics)
+            screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
         #expect(session.game.plies.map(\.san).suffix(2) == ["c3", "Nf6"], "the original line is the game again")
         #expect(swiped.says("第 7 步 c3"), "and back on the strip")
@@ -418,12 +418,12 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-card-searching", interact: { window in
             #expect(ScreenImage.activate(localized("discovery.view"), in: window))
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
 
         #expect(!session.isProbingTactics)
         #expect(rendered.says(localized("search.reached")))
-        #expect(!rendered.says(localized("till.judging")))
+        #expect(!rendered.says(localized("noSlips.judging")))
         #expect(rendered.says(localized("game.depth", 26)), "the Depth is a figure of its own")
         #expect(rendered.says(localized("standing.bar")))
     }
@@ -452,7 +452,7 @@ struct GameScreenScreenshots {
             #expect(!ScreenImage.words(in: window).contains { $0.contains("没人守的车") })
             #expect(ScreenImage.activate(localized("discovery.view"), in: window))
         }) {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         await hop()
 
@@ -602,7 +602,7 @@ struct GameScreenScreenshots {
         // Dealt to 要害 — the card that acts is not the news — and the search that finds the mate
         // is that card's own Stint, arriving a hop later.
         _ = await ScreenImage.write("game-news-takes-the-eye") {
-            screen(session, engine: engine, opening: .tactics)
+            screen(session, engine: engine)
         }
         await hop()
 
@@ -651,6 +651,56 @@ struct GameScreenScreenshots {
 
     /// The searches behind a reveal run in tasks of their own, so their answers are known a hop
     /// later — which is as true of the screen as it is of this test.
+    // ------------------------------------------------------------------ the way in
+    //
+    // What the screen opens as, pinned: every strip shut and no finding opened, whatever the
+    // position. The code that was documented as guessing otherwise had come to guess nothing.
+
+    /// A board with nothing played on it opens with both players' controls shut.
+    @Test("a fresh board opens with nobody's controls unfolded")
+    func aFreshBoardOpensShut() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        let engine = ScriptedEngine([])
+        let session = GameSession.fresh(game, engine: engine)
+        let rendered = await ScreenImage.write("game-opens-fresh") { screen(session, engine: engine) }
+
+        #expect(rendered.count(of: "的设置") == 2, "one way in to each side's settings")
+        #expect(!rendered.says("收起"), "and neither of them is open")
+    }
+
+    /// So does a game under way.
+    @Test("a game under way opens with nobody's controls unfolded")
+    func aGameUnderWayOpensShut() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let engine = ScriptedEngine([])
+        let session = GameSession.fresh(game, engine: engine)
+        let rendered = await ScreenImage.write("game-opens-under-way") { screen(session, engine: engine) }
+
+        #expect(rendered.count(of: "的设置") == 2)
+        #expect(!rendered.says("收起"))
+    }
+
+    /// A mate the finder comes back with is said on its own row and left shut: the line is not
+    /// read out, and not drawn, until somebody presses it.
+    @Test("a mate already found is announced, and not opened")
+    func aMateAlreadyFoundIsAnnouncedAndNotOpened() async throws {
+        let opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"
+        let game = try #require(Game(startFEN: opera))
+        let engine = ScriptedEngine([], byPosition: [
+            game.state.fen: Analysis(depth: 10, lines: [
+                Line(score: .mate(in: 2), uciMoves: ["b3b8", "d7b8", "d1d8"], san: ["Qb8+", "Nxb8", "Rd8#"])
+            ])
+        ])
+        let session = GameSession.fresh(game, engine: engine)
+        var rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
+        await hop()
+        rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
+
+        #expect(session.mateNews != nil)
+        #expect(rendered.says("发现杀招"))
+        #expect(!rendered.says("Qb8"), "the line stays behind the press")
+    }
+
     private func hop() async {
         for _ in 0..<20 {
             await Task.yield()
@@ -857,7 +907,7 @@ struct GameScreenScreenshots {
         let session = GameSession.fresh(try Self.refusedG4(), engine: engine)
         defer { session.suspend() }
         session.jumpToLatest()
-        session.setTilling(true)
+        session.setNoSlips(true)
         await hop()
         #expect(session.isSearching, "正着 is preparing its interception of the next move")
         let rendered = await ScreenImage.write("game-rejudge-waiting", interact: { window in
@@ -903,7 +953,7 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-stood-reply", interact: { window in
             let before = ScreenImage.words(in: window)
             #expect(before.contains { $0.contains(localized("wrong.stood")) }, "the row says the move was played")
-            #expect(!before.contains { $0.contains(localized("till.returned")) }, "nothing here was taken back")
+            #expect(!before.contains { $0.contains(localized("noSlips.returned")) }, "nothing here was taken back")
             #expect(!before.contains { $0.contains(localized("tried.reply")) }, "the answer waits to be asked for")
             #expect(ScreenImage.activate("Nf3", in: window), "the move that stood must be pressable")
             await ScreenImage.settle()
@@ -971,7 +1021,7 @@ struct GameScreenScreenshots {
         for ply in [0, 2, 4, 6] { game.setJudgement(stood, atPly: ply) }
         game.setTried([.init(san: "Nh3", drop: 12)], atPly: 4)
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
-        session.setTilling(true)
+        session.setNoSlips(true)
         return session
     }
 
@@ -1098,15 +1148,12 @@ struct GameScreenScreenshots {
 
     /// The screen as the app pushes it: inside a navigation stack, with the engine and the library
     /// in the environment. The engine is the only thing that is not the app's own.
-    /// The screen, and — when a test is photographing something that lives on one card of the
-    /// deck — the card to open on. The app decides that for itself from the position; a test says
-    /// so, the same way it says which game and which engine (docs/adr/0025).
     private func screen(
-        _ session: GameSession, engine: any Engine, opening: GameScreen.Card? = nil,
+        _ session: GameSession, engine: any Engine,
         library: GameLibrary? = nil
     ) -> some View {
         NavigationStack {
-            GameScreen(session: session, path: .constant([]), opening: opening)
+            GameScreen(session: session, path: .constant([]))
         }
         .environment(EngineHost(engine))
         .environment(library ?? GameLibrary())

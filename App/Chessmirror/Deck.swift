@@ -133,3 +133,329 @@ struct CardButton: View {
         .disabled(!isEnabled)
     }
 }
+
+// ===================================================================== the deck
+
+/// What the deck of findings under the record is showing (docs/adr/0025).
+///
+/// This was five pieces of state on the game screen — which card was in front, the set of cards
+/// that had been revealed, a Bool per card for whether its line was drawn, and a flag saying the
+/// deck had been dealt — held together by an invariant nobody had written down: the revealed set
+/// was either empty or exactly the card in front, and at most one of the two line flags could be
+/// true, because only the open card has an arrow button to press. Said as one optional and one
+/// Bool, that invariant is the shape of the thing rather than a rule somebody has to keep.
+@Observable @MainActor final class Deck {
+    /// The finding that is open, if one is. Nothing is open until a finding is pressed: a
+    /// finding is an invitation, and opening one on somebody's behalf is answering a question
+    /// they did not ask.
+    private(set) var open: GameScreen.Card?
+    /// Whether the open finding's line is drawn on the board. On when it opens — the line is
+    /// most of what the finding is for — and flipped by the arrow on the card.
+    private(set) var drawsLine = false
+    /// Whether the deck has been dealt. Once, on the way in — not on every appearance, or coming
+    /// back from a Review would ask the engine again for what is already on the table.
+    private(set) var isDealt = false
+
+    func isOpen(_ kind: GameScreen.Card) -> Bool { open == kind }
+
+    /// Whether this finding's line is the one on the board.
+    func draws(_ kind: GameScreen.Card) -> Bool { open == kind && drawsLine }
+
+    /// Pressing a finding. The one pressed opens with its line drawn, and whatever was open
+    /// shuts; pressing the one that is open shuts it. Says whether something is now open, which
+    /// is what the screen needs to know to spend a Stint on it.
+    @discardableResult func press(_ kind: GameScreen.Card) -> Bool {
+        let wasOpen = open == kind
+        open = wasOpen ? nil : kind
+        drawsLine = !wasOpen
+        return !wasOpen
+    }
+
+    /// The board on screen changed. Nothing that was open was about this position.
+    func shut() {
+        open = nil
+        drawsLine = false
+    }
+
+    /// The arrow on the open card.
+    func toggleLine() { drawsLine.toggle() }
+
+    /// Claims the deal, once. Says whether this call is the one that got it, so the arriving —
+    /// which is the session's business, not the deck's — happens exactly once.
+    func claimDeal() -> Bool {
+        guard !isDealt else { return false }
+        isDealt = true
+        return true
+    }
+}
+
+/// The findings under the record: what the engine and the rules noticed about the position on
+/// screen, each shut until it is pressed (docs/adr/0025).
+///
+/// It deals itself. Dealing is an arrival and an arrival spends a Stint, so it has to happen
+/// after the session has appeared — which used to be a comment over two lines in the screen's
+/// own `onAppear`, in the right order because somebody had read the comment. A view cannot
+/// appear before the view that contains it, so putting the deal here is the order.
+struct DeckView: View {
+    let session: GameSession
+    let deck: Deck
+    /// The board's selection, which reading the finder's answer puts down: the answer is about
+    /// the position, not about the piece somebody happened to have picked up.
+    @Binding var selected: Square?
+
+    /// Every card, in one order, whatever the position.
+    ///
+    /// **The deck does not change shape.** Two cards that never move can be learnt; a card that
+    /// cannot answer here says so on its own face.
+    private var cards: [GameScreen.Card] { [.mate, .tactics] }
+
+    /// Findings are invitations, never navigation: absent results occupy no space.
+    private var findings: [GameScreen.Card] {
+        cards.filter { $0 == .mate ? session.mateNews != nil : session.tactic != nil }
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(findings, id: \.self) { kind in
+                VStack(spacing: 0) {
+                    discovery(kind)
+                    if deck.isOpen(kind) {
+                        body(of: kind)
+                    }
+                }
+                .background(Palette.analysis.opacity(0.06))
+            }
+        }
+        .padding(.vertical, findings.isEmpty ? 0 : 8)
+        .onAppear {
+            guard deck.claimDeal() else { return }
+            // Both findings are questions for the finder, and arriving is what asks it
+            // (docs/adr/0023, 0025). Nothing is opened: a mate it turns up is said on its own
+            // row — 「发现杀招」 — and opened by whoever presses it.
+            session.arriveAtFinder()
+            session.adviseForCard()
+        }
+    }
+
+    @ViewBuilder private func body(of kind: GameScreen.Card) -> some View {
+        switch kind {
+        case .mate: cardFrame(kind) { mateBody }
+        case .tactics: cardFrame(kind) { tacticsBody }
+        }
+    }
+
+    private func discovery(_ kind: GameScreen.Card) -> some View {
+        let found = kind == .mate ? session.mateNews != nil : session.tactic != nil
+        let searching = session.isSearching || session.isProbingTactics
+        let title = found
+            ? localized(kind == .mate ? "discovery.mateFound" : "discovery.tacticFound")
+            : "\(kind.title) · \(localized(searching ? "discovery.checking" : "discovery.none"))"
+        return Button {
+            guard found else { return }
+            withAnimation(.snappy(duration: 0.22)) {
+                if deck.press(kind) { session.notePracticeHelp() }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: kind == .mate ? "flag.fill" : "bolt.fill")
+                    .font(.caption)
+                    .foregroundStyle(Palette.analysis)
+                    .frame(width: 14)
+                Text(title)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Palette.ink)
+                Spacer(minLength: 4)
+                if found {
+                    Image(systemName: deck.isOpen(kind) ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(Palette.inkSoft)
+                        .frame(width: 30, height: 30)
+                } else if searching {
+                    ProgressView().controlSize(.mini)
+                }
+            }
+            .frame(minHeight: 30)
+            .lineLimit(1)
+            .padding(.leading, 13)
+            .padding(.trailing, 8)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .leading) {
+                Rectangle().fill(Palette.analysis).frame(width: 3)
+            }
+            .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+            .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!found)
+        .accessibilityLabel(found ? localized("discovery.view") : title)
+        .accessibilityValue(title)
+        .chromeType()
+    }
+
+    /// One card: one line saying what it answers, and then the thing itself. The name is on the
+    /// rail under the card, so it is not said again here.
+    private func cardFrame<Content: View>(
+        _ kind: GameScreen.Card, @ViewBuilder body: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            body()
+            if deck.isOpen(kind), let progress = session.standingProgress {
+                HStack(spacing: 6) {
+                    if session.isAdvising { ProgressView().controlSize(.mini) }
+                    Text(localized(session.isAdvising ? "noSlips.judging" : "search.reached"))
+                    Text(localized("game.depth", progress.depth))
+                }
+                .font(.caption2)
+                .foregroundStyle(Palette.inkSoft)
+                .padding(.horizontal, 16)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 12)
+    }
+
+    // ------------------------------------------------------------------ 杀招
+
+    private var mateInk: Color {
+        guard let news = session.mateNews else { return Palette.ink }
+        return news.isOurs ? Palette.mine : Palette.alarm
+    }
+
+    /// The news: a mate somebody can already see, whoever it belongs to (docs/adr/0025).
+    ///
+    /// Not a switch and not an answer to anything — the one thing on this screen that arrives
+    /// unbidden. It says how forced it is because that is the difference between a mate a person
+    /// can follow and one they have to take on trust, and every clause of it was counted by the
+    /// rules code rather than asserted.
+    @ViewBuilder private var mateBody: some View {
+        if let news = session.mateNews {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(news.head)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(mateInk)
+                    Spacer(minLength: 4)
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { deck.toggleLine() }
+                    } label: {
+                        Image(systemName: deck.draws(.mate) ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(deck.draws(.mate) ? mateInk : Palette.inkSoft)
+                            .frame(width: 30, height: 30)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(news.arrows.isEmpty)
+                    .accessibilityLabel(localized(deck.draws(.mate) ? "screen.hideArrows" : "screen.showArrows"))
+                    .accessibilityHint(localized("screen.arrowsExplained"))
+                }
+                CardLede(news.sentence)
+                if !news.san.isEmpty {
+                    // The numbers are the join: the figure on a chip is the figure on its arrow.
+                    CardMoves(
+                        moves: news.san.enumerated().map { index, san in
+                            CardMoves.Move(
+                                step: index + 1,
+                                san: san,
+                                isYours: news.arrows.first { $0.step == index + 1 }?.isYours ?? false
+                            )
+                        }
+                    )
+                }
+                if !news.isFullyDrawn {
+                    CardNote(localized("screen.arrowLimit", MateNews.arrowLimit))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+        } else {
+            // No news is news, and it is three different pieces of it. A card that goes blank when
+            // there is no mate is a card that looks broken (docs/adr/0025).
+            VStack(alignment: .leading, spacing: 6) {
+                if session.viewed.isOver {
+                    Text(localized("screen.finished"))
+                } else if session.isProbingTactics || session.isSearching {
+                    EmptyView()
+                } else if session.isFindingTactics || session.analysis != nil {
+                    Text(localized("screen.noMate"))
+                } else {
+                    Text(localized("screen.mateIdle"))
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(Palette.inkSoft)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+        }
+    }
+
+    // ------------------------------------------------------------------ 战术
+
+    /// 战术 — the shot, named in the verbs a player declares in.
+    ///
+    /// **The switch did become the card.** 战术发现器 has a press of its own on the card, but
+    /// arriving here is also a press: the swipe is the asking (docs/adr/0025). 杀招 shares the
+    /// same probe, so opening one after the other does not stop it and start it again.
+    @ViewBuilder private var tacticsBody: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if session.isFindingTactics {
+                HStack(alignment: .top, spacing: 8) {
+                    tacticAnswer
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { deck.toggleLine() }
+                    } label: {
+                        Image(systemName: deck.draws(.tactics) ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(deck.draws(.tactics) ? Palette.analysis : Palette.inkSoft)
+                            .frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(localized(deck.draws(.tactics) ? "screen.hideArrows" : "screen.showArrows"))
+                }
+                if let tactic = session.tactic {
+                    CardMoves(moves: tactic.line.enumerated().map { index, san in
+                        CardMoves.Move(step: index + 1, san: san,
+                            isYours: session.tacticArrows.first { $0.step == index + 1 }?.isYours ?? index.isMultiple(of: 2))
+                    })
+                    if tactic.line.count > MateNews.arrowLimit {
+                        CardNote(localized("screen.arrowLimit", MateNews.arrowLimit))
+                    }
+                }
+            } else {
+                // Both findings are questions for the finder, so a deck with the finder off is a
+                // deck nobody has asked anything yet. It used to be able to say 「你自己关掉的」
+                // as well, off a flag nothing ever set: a silence with one cause has one
+                // sentence (docs/adr/0040).
+                Text(localized("screen.finderIdle"))
+                    .font(.caption)
+                    .foregroundStyle(Palette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+    }
+
+    /// The finder's answer, under the chip that asked — the same place a scan writes.
+    @ViewBuilder private var tacticAnswer: some View {
+        if let prompt = session.tacticPrompt {
+            Button {
+                selected = nil
+            } label: {
+                Text(prompt)
+                    .font(.caption)
+                    .foregroundStyle(session.tactic == nil ? Palette.inkSoft : Palette.analysis)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .buttonStyle(.plain)
+            .disabled(session.tactic?.line.isEmpty != false)
+            .accessibilityLabel(prompt)
+        }
+    }
+}

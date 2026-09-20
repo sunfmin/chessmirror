@@ -2,7 +2,7 @@ import Foundation
 
 /// 应招 — what a 试招 earned (docs/adr/0034).
 ///
-/// A 试招 is a move 正着 took back, and the whole of what makes it a mistake is the answer it
+/// A 试招 is a move 把关 took back, and the whole of what makes it a mistake is the answer it
 /// invited: the opponent's move, and the few moves after it. The app already had that Line — the
 /// search that judged the move produced it — so it is kept beside the 试招 it belongs to rather
 /// than being asked for again. Asked for again is exactly what it is not: the position the move

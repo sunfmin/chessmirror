@@ -26,7 +26,7 @@ struct SessionHostTests {
         let host = EngineHost(engine)
         let session = GameSession.fresh(game)
         defer { session.disappear() }
-        session.till(at: 10)
+        session.noSlips(at: 10)
         #expect(!session.isSearching, "nothing searches before the screen is there")
 
         session.appear(on: host, library: nil)
@@ -48,7 +48,7 @@ struct SessionHostTests {
         let engine = held()
         let host = EngineHost(engine)
         let session = GameSession.fresh(game)
-        session.till(at: 10)
+        session.noSlips(at: 10)
         session.appear(on: host, library: nil)
         // The shared store asks the engine a hop after the session asks it.
         await until { engine.searchCount == 1 }
@@ -68,7 +68,7 @@ struct SessionHostTests {
         let host = EngineHost(nets: { .init(big: Nets.big, small: Nets.small) })
         let session = GameSession.fresh(game)
         defer { session.disappear() }
-        session.till(at: 10)
+        session.noSlips(at: 10)
         session.appear(on: host, library: nil)
         #expect(!session.isSearching, "no engine yet: nothing to search with")
 

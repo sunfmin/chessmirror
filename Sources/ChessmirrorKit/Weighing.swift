@@ -3,7 +3,7 @@ import Foundation
 /// 细判 of one move: what the app's own engine, at its own depth, says the move cost
 /// (CONTEXT.md, docs/adr/0027).
 ///
-/// **One act, wherever a move is weighed.** 正着 refusing a move as it lands, a drill judging an
+/// **One act, wherever a move is weighed.** 把关 refusing a move as it lands, a drill judging an
 /// attempt, the 惩罚 exercise checking a reply, the badge after a move stands, and a legacy game
 /// being filled in all ask the same question of the same two searches, and each of them used to
 /// run the searches itself, settle checkmate and draw by hand, and pick the depth and the 应招 out

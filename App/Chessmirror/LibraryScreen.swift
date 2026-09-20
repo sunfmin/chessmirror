@@ -57,8 +57,9 @@ struct LibraryScreen: View {
                     if let reason = engine.unavailableReason {
                         note(reason, symbol: "exclamationmark.triangle.fill")
                     }
-                    entries
-                    practice
+                    doors
+                    intake
+                    bookDoor.clipShape(RoundedRectangle(cornerRadius: 14))
                     ladderBoard
                     games
                 }
@@ -244,24 +245,55 @@ struct LibraryScreen: View {
         .padding(.bottom, 6)
     }
 
-    /// The two ways in. Photographing a board is the one this app is for, so it is the one that
-    /// looks like a button — the other three ways to hand it a picture are behind the chevron.
-    private var entries: some View {
+    /// What the app is for, at the top and in the heaviest type it has: practise the moves you
+    /// got wrong, and play a game that will not let one stand (CONTEXT.md).
+    ///
+    /// These used to be the fourth and fifth rows, under three ways of handing the app a picture.
+    /// A picture is how a position gets *in*; it is not what anybody opened the app to do. The
+    /// ways in are still one tap away, in `intake`, wearing the weight that belongs to them.
+    private var doors: some View {
+        VStack(spacing: 10) {
+            Button {
+                start(Game(startFEN: PGN.standardStartFEN), noSlips: true)
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "leaf.fill").font(.title3)
+                    Text(localized("noSlips.start")).font(.headline)
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(Palette.parchment)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // The dark fill belongs to the row, not to this label, so the label has to claim
+                // the row as a tap target or only the glyph would answer.
+                .contentShape(Rectangle())
+                .background(Palette.ink, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .disabled(!engine.isReady)
+
+            dailyDoor.clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+    }
+
+    /// 进料: the ways a position gets into the app. Photographing a board is the first of them —
+    /// the other three ways to hand it a picture are behind the chevron — and all four are
+    /// quieter than the two things the app is for.
+    private var intake: some View {
         VStack(spacing: 10) {
             HStack(spacing: 0) {
                 Button {
                     isCameraOpen = true
                 } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: "camera.fill").font(.title3)
-                        Text(localized("library.photograph")).font(.headline)
+                        Image(systemName: "camera.fill").font(.subheadline.weight(.medium))
+                        Text(localized("library.photograph")).font(.subheadline.weight(.semibold))
                         Spacer(minLength: 0)
                     }
-                    .foregroundStyle(Palette.parchment)
+                    .foregroundStyle(Palette.ink)
                     .padding(.leading, 18)
                     .padding(.vertical, 16)
-                    // The dark fill belongs to the row, not to this label, so the label has to
-                    // claim its half of the row as a tap target or only the glyph would answer.
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -285,31 +317,19 @@ struct LibraryScreen: View {
                 } label: {
                     Image(systemName: "chevron.down")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Palette.parchment)
+                        .foregroundStyle(Palette.inkSoft)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 18)
                         .contentShape(Rectangle())
                 }
                 .overlay(alignment: .leading) {
-                    Rectangle().fill(Palette.parchment.opacity(0.25)).frame(width: 0.5)
+                    Rectangle().fill(Palette.ink.opacity(0.15)).frame(width: 0.5)
                 }
             }
-            .background(Palette.ink, in: RoundedRectangle(cornerRadius: 14))
+            .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
 
-            Button {
-                start(Game(startFEN: PGN.standardStartFEN), tilling: true)
-            } label: {
-                Label(localized("till.start"), systemImage: "leaf")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(18)
-                    .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
-            }
-            .buttonStyle(.plain)
-            .disabled(!engine.isReady)
-
-            // The two quieter doors share a row. Four full-width rows of the same shape read as
-            // a menu, and these two are not peers of the camera or of 把关: one is the board with
+            // The two quietest doors share a row. Three full-width rows of the same shape read as
+            // a menu, and these two are not even peers of the camera: one is the board with
             // nothing on it yet, the other is somebody else's game. Side by side they say so —
             // and stack again in a language whose words do not fit half a phone.
             ViewThatFits(in: .horizontal) {
@@ -349,27 +369,15 @@ struct LibraryScreen: View {
         .buttonStyle(.plain)
     }
 
-    /// 日课 and the 错题本 as one panel: the book, and today's slice of it. Two rows in one
-    /// shape, the way the ladder's rungs are, because they are one thing seen twice — and because
-    /// two loose rows under the four ways into a game were two more items on a list that had
-    /// stopped meaning anything by its fifth.
-    private var practice: some View {
-        VStack(spacing: 0) {
-            dailyDoor
-            if index.daily.remaining == 0 {
-                Divider().padding(.leading, 18)
-            }
-            bookDoor
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-
     /// 日课, and how much of it is left (docs/adr/0030).
     ///
     /// It opens the next question rather than a list of them, and that is the design rather than
     /// a shortcut: a screen listing today's queue is a screen somebody picks from, and picking is
     /// exactly what a spaced schedule exists to take off them (docs/adr/0032). There is one verb
     /// here and it is 下一道.
+    ///
+    /// **It stays on the screen with nothing due.** A door that disappears once it is done is a
+    /// door nobody learns is there, and「今天的练完了」is the whole of what a day's work buys.
     @ViewBuilder private var dailyDoor: some View {
         let left = index.daily.remaining
         Button {
@@ -377,8 +385,8 @@ struct LibraryScreen: View {
             path.append(.drill(next.mistake, .daily))
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "sun.max")
-                Text(localized("daily")).font(.subheadline.weight(.medium))
+                Image(systemName: "sun.max.fill").font(.title3)
+                Text(localized("daily")).font(.headline)
                 Spacer(minLength: 0)
                 Text(
                     left > 0
@@ -393,7 +401,9 @@ struct LibraryScreen: View {
             }
             .foregroundStyle(left > 0 ? Palette.parchment : Palette.ink)
             .padding(.horizontal, 18)
-            .padding(.vertical, 13)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
             .background(left > 0 ? Palette.analysis : Palette.chipRest)
         }
         .buttonStyle(.plain)
@@ -428,7 +438,7 @@ struct LibraryScreen: View {
         .buttonStyle(.plain)
     }
 
-    /// The 正着榜 (docs/adr/0038): one row per rung the player has stood a move at, the longest
+    /// The 连正榜 (docs/adr/0038): one row per rung the player has stood a move at, the longest
     /// 连正 on each row opening the game it was made in. Nothing at all until something has stood,
     /// because an empty ladder is not a thing to look at.
     @ViewBuilder private var ladderBoard: some View {
@@ -592,10 +602,10 @@ struct LibraryScreen: View {
         }
     }
 
-    private func start(_ game: Game?, tilling: Bool = false) {
+    private func start(_ game: Game?, noSlips: Bool = false) {
         guard let game else { return }
         var lines = judgement.lines
-        lines.tilling = tilling
+        lines.noSlips = noSlips
         let session = GameSession.playing(
             game, engine: engine.service, library: library,
             strength: StrengthSetting.shared.strength, lines: lines

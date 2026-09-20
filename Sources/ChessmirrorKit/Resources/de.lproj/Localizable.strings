@@ -163,7 +163,7 @@
 "camera.lens.standard" = "Standard";
 
 "library.engineStarting" = "Engine startet";
-"library.tagline" = "Brett fotografieren und weiterspielen.";
+"library.tagline" = "Aus deinen Fehlern werden Übungen, und eine Partie, die keinen davon stehen lässt.";
 "library.photograph" = "Brett fotografieren";
 "library.fromAlbum" = "Aus den Alben";
 "library.paste" = "Screenshot einsetzen";
@@ -374,18 +374,18 @@
 "daily.left" = "noch %d";
 "daily.done" = "Für heute erledigt";
 "daily.none" = "Heute nichts zu üben";
-"till.start" = "Ohne Patzer starten";
-"till.name" = "Ohne Patzer";
-"till.practice" = "Üben";
-"till.off" = "Aus";
-"till.judging" = "Berechnung";
-"till.refused" = "%@ kostet %d%%. Versuche es erneut.";
-"till.hint" = "Hinweis %d";
-"till.reveal" = "Antwort zeigen";
-"till.relax" = "Auf %d%% lockern";
-"till.shot" = "Es gibt eine taktische Möglichkeit.";
-"till.quiet" = "Keine bestätigte Taktik. Verbessere deine Stellung.";
-"till.notFound" = "Nicht gefunden";
+"noSlips.start" = "Ohne Patzer starten";
+"noSlips.name" = "Ohne Patzer";
+"noSlips.practice" = "Üben";
+"noSlips.off" = "Aus";
+"noSlips.judging" = "Berechnung";
+"noSlips.refused" = "%@ kostet %d%%. Versuche es erneut.";
+"noSlips.hint" = "Hinweis %d";
+"noSlips.reveal" = "Antwort zeigen";
+"noSlips.relax" = "Auf %d%% lockern";
+"noSlips.shot" = "Es gibt eine taktische Möglichkeit.";
+"noSlips.quiet" = "Keine bestätigte Taktik. Verbessere deine Stellung.";
+"noSlips.notFound" = "Nicht gefunden";
 "punish.toggle" = "Die gegnerische Antwort finden";
 "punish.prompt" = "Finde den stärksten Zug deines Gegners.";
 "punish.again" = "Es gibt eine stärkere Antwort. Versuche es erneut.";
@@ -467,7 +467,7 @@
 "discovery.mateFound" = "Matt gefunden";
 "discovery.tacticFound" = "Taktische Chance gefunden";
 "board.faceToFace" = "Gegenübersitzen";
-"till.returned" = "Zurückgenommen";
+"noSlips.returned" = "Zurückgenommen";
 "book.recorded" = "%d zum Fehlerbuch hinzugefügt";
 "standing.change" = "Gewinnchancenänderung dieses Zugs %@";
 "tried.reply" = "Die Antwort darauf";
@@ -486,7 +486,7 @@
 
 "strength" = "Stärke";
 "strength.full" = "Volle Stärke";
-"till.tally" = "Serie %d";
+"noSlips.tally" = "Serie %d";
 "ladder" = "Serien-Bestenliste";
 "ladder.run" = "Längste Serie";
 "standing.best" = "Bester Zug";

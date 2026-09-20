@@ -4,7 +4,7 @@ extension Game.Ply.Tried {
     /// 「Qh4 掉 23%，退回去重走。」 — what went wrong and nothing about what to do instead
     /// (docs/adr/0031). The sentence the strip says about a 试招 the moment it is taken back.
     public var sentence: String {
-        localized("till.refused", san, Drop.points(drop))
+        localized("noSlips.refused", san, Drop.points(drop))
     }
 }
 
@@ -52,7 +52,7 @@ public struct Standpoint: Hashable, Sendable {
     public var shown: Duration { ContinuousClock.now - began }
 }
 
-/// What 正着 rules about a move once it has been weighed, and what the game looks like afterwards
+/// What 把关 rules about a move once it has been weighed, and what the game looks like afterwards
 /// (docs/adr/0027, 0037).
 ///
 /// A pure reading of a `Weighing` against the 拦截线, with the game it leaves behind: the move
