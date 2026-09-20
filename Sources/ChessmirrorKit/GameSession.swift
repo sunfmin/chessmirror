@@ -10,6 +10,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Downloaded from a PGN link, whole chapters at a time (docs/adr/0014). The game
     /// text is the study's own, so there is nothing to take back to an editor for.
     case imported
+    /// Begun as a 错题, in practice (docs/adr/0047). A real game — it is played on from, it is
+    /// judged, and its 试招 fill the book like any other's — and one the player did not sit down
+    /// to play, so the list keeps it apart from the ones they did.
+    case practised
 
     /// Written into the PGN so the distinction survives a relaunch. Not a standard tag;
     /// PGN has no opinion about where a position came from, and readers ignore what they do
@@ -22,6 +26,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .fresh: localized("origin.fresh")
         case .recognised: localized("origin.recognised")
         case .imported: localized("origin.imported")
+        case .practised: localized("origin.practised")
         }
     }
     public var symbol: String {
@@ -29,6 +34,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .fresh: "square.grid.3x3"
         case .recognised: "camera"
         case .imported: "link"
+        case .practised: "figure.mind.and.body"
         }
     }
 }
@@ -343,9 +349,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     ) -> GameSession {
         // The drill's 线 are the session's: the attempt is judged and ruled under one value, and
         // the screen's toggle and the 错招 row read the same one.
-        let session = fresh(drill.game, controllers: [
-            drill.mover: .hand, drill.mover.opposite: .engine
-        ], engine: engine, library: library, lines: drill.lines)
+        let session = GameSession(
+            game: drill.game,
+            controllers: [drill.mover: .hand, drill.mover.opposite: .engine],
+            // What it is, written into the file it saves: a game that began as a 错题
+            // (docs/adr/0047). Every answered question leaves one, and the list reads this to
+            // keep them out of the way of the games the player sat down to play.
+            origin: .practised,
+            lines: drill.lines
+        )
+        session.attach(engine: engine, library: library)
         session.practice = drill
         session.orientation = drill.mover == .white ? .whiteAtBottom : .blackAtBottom
         return session

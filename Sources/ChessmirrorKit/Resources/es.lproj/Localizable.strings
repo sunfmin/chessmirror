@@ -24,6 +24,7 @@
 "origin.fresh" = "Colocada";
 "origin.recognised" = "Fotografiada";
 "origin.imported" = "Importada";
+"origin.practised" = "Práctica";
 
 "quality.blunder" = "Error grave";
 "quality.mistake" = "Error";
@@ -170,6 +171,7 @@
 "library.fromFiles" = "De archivos";
 "library.fromStart" = "Empezar desde la inicial";
 "library.games" = "Partidas";
+"library.practice" = "Práctica";
 "library.empty" = "Haz una jugada y la partida quedará anotada aquí.";
 "library.recognising" = "Leyendo el tablero";
 "library.noPicture" = "No se ha podido obtener la imagen";

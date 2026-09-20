@@ -24,6 +24,7 @@
 "origin.fresh" = "Aufgebaut";
 "origin.recognised" = "Fotografiert";
 "origin.imported" = "Importiert";
+"origin.practised" = "Übung";
 
 "quality.blunder" = "Grober Fehler";
 "quality.mistake" = "Fehler";
@@ -170,6 +171,7 @@
 "library.fromFiles" = "Aus Dateien";
 "library.fromStart" = "Von der Grundstellung";
 "library.games" = "Partien";
+"library.practice" = "Übung";
 "library.empty" = "Mach einen Zug, dann steht die Partie hier.";
 "library.recognising" = "Brett wird gelesen";
 "library.noPicture" = "Bild nicht bekommen";

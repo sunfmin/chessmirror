@@ -24,6 +24,7 @@
 "origin.fresh" = "手並べ";
 "origin.recognised" = "写真";
 "origin.imported" = "取り込み";
+"origin.practised" = "練習";
 
 "quality.blunder" = "大悪手";
 "quality.mistake" = "悪手";
@@ -164,6 +165,7 @@
 "library.fromFiles" = "ファイルから選ぶ";
 "library.fromStart" = "初期局面から";
 "library.games" = "対局の記録";
+"library.practice" = "練習";
 "library.empty" = "一手指せば、この対局はここに残る。";
 "library.recognising" = "盤を読んでいる";
 "library.noPicture" = "画像を取得できなかった";

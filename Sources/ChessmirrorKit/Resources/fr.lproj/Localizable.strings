@@ -24,6 +24,7 @@
 "origin.fresh" = "Posée";
 "origin.recognised" = "Photographiée";
 "origin.imported" = "Importée";
+"origin.practised" = "Entraînement";
 
 "quality.blunder" = "Gaffe";
 "quality.mistake" = "Erreur";
@@ -170,6 +171,7 @@
 "library.fromFiles" = "Depuis les fichiers";
 "library.fromStart" = "Partir de la position initiale";
 "library.games" = "Parties";
+"library.practice" = "Entraînement";
 "library.empty" = "Jouez un coup et la partie s'inscrira ici.";
 "library.recognising" = "Lecture de l'échiquier";
 "library.noPicture" = "Image inaccessible";

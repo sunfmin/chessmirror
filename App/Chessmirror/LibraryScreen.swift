@@ -39,6 +39,9 @@ struct LibraryScreen: View {
     @State private var isPhotoPickerOpen = false
     @State private var isFileImporterOpen = false
     @State private var isAboutShowing = false
+    /// Whether what practice left behind is open. Shut on every arrival: it is a drawer, not a
+    /// place the app remembers you were standing in.
+    @State private var isPracticeShowing = false
     @State private var photoItem: PhotosPickerItem?
     @State private var isRecognising = false
     @State private var failure: (title: String, message: String)?
@@ -489,14 +492,21 @@ struct LibraryScreen: View {
         .accessibilityLabel("\(title) \(best.value)")
     }
 
-    /// The games, as one flat list.
+    /// The games, as one flat list, with what practice left behind folded away under it.
     ///
     /// Flat, and that is the change: a game used to be a work that got curated into a collection,
     /// and it is raw material now — nobody curates the source of their own mistakes (docs/adr/0028).
     /// What a person looks for here is the game they just played, so the order is the order they
     /// arrived in and there is nothing to open first.
+    ///
+    /// **Except the drills.** Every 错题 answered leaves a file — a move and the engine's reply for
+    /// an answer that held, a bare position and a 试招 for one that did not (docs/adr/0047) — and
+    /// ten of those a day is the list a person came here to read, buried under the day's homework.
+    /// They are games all the same, so they are here, behind one row that says how many.
     private var games: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let practised = library.entries.filter { $0.origin == .practised }
+        let played = library.entries.filter { $0.origin != .practised }
+        return VStack(alignment: .leading, spacing: 8) {
             Text(localized("library.games")).eyebrow().padding(.top, 6)
 
             if library.entries.isEmpty {
@@ -507,7 +517,48 @@ struct LibraryScreen: View {
                     .padding(.vertical, 10)
             }
 
-            GameList(entries: library.entries) { open($0) }
+            GameList(entries: played) { open($0) }
+
+            if !practised.isEmpty {
+                practiceDrawer(practised)
+            }
+        }
+    }
+
+    /// What practice left behind: one row saying how many, and the games themselves when it is
+    /// opened. Shut to begin with, because a drill is a thing the player did rather than a game
+    /// they want to find again — and open it is the same list, with the position each one asked
+    /// about drawn on its row.
+    private func practiceDrawer(_ entries: [GameLibrary.Entry]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.snappy(duration: 0.22)) { isPracticeShowing.toggle() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: GameOrigin.practised.symbol).font(.footnote)
+                    Text(localized("library.practice")).font(.subheadline.weight(.medium))
+                    Spacer(minLength: 0)
+                    Text("\(entries.count)")
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(Palette.inkSoft)
+                    Image(systemName: isPracticeShowing ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                .foregroundStyle(Palette.ink)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localized("library.practice"))
+            .accessibilityValue("\(entries.count)")
+
+            if isPracticeShowing {
+                GameList(entries: entries) { open($0) }
+            }
         }
     }
 
