@@ -437,7 +437,14 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localized("noSlips.name"))
         .accessibilityValue(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
-        .disabled(session.isOccupied || (!engine.isReady && !session.isNoSlipsOn))
+        .disabled(!maySwitchNoSlips)
+    }
+
+    /// Whether the 把关 switch is pressable: the session has to accept a change of 线 at all
+    /// (`acceptsLines` — not mid-move, not in a 练习), and turning it *on* has to be possible
+    /// without an engine to stop anybody. One rule, read by both places that draw the switch.
+    private var maySwitchNoSlips: Bool {
+        session.acceptsLines && (engine.isReady || session.isNoSlipsOn)
     }
 
     // ------------------------------------------------------------------ the two sides
@@ -687,7 +694,7 @@ struct GameScreen: View {
                 set: { session.setNoSlips($0) }
             ))
             .toggleStyle(SettingToggleStyle(label: localized("noSlips.name")))
-            .disabled(session.isOccupied || (!engine.isReady && !session.isNoSlipsOn))
+            .disabled(!maySwitchNoSlips)
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))

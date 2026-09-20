@@ -387,6 +387,36 @@ func practiceKeepsItsCardsUnderNoSlips() throws {
     #expect(!game.isFindingTactics)
 }
 
+/// Contract: the 线 a drill is judged under are the session's own, and there is only the one
+/// value (docs/adr/0047). A switch that could put a 练习 out of 把关 would make the refusal the
+/// drill is built on optional.
+@MainActor
+@Test("a 练习 cannot be switched out of 把关, and the file says so")
+func practiceCannotLeaveTheGate() throws {
+    let (scripted, _) = try engine(
+        before: .centipawns(0), playing: "Qh4", after: .centipawns(133)
+    )
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let drill = try #require(Drill(position: afterNf3, engine: scripted, log: log))
+    let session = GameSession.practising(drill, engine: scripted)
+    defer { session.suspend() }
+
+    #expect(session.isNoSlipsOn, "a drill arrives under 把关 whatever the player's game is set to")
+    session.setNoSlips(false)
+    #expect(session.isNoSlipsOn, "and the switch cannot take it out")
+    #expect(drill.lines.noSlips)
+    #expect(session.lines == drill.lines, "one value, not two kept in step")
+
+    // Nor by the long way round, which is how a reopened game is handed the player's numbers.
+    session.setLines(JudgementLines(noSlips: false, record: 25, enqueue: 25))
+    #expect(session.isNoSlipsOn)
+    #expect(session.lines.record == drill.lines.record)
+
+    // And the file it writes says 把关 was on, which is what a later reader goes by.
+    #expect(session.pgn.intercept != nil)
+}
+
 // ------------------------------------------------------------------ under 把关
 
 /// Contract: 练习 is played under 把关 (docs/adr/0047).

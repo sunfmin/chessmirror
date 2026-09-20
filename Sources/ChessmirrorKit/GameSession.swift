@@ -282,8 +282,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         // under, and a game saved with it on comes back with it on. *Where* it stops the player
         // is the caller's 记录线 — the one number the player owns (docs/adr/0046) — and not the
         // number the file was saved under, which stays on the judgements that stood under it.
-        self.lines = lines
-        if PGN(game: game, tags: tags).intercept != nil { self.lines.noSlips = true }
+        self.ownLines = lines
+        if PGN(game: game, tags: tags).intercept != nil { self.ownLines.noSlips = true }
     }
 
     // ------------------------------------------------------------------ ways in
@@ -347,8 +347,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public static func practising(
         _ drill: Drill, engine: (any Engine)? = nil, library: GameLibrary? = nil
     ) -> GameSession {
-        // The drill's 线 are the session's: the attempt is judged and ruled under one value, and
-        // the screen's toggle and the 错招 row read the same one.
+        // The drill's 线 are the session's — read through `lines` for as long as the drill is
+        // here, so there is one value and not two kept in step. The initial value below is what
+        // the file is written under before anybody has played (`pgn`, docs/adr/0046).
         let session = GameSession(
             game: drill.game,
             controllers: [drill.mover: .hand, drill.mover.opposite: .engine],
@@ -772,7 +773,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The lines this game is judged by (docs/adr/0027, 0046). Per game rather than global: the
     /// numbers are the player's, and whether 把关 reads them is a thing one game is played under.
     /// Written through `setLines` and `setNoSlips`, which is where what follows a change lives.
-    public private(set) var lines: JudgementLines = .standard
+    ///
+    /// **A 练习 keeps no second copy.** While one is on, the drill's 线 *are* the session's: the
+    /// drill judges and rules the attempt under them (`Drill.lines`), and a session that kept its
+    /// own value beside them could be switched to 把关 off while the drill went on refusing —
+    /// 练习 is played under 把关, and a switch that can say otherwise makes ADR 0047 a suggestion.
+    public var lines: JudgementLines { practice?.lines ?? ownLines }
+
+    /// The 线 for a game nobody is practising. Read through `lines`, never around it.
+    private var ownLines: JudgementLines = .standard
 
     /// 把关: whether a move by hand is measured before it is allowed to stand.
     ///
@@ -814,6 +823,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         activity = .exercising(exercise)
     }
 
+    /// Whether the 线 may be moved right now.
+    ///
+    /// Not while a move is being weighed, and never in a 练习: a drill owns the 线 it judges and
+    /// rules its attempt under, and it is played under 把关 (docs/adr/0047). Said here rather than
+    /// only on the screen that draws the switch, so a screen that offers it by accident offers a
+    /// switch that does nothing rather than taking a drill out of 把关.
+    public var acceptsLines: Bool { !isOccupied && practice == nil }
+
     /// Switches 把关 on or off. It stops the player at the 记录线, **the only dial 把关 has on the
     /// judgement of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how
     /// much slack the coach cuts are two different questions, and answering both with one knob
@@ -828,11 +845,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// same consequences as flipping the switch alone: a refusal made under the old lines is
     /// forgotten, the file says the new ones, and the search starts over.
     public func setLines(_ new: JudgementLines) {
-        guard !isOccupied else { return }
+        guard acceptsLines else { return }
         guard new.isDrawn else { return }
         guard lines != new else { return }
         let interceptMoved = lines.intercept != new.intercept
-        lines = new
+        ownLines = new
         // A game going under 把关 puts its cards away; a practice session keeps them, because
         // what it deals is not decided by the switch (`dealsCards`).
         if interceptMoved, !dealsCards {
