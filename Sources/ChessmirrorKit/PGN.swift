@@ -369,6 +369,28 @@ public struct PGN: Hashable, Sendable {
         return lines
     }
 
+    /// As much of a PGN `Date` as the file actually knows, for a screen to show.
+    ///
+    /// PGN writes `????.??.??` for a date nobody recorded — it is this format's own way of
+    /// saying nothing, and `rosterDefault` writes it into every game saved without one — and a
+    /// partial date for one only half known. A row that prints the tag verbatim prints the
+    /// question marks: 「手摆 · ????.??.?? · 2 回合 · 未结束」.
+    ///
+    /// What is known is kept, from the year down, and the first unknown field ends it; nothing
+    /// known is lost, and nothing unknown is drawn. Nil when not even the year is known — and
+    /// the file's own modification date is **not** offered in its place, because for an imported
+    /// game that is when it was downloaded rather than when it was played, and a row showing one
+    /// as the other cannot be told from a row showing the truth.
+    public static func playedOn(_ tag: String?) -> String? {
+        guard let tag, !tag.isEmpty else { return nil }
+        var known: [Substring] = []
+        for field in tag.split(separator: ".", omittingEmptySubsequences: false) {
+            guard !field.isEmpty, !field.contains("?") else { break }
+            known.append(field)
+        }
+        return known.isEmpty ? nil : known.joined(separator: ".")
+    }
+
     /// Today in PGN's `YYYY.MM.DD`.
     public static func dateTag(_ date: Date = Date(), calendar: Calendar = .current) -> Tag {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)

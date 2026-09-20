@@ -42,10 +42,13 @@ import Foundation
         public var detail: String {
             if isDownloading { return localized("library.entry.downloading") }
             guard let pgn else { return localized("library.entry.unreadable") }
-            let date = pgn.tag("Date") ?? ""
             let result = pgn.game.resultToken
             let moves = (pgn.game.plies.count + 1) / 2
-            var parts = [origin.label, date, localized("library.entry.moves", plural: moves)]
+            // As much of the date as the file knows, and nothing where it knows none
+            // (`PGN.playedOn`).
+            var parts = [origin.label]
+            if let played = PGN.playedOn(pgn.tag("Date")) { parts.append(played) }
+            parts.append(localized("library.entry.moves", plural: moves))
             parts.append(result == "*" ? localized("library.entry.unfinished") : result)
             return parts.joined(separator: " · ")
         }

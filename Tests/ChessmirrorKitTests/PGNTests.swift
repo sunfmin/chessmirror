@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import Foundation
 import Testing
 
 private let start = PGN.standardStartFEN
@@ -359,4 +360,42 @@ func theFactsOfAGameRoundTripThroughTheirTags() throws {
     #expect(readImported.handColours == [.black], "the seats do not say whose moves are whose here")
     #expect(readImported.name == "Round 3")
     #expect(readImported.origin == .imported)
+}
+
+// ------------------------------------------------------------------ the date a row shows
+//
+// Contract: a row shows as much of the date as the file knows and no question marks. PGN's own
+// way of saying "nobody recorded this" is `????.??.??`, and it is written into every game saved
+// without a date — so the row that printed the tag verbatim printed that.
+
+@Test func aDateNobodyRecordedIsNotShown() {
+    #expect(PGN.playedOn("????.??.??") == nil)
+    #expect(PGN.playedOn(nil) == nil)
+    #expect(PGN.playedOn("") == nil)
+}
+
+@Test func aKnownDateIsShownWhole() {
+    #expect(PGN.playedOn("2026.09.20") == "2026.09.20")
+}
+
+@Test func aHalfKnownDateShowsOnlyWhatIsKnown() {
+    #expect(PGN.playedOn("2026.09.??") == "2026.09")
+    #expect(PGN.playedOn("2026.??.??") == "2026")
+    #expect(PGN.playedOn("????.09.20") == nil, "a month with no year is not a date to show")
+}
+
+/// The row itself: a game saved with no date says what it is and how long it is, and says
+/// nothing where the date would be.
+@MainActor
+@Test func aRowWithNoDateShowsNoQuestionMarks() throws {
+    let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    let undated = PGN(game: game, tags: [PGN.Tag("Date", "????.??.??")])
+    let entry = GameLibrary.Entry(url: URL(filePath: "/games/monday.pgn"), pgn: undated, modified: Date())
+
+    #expect(!entry.detail.contains("?"))
+    #expect(entry.detail.contains(localized("library.entry.moves", plural: 1)))
+
+    let dated = PGN(game: game, tags: [PGN.Tag("Date", "2026.09.20")])
+    let known = GameLibrary.Entry(url: URL(filePath: "/games/monday.pgn"), pgn: dated, modified: Date())
+    #expect(known.detail.contains("2026.09.20"))
 }
