@@ -121,7 +121,8 @@ public struct DrillVerdict: Hashable, Sendable {
     private var judging: Task<Void, Never>?
     private let engine: (any Engine)?
     private let log: PracticeLog
-    /// The three 线 this attempt is judged and ruled under.
+    /// The 线 this attempt is judged and ruled under, with 把关 on (docs/adr/0047): the player's
+    /// two numbers as they are, and the switch the drill does not leave to a setting.
     public let lines: JudgementLines
     private let source: Source
     private let clock: @Sendable () -> Date
@@ -143,7 +144,15 @@ public struct DrillVerdict: Hashable, Sendable {
         self.game = game
         self.engine = engine
         self.log = log
-        self.lines = lines
+        // 练习 is played under 把关, whatever a game of the player's is set to (docs/adr/0047).
+        // Here rather than at the screen that opens a drill, because a rule a caller has to
+        // remember is a rule the app went four months without: the refusal was written, tested
+        // and unreachable, and every 错题 answered wrong stood on the board instead.
+        self.lines = {
+            var mine = lines
+            mine.noSlips = true
+            return mine
+        }()
         self.source = source
         self.clock = clock
         startedAt = clock()

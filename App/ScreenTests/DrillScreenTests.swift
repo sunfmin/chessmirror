@@ -54,7 +54,7 @@ struct DrillScreenshots {
     /// where `san` leads.
     private func drill(
         playing san: String?, before: Int, after: Int, wanting: String
-    ) throws -> (drill: Drill, move: Move?, log: PracticeLog) {
+    ) throws -> (drill: Drill, move: Move?, log: PracticeLog, engine: ScriptedEngine) {
         let start = try #require(Game(startFEN: position.text + " 0 1"))
         var reached = start
         var move: Move?
@@ -78,7 +78,7 @@ struct DrillScreenshots {
         }
         let engine = ScriptedEngine([], byPosition: opinions)
         let log = temporaryLog()
-        return (try #require(Drill(position: position, engine: engine, log: log)), move, log)
+        return (try #require(Drill(position: position, engine: engine, log: log)), move, log, engine)
     }
 
     private func index(_ log: PracticeLog) -> MistakeIndex { MistakeIndex(log: log) }
@@ -97,7 +97,7 @@ struct DrillScreenshots {
 
     @Test("the position goes up with nothing said about it")
     func nothingIsGivenAwayBeforeTheMove() async throws {
-        let (drill, _, log) = try drill(playing: nil, before: 0, after: 0, wanting: "Nc6")
+        let (drill, _, log, _) = try drill(playing: nil, before: 0, after: 0, wanting: "Nc6")
         defer { try? FileManager.default.removeItem(at: log.url) }
 
         let rendered = await ScreenImage.write("drill-asking", interact: { window in
@@ -130,18 +130,22 @@ struct DrillScreenshots {
 
     @Test("a failed attempt keeps its feedback on the shared, playable game screen")
     func aFailedAttemptIsSettledOnScreen() async throws {
-        let (drill, move, log) = try drill(
+        let (drill, move, log, engine) = try drill(
             playing: "Qh4", before: 0, after: 133, wanting: "Nc6"
         )
         defer { try? FileManager.default.removeItem(at: log.url) }
-        drill.play(try #require(move))
-        await drill.settled()
+        // Through the session, which is how the screen plays it: the drill rules its own attempt
+        // and the session lands the ruling, so a wrong answer is taken back (docs/adr/0047).
+        let session = GameSession.practising(drill, engine: engine)
+        defer { session.suspend() }
+        session.play(try #require(move))
+        await session.settled()
 
         let rendered = await ScreenImage.write("drill-settled") {
             NavigationStack {
-                DrillScreen(drill: drill, mistake: mistake(), path: .constant([]))
+                GameScreen(session: session, path: .constant([]))
             }
-            .environment(EngineHost(ScriptedEngine([])))
+            .environment(EngineHost(engine))
             .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
             .environment(index(log))
         }
@@ -157,22 +161,33 @@ struct DrillScreenshots {
         // 下一题 only appears when there is another one; this book has exactly this position.
         #expect(!rendered.says("下一题"))
         #expect(log.attempts().count == 1, "and the attempt was written down")
+
+        // The move is not standing on the board: it was taken back, and the 试招 is on the
+        // position it was played from, where the chip under the record reads it.
+        #expect(session.game.plies.isEmpty)
+        #expect(session.board.state.fen == position.text + " 0 1")
+        #expect(session.pendingAttempts.map(\.san) == ["Qh4"])
+        #expect(session.isNoSlipsOn)
+        #expect(session.dealsCards, "and practice keeps its cards under 把关")
     }
 
     @Test("a move that holds is told so too, and is not argued with")
     func aPassIsAlsoToldSomething() async throws {
-        let (drill, move, log) = try drill(
+        let (drill, move, log, engine) = try drill(
             playing: "Nc6", before: 0, after: 45, wanting: "d5"
         )
         defer { try? FileManager.default.removeItem(at: log.url) }
-        drill.play(try #require(move))
-        await drill.settled()
+        let session = GameSession.practising(drill, engine: engine)
+        defer { session.suspend() }
+        session.play(try #require(move))
+        await session.settled()
+        #expect(session.game.plies.count == 1, "an answer that holds stands")
 
         let rendered = await ScreenImage.write("drill-passed") {
             NavigationStack {
-                DrillScreen(drill: drill, mistake: mistake(), path: .constant([]))
+                GameScreen(session: session, path: .constant([]))
             }
-            .environment(EngineHost(ScriptedEngine([])))
+            .environment(EngineHost(engine))
             .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
             .environment(index(log))
         }

@@ -2467,7 +2467,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func save() {
         guard !isWeighing else { return }
         guard let library else { return }
-        guard url != nil || !game.plies.isEmpty else { return }
+        // A refusal is as much a thing that happened as a move is (docs/adr/0037, 0047). It used
+        // to take a move to make a game worth a file, so being stopped at the first position and
+        // putting the phone down left nothing behind — in a drill, where the first position is
+        // the whole question, that was every 错题 answered wrong and walked away from.
+        guard url != nil || !game.plies.isEmpty || !game.pendingTried.isEmpty else { return }
         if url == nil { url = library.newURL() }
         guard let url else { return }
         library.write(pgn, to: url)

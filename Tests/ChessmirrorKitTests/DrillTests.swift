@@ -386,3 +386,76 @@ func practiceKeepsItsCardsUnderNoSlips() throws {
     game.setFindingTactics(true)
     #expect(!game.isFindingTactics)
 }
+
+// ------------------------------------------------------------------ under 把关
+
+/// Contract: 练习 is played under 把关 (docs/adr/0047).
+///
+/// The wrong answer comes off the board, the 试招 is written at the position it was played from,
+/// the file is saved although no move stands — answered wrong and walked away from is the
+/// commonest 错题 there is (docs/adr/0037) — and the book counts one more 遭遇 while the log
+/// still counts one go.
+@MainActor
+@Test("a wrong answer is taken back, written down, and lands in the book")
+func aWrongAnswerIsTakenBackAndWrittenDown() async throws {
+    let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let library = GameLibrary(folder: GameFolder(url: directory))
+    let log = PracticeLog(url: directory.appending(path: "practice.jsonl"))
+    let (scripted, move) = try engine(
+        before: .centipawns(0), playing: "Qh4", after: .centipawns(133), wanting: "Nc6"
+    )
+    // The lines the app hands a drill: the player's two numbers, with 把关 off. The drill switches
+    // it on itself, which is the whole of this change.
+    let drill = try #require(Drill(
+        position: afterNf3, engine: scripted, log: log, lines: JudgementLines(noSlips: false),
+        source: .daily
+    ))
+    #expect(drill.lines.noSlips, "练习 is played under 把关 whatever a game is set to")
+    let session = GameSession.practising(drill, engine: scripted, library: library)
+    defer { session.suspend() }
+
+    session.play(move)
+    await session.settled()
+
+    #expect(drill.verdict?.passed == false)
+    #expect(session.game.plies.isEmpty, "the wrong answer came back off the board")
+    #expect(session.refused?.san == "Qh4")
+    #expect(session.game.pendingTries(atPly: 0).map(\.san) == ["Qh4"])
+    #expect(session.board.state.fen == afterNf3.text + " 0 1", "the question is on the board again")
+    #expect(log.attempts().count == 1, "one go, whatever the book makes of it")
+
+    let url = try #require(session.url, "a refusal is worth a file even with no move in it")
+    let saved = try PGN(parsing: String(contentsOf: url, encoding: .utf8))
+    #expect(saved.game.plies.isEmpty)
+    #expect(saved.handColours == [afterNf3.sideToMove])
+    let book = MistakeBook.derive(
+        from: [GameLibrary.Entry(url: url, pgn: saved, modified: Date())]
+    )
+    #expect(book.mistakes.count == 1)
+    #expect(book.mistakes.first?.position == afterNf3)
+    #expect(book.mistakes.first?.encounters.first?.played == "Qh4")
+}
+
+/// The other half: an answer that holds still stands, and the game goes on from it.
+@MainActor
+@Test("an answer that holds stands, and 把关 is still on for what follows")
+func anAnswerThatHoldsStands() async throws {
+    let (scripted, move) = try engine(
+        before: .centipawns(0), playing: "Nc6", after: .centipawns(45), wanting: "d5"
+    )
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let drill = try #require(Drill(position: afterNf3, engine: scripted, log: log))
+    let session = GameSession.practising(drill, engine: scripted)
+    defer { session.suspend() }
+
+    session.play(move)
+    await session.settled()
+
+    #expect(drill.verdict?.passed == true)
+    #expect(session.game.plies.count == 1)
+    #expect(session.refused == nil)
+    #expect(session.isNoSlipsOn, "and what follows is played under 把关 too")
+}
