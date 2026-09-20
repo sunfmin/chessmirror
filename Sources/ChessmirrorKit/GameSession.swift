@@ -1447,10 +1447,15 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let finish = viewed.finish
         let bar = Strip.Bar(score: feedbackScore, finish: finish)
         let tally = noSlips
+        // A search to account for is one that has got somewhere, or one that is running and has
+        // not yet: zero is "in flight, nothing said", and is never said of a board nothing is
+        // searching — a session with no engine used to read 深度 0 for as long as it was open.
+        let reached = searchProgress?.depth ?? 0
+        let accountsForASearch = phase != .exercising && finish == nil && (reached > 0 || isSearching)
         return Strip(
             voice: standing,
             tally: isNoSlipsOn || tally.longestRun > 0 ? tally : nil,
-            depth: phase != .exercising && finish == nil ? (searchProgress?.depth ?? 0) : nil,
+            depth: accountsForASearch ? reached : nil,
             bar: bar
         )
     }

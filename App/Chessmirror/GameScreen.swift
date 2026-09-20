@@ -324,9 +324,12 @@ struct GameScreen: View {
                         EmptyView()
                     }
                 }
-                // The search has to account for itself (docs/adr/0020).
+                // The search has to account for itself (docs/adr/0020) — and one that has said
+                // nothing yet accounts for itself in words: a depth of nought is not a report.
+                // The width is the depth label's either way, so the row does not jump when the
+                // first depth lands.
                 if let depth = strip.depth {
-                    Text(localized("game.depth", depth))
+                    Text(depth > 0 ? localized("game.depth", depth) : localized("noSlips.judging"))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                 }
