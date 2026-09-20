@@ -39,6 +39,15 @@ import Foundation
             return GameLibrary.fallbackName(for: url)
         }
 
+        /// The position a row draws. Where the game stands, except for a 练习 file, which draws
+        /// the 错题 it was asked about — the position it started from. A drill answered right has
+        /// moved on from that position, and a row drawing where it ended says nothing about which
+        /// question it answered; the 错题 *is* the position (docs/adr/0047).
+        public var shownFEN: String? {
+            guard let pgn else { return nil }
+            return origin == .practised ? pgn.game.startFEN : pgn.game.state.fen
+        }
+
         public var detail: String {
             if isDownloading { return localized("library.entry.downloading") }
             guard let pgn else { return localized("library.entry.unreadable") }
@@ -48,6 +57,14 @@ import Foundation
             // (`PGN.playedOn`).
             var parts = [origin.label]
             if let played = PGN.playedOn(pgn.tag("Date")) { parts.append(played) }
+            // A 错题 answered wrong and walked away from is a file with no move in it and a 试招
+            // on the first position (docs/adr/0047). "0 回合 · 未结束" is true of it and says
+            // nothing; what happened is the move that was taken back.
+            if origin == .practised, pgn.game.plies.isEmpty,
+               let tried = pgn.game.pendingTries(atPly: 0).last {
+                parts.append(localized("library.entry.tried", tried.san))
+                return parts.joined(separator: " · ")
+            }
             parts.append(localized("library.entry.moves", plural: moves))
             parts.append(result == "*" ? localized("library.entry.unfinished") : result)
             return parts.joined(separator: " · ")

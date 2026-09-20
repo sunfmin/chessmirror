@@ -10,6 +10,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Downloaded from a PGN link, whole chapters at a time (docs/adr/0014). The game
     /// text is the study's own, so there is nothing to take back to an editor for.
     case imported
+    /// Begun as a 错题, in practice (docs/adr/0047). A real game — it is played on from, it is
+    /// judged, and its 试招 fill the book like any other's — and one the player did not sit down
+    /// to play, so the list keeps it apart from the ones they did.
+    case practised
 
     /// Written into the PGN so the distinction survives a relaunch. Not a standard tag;
     /// PGN has no opinion about where a position came from, and readers ignore what they do
@@ -22,6 +26,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .fresh: localized("origin.fresh")
         case .recognised: localized("origin.recognised")
         case .imported: localized("origin.imported")
+        case .practised: localized("origin.practised")
         }
     }
     public var symbol: String {
@@ -29,6 +34,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .fresh: "square.grid.3x3"
         case .recognised: "camera"
         case .imported: "link"
+        case .practised: "figure.mind.and.body"
         }
     }
 }
@@ -343,9 +349,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     ) -> GameSession {
         // The drill's 线 are the session's: the attempt is judged and ruled under one value, and
         // the screen's toggle and the 错招 row read the same one.
-        let session = fresh(drill.game, controllers: [
-            drill.mover: .hand, drill.mover.opposite: .engine
-        ], engine: engine, library: library, lines: drill.lines)
+        let session = GameSession(
+            game: drill.game,
+            controllers: [drill.mover: .hand, drill.mover.opposite: .engine],
+            // What it is, written into the file it saves: a game that began as a 错题
+            // (docs/adr/0047). Every answered question leaves one, and the list reads this to
+            // keep them out of the way of the games the player sat down to play.
+            origin: .practised,
+            lines: drill.lines
+        )
+        session.attach(engine: engine, library: library)
         session.practice = drill
         session.orientation = drill.mover == .white ? .whiteAtBottom : .blackAtBottom
         return session
@@ -411,11 +424,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// moves are there to be walked through, and the last position is the one thing about a
     /// finished game you already know. 下一步 is the first tap either way.
     ///
-    /// The Controllers are not stored in PGN — nothing in the format has anywhere to put them — so
-    /// a reopened game starts with the side about to move in hand, the other side on the engine,
-    /// and in practice: no arrow, no number, nobody whispering an answer. Reading faces the play:
-    /// the person who opens a record plays its first move, and the engine answers it — as soon as
-    /// it has finished loading, if the record got opened first.
+    /// In the seat the file gave it (`seats(named:startingSideToMove:)`): the roster says which
+    /// side was played by hand, and that side is still the player's when the record comes back.
+    /// A record that names neither side, or both, faces the play instead — the person who opens it
+    /// plays its first move, and the engine answers it, as soon as it has finished loading if the
+    /// record got opened first. Either way it opens in practice: no arrow, no number, nobody
+    /// whispering an answer.
+    ///
+    /// Opening writes nothing. The seats are settled as the session is made rather than switched
+    /// afterwards, because switching one saves the file — and a record that rewrites its own
+    /// roster the moment it is looked at is a record whose 错题 change hands (docs/adr/0028).
     ///
     /// Nil — refused, not failed — while the file is still on the way from iCloud. Opening it
     /// would give an empty board wearing the real game's file name, and the autosave after the
@@ -433,7 +451,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard !entry.isDownloading else { return nil }
         let session = GameSession(entry: entry, library: library, strength: strength, lines: lines)
         session.attach(engine: engine, library: library)
-        session.seatEngineOpponent()
         return session
     }
 
@@ -476,9 +493,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let facing = hands.count == 1 ? hands.first! : game.startingSideToMove
         self.init(
             game: game,
-            // The other side is handed to the engine by `opened`. Practice is not set here or
-            // there: it is where every Game starts.
-            controllers: [.white: .hand, .black: .hand],
+            // Seated here rather than by `opened`, because seating through `setController` writes
+            // the file — and opening a record must not change it before the player has touched it.
+            controllers: Self.seats(named: hands, startingSideToMove: game.startingSideToMove),
             // A record that names the player's side (an import tracked as Black, a game where the
             // engine had White) opens with that side at the bottom: it is their game, seen from
             // their chair. Any other record faces the side about to move: reading begins where
@@ -558,6 +575,26 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         setController(.engine, for: game.startingSideToMove.opposite)
     }
 
+    /// The seats a saved record comes back to.
+    ///
+    /// **The file's word first.** A record names who played each side — `手动` against the
+    /// engine's name — and the 错题本 counts a game's mistakes over exactly those colours
+    /// (`PGN.handColours`, docs/adr/0028). Seating by the side that happens to move first instead
+    /// put the player's own colour on the engine whenever the two differ — a photographed position
+    /// with White to move in a game the player has Black in, an import tracked as Black, a game
+    /// whose first move was handed over — and then wrote the flipped roster back to the file, so
+    /// the game's 错题 changed owner and left the book.
+    ///
+    /// A file that names one side leaves that side in hand and gives the engine the other. A file
+    /// that names both, or names none, has nothing to say about who is playing now: then the side
+    /// about to move is the person's, which is where reading a record begins.
+    static func seats(
+        named hands: Set<PieceColour>, startingSideToMove: PieceColour
+    ) -> [PieceColour: Controller] {
+        let mine = hands.count == 1 ? hands.first! : startingSideToMove
+        return [mine: .hand, mine.opposite: .engine]
+    }
+
     public func controller(for colour: PieceColour) -> Controller {
         controllers[colour] ?? .hand
     }
@@ -591,7 +628,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Turns the tactics finder on, or back off. Takes effect now: a shot left standing after
     /// the switch is thrown is the one thing the live board must not keep drawing.
     public func setFindingTactics(_ on: Bool) {
-        guard !isNoSlipsOn || !on else { return }
+        guard dealsCards || !on else { return }
         guard isFindingTactics != on else { return }
         if !on {
             finder.turnOff()
@@ -744,11 +781,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// sits beside 谁执白 and 引擎想多久 rather than in the app's settings: any position can be
     /// played under 把关, including one reached by playing on from a 错题 or read off a photograph.
     public var isNoSlipsOn: Bool { lines.noSlips }
-    /// Whether the deck is dealt and a card may ask the engine: never under 把关. A card is an
-    /// opinion about the position in front of the player, and 把关 says nothing about what to
-    /// play (docs/adr/0031, 0040). The one rule, read here by the screen that deals and by the
-    /// session that answers, so the two cannot disagree about whether a card is on the table.
-    public var dealsCards: Bool { !isNoSlipsOn }
+    /// Whether the deck is dealt and a card may ask the engine. The one rule, read here by the
+    /// screen that deals, by the session that answers and by the finder's own switch, so none of
+    /// the three can disagree about whether a card is on the table.
+    ///
+    /// **Never in a 把关 game**: a card is an opinion about the position in front of the player,
+    /// and 把关 says nothing about what to play (docs/adr/0031, 0040).
+    ///
+    /// **Always in a practice session**, 把关 or not. This used to read the switch alone, which
+    /// tied two unrelated things together: whether anybody is stopping your hand, and whether 杀
+    /// and 战术 may be looked at. A drill's help is counted rather than withheld — pressing a card
+    /// is a rung on the practice log's `hints` (docs/adr/0029) — so putting practice under 把关
+    /// would have taken the cards away and left that number with nothing to count.
+    public var dealsCards: Bool { practice != nil || !isNoSlipsOn }
     public var findsPunishment = false
     /// The exercise last put on the board, kept once it is finished so its answer can still be
     /// read. Whether it is *on* the board is the activity's to say (`activePunishment`).
@@ -788,7 +833,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         guard lines != new else { return }
         let interceptMoved = lines.intercept != new.intercept
         lines = new
-        if interceptMoved, new.noSlips {
+        // A game going under 把关 puts its cards away; a practice session keeps them, because
+        // what it deals is not decided by the switch (`dealsCards`).
+        if interceptMoved, !dealsCards {
             analysis = nil
             setFindingTactics(false)
         }
@@ -2433,7 +2480,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func save() {
         guard !isWeighing else { return }
         guard let library else { return }
-        guard url != nil || !game.plies.isEmpty else { return }
+        // A refusal is as much a thing that happened as a move is (docs/adr/0037, 0047). It used
+        // to take a move to make a game worth a file, so being stopped at the first position and
+        // putting the phone down left nothing behind — in a drill, where the first position is
+        // the whole question, that was every 错题 answered wrong and walked away from.
+        guard url != nil || !game.plies.isEmpty || !game.pendingTried.isEmpty else { return }
         if url == nil { url = library.newURL() }
         guard let url else { return }
         library.write(pgn, to: url)

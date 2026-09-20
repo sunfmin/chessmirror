@@ -57,7 +57,9 @@ _Avoid_: 走势, 评估曲线
 
 **遭遇 (Occurrence)**:
 One time the player fell for a 错题 — when, in which game, which move they played, what it
-cost, where it came from. A 错题 owns a list of them.
+cost, where it came from. A 错题 owns a list of them. A 试招 refused while practising is one of
+these like any other: the book counts occasions and the 练习日志 counts goes, and neither is read
+off the other (docs/adr/0047).
 _Avoid_: 记录, 实例, 犯错
 
 **复发 (Recurrence)**:
@@ -90,8 +92,10 @@ worth remembering without being worth drilling. Both ship at ten.
 ### 日课 — the day's practice
 
 **练习 (Practice)**:
-Working through 日课 or revisiting a 错题. Not a synonym for hiding the engine's answer,
-and not the opposite of 把关: 把关 names whether wrong moves may stand during a game.
+Working through 日课 or revisiting a 错题, **played under 把关**: the wrong answer comes back off
+the board and is written down where it happened (docs/adr/0047). Not the opposite of 把关, and
+never was — and not a synonym for hiding the engine's answer either: 杀 and 战术 are dealt here
+the way they are in an ordinary game, and opening one is counted as help rather than refused.
 
 **日课 (Daily)**:
 The 错题 due today, as one queue, in one order. **It cannot be filtered, sorted or split** —

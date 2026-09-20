@@ -26,6 +26,7 @@
 "origin.fresh" = "手摆";
 "origin.recognised" = "识别";
 "origin.imported" = "导入";
+"origin.practised" = "练习";
 
 "quality.blunder" = "漏着";
 "quality.mistake" = "失误";
@@ -92,6 +93,7 @@
 "library.entry.unreadable" = "无法读取";
 "library.entry.moves" = "%d 回合";
 "library.entry.unfinished" = "未结束";
+"library.entry.tried" = "试招 %@";
 
 
 /* ---------------------------------------------------------------- 说了干什么，棋盘认不认 */
@@ -193,6 +195,7 @@
 "library.fromFiles" = "从文件选";
 "library.fromStart" = "从开局摆起";
 "library.games" = "对局记录";
+"library.practice" = "练习";
 "library.empty" = "走出第一步，这局就会记在这里。";
 "library.recognising" = "在认棋盘";
 "library.noPicture" = "没能拿到图片";

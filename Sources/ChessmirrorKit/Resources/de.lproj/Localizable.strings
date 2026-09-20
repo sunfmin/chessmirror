@@ -24,6 +24,7 @@
 "origin.fresh" = "Aufgebaut";
 "origin.recognised" = "Fotografiert";
 "origin.imported" = "Importiert";
+"origin.practised" = "Übung";
 
 "quality.blunder" = "Grober Fehler";
 "quality.mistake" = "Fehler";
@@ -81,6 +82,7 @@
 "library.entry.moves" = "%d Züge";
 "library.entry.moves.one" = "%d Zug";
 "library.entry.unfinished" = "Unbeendet";
+"library.entry.tried" = "Versucht: %@";
 "library.entry.branches.one" = "%d Variante";
 
 "check.take.notHere" = "dieser Zug schlägt nichts auf %@";
@@ -170,6 +172,7 @@
 "library.fromFiles" = "Aus Dateien";
 "library.fromStart" = "Von der Grundstellung";
 "library.games" = "Partien";
+"library.practice" = "Übung";
 "library.empty" = "Mach einen Zug, dann steht die Partie hier.";
 "library.recognising" = "Brett wird gelesen";
 "library.noPicture" = "Bild nicht bekommen";

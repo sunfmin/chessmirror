@@ -40,6 +40,67 @@ struct LibraryScreenScreenshots {
         }
         #expect(rendered.says(message))
     }
+    /// What practice leaves behind is a game, and there are ten of them a day: they go in a drawer
+    /// of their own so the list a person came here to read is still the one on top (docs/adr/0047).
+    @Test("the games a drill left behind are folded away behind one row")
+    func practiceGamesAreFoldedAway() async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let index = MistakeIndex(log: PracticeLog(url: directory.appending(path: "p.jsonl")))
+
+        let played = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+        #expect(library.write(
+            PGN(
+                game: played, seats: [.white: .hand, .black: .engine], origin: .fresh,
+                lines: JudgementLines(noSlips: true),
+                carrying: [PGN.Tag(GameLibrary.nameTag, "周二那盘")]
+            ),
+            to: directory.appending(path: "played.pgn")
+        ))
+        for (number, name) in ["练习甲", "练习乙", "练习丙"].enumerated() {
+            var position = try #require(Game(
+                startFEN: "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
+            ))
+            // The first one is a question answered wrong and walked away from: no move in the
+            // file at all, and a 试招 on the position it asked about (docs/adr/0047).
+            if number == 0 {
+                position.recordTried(Game.Ply.Tried(san: "Qh4", drop: 12.4, depth: 20), atPly: 0)
+            }
+            #expect(library.write(
+                PGN(
+                    game: position, seats: [.black: .hand, .white: .engine],
+                    origin: .practised, lines: JudgementLines(noSlips: true),
+                    carrying: [PGN.Tag(GameLibrary.nameTag, name)]
+                ),
+                to: directory.appending(path: "drill-\(number).pgn")
+            ))
+        }
+
+        let rendered = await ScreenImage.write("library-practice-drawer", interact: { window in
+            let shut = ScreenImage.words(in: window)
+            #expect(shut.contains { $0.contains("周二那盘") }, "the game they played is on the list")
+            #expect(!shut.contains { $0.contains("练习甲") }, "and the day's drills are not")
+            #expect(ScreenImage.activate(localized("library.practice"), in: window))
+            await ScreenImage.settle()
+            let open = ScreenImage.words(in: window)
+            #expect(open.contains { $0.contains("练习甲") })
+            #expect(
+                open.contains { $0.contains("Qh4") },
+                "and the one with no move in it says what was taken back"
+            )
+        }) {
+            LibraryScreen()
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library)
+                .environment(index)
+                .environment(LanguageSetting.shared)
+        }
+
+        #expect(rendered.says(localized("library.practice")))
+        #expect(rendered.says("周二那盘"))
+    }
+
     /// A library in a fresh temporary folder, so nothing here touches the real Games folder.
     private func library(in tempDir: URL) -> GameLibrary {
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)

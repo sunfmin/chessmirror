@@ -16,8 +16,9 @@ struct MineTests {
         return url
     }
 
-    /// An imported game the player was Black in, opened with White to move — so the seat in hand
-    /// is White's — still counts Black's moves as the player's, on the row as on the ladder.
+    /// An imported game the player was Black in opens from Black's chair (docs/adr/0047 era:
+    /// the roster is the seating plan) and counts Black's moves as the player's, on the row as on
+    /// the ladder — whichever seat it is read from, which is what the tag is for.
     @Test func anImportedGameCountsTheTrackedSideWhateverSeatItIsReadFrom() throws {
         let folder = try folder()
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -35,8 +36,9 @@ struct MineTests {
         let session = try #require(GameSession.opened(entry, library: library))
         defer { session.suspend() }
 
-        #expect(session.controller(for: .white) == .hand, "opened facing the side to move")
-        #expect(session.mine == [.black], "and still the player's side is the one the import tracked")
+        #expect(session.controller(for: .black) == .hand, "the side the import tracked is theirs")
+        #expect(session.controller(for: .white) == .engine)
+        #expect(session.mine == [.black], "and the player's side is the one the import tracked")
         #expect(session.noSlips == game.noSlips(by: [.black]))
         #expect(session.noSlips.longestRun == 2)
         #expect(session.mine == (try PGN(parsing: session.pgn.text)).handColours)
