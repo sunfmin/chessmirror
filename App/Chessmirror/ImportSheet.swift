@@ -171,7 +171,7 @@ struct ImportSheet: View {
             presenting: choosingSide
         ) { chapter in
             ForEach([PieceColour.white, .black], id: \.self) { side in
-                Button("\(side.label) · \(chapter.pgn.tag(side == .white ? "White" : "Black") ?? "?")") {
+                Button("\(side.label) · \(chapter.pgn.playerName(side) ?? "?")") {
                     if let entry = session.open(chapter, into: library, tracking: side) {
                         onOpen?(entry)
                         dismiss()
@@ -388,7 +388,7 @@ struct ImportSheet: View {
     private func row(_ chapter: PGNImport.ImportChapter, account: String?) -> some View {
         let side = account.flatMap { PGNImport.side(of: $0, in: chapter.pgn) }
         let status = session.status(of: chapter, in: library, book: index).label
-        let opponent = side.map { chapter.pgn.tag($0 == .white ? "Black" : "White") ?? "?" }
+        let opponent = side.map { chapter.pgn.playerName($0.opposite) ?? "?" }
         let verdict = side.flatMap { PGNImport.verdict(for: $0, in: chapter.pgn) }
         let when = side != nil ? PGNImport.playedAt(chapter.pgn) : nil
         return Button {

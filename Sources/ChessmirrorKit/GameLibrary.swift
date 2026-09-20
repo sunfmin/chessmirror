@@ -45,7 +45,7 @@ import Foundation
         /// statement about the last time anything touched the file — a re-save, a rename, a
         /// Review landing — which is not when the player fell for anything.
         public var when: Date {
-            pgn.flatMap { PGN.playedDay($0.tag("Date")) } ?? modified
+            pgn.flatMap { PGN.playedDay($0.tag(PGN.Tags.date)) } ?? modified
         }
 
         /// The position a row draws. Where the game stands, except for a 练习 file, which draws
@@ -65,7 +65,7 @@ import Foundation
             // As much of the date as the file knows, and nothing where it knows none
             // (`PGN.playedOn`).
             var parts = [origin.label]
-            if let played = PGN.playedOn(pgn.tag("Date")) { parts.append(played) }
+            if let played = PGN.playedOn(pgn.tag(PGN.Tags.date)) { parts.append(played) }
             // A 错题 answered wrong and walked away from is a file with no move in it and a 试招
             // on the first position (docs/adr/0047). "0 回合 · 未结束" is true of it and says
             // nothing; what happened is the move that was taken back.
@@ -83,7 +83,7 @@ import Foundation
     public private(set) var entries: [Entry] = []
 
     /// The tag a game's own name lives in.
-    public nonisolated static let nameTag = "Name"
+    public nonisolated static let nameTag = PGN.Tags.name
 
     public func sortedByName(_ list: [Entry]) -> [Entry] {
         list.sorted { Self.reads($0.title, before: $1.title) }
@@ -180,7 +180,7 @@ import Foundation
                     current.game == original.game else { return completed(.superseded) }
                 var result = current
                 result.game = judged.game
-                result.setTag("ReviewSift", to: judged.tag("ReviewSift"))
+                result.setTag(PGN.Tags.reviewSift, to: judged.tag(PGN.Tags.reviewSift))
                 completed(write(result, to: entry.url) ? .reviewed(result) : .failed)
             } catch {
                 // No partial scores are saved; asking again starts the job over.

@@ -23,7 +23,7 @@ public struct PGN: Hashable, Sendable {
     public static let standardStartFEN =
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-    private static let rosterOrder = ["Event", "Site", "Date", "Round", "White", "Black", "Result"]
+    private static let rosterOrder = [Tags.event, Tags.site, Tags.date, Tags.round, Tags.white, Tags.black, Tags.result]
 
     public init(game: Game, tags: [Tag] = []) {
         self.game = game
@@ -42,9 +42,47 @@ public struct PGN: Hashable, Sendable {
     // and the 连正榜 read the same properties off the same file, which is how the row under the
     // board and the ladder come to agree about whose moves are whose.
 
-    static let interceptTag = "Intercept"
+    /// The tag names this app knows by name.
+    ///
+    /// **The one place a fact gets its tag name.** The claim was half true for a year: the facts
+    /// a session writes came through here, while the importer spelled `"White"`, `"Event"`,
+    /// `"UTCDate"` and seven more of its own, and the app spelled two. A tag misspelt in one of
+    /// those places is a game this app writes and cannot read back (docs/adr/0010).
+    public enum Tags {
+        public static let event = "Event"
+        public static let site = "Site"
+        public static let date = "Date"
+        public static let round = "Round"
+        public static let white = "White"
+        public static let black = "Black"
+        public static let result = "Result"
+        /// Where an imported game came from, and when, as its site recorded it.
+        public static let link = "Link"
+        public static let utcDate = "UTCDate"
+        public static let utcTime = "UTCTime"
+        /// A study's own name for one chapter (docs/adr/0014).
+        public static let chapterName = "ChapterName"
+        /// How an import's Review was run (docs/adr/0044).
+        public static let reviewSift = "ReviewSift"
+        /// What the player called this game (`GameLibrary.rename`).
+        public static let name = "Name"
+        /// Whose moves are whose, for an import: the roster names two real people, so the file
+        /// says which of them the player is (docs/adr/0028).
+        public static let trackedSide = "TrackedSide"
+        /// Where the position came from (`GameOrigin`).
+        public static let source = "Source"
+        /// The 记录线 把关 stopped the player at (docs/adr/0046).
+        public static let intercept = "Intercept"
+
+        /// The roster name for one colour.
+        public static func player(_ colour: PieceColour) -> String {
+            colour == .white ? white : black
+        }
+    }
+
+    static let interceptTag = Tags.intercept
     static let interceptPreferenceTag = "InterceptPreference"
-    static let trackedSideTag = "TrackedSide"
+    static let trackedSideTag = Tags.trackedSide
 
     /// The file this app writes for a game it holds: the Game, and the facts about the game that
     /// are not moves — who sat at each side, where it came from, the lines it is judged by —
@@ -58,24 +96,24 @@ public struct PGN: Hashable, Sendable {
         // worth saying now that there are no collections (docs/adr/0028). Written unconditionally:
         // an Event an import brought in names somebody else's tournament, and the file this app
         // writes is this app's.
-        written.setTag("Event", to: "Chessmirror")
+        written.setTag(Tags.event, to: "Chessmirror")
         // An imported game keeps the two real people in its roster; which of them is the player
         // is `trackedSide`, said by the import (docs/adr/0028).
         if origin != .imported {
-            written.setTag("White", to: (seats[.white] ?? .hand).playerName)
-            written.setTag("Black", to: (seats[.black] ?? .hand).playerName)
+            written.setTag(Tags.white, to: (seats[.white] ?? .hand).playerName)
+            written.setTag(Tags.black, to: (seats[.black] ?? .hand).playerName)
             // The standard Elo tags, for other tools, when the whole game was at one rung; a game
             // that changed rung says so per move and nowhere else (docs/adr/0038).
             written.setTag("WhiteElo", to: game.constantElo(of: .white).map(String.init))
             written.setTag("BlackElo", to: game.constantElo(of: .black).map(String.init))
         }
-        written.setTag("Result", to: game.resultToken)
+        written.setTag(Tags.result, to: game.resultToken)
         written.setTag(Self.interceptTag, to: lines.intercept.map(String.init(describing:)))
         // The line 把关 would come back on at, from when it had a dial of its own. It has none
         // now (docs/adr/0046), so a file that carried one stops carrying it.
         written.setTag(Self.interceptPreferenceTag, to: nil)
         written.setTag(GameOrigin.tagName, to: origin.tagValue)
-        if written.tag("Date") == nil {
+        if written.tag(Tags.date) == nil {
             written.tags.append(Self.dateTag())
         }
         self = written
@@ -133,8 +171,8 @@ public struct PGN: Hashable, Sendable {
             return trackedSide.map { [$0] } ?? []
         }
         var found: Set<PieceColour> = []
-        if tag("White") == Controller.hand.playerName { found.insert(.white) }
-        if tag("Black") == Controller.hand.playerName { found.insert(.black) }
+        if playerName(.white) == Controller.hand.playerName { found.insert(.white) }
+        if playerName(.black) == Controller.hand.playerName { found.insert(.black) }
         return found
     }
 
@@ -405,14 +443,123 @@ public struct PGN: Hashable, Sendable {
         return calendar.date(from: DateComponents(year: year, month: month, day: day))
     }
 
+    /// The name in the roster for one colour, as the file has it.
+    public func playerName(_ colour: PieceColour) -> String? { tag(Tags.player(colour)) }
+
     /// Today in PGN's `YYYY.MM.DD`.
     public static func dateTag(_ date: Date = Date(), calendar: Calendar = .current) -> Tag {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         let text = String(
             format: "%04d.%02d.%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0
         )
-        return Tag("Date", text)
+        return Tag(Tags.date, text)
     }
+
+    // ------------------------------------------------------- one file, many games
+
+    /// Cuts a multi-game PGN into one block of text per game.
+    ///
+    /// Here rather than in the importer, where it lived: deciding what a `[` means is this
+    /// file's job, and two modules deciding it separately is two things that must agree about
+    /// the format the whole app stores its games in (docs/adr/0010). The parser reads one game;
+    /// this says where one game ends.
+    /// One block per game in a multi-game PGN, each kept byte-for-byte so the
+    /// single-game parser can have it whole.
+    ///
+    /// The split point is a tag line — a line starting `[` — that comes after the
+    /// current game's tags have ended. Two things end them: movetext, which is every
+    /// non-tag line, and a blank line following the tags (a chapter with no moves is
+    /// just tags, then the next chapter's tags). A `[` inside a comment or a
+    /// variation must never split: `{[%cal …]}` keeps its brackets, so the `()` and
+    /// `{}` depths are tracked and only a `[` at depth zero can start a game.
+    /// Blank lines are kept — they are the whitespace the parser already skips — but
+    /// blocks that end up empty are dropped.
+    public static func split(_ text: String) -> [String] {
+        var blocks: [String] = []
+        var current: [String] = []
+        var seenTag = false
+        var tagsClosed = false
+        var hasMovetext = false
+        var parens = 0
+        var braces = 0
+
+        func closeBlock() {
+            let block = current.joined(separator: "\n")
+            if !block.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                blocks.append(block)
+            }
+            current = []
+            seenTag = false
+            tagsClosed = false
+            hasMovetext = false
+            parens = 0
+            braces = 0
+        }
+
+        for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            if line.isEmpty {
+                if seenTag { tagsClosed = true }
+                current.append(String(rawLine))
+                continue
+            }
+            if line.first == "[", parens == 0, braces == 0, hasMovetext || tagsClosed {
+                closeBlock()
+            }
+            // Depth first or after the split test? Before: the `(` of this line is
+            // this game's, and a `[` deeper into the line is this game's too.
+            let effects = bracketEffects(in: line)
+            parens += effects.parens
+            braces += effects.braces
+            if line.first == "[" {
+                seenTag = true
+            } else {
+                hasMovetext = true
+            }
+            current.append(String(rawLine))
+        }
+        closeBlock()
+        return blocks
+    }
+
+    /// How a line changes the `()` and `{}` depths, which is all the splitter needs
+    /// to know about it.
+    ///
+    /// Quote- and comment-aware, because both happily contain the brackets that would
+    /// fool it: a tag value like `[White "De La Bourdonnais (1834)"]` must not open a
+    /// variation, and a comment is where lichess puts arrows — `{[%cal Gd2d4]}` — so
+    /// everything inside `{…}` is dead to the counters except the closing brace.
+    private static func bracketEffects(in line: String) -> (parens: Int, braces: Int) {
+        var parens = 0
+        var braces = 0
+        var inQuotes = false
+        var previous: Character?
+        for character in line {
+            if braces > 0 {
+                if character == "}" { braces -= 1 }
+            } else if inQuotes {
+                if character == "\"", previous != "\\" { inQuotes = false }
+            } else {
+                switch character {
+                case "\"":
+                    inQuotes = true
+                case "(":
+                    parens += 1
+                case ")":
+                    parens -= 1
+                case "{":
+                    braces += 1
+                case "}":
+                    braces -= 1
+                default:
+                    break
+                }
+            }
+            previous = character
+        }
+        return (parens, braces)
+    }
+
 
     // ------------------------------------------------------------------ reading
 
@@ -541,7 +688,7 @@ public struct PGN: Hashable, Sendable {
         if !game.plies.contains(where: { $0.strength != nil }) {
             let engine = Controller.engine.playerName
             for colour in [PieceColour.white, .black]
-            where tags.first(where: { $0.name == (colour == .white ? "White" : "Black") })?.value == engine {
+            where tags.first(where: { $0.name == Tags.player(colour) })?.value == engine {
                 for index in game.plies.indices where game.mover(ofPly: index + 1) == colour {
                     game.setStrength(.full, atPly: index)
                 }
