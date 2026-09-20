@@ -245,6 +245,11 @@ import Foundation
 
         return urls
             .filter { $0.pathExtension.lowercased() == "pgn" }
+            // One form per file. A game is identified by its URL — the 错题本 caches its walk
+            // under it, a row's count is looked up by it — and a directory listing resolves the
+            // links in a path where `appending(path:)` does not, so a game saved and the same
+            // game listed could be two keys for one file.
+            .map { $0.resolvingSymlinksInPath() }
             .map { url in
                 // A game another device saved is a name here before it is bytes. Asking for it
                 // is enough — the folder says when it has landed, and the list is built again.
@@ -282,8 +287,18 @@ import Foundation
             url = directory.appending(path: "chessmirror-\(stamp)-\(suffix).pgn")
             suffix += 1
         }
-        return url
+        // In the form the listing will give it back in (`gather`), so the file a session saves
+        // to and the row it comes back as are one key.
+        return url.resolvingSymlinksInPath()
     }
+
+    /// Waits for the saves already asked for to land.
+    ///
+    /// A write to iCloud is chained and detached — `write` says the save was *taken*, not that
+    /// the bytes are down — so anything that has to read the folder back needs a way to wait for
+    /// it. Without one the coordinated half of this file could only be exercised by a person
+    /// with an iCloud account and a second device.
+    public func written() async { await writeChain?.value }
 
     @discardableResult
     public func write(_ pgn: PGN, to url: URL) -> Bool {
@@ -377,8 +392,8 @@ import Foundation
         let modified =
             (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
             ?? Date()
-        let entry = Entry(url: url, pgn: pgn, modified: modified)
-        if let index = entries.firstIndex(where: { $0.url == url }) {
+        let entry = Entry(url: url.resolvingSymlinksInPath(), pgn: pgn, modified: modified)
+        if let index = entries.firstIndex(where: { $0.url == entry.url }) {
             entries[index] = entry
         } else {
             entries.insert(entry, at: 0)
