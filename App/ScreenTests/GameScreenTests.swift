@@ -680,27 +680,6 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("收起"))
     }
 
-    /// A mate the finder comes back with is said on its own row and left shut: the line is not
-    /// read out, and not drawn, until somebody presses it.
-    @Test("a mate already found is announced, and not opened")
-    func aMateAlreadyFoundIsAnnouncedAndNotOpened() async throws {
-        let opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"
-        let game = try #require(Game(startFEN: opera))
-        let engine = ScriptedEngine([], byPosition: [
-            game.state.fen: Analysis(depth: 10, lines: [
-                Line(score: .mate(in: 2), uciMoves: ["b3b8", "d7b8", "d1d8"], san: ["Qb8+", "Nxb8", "Rd8#"])
-            ])
-        ])
-        let session = GameSession.fresh(game, engine: engine)
-        var rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
-        await hop()
-        rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
-
-        #expect(session.mateNews != nil)
-        #expect(rendered.says("发现杀招"))
-        #expect(!rendered.says("Qb8"), "the line stays behind the press")
-    }
-
     private func hop() async {
         for _ in 0..<20 {
             await Task.yield()

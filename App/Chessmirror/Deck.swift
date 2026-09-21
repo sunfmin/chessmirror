@@ -32,13 +32,7 @@ struct CardLede: View {
 /// the figure on the arrow. Horizontal, because a sequence of moves is a sequence — six of them
 /// down the card would be six paragraphs of nothing.
 struct CardMoves: View {
-    struct Move: Hashable {
-        let step: Int
-        let san: String
-        let isYours: Bool
-    }
-
-    let moves: [Move]
+    let moves: [LineStep]
     /// Which step the eye is on, when one of them is being walked.
     var standing: Int?
     var tap: ((Int) -> Void)?
@@ -136,63 +130,6 @@ struct CardButton: View {
 
 // ===================================================================== the deck
 
-/// What the deck of findings under the record is showing (docs/adr/0025).
-///
-/// This was five pieces of state on the game screen — which card was in front, the set of cards
-/// that had been revealed, a Bool per card for whether its line was drawn, and a flag saying the
-/// deck had been dealt — held together by an invariant nobody had written down: the revealed set
-/// was either empty or exactly the card in front, and at most one of the two line flags could be
-/// true, because only the open card has an arrow button to press. Said as one optional and one
-/// Bool, that invariant is the shape of the thing rather than a rule somebody has to keep.
-@Observable @MainActor final class Deck {
-    /// The finding that is open, if one is. Nothing is open until a finding is pressed: a
-    /// finding is an invitation, and opening one on somebody's behalf is answering a question
-    /// they did not ask.
-    private(set) var open: GameScreen.Card?
-    /// Whether the open finding's line is drawn on the board. On when it opens — the line is
-    /// most of what the finding is for — and flipped by the arrow on the card.
-    private(set) var drawsLine = false
-    /// Whether the deck has been dealt. Once, on the way in — not on every appearance, or coming
-    /// back from a Review would ask the engine again for what is already on the table.
-    private(set) var isDealt = false
-
-    func isOpen(_ kind: GameScreen.Card) -> Bool { open == kind }
-
-    /// Whether this finding's line is the one on the board.
-    func draws(_ kind: GameScreen.Card) -> Bool { open == kind && drawsLine }
-
-    /// The card whose line is on the board, when one is. What the session is asked for arrows
-    /// about (`GameSession.arrows(for:)`).
-    var drawn: GameScreen.Card? { drawsLine ? open : nil }
-
-    /// Pressing a finding. The one pressed opens with its line drawn, and whatever was open
-    /// shuts; pressing the one that is open shuts it. Says whether something is now open, which
-    /// is what the screen needs to know to spend a Stint on it.
-    @discardableResult func press(_ kind: GameScreen.Card) -> Bool {
-        let wasOpen = open == kind
-        open = wasOpen ? nil : kind
-        drawsLine = !wasOpen
-        return !wasOpen
-    }
-
-    /// The board on screen changed. Nothing that was open was about this position.
-    func shut() {
-        open = nil
-        drawsLine = false
-    }
-
-    /// The arrow on the open card.
-    func toggleLine() { drawsLine.toggle() }
-
-    /// Claims the deal, once. Says whether this call is the one that got it, so the arriving —
-    /// which is the session's business, not the deck's — happens exactly once.
-    func claimDeal() -> Bool {
-        guard !isDealt else { return false }
-        isDealt = true
-        return true
-    }
-}
-
 /// The findings under the record: what the engine and the rules noticed about the position on
 /// screen, each shut until it is pressed (docs/adr/0025).
 ///
@@ -202,7 +139,6 @@ struct CardButton: View {
 /// appear before the view that contains it, so putting the deal here is the order.
 struct DeckView: View {
     let session: GameSession
-    let deck: Deck
     /// The board's selection, which reading the finder's answer puts down: the answer is about
     /// the position, not about the piece somebody happened to have picked up.
     @Binding var selected: Square?
@@ -216,7 +152,7 @@ struct DeckView: View {
             ForEach(findings, id: \.self) { kind in
                 VStack(spacing: 0) {
                     discovery(kind)
-                    if deck.isOpen(kind) {
+                    if session.isOpen(kind) {
                         body(of: kind)
                     }
                 }
@@ -224,14 +160,7 @@ struct DeckView: View {
             }
         }
         .padding(.vertical, findings.isEmpty ? 0 : 8)
-        .onAppear {
-            guard deck.claimDeal() else { return }
-            // Both findings are questions for the finder, and arriving is what asks it
-            // (docs/adr/0023, 0025). Nothing is opened: a mate it turns up is said on its own
-            // row — 「发现杀招」 — and opened by whoever presses it.
-            session.arriveAtFinder()
-            session.adviseForCard()
-        }
+        .onAppear { session.dealDeck() }
     }
 
     @ViewBuilder private func body(of kind: GameScreen.Card) -> some View {
@@ -247,10 +176,7 @@ struct DeckView: View {
         let searching = session.deck.isSearching
         let title = row?.title ?? kind.title
         return Button {
-            guard found else { return }
-            withAnimation(.snappy(duration: 0.22)) {
-                if deck.press(kind) { session.notePracticeHelp() }
-            }
+            withAnimation(.snappy(duration: 0.22)) { session.press(kind) }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: kind.symbol)
@@ -262,7 +188,7 @@ struct DeckView: View {
                     .foregroundStyle(Palette.ink)
                 Spacer(minLength: 4)
                 if found {
-                    Image(systemName: deck.isOpen(kind) ? "chevron.up" : "chevron.down")
+                    Image(systemName: session.isOpen(kind) ? "chevron.up" : "chevron.down")
                         .font(.caption2)
                         .foregroundStyle(Palette.inkSoft)
                         .frame(width: 30, height: 30)
@@ -297,7 +223,7 @@ struct DeckView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             body()
-            if deck.isOpen(kind), let progress = session.standingProgress {
+            if session.isOpen(kind), let progress = session.standingProgress {
                 HStack(spacing: 6) {
                     if session.isAdvising { ProgressView().controlSize(.mini) }
                     Text(localized(session.isAdvising ? "noSlips.judging" : "search.reached"))
@@ -334,31 +260,23 @@ struct DeckView: View {
                         .foregroundStyle(mateInk)
                     Spacer(minLength: 4)
                     Button {
-                        withAnimation(.snappy(duration: 0.2)) { deck.toggleLine() }
+                        withAnimation(.snappy(duration: 0.2)) { session.toggleLine() }
                     } label: {
-                        Image(systemName: deck.draws(.mate) ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
+                        Image(systemName: session.draws(.mate) ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
                             .font(.subheadline)
-                            .foregroundStyle(deck.draws(.mate) ? mateInk : Palette.inkSoft)
+                            .foregroundStyle(session.draws(.mate) ? mateInk : Palette.inkSoft)
                             .frame(width: 30, height: 30)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .disabled(news.arrows.isEmpty)
-                    .accessibilityLabel(localized(deck.draws(.mate) ? "screen.hideArrows" : "screen.showArrows"))
+                    .accessibilityLabel(localized(session.draws(.mate) ? "screen.hideArrows" : "screen.showArrows"))
                     .accessibilityHint(localized("screen.arrowsExplained"))
                 }
                 CardLede(news.sentence)
-                if !news.san.isEmpty {
+                if !news.steps.isEmpty {
                     // The numbers are the join: the figure on a chip is the figure on its arrow.
-                    CardMoves(
-                        moves: news.san.enumerated().map { index, san in
-                            CardMoves.Move(
-                                step: index + 1,
-                                san: san,
-                                isYours: news.arrows.first { $0.step == index + 1 }?.isYours ?? false
-                            )
-                        }
-                    )
+                    CardMoves(moves: news.steps)
                 }
                 if !news.isFullyDrawn {
                     CardNote(localized("screen.arrowLimit", MateNews.arrowLimit))
@@ -368,18 +286,9 @@ struct DeckView: View {
             .padding(.horizontal, 16)
             .padding(.top, 10)
         } else {
-            // No news is news, and it is three different pieces of it. A card that goes blank when
-            // there is no mate is a card that looks broken (docs/adr/0025).
+            // No news is news, and which piece of it is the session's (`mateQuiet`).
             VStack(alignment: .leading, spacing: 6) {
-                if session.viewed.isOver {
-                    Text(localized("screen.finished"))
-                } else if session.isProbingTactics || session.isSearching {
-                    EmptyView()
-                } else if session.isFindingTactics || session.analysis != nil {
-                    Text(localized("screen.noMate"))
-                } else {
-                    Text(localized("screen.mateIdle"))
-                }
+                if let quiet = session.mateQuiet { Text(quiet) }
             }
             .font(.caption)
             .foregroundStyle(Palette.inkSoft)
@@ -402,21 +311,18 @@ struct DeckView: View {
                 HStack(alignment: .top, spacing: 8) {
                     tacticAnswer
                     Button {
-                        withAnimation(.snappy(duration: 0.2)) { deck.toggleLine() }
+                        withAnimation(.snappy(duration: 0.2)) { session.toggleLine() }
                     } label: {
-                        Image(systemName: deck.draws(.tactics) ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
+                        Image(systemName: session.draws(.tactics) ? "arrow.up.right.circle.fill" : "arrow.up.right.circle")
                             .font(.subheadline)
-                            .foregroundStyle(deck.draws(.tactics) ? Palette.analysis : Palette.inkSoft)
+                            .foregroundStyle(session.draws(.tactics) ? Palette.analysis : Palette.inkSoft)
                             .frame(width: 30, height: 30)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(localized(deck.draws(.tactics) ? "screen.hideArrows" : "screen.showArrows"))
+                    .accessibilityLabel(localized(session.draws(.tactics) ? "screen.hideArrows" : "screen.showArrows"))
                 }
                 if let tactic = session.tactic {
-                    CardMoves(moves: tactic.line.enumerated().map { index, san in
-                        CardMoves.Move(step: index + 1, san: san,
-                            isYours: session.tacticArrows.first { $0.step == index + 1 }?.isYours ?? index.isMultiple(of: 2))
-                    })
+                    CardMoves(moves: session.steps(on: .tactics))
                     if tactic.line.count > MateNews.arrowLimit {
                         CardNote(localized("screen.arrowLimit", MateNews.arrowLimit))
                     }

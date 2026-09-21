@@ -40,9 +40,6 @@ struct GameScreen: View {
     /// this to nil, which it already was. A fresh board and a game under way both open with every
     /// strip shut, and only a thumb opens one.
     @State private var unfolded: PieceColour?
-    /// What the deck of findings under the record is showing. The deck keeps it, because it is
-    /// the deck's; this screen holds the object so the board can ask which line to draw.
-    @State private var deck = Deck()
     /// Whether a thumb is on 让引擎走 right now. The engine is thinking for exactly as long as it is —
     /// which is why this is read off the session rather than kept here as well. A screen holding
     /// its own copy of "a finger is down" is a screen that can be left holding it: a press that
@@ -79,7 +76,7 @@ struct GameScreen: View {
                 .chromeType()
 
                 if session.dealsCards {
-                    DeckView(session: session, deck: deck, selected: $selected)
+                    DeckView(session: session, selected: $selected)
                 }
               }
               .frame(width: proxy.size.width)
@@ -92,11 +89,6 @@ struct GameScreen: View {
         // the record walks to that Ply rather than being cut to it. Nothing happens for a game
         // opened any other way — there is no Ply to walk to.
         .task { await session.walkToArrival() }
-        .onChange(of: viewed.state.fen) { _, _ in deck.shut() }
-        .onChange(of: session.thinking) { _, now in
-            guard now == nil, session.dealsCards else { return }
-            session.adviseForCard()
-        }
         // The card stands on the glass. The home indicator is a mark on top of it, not a
         // margin that holds the deck off the bottom of the phone.
         // No title, and now nothing in its place either. The screen is a board; a word saying
@@ -364,7 +356,6 @@ struct GameScreen: View {
     /// arrows on the board. One move is the refused one and the rest are the answers to it, so
     /// the row begins with the move the player made and not with what happened to it.
     @ViewBuilder private func replyRow(_ reading: GameSession.ReplyReading) -> some View {
-        let chips = reading.steps.map { CardMoves.Move(step: $0.step, san: $0.san, isYours: $0.isYours) }
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text(localized("tried.reply")).font(.caption).foregroundStyle(Palette.inkSoft)
@@ -376,8 +367,8 @@ struct GameScreen: View {
                 rejudgeControl(reading)
             }
             .frame(minHeight: 22)
-            if !chips.isEmpty {
-                CardMoves(moves: chips)
+            if !reading.steps.isEmpty {
+                CardMoves(moves: reading.steps)
             } else if !reading.isAsking {
                 Text(localized("tried.reply.none")).font(.caption).foregroundStyle(Palette.inkSoft)
             }
@@ -1245,17 +1236,10 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ the deck
 
-    /// The open finding's line, as numbered arrows. Nothing when nothing is open, or when the
-    /// deck is not on this screen at all: arrows from a card nobody can see are arrows about a
-    /// question nobody asked (docs/adr/0025).
-    private var deckArrows: [MoveArrow] {
-        session.arrows(for: deck.drawn)
-    }
-
     /// One finding of the deck under the record — the kit's (`Deck.Card`, docs/adr/0025). The
     /// name stays here because the screen's open card, its animations and its tests all spell it
     /// `GameScreen.Card`; what a card *is* is not the screen's to say.
-    typealias Card = ChessmirrorKit.Deck.Card
+    typealias Card = Deck.Card
 
     // ------------------------------------------------------------------ the bar at the top
 
@@ -1373,7 +1357,7 @@ struct GameScreen: View {
             // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
             // A 应招 beats all of them while it is being read: it is the one line somebody has
             // just asked for, and the board can only carry one at a time.
-            plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 } ?? deckArrows,
+            plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 } ?? session.deckArrows,
             isInteractive: session.isHandTurn,
             onTap: tap
         )
