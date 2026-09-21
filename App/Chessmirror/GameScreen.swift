@@ -29,7 +29,6 @@ struct GameScreen: View {
     /// the eye just was. Every other way the cursor moves still centres.
     @State private var isTappingStrip = false
     @State private var promotion: PromotionRequest?
-    @State private var isSoundOn = Sounds.current.isSoundOn
     /// Which side's own controls are open. Nobody's, unless somebody said otherwise — and then
     /// their answer stands for as long as the screen does. Never derived from the game: an unfold
     /// that answers to the moves is an unfold that opens and shuts under your thumb, and the board
@@ -141,10 +140,10 @@ struct GameScreen: View {
                     } label: {
                         Label(localized("edit.title"), systemImage: "hand.point.up.left")
                     }
-                    Toggle(isOn: $isSoundOn) {
+                    Toggle(isOn: Bindable(PlayerSettings.shared).isSoundOn) {
                         Label(
                             localized("game.sound"),
-                            systemImage: isSoundOn ? "speaker.wave.2" : "speaker.slash"
+                            systemImage: PlayerSettings.shared.isSoundOn ? "speaker.wave.2" : "speaker.slash"
                         )
                     }
                     if let url = session.url {
@@ -192,13 +191,6 @@ struct GameScreen: View {
         .onDisappear {
             session.onEvent = nil
             session.disappear()
-        }
-        .onChange(of: isSoundOn) { _, isOn in Sounds.current.isSoundOn = isOn }
-        // The setting travels between devices (docs/adr/0012), so it can change while this
-        // screen is the one on show — and a toggle that disagrees with the sound is worse than
-        // no toggle.
-        .onReceive(NotificationCenter.default.publisher(for: NSUbiquitousKeyValueStore.didChangeExternallyNotification)) { _ in
-            isSoundOn = Sounds.current.isSoundOn
         }
         .confirmationDialog(
             localized("game.promotion"), isPresented: .constant(promotion != nil),
@@ -459,7 +451,7 @@ struct GameScreen: View {
                     rungMenu
                     // What the engine gets over a move: the 搜索预算 every live position search
                     // gets, said so nobody waits for a clock that does not exist (docs/adr/0039).
-                    Text(SearchSetting.shared.limit.label)
+                    Text(PlayerSettings.shared.searchLimit.label)
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
                 } else {
@@ -589,7 +581,7 @@ struct GameScreen: View {
             ForEach(Strength.ladder, id: \.self) { rung in
                 Button {
                     session.setStrength(rung)
-                    StrengthSetting.shared.strength = rung
+                    PlayerSettings.shared.strength = rung
                 } label: {
                     if rung == session.strength {
                         Label(rung.label, systemImage: "checkmark")
@@ -661,7 +653,7 @@ struct GameScreen: View {
                 HStack(spacing: 8) {
                     Text(localized("game.perMove")).foregroundStyle(Palette.inkSoft)
                     Spacer()
-                    Text(SearchSetting.shared.limit.label).foregroundStyle(Palette.ink)
+                    Text(PlayerSettings.shared.searchLimit.label).foregroundStyle(Palette.ink)
                 }
                 .padding(.vertical, 5)
             }

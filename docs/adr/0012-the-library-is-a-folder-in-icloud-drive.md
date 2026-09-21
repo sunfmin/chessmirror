@@ -4,7 +4,10 @@ The games directory is the app's iCloud ubiquity container's `Documents` folder,
 the Files app as 棋镜, with the local `Documents/Games` folder kept as the fallback for a device
 with no iCloud account and as the folder the app lists at launch before iCloud has answered.
 Games saved before there was an iCloud are moved up into it once, on the first launch that finds
-one. The one setting the app has — 音效 — travels separately, in `NSUbiquitousKeyValueStore`.
+one. The player's settings — 记录线 and 入列线, the rung, the 搜索预算, the language, 音效 and
+what the import sheet remembers — travel separately, in `NSUbiquitousKeyValueStore`, with a
+`UserDefaults` copy that answers at launch. They are kept by one module (`PlayerSettings`) behind
+one seam (`SettingsStore`): the app's adapter writes both stores, a test's keeps a dictionary.
 
 This follows from PGN files being the storage format (docs/adr/0010): a library that is a
 directory of text files is a library that syncs by being put in a directory that syncs. CloudKit

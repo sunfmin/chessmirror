@@ -15,11 +15,10 @@ struct ChessmirrorApp: App {
     /// and from the practice log, and it is a cache that can be thrown away at any moment
     /// (docs/adr/0028, docs/adr/0029).
     @State private var book = MistakeIndex()
-    /// What language every word on every screen comes out in. Read before the first screen is
-    /// built, so a person who chose one gets it on the launch screen rather than one frame later.
-    @State private var language = LanguageSetting.shared
-    /// The 搜索预算, read here so that the kit has the player's budget before any search runs.
-    @State private var search = SearchSetting.shared
+    /// Everything the player has set. Read before the first screen is built, so a person who
+    /// chose a language gets it on the launch screen rather than one frame later, and the kit
+    /// has the player's 搜索预算 before any search runs.
+    @State private var settings = PlayerSettings.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -28,12 +27,11 @@ struct ChessmirrorApp: App {
                 .environment(engine)
                 .environment(library)
                 .environment(book)
-                .environment(language)
                 // The one thing in the app that rebuilds every screen: the words on all of them
                 // change at once, and there is no other way to tell SwiftUI that a plain function
                 // call started answering differently. Changing language is a deliberate, rare act
                 // — the price is the navigation stack, which is a fair one for it.
-                .id(language.current)
+                .id(settings.currentLanguage)
                 // The kit's `Sounds` is a seam holding whichever Feedback was installed on the
                 // way up; the app installs its own, and everything that plays goes through it.
                 .task { _ = SystemFeedback.shared }
@@ -50,4 +48,14 @@ struct ChessmirrorApp: App {
                 }
         }
     }
+}
+
+extension PlayerSettings {
+    /// The app's settings: kept in both stores (`TravellingSettings`), and the ones the kit runs
+    /// on from the first time anything asks for them.
+    static let shared: PlayerSettings = {
+        let settings = PlayerSettings(store: TravellingSettings())
+        settings.install()
+        return settings
+    }()
 }

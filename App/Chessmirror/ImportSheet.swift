@@ -86,7 +86,7 @@ struct ImportSheet: View {
     ///   - initialDoor: the door to open, when not the one used last.
     init(
         session: ImportSession = ImportSession(),
-        memory: ImportMemory = .shared,
+        memory: ImportMemory = PlayerSettings.shared.imports,
         engine: (any Engine)? = nil,
         initialInput: String = "",
         initialDoor: Door? = nil,

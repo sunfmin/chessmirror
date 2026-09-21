@@ -48,7 +48,6 @@ struct DailyScreenshots {
             .environment(EngineHost(ScriptedEngine([])))
             .environment(library)
             .environment(index)
-            .environment(LanguageSetting.shared)
     }
 
     @Test("the first screen says how much of today is left, and empties when it is done")

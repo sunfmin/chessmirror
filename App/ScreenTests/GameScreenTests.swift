@@ -1007,8 +1007,8 @@ struct GameScreenScreenshots {
     /// alone counting, the time alone is said — and the kit's every live search runs on it.
     @Test("the engine's bar says the budget the player set")
     func theEngineBarSaysTheBudget() async throws {
-        SearchSetting.shared.limit = SearchLimit(seconds: 5, depth: 12, stop: .time)
-        defer { SearchSetting.shared.limit = .standard }
+        PlayerSettings.shared.searchLimit = SearchLimit(seconds: 5, depth: 12, stop: .time)
+        defer { PlayerSettings.shared.searchLimit = .standard }
         #expect(PositionSearches.budget == .time(.seconds(5)), "the kit runs on it")
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
@@ -1050,18 +1050,6 @@ struct GameScreenScreenshots {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
         #expect(rendered.says("Stockfish 18 · 2000"))
-    }
-
-    /// The rung picked is the one the next game starts at, on this phone and on the next one; a
-    /// phone that has never picked starts at 满力.
-    @Test("the rung picked is remembered, and a fresh phone starts at 满力")
-    func theRungIsRemembered() {
-        let setting = StrengthSetting.shared
-        #expect(setting.strength == .full, "nothing picked yet")
-        setting.strength = .elo(2200)
-        defer { setting.strength = .full }
-        #expect(UserDefaults.standard.string(forKey: "chessmirror.strength") == "2200")
-        #expect(NSUbiquitousKeyValueStore.default.string(forKey: "chessmirror.strength") == "2200")
     }
 
     // ------------------------------------------------------------------- glue

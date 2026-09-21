@@ -360,13 +360,10 @@ struct ImportScreenScreenshots {
         #expect(!rendered.says("重试"))
     }
 
-    /// A memory of its own for each test, in a suite nobody's phone reads, and the cloud kept
-    /// out of it — so what one test remembers is not in the next test's field.
+    /// A memory of its own for each test, kept in a dictionary and nowhere else — so what one
+    /// test remembers is not in the next test's field, and nobody's phone or iCloud hears of it.
     private func memory(remembering names: [String] = [], on site: PGNImport.Site = .lichess) -> ImportMemory {
-        let suite = "chessmirror-screens-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
-        let memory = ImportMemory(defaults: defaults, travels: false)
+        let memory = PlayerSettings(store: InMemorySettings()).imports
         for name in names.reversed() { memory.remember(name, on: site) }
         return memory
     }

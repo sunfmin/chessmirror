@@ -32,7 +32,7 @@ struct LibraryScreen: View {
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
     @Environment(MistakeIndex.self) private var index
-    private let judgement = JudgementSetting.shared
+    private let settings = PlayerSettings.shared
 
     @State private var path: [Step] = []
     @State private var isCameraOpen = false
@@ -97,7 +97,7 @@ struct LibraryScreen: View {
                     DrillHost(
                         mistake: mistake,
                         engine: engine.service,
-                        lines: judgement.lines,
+                        lines: settings.lines,
                         log: index.log,
                         source: source,
                         path: $path
@@ -193,8 +193,8 @@ struct LibraryScreen: View {
         // whenever they change, and costs nothing when they have not, because it walks only what
         // is new (docs/adr/0028). Asked for here because this is where the app starts, not
         // because the book is this screen's — freshness is the index's own (`MistakeIndex.follow`).
-        .task { index.update(from: library.entries, lines: judgement.lines); index.follow(library) }
-        .onChange(of: judgement.lines) { _, lines in
+        .task { index.update(from: library.entries, lines: settings.lines); index.follow(library) }
+        .onChange(of: settings.lines) { _, lines in
             index.update(from: library.entries, lines: lines)
         }
     }
@@ -631,8 +631,8 @@ struct LibraryScreen: View {
                     shaky: shaky,
                     engine: engine.service,
                     library: library,
-                    strength: StrengthSetting.shared.strength,
-                    lines: judgement.lines
+                    strength: settings.strength,
+                    lines: settings.lines
                 )
                 path.append(.game(session))
             case .needsEditing(let draft, let shaky, let orientation, let picture):
@@ -654,11 +654,11 @@ struct LibraryScreen: View {
 
     private func start(_ game: Game?, noSlips: Bool = false) {
         guard let game else { return }
-        var lines = judgement.lines
+        var lines = settings.lines
         lines.noSlips = noSlips
         let session = GameSession.playing(
             game, engine: engine.service, library: library,
-            strength: StrengthSetting.shared.strength, lines: lines
+            strength: settings.strength, lines: lines
         )
         path.append(.game(session))
     }
@@ -666,7 +666,7 @@ struct LibraryScreen: View {
     private func open(_ entry: GameLibrary.Entry) {
         guard let session = GameSession.opened(
             entry, engine: engine.service, library: library,
-            strength: StrengthSetting.shared.strength, lines: judgement.lines
+            strength: settings.strength, lines: settings.lines
         ) else { return }
         path.append(.game(session))
     }

@@ -10,9 +10,7 @@ struct AboutScreen: View {
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
-    @Bindable private var language = LanguageSetting.shared
-    @Bindable private var judgement = JudgementSetting.shared
-    @Bindable private var search = SearchSetting.shared
+    @Bindable private var settings = PlayerSettings.shared
 
     private static let source = URL(string: "https://github.com/sunfmin/chessmirror")!
 
@@ -38,7 +36,7 @@ struct AboutScreen: View {
                 // in their own words, because a list of languages written in one language is a
                 // list only the people who already read that language can use.
                 Section {
-                    Picker(selection: $language.chosen) {
+                    Picker(selection: $settings.language) {
                         Text(localized("about.language.system")).tag(Language?.none)
                         ForEach(Language.allCases) { candidate in
                             Text(candidate.endonym).tag(Language?.some(candidate))
@@ -58,15 +56,15 @@ struct AboutScreen: View {
                 // first of these (docs/adr/0046), and its switch is a thing one game is played
                 // under rather than a standing setting.
                 Section {
-                    Picker(selection: $judgement.record) {
+                    Picker(selection: $settings.record) {
                         ForEach(JudgementLines.choices, id: \.self) { line in
                             Text(percent(line)).tag(line)
                         }
                     } label: {
                         Text(localized("lines.record"))
                     }
-                    Picker(selection: $judgement.enqueue) {
-                        ForEach(judgement.lines.enqueueChoices, id: \.self) { line in
+                    Picker(selection: $settings.enqueue) {
+                        ForEach(settings.lines.enqueueChoices, id: \.self) { line in
                             Text(percent(line)).tag(line)
                         }
                     } label: {
@@ -83,23 +81,23 @@ struct AboutScreen: View {
                 // thing wherever it was measured. The end that does not count is greyed rather
                 // than hidden: it keeps its number, and comes back when it counts again.
                 Section {
-                    Picker(selection: $search.seconds) {
+                    Picker(selection: $settings.searchLimit.seconds) {
                         ForEach(SearchLimit.secondsChoices, id: \.self) { seconds in
                             Text(localized("search.seconds", seconds)).tag(seconds)
                         }
                     } label: {
                         Text(localized("search.time"))
                     }
-                    .disabled(search.stop == .depth)
-                    Picker(selection: $search.depth) {
+                    .disabled(settings.searchLimit.stop == .depth)
+                    Picker(selection: $settings.searchLimit.depth) {
                         ForEach(SearchLimit.depthChoices, id: \.self) { depth in
                             Text(localized("search.plies", depth)).tag(depth)
                         }
                     } label: {
                         Text(localized("search.depth"))
                     }
-                    .disabled(search.stop == .time)
-                    Picker(selection: $search.stop) {
+                    .disabled(settings.searchLimit.stop == .time)
+                    Picker(selection: $settings.searchLimit.stop) {
                         ForEach(SearchLimit.Stop.allCases, id: \.self) { stop in
                             Text(localized("search.stop.\(stop.rawValue)")).tag(stop)
                         }
