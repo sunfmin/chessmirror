@@ -99,3 +99,11 @@ is whatever is left. `DeckFloor` renders that size and holds the card, the names
 - The deck is still exactly as tall as the room it is given, so a sparse card still wears empty
   panel and a full one still cuts a row where the viewport ends. That is the price of a board that
   does not move when the cards change (docs/adr/0024) and it is not paid here.
+
+## Later: the budget is gone
+
+The board has since gone full width at every size and every text size (`GameScreen.boardSide` is
+the width and nothing else), and the deck is the one flexible child under it. The named numbers
+above — `chrome`, `railReserve`, `cardWanted`, `cardFloor`, `minBoard`, `accessibilityChrome`,
+`deckRoom` — had no reader left and were deleted. What still stands from this record is the
+portrait lock and `DeckFloor` reading the card's room off the render.

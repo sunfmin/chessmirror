@@ -1252,81 +1252,15 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ the board
 
-    // The deck's room, as named numbers rather than one unexplained `388`.
-
-    /// The most a card is ever asked for: what `boardSide` holds back for the deck, so that the
-    /// card is this big before the board takes another eight points of width.
-    ///
-    /// Measured rather than chosen — 164pt is what a card on a 402×874 phone came out at when the
-    /// screen was laid out by hand, and `DeckFloorTests` reads the same figure back off the picture.
-    static let cardWanted: CGFloat = 162
-
-    /// The least a card may be and still be a card: the bound `DeckFloor` holds every screen the app
-    /// runs on to, and the reason the board reserves `cardWanted` rather than this.
-    ///
-    /// A bound rather than a clamp in the layout itself: the room the deck gets is whatever the
-    /// board leaves, and the board's own budget is what keeps that above this (docs/adr/0025). The
-    /// shortest screen the app runs on leaves 137pt, so this is a number nothing reaches — which is
-    /// the shape to keep it in. A floor that is doing work is a floor that has been hit.
-    static let cardFloor: CGFloat = 120
-
-    /// What the five names take. The rail measures itself and corrects this; it is here so the
-    /// board can be sized before anything has been laid out.
-    static let railReserve: CGFloat = 48
-
-    /// Everything above the deck: two player bars, the standing strip, the record row.
-    static let chrome: CGFloat = 178
-
-    /// Below this a board is not a board. It is the one thing that can still win an argument with
-    /// the deck, and it only wins one on a screen with no business running this app.
-    static let minBoard: CGFloat = 240
-
-    /// How big the board is, and it depends on the screen and nothing else.
+    /// How big the board is, and it depends on the screen and nothing else: the full width.
     ///
     /// It used to take whatever height was left over, which meant the board changed size when the
-    /// engine found a third line to show — the one thing on this screen that must never move. So
-    /// it is sized from the width, all but full bleed, and shrinks to leave the rest of the screen
-    /// what it needs. Rounded to a multiple of eight so every square is a whole number of points
-    /// and no grid line lands on a half pixel.
-    ///
-    /// Two bars and a record cost more than the deck they replaced, and the difference comes off
-    /// the board rather than off the reading: a board forty points wider is not worth a 改棋子 row
-    /// cut in half by the footer on the one screen — a board straight off a photograph — where
-    /// that row is the whole job.
-    ///
-    /// **The board yields to the deck, not the other way round.** The height it may take is the
-    /// screen less the chrome, less the names, less the card the deck wants. It used to be
-    /// `max(240, size.height - 388)`, and the `max` was the bug: on a screen shorter than that sum
-    /// the board kept its 240 and the deck paid the difference — on a phone on its side, all of it,
-    /// silently, `opacity(0)`, with every action on the cards gone (docs/adr/0025). `minBoard` is
-    /// still the floor for a screen too short for a board at all; what changed is that the deck's
-    /// room is now part of the sum rather than what was left after it.
-    static func boardSide(in size: CGSize, accessibilityText: Bool = false) -> CGFloat {
-        let byWidth = max(0, size.width)
-        // And at an accessibility text size it gives back what the rows above it cost when they
-        // grow — capped growth, but growth (see `chromeType`). A board is a grid: 312pt of it is
-        // still a board to look at, where a card squeezed by the labels to 104pt is two lines of
-        // itself and nothing else. `DeckFloor` reads the largest text size back off the render.
-        return byWidth
-    }
-
-    /// What the rows above the board take when the reader's text is at an accessibility size: the
-    /// capped growth of two player bars, the standing strip and the record, measured at the largest
-    /// size the system offers (240pt of chrome against 178 at the default), rounded to a whole
-    /// number of board squares.
-    static let accessibilityChrome: CGFloat = 64
-
-    /// What the deck is left under the record on a screen the layout has been handed this much
-    /// height — the sum the column comes to, written out so a test can hold it without a window.
-    /// The deck takes exactly this by being the one flexible child of a column whose other children
-    /// are fixed, which is why `deck` needs no measurement of its own (docs/adr/0025).
-    ///
-    /// That height is what `proxy.size.height` is: the glass less the status bar and the navigation
-    /// bar, and including the home-indicator band, because the deck is drawn down to the glass
-    /// (`.ignoresSafeArea(edges: .bottom)`). On a 402×874 phone it is 758, which is the figure
-    /// `DeckFloor` measures back off `game-in-play.png`: 368 of board, 212 of deck.
-    static func deckRoom(readerHeight: CGFloat, width: CGFloat) -> CGFloat {
-        readerHeight - chrome - boardSide(in: CGSize(width: width, height: readerHeight))
+    /// engine found a third line to show — the one thing on this screen that must never move. It
+    /// then went through a height budget against the deck (docs/adr/0025), and that budget is gone
+    /// with the deck's fixed floor: the board is full bleed at every size and every text size, and
+    /// the deck is the one flexible child under it.
+    static func boardSide(in size: CGSize) -> CGFloat {
+        max(0, size.width)
     }
 
     private var board: some View {
