@@ -324,11 +324,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         shaky: Set<Square> = [],
         engine: (any Engine)? = nil,
         library: GameLibrary? = nil,
+        strength: Strength = .full,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
             game: game, orientation: orientation, origin: .recognised, picture: picture, shaky: shaky,
-            lines: lines
+            strength: strength, lines: lines
         )
         session.attach(engine: engine, library: library)
         return session
@@ -487,6 +488,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         shaky: Set<Square>,
         engine: (any Engine)?,
         library: GameLibrary?,
+        strength: Strength = .full,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
@@ -496,6 +498,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             origin: origin,
             picture: picture,
             shaky: shaky,
+            strength: strength,
             lines: lines
         )
         session.attach(engine: engine, library: library)

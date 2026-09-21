@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import Foundation
 import Testing
 
 /// The one scale everything is judged on, and the three lines drawn on it (docs/adr/0027).
@@ -193,4 +194,29 @@ func dropIsFromTheMoversSide() throws {
     #expect(game.drop(atPly: 1) == 0, "White's first move changed nothing")
     let blacks = try #require(game.drop(atPly: 2))
     #expect(blacks < -20, "Black's move gained: a negative drop, not a clamped zero")
+}
+
+@Test("the 入列线 never sits below the 记录线, however the pair is made")
+func theEnrolLineNeverSitsBelowTheRecordLine() throws {
+    #expect(JudgementLines(record: 20, enqueue: 10).enqueue == 20, "made out of order, read in order")
+
+    var lines = JudgementLines(record: 10, enqueue: 15)
+    lines.record = 25
+    #expect(lines.enqueue == 25, "raising the 记录线 past it takes it along")
+    lines.record = 5
+    #expect(lines.enqueue == 25, "and lowering the 记录线 leaves it where it was taken")
+    lines.enqueue = 1
+    #expect(lines.enqueue == 5, "set under the 记录线, it is the 记录线")
+    #expect(lines.enqueues(5) && !lines.enqueues(4.9))
+
+    let stored = Data(#"{"noSlips":false,"record":20,"enqueue":10}"#.utf8)
+    let decoded = try JSONDecoder().decode(JudgementLines.self, from: stored)
+    #expect(decoded.enqueue == 20, "a pair written down before this held is read back in order")
+    #expect(try JSONDecoder().decode(
+        JudgementLines.self, from: JSONEncoder().encode(JudgementLines(record: 10, enqueue: 25))
+    ) == JudgementLines(record: 10, enqueue: 25), "and a good pair survives the trip")
+
+    #expect(JudgementLines.choices == [5, 10, 15, 20, 25, 30])
+    #expect(JudgementLines(record: 15).enqueueChoices == [15, 20, 25, 30],
+            "the sheet offers only what the 入列线 can be")
 }

@@ -631,6 +631,7 @@ struct LibraryScreen: View {
                     shaky: shaky,
                     engine: engine.service,
                     library: library,
+                    strength: StrengthSetting.shared.strength,
                     lines: judgement.lines
                 )
                 path.append(.game(session))

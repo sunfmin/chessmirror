@@ -19,6 +19,8 @@ import Foundation
         didSet {
             guard record != oldValue else { return }
             Self.remember(record, forKey: Self.recordKey)
+            // The 入列线 never sits below it (`JudgementLines.enqueue`); raising this drags it.
+            enqueue = JudgementLines(record: record, enqueue: enqueue).enqueue
         }
     }
 
@@ -36,16 +38,13 @@ import Foundation
         JudgementLines(noSlips: false, record: record, enqueue: enqueue)
     }
 
-    /// The values either line is offered, because tenths of a percent are not a thing anybody
-    /// can feel and a slider would suggest they are.
-    static let choices: [Double] = [5, 10, 15, 20, 25, 30]
-
     private static let recordKey = "chessmirror.line.record"
     private static let enqueueKey = "chessmirror.line.enqueue"
 
     private init() {
         record = Self.remembered(Self.recordKey) ?? JudgementLines.standard.record
         enqueue = Self.remembered(Self.enqueueKey) ?? JudgementLines.standard.enqueue
+        enqueue = lines.enqueue
         NotificationCenter.default.addObserver(
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: NSUbiquitousKeyValueStore.default,

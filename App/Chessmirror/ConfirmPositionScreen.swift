@@ -488,6 +488,7 @@ struct ConfirmPositionScreen: View {
             shaky: proposal.shaky,
             engine: engine.service,
             library: library,
+            strength: StrengthSetting.shared.strength,
             lines: JudgementSetting.shared.lines
         )
         // Replaces the stack rather than adding to it: going back from a game in progress belongs

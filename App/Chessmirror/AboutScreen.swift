@@ -59,14 +59,14 @@ struct AboutScreen: View {
                 // under rather than a standing setting.
                 Section {
                     Picker(selection: $judgement.record) {
-                        ForEach(JudgementSetting.choices, id: \.self) { line in
+                        ForEach(JudgementLines.choices, id: \.self) { line in
                             Text(percent(line)).tag(line)
                         }
                     } label: {
                         Text(localized("lines.record"))
                     }
                     Picker(selection: $judgement.enqueue) {
-                        ForEach(JudgementSetting.choices, id: \.self) { line in
+                        ForEach(judgement.lines.enqueueChoices, id: \.self) { line in
                             Text(percent(line)).tag(line)
                         }
                     } label: {
