@@ -82,6 +82,11 @@ import Foundation
 
     public private(set) var entries: [Entry] = []
 
+    /// The game kept at this file, if the library lists one.
+    public func entry(at url: URL) -> Entry? {
+        entries.first { $0.url == url }
+    }
+
     /// The tag a game's own name lives in.
     public nonisolated static let nameTag = PGN.Tags.name
 

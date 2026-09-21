@@ -477,7 +477,7 @@ struct LibraryScreen: View {
     /// A best on the ladder, and the way to the game it was made in.
     private func best(_ title: String, _ best: Ladder.Best) -> some View {
         Button {
-            if let entry = library.entries.first(where: { $0.url == best.game }) { open(entry) }
+            if let session = opener.open(best.game) { path.append(.game(session)) }
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title).font(.caption).foregroundStyle(Palette.inkSoft)
@@ -624,15 +624,8 @@ struct LibraryScreen: View {
 
             switch intake {
             case .played(let game, let shaky, let orientation, let picture):
-                let session = GameSession.recognised(
-                    game,
-                    orientation: orientation,
-                    picture: picture,
-                    shaky: shaky,
-                    engine: engine.service,
-                    library: library,
-                    strength: settings.strength,
-                    lines: settings.lines
+                let session = opener.recognised(
+                    game, orientation: orientation, picture: picture, shaky: shaky
                 )
                 path.append(.game(session))
             case .needsEditing(let draft, let shaky, let orientation, let picture):
@@ -654,21 +647,18 @@ struct LibraryScreen: View {
 
     private func start(_ game: Game?, noSlips: Bool = false) {
         guard let game else { return }
-        var lines = settings.lines
-        lines.noSlips = noSlips
-        let session = GameSession.playing(
-            game, engine: engine.service, library: library,
-            strength: settings.strength, lines: lines
-        )
-        path.append(.game(session))
+        path.append(.game(opener.play(game, noSlips: noSlips)))
     }
 
     private func open(_ entry: GameLibrary.Entry) {
-        guard let session = GameSession.opened(
-            entry, engine: engine.service, library: library,
-            strength: settings.strength, lines: settings.lines
-        ) else { return }
+        guard let session = opener.open(entry) else { return }
         path.append(.game(session))
+    }
+
+    /// Every game this screen opens is opened with the engine, the library and what the player
+    /// has set right now (`GameOpener`).
+    private var opener: GameOpener {
+        GameOpener(engine: engine.service, library: library, settings: settings)
     }
 }
 

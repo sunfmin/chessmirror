@@ -556,7 +556,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Starts the Review of this imported game. Nothing happens unless `canReview`.
     public func review() {
         guard canReview, let engine, let library, let url,
-            let entry = library.entries.first(where: { $0.url == url }) else { return }
+            let entry = library.entry(at: url) else { return }
         reviewNews = nil
         library.reviewImported(entry, using: engine) { [weak self] outcome in
             guard let self else { return }

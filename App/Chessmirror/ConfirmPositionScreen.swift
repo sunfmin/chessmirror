@@ -480,17 +480,13 @@ struct ConfirmPositionScreen: View {
             return
         }
 
-        let session = GameSession.corrected(
+        let session = GameOpener(engine: engine.service, library: library, settings: .shared).corrected(
             game,
             controllers: proposal.controllers,
             orientation: proposal.orientation,
             origin: proposal.origin,
             picture: proposal.picture,
-            shaky: proposal.shaky,
-            engine: engine.service,
-            library: library,
-            strength: PlayerSettings.shared.strength,
-            lines: PlayerSettings.shared.lines
+            shaky: proposal.shaky
         )
         // Replaces the stack rather than adding to it: going back from a game in progress belongs
         // in the library, not in the editor of a position already being played.
