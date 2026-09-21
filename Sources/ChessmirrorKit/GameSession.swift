@@ -418,6 +418,46 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
     public private(set) var reviewNews: ReviewNews?
 
+    /// The row under the record for an imported game's Review (docs/adr/0016, 0044): how far it
+    /// has got, the offer to start it, or what it found. Nil for every game that is not an
+    /// import awaiting or just given its Review — which is every game played here.
+    public enum ReviewRow: Hashable, Sendable {
+        /// Running: positions settled of positions to settle, or queued behind another game.
+        case running(ImportReview.Progress)
+        /// Offered, as a press rather than something that starts itself — seconds of engine per
+        /// move. `failed` when the last try could not settle every position; `canStart` false
+        /// while there is no engine or library to run it with.
+        case offered(failed: Bool, canStart: Bool)
+        /// Landed, with this many 错招 found.
+        case done(slips: Int)
+
+        /// What the row says.
+        public var text: String {
+            switch self {
+            case .running(let progress):
+                progress.total > 0
+                    ? localized("review.progress", progress.judged, progress.total)
+                    : localized("import.status.queued")
+            case .offered(let failed, _): localized(failed ? "review.failed" : "review.offer")
+            case .done(let slips):
+                slips > 0 ? localized("review.done", slips) : localized("review.done.clean")
+            }
+        }
+
+        /// The button's word, for the one state that has a button.
+        public var action: String? {
+            guard case .offered(_, let canStart) = self else { return nil }
+            return localized(canStart ? "review.start" : "review.waiting")
+        }
+    }
+
+    public var reviewRow: ReviewRow? {
+        if let reviewProgress { return .running(reviewProgress) }
+        if awaitsReview { return .offered(failed: reviewNews == .failed, canStart: canReview) }
+        if case .done(let slips) = reviewNews { return .done(slips: slips) }
+        return nil
+    }
+
     /// Starts the Review of this imported game. Nothing happens unless `canReview`.
     public func review() {
         guard canReview, let engine, let library, let url,
@@ -623,6 +663,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         controllers[colour] ?? .hand
     }
 
+    /// Whether a seat chip may be pressed: never while the board is spoken for — the same refusal
+    /// `setController` makes — and the engine's only once there is an engine. Seating it before
+    /// one has arrived is allowed in the kit (a game can be made before the host is ready); it is
+    /// the chip that has nothing to offer yet.
+    public func canSeat(_ controller: Controller) -> Bool {
+        !isOccupied && (controller == .hand || engine != nil)
+    }
+
     public func setController(_ controller: Controller, for colour: PieceColour) {
         guard !isOccupied else { return }
         guard controllers[colour] != controller else { return }
@@ -748,9 +796,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Swaps the position the game starts from. Only for a game nobody has moved in yet — which
     /// is the case this exists for: correcting a piece straight after the photograph should fix
     /// the game in front of you, not leave a second record behind.
+    /// Whether a corrected position can go back into this game rather than make a second one:
+    /// nothing played in it yet, and the board not spoken for. What the editor's button reads to
+    /// say which of the two it will do — it read only the first, and said 「用这个」 over a press
+    /// that then made a second game.
+    public var canReplaceStart: Bool { !isOccupied && game.plies.isEmpty }
+
     public func replaceStart(with fresh: Game) -> Bool {
-        guard !isOccupied else { return false }
-        guard game.plies.isEmpty else { return false }
+        guard canReplaceStart else { return false }
         stopSearching()
         game = fresh
         cursor = 0
@@ -848,6 +901,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// only on the screen that draws the switch, so a screen that offers it by accident offers a
     /// switch that does nothing rather than taking a drill out of 把关.
     public var acceptsLines: Bool { !isOccupied && practice == nil }
+
+    /// Whether the 把关 switch is pressable: the session has to accept a change of 线 at all
+    /// (`acceptsLines` — not mid-move, not in a 练习), and turning it *on* needs an engine to do
+    /// the stopping. Turning it off never does.
+    public var canSwitchNoSlips: Bool { acceptsLines && (engine != nil || isNoSlipsOn) }
 
     /// Switches 把关 on or off. It stops the player at the 记录线, **the only dial 把关 has on the
     /// judgement of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how
@@ -1192,6 +1250,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The 应招 open on the strip, if one is (`readReply(at:)`).
     public var replyReading: ReplyReading? { replyOnStrip.reading }
 
+    /// Whether a wrong move on the strip may be asked about: not while a 惩罚 exercise has the
+    /// board, which is the one thing in the strip asking something of the player (docs/adr/0031).
+    public var canReadReply: Bool { activePunishment == nil }
+
     /// Reads the 应招 of a 试招 on the strip, or puts it away again if it is the one open.
     ///
     /// A move that carries its answer is read at once; one refused before replies were written
@@ -1204,7 +1266,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         let wrongs = reading.wrongs
-        guard activePunishment == nil, wrongs.indices.contains(index),
+        guard canReadReply, wrongs.indices.contains(index),
             let position = refusedPosition
         else { return }
         let wrong = wrongs[index]
@@ -2017,9 +2079,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Takes the last move of the game off. Only from the latest position: in the middle of a
     /// game, going backwards is browsing, and deleting is not what a back button means.
+    /// Whether 撤销 may be pressed: the three refusals `undo()` makes, read by the menu that
+    /// offers it. The menu used to spell only two of them, so it stayed live while a move was
+    /// being weighed and did nothing when pressed.
+    public var canUndo: Bool { !isOccupied && isAtLatest && !game.plies.isEmpty }
+
     public func undo() {
-        guard !isOccupied else { return }
-        guard isAtLatest, !game.plies.isEmpty else { return }
+        guard canUndo else { return }
         stopSearching()
         game.undo()
         emit(.stepped)

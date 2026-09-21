@@ -106,6 +106,14 @@ public enum Drop {
     public static func cost(_ drop: Double) -> String { localized("book.cost", points(drop)) }
 }
 
+/// How deep a search has got, said the one way (docs/adr/0020): 「深度 18」, and 「在算」 while it
+/// has reported nothing yet — a depth of nought is not a report. It was spelled at three sites.
+public enum Depth {
+    public static func label(_ depth: Int) -> String {
+        depth > 0 ? localized("game.depth", depth) : localized("noSlips.judging")
+    }
+}
+
 extension Set where Element == Square {
     /// The one line the app says about squares the camera was not sure of — nil when it was sure
     /// of every square it read. The game screen and the editor used to each own this line, byte

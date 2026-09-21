@@ -186,6 +186,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     #expect(session.awaitsReview)
     #expect(library.reviewingURLs.isEmpty)
     #expect(session.reviewProgress == nil)
+    #expect(session.reviewRow == .offered(failed: false, canStart: !engineArrivesLate))
     if engineArrivesLate {
         #expect(!session.canReview, "no engine yet, so the offer cannot be taken up")
         session.review()
@@ -196,6 +197,10 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     session.review()
     #expect(session.isReviewing)
     #expect(!session.canReview, "a Review already running cannot be asked for again")
+    guard case .running = session.reviewRow else {
+        Issue.record("expected the row to be counting, got \(String(describing: session.reviewRow))")
+        return
+    }
     // Asking again, or reappearing, while it runs must not queue another copy.
     session.review()
     session.attach(engine: engine, library: library)
@@ -208,6 +213,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     #expect(library.reviewingURLs.isEmpty)
     #expect(session.reviewProgress == nil)
     #expect(session.reviewNews == .done(slips: 0))
+    #expect(session.reviewRow == .done(slips: 0))
     #expect(!session.awaitsReview)
     #expect(session.game.reviewDepth == 16)
     // The review's own searches, apart from the live position searches the opened game starts.
@@ -258,6 +264,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     #expect(session.reviewNews == .failed)
     #expect(session.awaitsReview)
     #expect(session.canReview, "nothing running, so it can be asked again")
+    #expect(session.reviewRow == .offered(failed: true, canStart: true))
     let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
     #expect(!disk.game.isReviewed, "no partial Review is ever written")
 }

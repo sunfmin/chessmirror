@@ -455,9 +455,10 @@ struct ConfirmPositionScreen: View {
 
     /// Whether this goes back into the game it came from. It does when nothing has been played
     /// there yet, which is when the answer to "the camera got a piece wrong" should be that the
-    /// piece is now right — not a second game in the list.
+    /// piece is now right — not a second game in the list. The session's own answer, the one
+    /// `replaceStart` acts on, so the button never says 「用这个」 over a press that starts a game.
     private var isCorrection: Bool {
-        proposal.reopening?.game.plies.isEmpty ?? false
+        proposal.reopening?.canReplaceStart ?? false
     }
 
     private func paint(_ square: Square) {

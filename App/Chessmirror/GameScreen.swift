@@ -143,7 +143,7 @@ struct GameScreen: View {
                     } label: {
                         Label(localized("game.undo"), systemImage: "arrow.uturn.backward")
                     }
-                    .disabled(!session.isAtLatest || session.game.plies.isEmpty)
+                    .disabled(!session.canUndo)
                     Button {
                         path.append(.confirm(PositionProposal(reopening: session)))
                     } label: {
@@ -297,7 +297,7 @@ struct GameScreen: View {
                 // The width is the depth label's either way, so the row does not jump when the
                 // first depth lands.
                 if let depth = strip.depth {
-                    Text(depth > 0 ? localized("game.depth", depth) : localized("noSlips.judging"))
+                    Text(Depth.label(depth))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -354,7 +354,7 @@ struct GameScreen: View {
             .accessibilityElement(children: .combine)
         }
         .buttonStyle(.plain)
-        .disabled(session.activePunishment != nil)
+        .disabled(!session.canReadReply)
         .accessibilityLabel(wrong.san)
         .accessibilityValue(Drop.figure(wrong.drop))
         .accessibilityHint(localized("tried.reply.hint"))
@@ -394,7 +394,7 @@ struct GameScreen: View {
     @ViewBuilder private func rejudgeControl(_ reading: GameSession.ReplyReading) -> some View {
         if let running = session.rejudging, running.index == reading.index {
             ProgressView().controlSize(.mini)
-            Text(running.depth > 0 ? localized("game.depth", running.depth) : localized("noSlips.judging"))
+            Text(Depth.label(running.depth))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.inkSoft)
         } else {
@@ -437,14 +437,7 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localized("noSlips.name"))
         .accessibilityValue(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
-        .disabled(!maySwitchNoSlips)
-    }
-
-    /// Whether the 把关 switch is pressable: the session has to accept a change of 线 at all
-    /// (`acceptsLines` — not mid-move, not in a 练习), and turning it *on* has to be possible
-    /// without an engine to stop anybody. One rule, read by both places that draw the switch.
-    private var maySwitchNoSlips: Bool {
-        session.acceptsLines && (engine.isReady || session.isNoSlipsOn)
+        .disabled(!session.canSwitchNoSlips)
     }
 
     // ------------------------------------------------------------------ the two sides
@@ -616,7 +609,7 @@ struct GameScreen: View {
             }
         } label: {
             HStack(spacing: 3) {
-                Text(rungTitle)
+                Text(session.strength.engineName)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 8, weight: .semibold))
             }
@@ -626,13 +619,7 @@ struct GameScreen: View {
         }
         .disabled(session.isOccupied)
         .accessibilityLabel(localized("strength"))
-        .accessibilityValue(rungTitle)
-    }
-
-    /// 「Stockfish 18 · 1800」, or the name alone at 满力.
-    private var rungTitle: String {
-        let name = Controller.engine.playerName
-        return session.strength == .full ? name : "\(name) · \(session.strength.label)"
+        .accessibilityValue(session.strength.engineName)
     }
 
     private func unfoldButton(_ colour: PieceColour) -> some View {
@@ -674,7 +661,7 @@ struct GameScreen: View {
                                         in: RoundedRectangle(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
-                    .disabled(controller == .engine && !engine.isReady)
+                    .disabled(!session.canSeat(controller))
                 }
             }
             .frame(minHeight: 36)
@@ -694,7 +681,7 @@ struct GameScreen: View {
                 set: { session.setNoSlips($0) }
             ))
             .toggleStyle(SettingToggleStyle(label: localized("noSlips.name")))
-            .disabled(!maySwitchNoSlips)
+            .disabled(!session.canSwitchNoSlips)
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))
@@ -814,15 +801,12 @@ struct GameScreen: View {
     /// row below fills in on its own, because it reads the same game. Absent for every game that
     /// is not an unreviewed import, which is every game the player played here.
     @ViewBuilder private var reviewRow: some View {
-        if let progress = session.reviewProgress {
+        switch session.reviewRow {
+        case .running(let progress)?:
             VStack(alignment: .leading, spacing: 6) {
-                Text(
-                    progress.total > 0
-                        ? localized("review.progress", progress.judged, progress.total)
-                        : localized("import.status.queued")
-                )
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(Palette.ink)
+                Text(GameSession.ReviewRow.running(progress).text)
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(Palette.ink)
                 ProgressView(value: progress.fraction)
                     .tint(Palette.analysis)
             }
@@ -830,37 +814,34 @@ struct GameScreen: View {
             .reviewChrome()
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.updatesFrequently)
-        } else if session.awaitsReview {
-            let failed = session.reviewNews == .failed
+        case .offered(let failed, let canStart)?:
+            let row = GameSession.ReviewRow.offered(failed: failed, canStart: canStart)
             HStack(spacing: 10) {
-                Text(localized(failed ? "review.failed" : "review.offer"))
+                Text(row.text)
                     .font(.footnote)
                     .foregroundStyle(failed ? Palette.alarm : Palette.inkSoft)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button { session.review() } label: {
-                    Text(localized(session.canReview ? "review.start" : "review.waiting"))
+                    Text(row.action ?? "")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(session.canReview ? Palette.raised : Palette.inkSoft)
+                        .foregroundStyle(canStart ? Palette.raised : Palette.inkSoft)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(
-                            session.canReview ? Palette.analysis : Palette.chipRest, in: Capsule()
-                        )
+                        .background(canStart ? Palette.analysis : Palette.chipRest, in: Capsule())
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(!session.canReview)
+                .disabled(!canStart)
             }
             .reviewChrome()
-        } else if case .done(let count) = session.reviewNews {
-            Label(
-                count > 0 ? localized("review.done", count) : localized("review.done.clean"),
-                systemImage: "checkmark.circle.fill"
-            )
-            .font(.footnote)
-            .foregroundStyle(Palette.analysis)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .reviewChrome()
+        case .done(let slips)?:
+            Label(GameSession.ReviewRow.done(slips: slips).text, systemImage: "checkmark.circle.fill")
+                .font(.footnote)
+                .foregroundStyle(Palette.analysis)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .reviewChrome()
+        case nil:
+            EmptyView()
         }
     }
 

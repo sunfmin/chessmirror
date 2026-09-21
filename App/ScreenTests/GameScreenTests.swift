@@ -1018,15 +1018,10 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-rung-1800") {
             screen(bound, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
-        #expect(rendered.says("Stockfish 18 · 1800"))
+        // What the name says at each rung is the kit's (StrengthTests); this is that the bar
+        // says it, and says what the number is.
+        #expect(rendered.says(bound.strength.engineName))
         #expect(rendered.says("棋力"), "VoiceOver says what the number is")
-
-        let unbound = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
-        let atFull = await ScreenImage.write("game-rung-full") {
-            screen(unbound, engine: ScriptedEngine(Self.searching, isEndless: true))
-        }
-        #expect(atFull.says("Stockfish 18"))
-        #expect(!atFull.says("Stockfish 18 ·"), "the name alone at 满力")
     }
 
     /// The bar says the 搜索预算 the setting names, not a fixed line (CONTEXT.md): with the time
