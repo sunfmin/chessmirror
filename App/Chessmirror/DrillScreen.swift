@@ -19,11 +19,10 @@ struct DrillScreen: View {
         _session = State(initialValue: GameSession.practising(drill))
     }
 
+    /// Today's queue follows the attempt on its own: the drill came from the index
+    /// (`MistakeIndex.practise`), which works the day out again when it settles.
     var body: some View {
         GameScreen(session: session, path: $path, practiceNext: nextAction)
-        .onChange(of: drill.isSettled) { _, settled in
-            if settled { index.refresh() }
-        }
     }
 
     private func goToNext() {
@@ -36,17 +35,7 @@ struct DrillScreen: View {
         return { goToNext() }
     }
 
-    private var next: Mistake? {
-        switch source {
-        case .daily:
-            return index.daily.cards.first { $0.position != mistake.position }?.mistake
-        case .picked:
-            let book = index.book.mistakes
-            guard let here = book.firstIndex(where: { $0.position == mistake.position }),
-                  book.count > 1 else { return nil }
-            return book[(here + 1) % book.count]
-        }
-    }
+    private var next: Mistake? { index.next(after: mistake, source: source) }
 }
 
 /// Owns the attempt for one navigation destination, keeping its clock stable on redraws.
@@ -58,18 +47,15 @@ struct DrillHost: View {
 
     init(
         mistake: Mistake,
+        index: MistakeIndex,
         engine: (any Engine)?,
-        lines: JudgementLines,
-        log: PracticeLog,
         source: Drill.Source = .picked,
         path: Binding<[Step]>
     ) {
         self.mistake = mistake
         self.source = source
         _path = path
-        _drill = State(initialValue: Drill(
-            position: mistake.position, engine: engine, log: log, lines: lines, source: source
-        ))
+        _drill = State(initialValue: index.practise(mistake, engine: engine, source: source))
     }
 
     var body: some View {

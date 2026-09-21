@@ -28,14 +28,14 @@ struct DrillVerdictRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             headline
-            if let explanation {
+            if let explanation = drill.explanation {
                 Text(explanation)
                     .font(.footnote)
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if drill.isSettled || drill.couldNotJudge { action }
+            if drill.offersWayOn { action }
         }
         .padding(.leading, 13)
         .padding(.trailing, 12)
@@ -52,7 +52,7 @@ struct DrillVerdictRow: View {
     private var headline: some View {
         HStack(spacing: 8) {
             if drill.isJudging { ProgressView().controlSize(.small) }
-            Text(word)
+            Text(drill.standing.word)
                 .font(isAnswered ? .title3.weight(.semibold) : .subheadline)
                 .foregroundStyle(isAnswered || drill.couldNotJudge ? tone : Palette.inkSoft)
             Spacer(minLength: 0)
@@ -84,25 +84,12 @@ struct DrillVerdictRow: View {
     /// Whether the attempt has been judged, which is when this row has an answer to give.
     private var isAnswered: Bool { drill.verdict != nil }
 
-    private var word: String {
-        if let verdict = drill.verdict {
-            return localized(verdict.passed ? "drill.held" : "drill.dropped")
-        }
-        if drill.couldNotJudge { return localized("drill.noEngine") }
-        return localized(drill.isJudging ? "drill.judging" : "drill.prompt")
-    }
-
-    /// Why, and only when the answer was no. A move that held has been told that it held; a
-    /// paragraph explaining a right answer is the app arguing with it (docs/adr/0027).
-    private var explanation: String? {
-        guard let verdict = drill.verdict, !verdict.passed else { return nil }
-        return verdict.sentence
-    }
-
+    /// The colour the word means: teal for a move that held, alarm for one that gave something
+    /// away — or that could not be judged at all.
     private var tone: Color {
-        guard let verdict = drill.verdict else {
-            return drill.couldNotJudge ? Palette.alarm : Palette.analysis
+        switch drill.standing {
+        case .dropped, .unjudged: Palette.alarm
+        case .asking, .judging, .held: Palette.analysis
         }
-        return verdict.passed ? Palette.analysis : Palette.alarm
     }
 }

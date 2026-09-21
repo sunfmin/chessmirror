@@ -96,9 +96,8 @@ struct LibraryScreen: View {
                 case .drill(let mistake, let source):
                     DrillHost(
                         mistake: mistake,
+                        index: index,
                         engine: engine.service,
-                        lines: settings.lines,
-                        log: index.log,
                         source: source,
                         path: $path
                     )
@@ -193,10 +192,7 @@ struct LibraryScreen: View {
         // whenever they change, and costs nothing when they have not, because it walks only what
         // is new (docs/adr/0028). Asked for here because this is where the app starts, not
         // because the book is this screen's — freshness is the index's own (`MistakeIndex.follow`).
-        .task { index.update(from: library.entries, lines: settings.lines); index.follow(library) }
-        .onChange(of: settings.lines) { _, lines in
-            index.update(from: library.entries, lines: lines)
-        }
+        .task { index.follow(library, settings: settings) }
     }
 
     // ------------------------------------------------------------------ parts
@@ -389,11 +385,7 @@ struct LibraryScreen: View {
                 Image(systemName: "sun.max.fill").font(.title3)
                 Text(localized("daily")).font(.headline)
                 Spacer(minLength: 0)
-                Text(
-                    left > 0
-                        ? localized("daily.left", plural: left)
-                        : localized(index.book.isEmpty ? "daily.none" : "daily.done")
-                )
+                Text(index.dailyLabel)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(left > 0 ? Palette.parchment : Palette.inkSoft)
                 if left > 0 {

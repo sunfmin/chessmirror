@@ -1,4 +1,5 @@
 import ChessmirrorKit
+import ChessmirrorKitTesting
 import Foundation
 import Testing
 
@@ -414,4 +415,112 @@ private func reviewedButClean() -> PGN {
         try? await Task.sleep(for: .milliseconds(10))
     }
     #expect(index.book.mistakes.first?.recurrence == held, "unfollowed, the book stands still")
+}
+
+// ------------------------------------------------------------------ 日课 from the index
+
+@MainActor
+private func hop() async {
+    for _ in 0..<20 {
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+}
+
+/// The question after this one: today's next card, or the book's next 错题 round to the first,
+/// and nothing when there is nothing else to ask.
+@MainActor
+@Test("the next question comes from the day or the book, and runs out")
+func theNextQuestion() throws {
+    let index = MistakeIndex(log: temporaryLog())
+    index.update(from: try (1...3).map { try game(seed: $0, at: now) })
+    let book = index.book.mistakes
+    #expect(book.count == 3)
+    #expect(index.next(after: book[0], source: .picked) == book[1])
+    #expect(index.next(after: book[2], source: .picked) == book[0], "round to the first")
+
+    let cards = index.daily.cards
+    #expect(cards.count == 3)
+    #expect(index.next(after: cards[0].mistake, source: .daily) == cards[1].mistake)
+    #expect(index.next(after: cards[1].mistake, source: .daily) == cards[0].mistake,
+            "the first card still standing that is not this one")
+
+    let one = MistakeIndex(log: temporaryLog())
+    one.update(from: [try game(seed: 1, at: now)])
+    let only = try #require(one.book.mistakes.first)
+    #expect(one.next(after: only, source: .picked) == nil, "a book of one")
+    #expect(one.next(after: only, source: .daily) == nil, "the end of the queue")
+}
+
+/// The door says what is left today, that today is done, or that there is nothing yet.
+@MainActor
+@Test("the daily door says how much is left, that it is done, or that there is nothing yet")
+func theDailyDoorSaysWhereTheDayIs() throws {
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let index = MistakeIndex(log: log)
+    #expect(index.dailyLabel == localized("daily.none"))
+
+    index.update(from: try (1...3).map { try game(seed: $0, at: now) })
+    #expect(index.dailyLabel == localized("daily.left", plural: 3))
+
+    for card in index.daily.cards {
+        log.append(.drilled(PracticeLog.Attempt(
+            position: card.position, seconds: 5, passed: true, played: "?", cost: 0, hints: 0,
+            source: .daily
+        )))
+    }
+    index.refresh()
+    #expect(index.daily.isEmpty)
+    #expect(index.dailyLabel == localized("daily.done"))
+}
+
+/// A drill the index hands out writes to its log under its lines, and when it settles the day is
+/// worked out again — the practised card leaves today's queue without anybody refreshing it.
+@MainActor
+@Test("an attempt settled from 日课 takes its card off today's queue")
+func aSettledAttemptMovesTheDay() async throws {
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+    let index = MistakeIndex(log: log)
+    index.update(from: try (1...3).map { try game(seed: $0, at: now) })
+    let card = try #require(index.daily.next)
+    let engine = ScriptedEngine([
+        Analysis(depth: Drill.depth, lines: [Line(score: .centipawns(0), uciMoves: [], san: [])])
+    ])
+
+    let drill = try #require(index.practise(card.mistake, engine: engine, source: .daily))
+    #expect(drill.lines.noSlips, "under 把关, as every 练习 is")
+    drill.play(try #require(drill.game.state.legalMoves.first))
+    await drill.settled()
+    #expect(drill.verdict?.passed == true)
+    #expect(log.attempts().count == 1, "written into the index's own log")
+    await hop()
+    #expect(index.daily.remaining == 2)
+    #expect(!index.daily.cards.contains { $0.position == card.position })
+}
+
+/// The book follows the player's lines the way it follows the games: moved above the one 错题's
+/// cost, the book empties; moved back, it comes back.
+@MainActor
+@Test("the book follows the player's lines as it follows the games")
+func theBookFollowsTheLines() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let library = GameLibrary(folder: GameFolder(url: folder))
+    let pgn = try #require(try game(seed: 1, at: now).pgn)
+    #expect(library.write(pgn, to: folder.appending(path: "seed-1.pgn")))
+    let settings = PlayerSettings(store: InMemorySettings())
+    let index = MistakeIndex(log: temporaryLog())
+    defer { index.unfollow() }
+
+    index.follow(library, settings: settings)
+    #expect(index.book.mistakes.count == 1)
+    settings.record = 40
+    await hop()
+    #expect(index.book.isEmpty, "31 points is under a 40-point 记录线")
+    settings.record = 10
+    await hop()
+    #expect(index.book.mistakes.count == 1)
 }

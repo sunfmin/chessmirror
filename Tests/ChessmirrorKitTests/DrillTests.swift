@@ -489,3 +489,49 @@ func anAnswerThatHoldsStands() async throws {
     #expect(session.refused == nil)
     #expect(session.isNoSlipsOn, "and what follows is played under 把关 too")
 }
+
+// ------------------------------------------------------------------ the verdict row
+
+/// The row under the board says where the attempt stands in one word, explains only a fail, and
+/// offers the way on once there is an answer or there cannot be one (docs/adr/0029).
+@MainActor
+@Test("the verdict row says where the attempt stands")
+func theVerdictRowSaysWhereTheAttemptStands() async throws {
+    let log = temporaryLog()
+    defer { try? FileManager.default.removeItem(at: log.url) }
+
+    let (held, holding) = try engine(
+        before: .centipawns(0), playing: "Nc6", after: .centipawns(45), wanting: "d5"
+    )
+    let good = try #require(Drill(position: afterNf3, engine: held, log: log))
+    #expect(good.standing == .asking)
+    #expect(!good.offersWayOn, "nothing to move on from before the move")
+    good.play(holding)
+    #expect(good.standing == .judging)
+    await good.settled()
+    #expect(good.standing == .held)
+    #expect(good.explanation == nil, "a move that held is not argued with")
+    #expect(good.offersWayOn)
+
+    let (lost, losing) = try engine(
+        before: .centipawns(0), playing: "Qh4", after: .centipawns(133), wanting: "Nc6"
+    )
+    let bad = try #require(Drill(position: afterNf3, engine: lost, log: log))
+    bad.play(losing)
+    await bad.settled()
+    #expect(bad.standing == .dropped)
+    #expect(bad.explanation == bad.verdict?.sentence)
+
+    let unjudged = try #require(Drill(position: afterNf3, engine: nil, log: log))
+    unjudged.play(losing)
+    await unjudged.settled()
+    #expect(unjudged.standing == .unjudged)
+    #expect(unjudged.offersWayOn, "a drill that cannot be judged still lets you on")
+
+    Speech.speaking(.chinese) {
+        #expect(Drill.Standing.held.word == localized("drill.held"))
+        #expect(Drill.Standing.dropped.word == localized("drill.dropped"))
+        #expect(Drill.Standing.unjudged.word == localized("drill.noEngine"))
+        #expect(Drill.Standing.asking.word == localized("drill.prompt"))
+    }
+}
