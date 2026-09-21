@@ -30,6 +30,30 @@ import ChessmirrorKitTesting
         ])
     }
 
+    /// Every way into a game starts at the rung it is handed. A photographed board and a corrected
+    /// one took no rung at all and started at 满力, so the first engine seated on a game read off
+    /// the camera played at full strength whatever the player had picked.
+    @Test("every way into a game starts at the rung it is handed")
+    func everyWayInTakesTheRung() {
+        let rung = Strength.elo(1600)
+        let game = Self.start
+        #expect(GameSession.recognised(game, strength: rung).strength == rung)
+        #expect(GameSession.corrected(
+            game, controllers: [.white: .hand, .black: .hand], orientation: .whiteAtBottom,
+            origin: .recognised, picture: nil, shaky: [], engine: nil, library: nil, strength: rung
+        ).strength == rung)
+        #expect(GameSession.fresh(game, strength: rung).strength == rung)
+        #expect(GameSession.playing(game, strength: rung).strength == rung)
+        #expect(GameSession.recognised(game).strength == .full, "and 满力 is still the default")
+    }
+
+    /// The engine's bar names the engine with the rung it is on, and the name alone at 满力.
+    @Test("the engine is named with its rung")
+    func theEngineIsNamedWithItsRung() {
+        #expect(Strength.elo(1800).engineName == "Stockfish 18 · 1800")
+        #expect(Strength.full.engineName == "Stockfish 18")
+    }
+
     /// One move by hand under 正着, answered by the engine: the judging searches, the engine's own
     /// search, and the search that prepares the next position, in that order.
     private func playE4(against strength: Strength, engine: ScriptedEngine) async throws -> GameSession {

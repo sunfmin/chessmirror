@@ -16,35 +16,6 @@ import UIKit
 @MainActor final class SystemFeedback: Feedback {
     static let shared = SystemFeedback()
 
-    /// Off is a setting people genuinely want, and it belongs somewhere that survives a launch
-    /// — and, since the games follow a person to their other devices (docs/adr/0012), somewhere
-    /// that follows them too. A setting that has to be turned off on every device is a setting
-    /// that is only half kept.
-    var isSoundOn: Bool {
-        didSet { Self.remember(isSoundOn) }
-    }
-
-    private static let soundKey = "chessmirror.sound"
-
-    /// Both stores, always. iCloud's is the one that travels; `UserDefaults` is the one that
-    /// answers on a device with no account, and the one that answers instantly at launch
-    /// before iCloud's has been read back off the network.
-    private static func remember(_ isOn: Bool) {
-        UserDefaults.standard.set(isOn, forKey: soundKey)
-        NSUbiquitousKeyValueStore.default.set(isOn, forKey: soundKey)
-    }
-
-    /// What the setting was last left at anywhere, or nil for a person who has never touched
-    /// it. iCloud wins when both have an answer: it is the more recently-informed of the two,
-    /// and disagreement means another device has since had a say.
-    private static func remembered() -> Bool? {
-        if let travelled = NSUbiquitousKeyValueStore.default.object(forKey: soundKey) as? Bool {
-            return travelled
-        }
-        guard UserDefaults.standard.object(forKey: soundKey) != nil else { return nil }
-        return UserDefaults.standard.bool(forKey: soundKey)
-    }
-
     private let engine = AVAudioEngine()
     /// Four players so that sounds in quick succession overlap instead of cutting each other
     /// off — which is what happens when the engine replies the instant you move.
@@ -59,32 +30,18 @@ import UIKit
     private let heavyImpact = UIImpactFeedbackGenerator(style: .medium)
 
     private init() {
-        isSoundOn = Self.remembered() ?? true
         // This is the seam working: the kit's `Sounds` is handed the app's adapter on the way
         // up, and everything that plays a sound goes through it from then on. A test that wants
         // silence or a recording replaces `Sounds.current` before it builds its screens.
         Sounds.current = self
-        // iCloud's copy arrives whenever it arrives, including while the app is open and its
-        // menu on screen. Set through the property rather than around it, so that the local
-        // copy is brought into line with the travelled one at the same time.
-        NotificationCenter.default.addObserver(
-            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: NSUbiquitousKeyValueStore.default,
-            queue: .main
-        ) { _ in
-            MainActor.assumeIsolated {
-                guard let travelled = Self.remembered(), travelled != SystemFeedback.shared.isSoundOn else { return }
-                SystemFeedback.shared.isSoundOn = travelled
-            }
-        }
-        NSUbiquitousKeyValueStore.default.synchronize()
     }
 
     // ------------------------------------------------------------------ using
 
     func play(_ sound: FeedbackSound) {
         touch(sound)
-        guard isSoundOn else { return }
+        // Off is the player's setting, and it travels (docs/adr/0012).
+        guard PlayerSettings.shared.isSoundOn else { return }
         // Two taps closer together than this are one gesture as far as the ear is concerned, and
         // playing both only makes a louder version of one.
         let now = ContinuousClock.now

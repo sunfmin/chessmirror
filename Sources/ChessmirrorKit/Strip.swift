@@ -16,6 +16,15 @@ public enum Finish: Hashable, Sendable {
         case .drawn: 0.5
         }
     }
+
+    /// What the bar says for a game that is over, in place of a score. A domain type owns its own
+    /// words (docs/adr/0019); this one was the screen's.
+    public var label: String {
+        switch self {
+        case .won(let colour): localized("standing.won", colour.label)
+        case .drawn: localized("standing.drawn")
+        }
+    }
 }
 
 extension Game {

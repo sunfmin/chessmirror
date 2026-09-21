@@ -32,7 +32,7 @@ struct LibraryScreen: View {
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
     @Environment(MistakeIndex.self) private var index
-    private let judgement = JudgementSetting.shared
+    private let settings = PlayerSettings.shared
 
     @State private var path: [Step] = []
     @State private var isCameraOpen = false
@@ -96,9 +96,8 @@ struct LibraryScreen: View {
                 case .drill(let mistake, let source):
                     DrillHost(
                         mistake: mistake,
+                        index: index,
                         engine: engine.service,
-                        lines: judgement.lines,
-                        log: index.log,
                         source: source,
                         path: $path
                     )
@@ -193,10 +192,7 @@ struct LibraryScreen: View {
         // whenever they change, and costs nothing when they have not, because it walks only what
         // is new (docs/adr/0028). Asked for here because this is where the app starts, not
         // because the book is this screen's — freshness is the index's own (`MistakeIndex.follow`).
-        .task { index.update(from: library.entries, lines: judgement.lines); index.follow(library) }
-        .onChange(of: judgement.lines) { _, lines in
-            index.update(from: library.entries, lines: lines)
-        }
+        .task { index.follow(library, settings: settings) }
     }
 
     // ------------------------------------------------------------------ parts
@@ -389,11 +385,7 @@ struct LibraryScreen: View {
                 Image(systemName: "sun.max.fill").font(.title3)
                 Text(localized("daily")).font(.headline)
                 Spacer(minLength: 0)
-                Text(
-                    left > 0
-                        ? localized("daily.left", plural: left)
-                        : localized(index.book.isEmpty ? "daily.none" : "daily.done")
-                )
+                Text(index.dailyLabel)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(left > 0 ? Palette.parchment : Palette.inkSoft)
                 if left > 0 {
@@ -477,7 +469,7 @@ struct LibraryScreen: View {
     /// A best on the ladder, and the way to the game it was made in.
     private func best(_ title: String, _ best: Ladder.Best) -> some View {
         Button {
-            if let entry = library.entries.first(where: { $0.url == best.game }) { open(entry) }
+            if let session = opener.open(best.game) { path.append(.game(session)) }
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title).font(.caption).foregroundStyle(Palette.inkSoft)
@@ -624,14 +616,8 @@ struct LibraryScreen: View {
 
             switch intake {
             case .played(let game, let shaky, let orientation, let picture):
-                let session = GameSession.recognised(
-                    game,
-                    orientation: orientation,
-                    picture: picture,
-                    shaky: shaky,
-                    engine: engine.service,
-                    library: library,
-                    lines: judgement.lines
+                let session = opener.recognised(
+                    game, orientation: orientation, picture: picture, shaky: shaky
                 )
                 path.append(.game(session))
             case .needsEditing(let draft, let shaky, let orientation, let picture):
@@ -653,21 +639,18 @@ struct LibraryScreen: View {
 
     private func start(_ game: Game?, noSlips: Bool = false) {
         guard let game else { return }
-        var lines = judgement.lines
-        lines.noSlips = noSlips
-        let session = GameSession.playing(
-            game, engine: engine.service, library: library,
-            strength: StrengthSetting.shared.strength, lines: lines
-        )
-        path.append(.game(session))
+        path.append(.game(opener.play(game, noSlips: noSlips)))
     }
 
     private func open(_ entry: GameLibrary.Entry) {
-        guard let session = GameSession.opened(
-            entry, engine: engine.service, library: library,
-            strength: StrengthSetting.shared.strength, lines: judgement.lines
-        ) else { return }
+        guard let session = opener.open(entry) else { return }
         path.append(.game(session))
+    }
+
+    /// Every game this screen opens is opened with the engine, the library and what the player
+    /// has set right now (`GameOpener`).
+    private var opener: GameOpener {
+        GameOpener(engine: engine.service, library: library, settings: settings)
     }
 }
 
@@ -716,7 +699,8 @@ struct GameList: View {
                 if let pgn = entry.pgn, let fen = entry.shownFEN {
                     BoardView(
                         pieces: PositionDraft(fen: fen)?.pieces ?? [:],
-                        orientation: pgn.handColours == [.black] ? .blackAtBottom : .whiteAtBottom,
+                        // The chair the game opens in, so the shelf and the opened board agree.
+                        orientation: pgn.orientation,
                         coordinates: false,
                         isInteractive: false
                     )

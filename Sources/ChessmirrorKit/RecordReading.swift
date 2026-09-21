@@ -24,22 +24,31 @@ public struct RecordReading: Sendable {
     public let slips: [Slip]
 
     private let game: Game
+    private let lines: JudgementLines
+    /// Whether anything in the game has been measured: a record with nothing measured in it has
+    /// no line of costs to draw (`Game.hasCosts`). Held, because it is a walk of its own.
+    private let hasCosts: Bool
 
     /// A reading of `game` at `cursor`, by the 判决线 in force and the sides the player moved.
     public init(game: Game, mine: Set<PieceColour>, lines: JudgementLines, cursor: Int) {
-        self.init(game: game, cursor: cursor, slips: game.slips(by: mine, lines: lines))
+        self.init(
+            game: game, lines: lines, cursor: cursor, slips: game.slips(by: mine, lines: lines),
+            hasCosts: game.hasCosts
+        )
     }
 
-    private init(game: Game, cursor: Int, slips: [Slip]) {
+    private init(game: Game, lines: JudgementLines, cursor: Int, slips: [Slip], hasCosts: Bool) {
         self.game = game
+        self.lines = lines
         self.cursor = cursor
         self.slips = slips
+        self.hasCosts = hasCosts
     }
 
     /// The same game read at another position. The walk is not repeated: nothing about which
     /// moves were 错招 depends on where the eye is.
     public func moved(to cursor: Int) -> RecordReading {
-        RecordReading(game: game, cursor: cursor, slips: slips)
+        RecordReading(game: game, lines: lines, cursor: cursor, slips: slips, hasCosts: hasCosts)
     }
 
     /// The 错招 by the *position* they were made at, which is what the record strip's cells are:
@@ -144,6 +153,162 @@ public struct RecordReading: Sendable {
             depth: game.plies[index].judgement?.depth ?? game.reviewDepth,
             line: game.reviewLine(atPly: index + 1)
         )
+    }
+
+    // ------------------------------------------------------------------ what the record says
+    //
+    // Every word and figure the record strip puts on the glass, decided here and only drawn by the
+    // screen. They were the screen's, which is why the way a 掉幅 is said had a second spelling
+    // beside `Drop`, and why every one of these rules could only be asked of a simulator.
+
+    /// The line under a move on the record (docs/adr/0027).
+    public enum Caption: Hashable, Sendable {
+        /// Nobody measured this move: a blank of the same height, which is not the same as zero.
+        case unmeasured
+        /// The engine's own first choice (CONTEXT.md: 最佳). A fact about which move it was, so it
+        /// wins over a cost that did not round to nought — two searches disagree by a point.
+        case best
+        /// Another move that cost nothing: information — the move was right — and not 最佳.
+        case free
+        /// What it cost, in percentage points.
+        case cost(Double)
+
+        /// What the cell shows under the move: a blank, 「最佳」, 「0」, or `−25%`.
+        public var figure: String {
+            switch self {
+            case .unmeasured: " "
+            case .best: localized("record.best")
+            case .free: "0"
+            case .cost(let drop): Drop.figure(drop)
+            }
+        }
+
+        /// The clause said out loud for it, nil for a move nobody measured.
+        public var spoken: String? {
+            switch self {
+            case .unmeasured: nil
+            case .best: localized("standing.best")
+            case .free: Drop.cost(0)
+            case .cost(let drop): Drop.cost(drop)
+            }
+        }
+    }
+
+    /// The mark a 错招 leaves at the foot of the position it was made at, in two weights on the one
+    /// scale (docs/adr/0027): what the 记录线 wrote down, and what the 入列线 says is still owed.
+    public enum Mark: Hashable, Sendable {
+        case written
+        case owed
+    }
+
+    /// One place on the record, as the strip shows it and says it.
+    public struct Cell: Hashable, Sendable {
+        /// The cursor it takes the board to.
+        public let ply: Int
+        /// What the cell reads: the move, or 「开局」 for the position the game began in.
+        public let name: String
+        /// The line under it — nil when nothing in the game has been measured, so a game nobody
+        /// judged is the strip exactly as it was.
+        public let caption: Caption?
+        /// The mark at its foot when the player went wrong *from* this position.
+        public let mark: Mark?
+        /// Said the way somebody reading a game aloud says it: where it is, what it cost, and that
+        /// a mistake was made from here.
+        public let spoken: String
+    }
+
+    /// The position the game began in, at the head of its own record. One name for one place: it
+    /// is a place in the game like any other, not an instruction.
+    public var opening: Cell {
+        cell(ply: 0, name: localized("record.opening"), said: localized("record.opening"))
+    }
+
+    /// One half of a move on the record. The mark is the one whose *position* this cell is —
+    /// the position before the next move, not after this one (`slipByPosition`).
+    public func cell(_ half: Game.Half) -> Cell {
+        cell(ply: half.ply, name: half.san, said: half.spoken)
+    }
+
+    private func cell(ply: Int, name: String, said: String) -> Cell {
+        let caption = hasCosts && ply > 0 ? caption(atPly: ply) : nil
+        let mark = slipByPosition[ply].map(mark(of:))
+        var clauses = [said]
+        if let spoken = caption?.spoken { clauses.append(spoken) }
+        if let slip = slipByPosition[ply] {
+            clauses.append(localized("record.slipMark", Drop.points(slip.drop)))
+        }
+        return Cell(
+            ply: ply, name: name, caption: caption, mark: mark,
+            spoken: clauses.joined(separator: localized("clause.separator"))
+        )
+    }
+
+    private func caption(atPly ply: Int) -> Caption {
+        if game.isBest(atPly: ply) { return .best }
+        guard let drop = game.cost(atPly: ply) else { return .unmeasured }
+        return Drop.points(max(0, drop)) == 0 ? .free : .cost(max(0, drop))
+    }
+
+    private func mark(of slip: Slip) -> Mark {
+        slip.isWorthDrilling(lines) ? .owed : .written
+    }
+
+    /// One 错题 of this game as its tile under the strip says it: where in the game, how many wrong
+    /// moves were tried there, what the worst of them cost, and whether it is still owed.
+    public struct Tile: Hashable, Sendable, Identifiable {
+        public let slip: Slip
+        /// The scoresheet's figure — 「1.」「2…」 — the same one the cell above carries, including
+        /// for the position the game stops on: a 错招 there sits at the Ply one past the last
+        /// move (docs/adr/0037), and that move has a number even before it is played.
+        public let number: String
+        /// `×N` when one position took more than one wrong move, which is why the tile is not
+        /// named after any one of them. Nil for one.
+        public let times: Int?
+        /// What the worst of them cost, as a figure.
+        public let figure: String
+        /// Whether the 入列线 says the player still owes it: full strength, else held back.
+        public let isOwed: Bool
+        /// The whole tile, said out loud.
+        public let spoken: String
+
+        public var id: Slip.ID { slip.id }
+    }
+
+    /// The tiles, one per 错题 of this game, in the order they happen.
+    public var tiles: [Tile] { slips.map(tile(for:)) }
+
+    public func tile(for slip: Slip) -> Tile {
+        let times = slip.wrong.count > 1 ? slip.wrong.count : nil
+        let separator = localized("clause.separator")
+        // Out loud the position the game stops on is 「现在」: a number a finger can match to the
+        // strip is what a row of tiles wants, and a word is what an ear wants.
+        let place = slip.ply > game.plies.count
+            ? localized("record.now") : localized("record.ply", slip.ply)
+        var spoken = place + separator + Drop.cost(slip.drop)
+        if let times { spoken += separator + localized("slips.wrong", times) }
+        return Tile(
+            slip: slip, number: game.moveLabel(ofPly: slip.ply), times: times,
+            figure: Drop.figure(slip.drop), isOwed: slip.isWorthDrilling(lines), spoken: spoken
+        )
+    }
+
+    /// What leads the row of wrong moves at the position being read: an ✕ when anything there was
+    /// taken back, and a mark that says it was played when the row is only the move that stood —
+    /// an imported game's, where nothing was ever refused (docs/adr/0034, 0036).
+    public enum Lead: Hashable, Sendable {
+        case returned
+        case stood
+
+        /// The word the mark is read out as, instead of spending the row's width on it.
+        public var spoken: String {
+            localized(self == .returned ? "noSlips.returned" : "wrong.stood")
+        }
+    }
+
+    /// Nil when there are no wrong moves to lead.
+    public var lead: Lead? {
+        guard !wrongs.isEmpty else { return nil }
+        return wrongs.contains { !$0.stood } ? .returned : .stood
     }
 
     // ------------------------------------------------------------------ one wrong move

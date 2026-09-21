@@ -122,6 +122,9 @@ import Testing
         let arrows = session.tacticArrows
         #expect(arrows.map(\.move.from.description) == ["d1", "e8"])
         #expect(arrows.map(\.isYours) == [true, false], "White is the hand, Black the engine")
+        #expect(session.steps(on: .tactics) == [
+            LineStep(step: 1, san: "Qxd5", isYours: true), LineStep(step: 2, san: "Kf8", isYours: false),
+        ], "and the card's chips are the same line, coloured the same way")
     }
 
     // ------------------------------------------------------------------ the card's frame

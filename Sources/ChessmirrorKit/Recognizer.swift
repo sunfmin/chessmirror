@@ -7,6 +7,12 @@ public enum Orientation: String, Hashable, Sendable, CaseIterable {
     public static func facing(_ colour: PieceColour) -> Orientation {
         colour == .white ? .whiteAtBottom : .blackAtBottom
     }
+
+    /// The colour whose pieces stand at the bottom — the chair the board is seen from.
+    public var bottom: PieceColour { self == .whiteAtBottom ? .white : .black }
+
+    /// The colour across the board, whose pieces a face-to-face board turns round.
+    public var top: PieceColour { bottom.opposite }
 }
 
 /// How to fill in the castling field, which a picture cannot actually show.

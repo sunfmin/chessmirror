@@ -36,7 +36,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
         }
         #expect(rendered.says(message))
     }
@@ -94,7 +93,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
         }
 
         #expect(rendered.says(localized("library.practice")))
@@ -125,7 +123,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library(in: tempDir))
                 .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
-                .environment(LanguageSetting.shared)
         }
 
         #expect(rendered.says("拍棋盘"), "the camera is still there, one tap away")
@@ -147,7 +144,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library(in: tempDir))
                 .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
-                .environment(LanguageSetting.shared)
         }
 
         #expect(rendered.says("把下错的招变成重练的题"), "the subtitle says what the app is for")
@@ -176,7 +172,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
         }
 
         #expect(rendered.says(localized("daily.left", plural: 1)))
@@ -212,7 +207,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
         }
 
         #expect(rendered.says(localized("daily")), "the door is still there")
@@ -238,7 +232,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
                 .dynamicTypeSize(type)
         }
 
@@ -297,7 +290,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
         }
 
         #expect(rendered.says("连正榜"))
@@ -344,7 +336,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
         }
         #expect(rendered.says("Bc4"), "the record of the game that was opened")
     }
@@ -370,7 +361,6 @@ struct LibraryScreenScreenshots {
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(index)
-                .environment(LanguageSetting.shared)
         }
         #expect(index.ladder.isEmpty)
         #expect(!rendered.says("连正榜"))
@@ -383,9 +373,9 @@ struct LibraryScreenScreenshots {
         let tempDir = tempDir()
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
-        #expect(JudgementSetting.shared.lines.record == 10)
-        #expect(JudgementSetting.shared.lines.enqueue == 10)
-        #expect(!JudgementSetting.shared.lines.noSlips, "把关 is not a standing setting")
+        #expect(PlayerSettings.shared.lines.record == 10)
+        #expect(PlayerSettings.shared.lines.enqueue == 10)
+        #expect(!PlayerSettings.shared.lines.noSlips, "把关 is not a standing setting")
 
         let rendered = await ScreenImage.write("about-lines") {
             AboutScreen()
@@ -406,7 +396,7 @@ struct LibraryScreenScreenshots {
     func theSearchBudgetIsOnTheSettingsSheet() async throws {
         let tempDir = tempDir()
         defer { try? FileManager.default.removeItem(at: tempDir) }
-        #expect(SearchSetting.shared.limit == .standard)
+        #expect(PlayerSettings.shared.searchLimit == .standard)
         #expect(PositionSearches.limit == .standard, "and the kit runs on it")
 
         let rendered = await ScreenImage.write("about-search") {

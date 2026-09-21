@@ -23,8 +23,10 @@ public enum FeedbackSound: Hashable, Sendable, CaseIterable {
 /// there are two adapters. The app's makes noise through AVFoundation and buzzes the Taptic
 /// engine; a test's records what it was asked to play, which is the only way an assertion about
 /// *what a game sounded like* can be written at all.
+///
+/// Whether it makes a noise at all is the player's setting (`PlayerSettings.isSoundOn`), which the
+/// app's adapter reads; the seam is only what to play.
 @MainActor public protocol Feedback: AnyObject {
-    var isSoundOn: Bool { get set }
     func play(_ sound: FeedbackSound)
 }
 
@@ -44,9 +46,25 @@ extension Feedback {
     }
 }
 
+extension Feedback {
+    /// What a session's event sounds like.
+    ///
+    /// Beside the sounds rather than in the session, which says what happened and nothing about
+    /// a speaker (`GameSession.Event`). A fork gets the rising two-tone a check gets: a line
+    /// leaving the one it was played over is worth a noise of its own, and that is the noise that
+    /// means "look".
+    public func hear(_ event: GameSession.Event) {
+        switch event {
+        case .landed(let move, let outcome): play(move, outcome: outcome)
+        case .refused: play(.refused)
+        case .forked: play(.check)
+        case .stepped: play(.move)
+        }
+    }
+}
+
 /// An adapter that makes no noise. The default, and what a machine with no audio gets.
 @MainActor public final class SilentFeedback: Feedback {
-    public var isSoundOn = false
     public init() {}
     public func play(_ sound: FeedbackSound) {}
 }

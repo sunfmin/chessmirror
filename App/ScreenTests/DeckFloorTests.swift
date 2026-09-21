@@ -19,7 +19,6 @@ struct DeckFloor {
             CGSize(width: 1376, height: 1032),
         ] {
             #expect(GameScreen.boardSide(in: size) == size.width)
-            #expect(GameScreen.boardSide(in: size, accessibilityText: true) == size.width)
         }
     }
 

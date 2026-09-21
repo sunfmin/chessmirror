@@ -10,61 +10,11 @@ import SwiftUI
 /// every game that comes through becomes one file in the library. The downloading and reading
 /// is `ImportSession`'s; this is the deck of controls around it, one state per phase.
 ///
-/// The sheet remembers (`ImportMemory`): the account that fetched last is in the field when its
-/// door opens, the other accounts that have fetched are a chip away, and the door and count are
-/// the ones used last time. The button says what it is about to do — 「拉 sunfmin 最近 10 局」 —
-/// so a wrong name is caught before the network is asked, and when the site says there is no
-/// such player, the message names the name as it was typed and the field it came from is
-/// marked.
+/// Which door is open, what is typed at it, what the button says and when a name is remembered
+/// are the kit's (`ImportDoors`); this draws them.
 struct ImportSheet: View {
-    /// Which door. Not a mode — all four share every state after the download, because after
-    /// the download there is no difference between them.
-    enum Door: String, Hashable, CaseIterable {
-        case lichess
-        case chessCom
-        case chessease
-        case link
+    typealias Door = ImportDoors.Door
 
-        /// The site a door belongs to; the plain link door belongs to none.
-        var site: PGNImport.Site? {
-            switch self {
-            case .lichess: .lichess
-            case .chessCom: .chessCom
-            case .chessease: .chessease
-            case .link: nil
-            }
-        }
-
-        /// A door that asks for a username rather than a link.
-        var asksForPlayer: Bool { site.map { PGNImport.Site.withPlayers.contains($0) } ?? false }
-
-        var label: String {
-            switch self {
-            case .link: localized("import.door.link")
-            default: site!.label
-            }
-        }
-
-        var explainer: String {
-            switch self {
-            case .lichess: localized("import.door.lichess.explained")
-            case .chessCom: localized("import.door.chessCom.explained")
-            case .chessease: localized("import.door.chessease.explained")
-            case .link: localized("import.door.link.explained")
-            }
-        }
-
-        var prompt: String {
-            switch self {
-            case .lichess, .chessCom: localized("import.field.player", site!.label)
-            case .chessease: localized("import.field.share")
-            case .link: localized("import.field.link")
-            }
-        }
-    }
-
-    let session: ImportSession
-    let memory: ImportMemory
     /// The engine the games written by 入库 are analysed with, when there is one yet.
     let engine: (any Engine)?
     let onOpen: ((GameLibrary.Entry) -> Void)?
@@ -73,10 +23,7 @@ struct ImportSheet: View {
     @Environment(MistakeIndex.self) private var index
     @Environment(\.dismiss) private var dismiss
 
-    /// One field's text per door, so switching doors and back loses nothing typed.
-    @State private var typed: [Door: String]
-    @State private var door: Door
-    @State private var count: Int
+    @State private var doors: ImportDoors
     @State private var choosingSide: PGNImport.ImportChapter?
     @FocusState private var isEditing: Bool
 
@@ -86,37 +33,27 @@ struct ImportSheet: View {
     ///   - initialDoor: the door to open, when not the one used last.
     init(
         session: ImportSession = ImportSession(),
-        memory: ImportMemory = .shared,
+        memory: ImportMemory = PlayerSettings.shared.imports,
         engine: (any Engine)? = nil,
         initialInput: String = "",
         initialDoor: Door? = nil,
         onOpen: ((GameLibrary.Entry) -> Void)? = nil
     ) {
-        self.session = session
-        self.memory = memory
         self.engine = engine
         self.onOpen = onOpen
-        var typed: [Door: String] = [:]
-        for site in PGNImport.Site.withPlayers {
-            if let name = memory.latest(on: site), let door = Door(rawValue: site.rawValue) {
-                typed[door] = name
-            }
-        }
-        var door = initialDoor ?? Door(rawValue: memory.door) ?? .lichess
-        if !initialInput.isEmpty {
-            door = PGNImport.chesseaseGame(in: initialInput) != nil ? .chessease : .link
-            typed[door] = initialInput
-        }
-        _typed = State(initialValue: typed)
-        _door = State(initialValue: door)
-        _count = State(initialValue: memory.count)
+        _doors = State(initialValue: ImportDoors(
+            session: session, memory: memory, initialInput: initialInput, initialDoor: initialDoor
+        ))
     }
+
+    private var session: ImportSession { doors.session }
+    private var door: Door { doors.door }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    doors
+                    doorChips
 
                     Text(door.explainer)
                         .font(.footnote)
@@ -131,7 +68,7 @@ struct ImportSheet: View {
 
                     switch session.phase {
                     case .idle:
-                        primaryButton(fetchLabel, isEnabled: canFetch, action: fetch)
+                        primaryButton(doors.fetchLabel, isEnabled: doors.canFetch, action: fetch)
                     case .fetching:
                         waiting(localized("import.fetching"))
                     case .ready(let plan):
@@ -154,13 +91,6 @@ struct ImportSheet: View {
                 }
             }
         }
-        .onChange(of: session.phase) { _, phase in
-            // A name is remembered the moment it has fetched something, and not before.
-            guard case .ready = phase, let site = door.site, door.asksForPlayer else { return }
-            memory.remember(input, on: site)
-        }
-        .onChange(of: door) { _, door in memory.door = door.rawValue }
-        .onChange(of: count) { _, count in memory.count = count }
         .confirmationDialog(
             localized("import.trackSide"),
             isPresented: Binding(
@@ -185,12 +115,11 @@ struct ImportSheet: View {
     // ------------------------------------------------------------------ parts
 
     /// The four doors. A chip each, because that is the app's one selector idiom.
-    private var doors: some View {
+    private var doorChips: some View {
         HStack(spacing: 8) {
             ForEach(Door.allCases, id: \.self) { candidate in
                 Button {
-                    door = candidate
-                    session.reset()
+                    doors.open(candidate)
                 } label: {
                     Chip(label: candidate.label, isOn: door == candidate)
                 }
@@ -204,9 +133,9 @@ struct ImportSheet: View {
     /// under it is about what was typed here — a name the site does not know, a link that is not
     /// one — so the message and the field it is talking about read as one thing.
     private var field: some View {
-        let isAtFault = if case .failed(let error) = session.phase { error.isAboutInput } else { false }
+        let isAtFault = doors.isInputAtFault
         return HStack(spacing: 8) {
-            TextField(door.prompt, text: inputBinding)
+            TextField(door.prompt, text: Bindable(doors).text)
                 .keyboardType(door.asksForPlayer ? .asciiCapable : .URL)
                 .textContentType(door.asksForPlayer ? .username : .URL)
                 .submitLabel(.go)
@@ -216,10 +145,9 @@ struct ImportSheet: View {
                 .autocorrectionDisabled()
                 .font(.subheadline)
                 .foregroundStyle(Palette.ink)
-            if !input.isEmpty {
+            if !doors.input.isEmpty {
                 Button {
-                    typed[door] = ""
-                    session.reset()
+                    doors.clear()
                     isEditing = true
                 } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -243,20 +171,20 @@ struct ImportSheet: View {
     /// Absent until there is one, and a name can be struck off by holding it.
     @ViewBuilder
     private var remembered: some View {
-        if let site = door.site, let names = memory.names[site], !names.isEmpty {
+        let names = doors.remembered
+        if !names.isEmpty {
             HStack(spacing: 6) {
                 Text(localized("import.remembered")).eyebrow()
                 ForEach(names, id: \.self) { name in
                     Button {
-                        typed[door] = name
-                        session.reset()
+                        doors.pick(name)
                     } label: {
-                        Chip(label: name, isOn: input.caseInsensitiveCompare(name) == .orderedSame)
+                        Chip(label: name, isOn: doors.input.caseInsensitiveCompare(name) == .orderedSame)
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
                         Button(role: .destructive) {
-                            memory.forget(name, on: site)
+                            doors.forget(name)
                         } label: {
                             Label(localized("import.forget"), systemImage: "trash")
                         }
@@ -272,11 +200,11 @@ struct ImportSheet: View {
     private var howMany: some View {
         HStack(spacing: 6) {
             Text(localized("import.howMany")).eyebrow()
-            ForEach([5, 10, 20, 50], id: \.self) { many in
+            ForEach(ImportDoors.counts, id: \.self) { many in
                 Button {
-                    count = many
+                    doors.ask(for: many)
                 } label: {
-                    Chip(label: "\(many)", isOn: count == many)
+                    Chip(label: "\(many)", isOn: doors.count == many)
                 }
                 .buttonStyle(.plain)
             }
@@ -291,27 +219,22 @@ struct ImportSheet: View {
     /// it records their side's mistakes without asking. Through a link nobody is known, so a
     /// row is the chapter's own name and opening it asks whose mistakes to keep.
     private func ready(_ plan: PGNImport.ImportPlan) -> some View {
-        let account = door.asksForPlayer && !input.isEmpty ? input : nil
-        let standing = plan.chapters.map { session.status(of: $0, in: library, book: index) }
-        let toAdd = standing.count { $0 == .notImported }
+        let reading = doors.reading(plan, in: library, book: index, hasEngine: engine != nil)
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(summary(of: plan))
+                    Text(reading.summary)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Palette.ink)
-                    Text(
-                        account.map { localized("import.plan.tap.player", $0) }
-                            ?? localized("import.plan.tap.link")
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(Palette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(reading.tapHint)
+                        .font(.footnote)
+                        .foregroundStyle(Palette.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.bottom, 10)
                 ForEach(plan.chapters) { chapter in
                     Divider().overlay(Palette.hairline)
-                    row(chapter, account: account)
+                    row(chapter)
                 }
                 if plan.unreadable > 0 {
                     Divider().overlay(Palette.hairline)
@@ -327,28 +250,19 @@ struct ImportSheet: View {
 
             // The one press that makes the fetch real. Gone once there is nothing left to add,
             // and what it did stands in its place — the rows above carry the rest.
-            if let applied = session.applied, toAdd == 0 {
-                Text(
-                    applied.imported == 0
-                        ? localized("import.applied.none")
-                        : engine == nil
-                            ? localized("import.done", plural: applied.imported)
-                            : standing.contains { if case .scoring = $0 { true } else { false } }
-                                ? localized("import.applied", plural: applied.imported)
-                                : localized("import.applied.landed", plural: applied.imported)
-                )
-                .font(.footnote)
-                .foregroundStyle(Palette.inkSoft)
-                .fixedSize(horizontal: false, vertical: true)
-            } else if toAdd > 0 {
-                primaryButton(applyLabel(adding: toAdd, of: plan.chapters.count), isEnabled: true) {
-                    session.apply(into: library, as: account, reviewingWith: engine)
+            if let applied = reading.applied {
+                Text(applied)
+                    .font(.footnote)
+                    .foregroundStyle(Palette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let apply = reading.apply {
+                primaryButton(apply, isEnabled: true) {
+                    session.apply(into: library, as: doors.account, reviewingWith: engine)
                 }
             }
             HStack(spacing: 10) {
                 Button {
-                    session.reset()
-                    if !door.asksForPlayer { typed[door] = "" }
+                    doors.again()
                 } label: {
                     Text(localized("import.again"))
                         .font(.subheadline.weight(.medium))
@@ -375,22 +289,12 @@ struct ImportSheet: View {
         }
     }
 
-    /// 「入库 8 局（2 局已有）」: what the press will write, and what it will leave alone.
-    private func applyLabel(adding: Int, of total: Int) -> String {
-        var label = localized("import.apply", plural: adding)
-        if total > adding { label += " " + localized("import.apply.skipped", plural: total - adding) }
-        return label
-    }
-
     /// One game to open. With an account: their colour as a swatch, the opponent, the verdict
     /// from their side, and when. Without: the chapter's name. The 错题本's standing on the game
     /// trails either.
-    private func row(_ chapter: PGNImport.ImportChapter, account: String?) -> some View {
-        let side = account.flatMap { PGNImport.side(of: $0, in: chapter.pgn) }
-        let status = session.status(of: chapter, in: library, book: index).label
-        let opponent = side.map { chapter.pgn.playerName($0.opposite) ?? "?" }
-        let verdict = side.flatMap { PGNImport.verdict(for: $0, in: chapter.pgn) }
-        let when = side != nil ? PGNImport.playedAt(chapter.pgn) : nil
+    private func row(_ chapter: PGNImport.ImportChapter) -> some View {
+        let row = doors.row(chapter, in: library, book: index)
+        let side = row.side
         return Button {
             if let side {
                 if let entry = session.open(chapter, into: library, tracking: side) {
@@ -408,23 +312,23 @@ struct ImportSheet: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(opponent ?? chapter.name)
+                        Text(row.title)
                             .font(.subheadline)
                             .foregroundStyle(Palette.ink)
-                        if let verdict {
+                        if let verdict = row.verdict {
                             Text(verdict)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Palette.inkSoft)
                         }
                     }
-                    if let when {
+                    if let when = row.when {
                         Text(when)
                             .font(.footnote)
                             .foregroundStyle(Palette.inkSoft)
                     }
                 }
                 Spacer(minLength: 8)
-                Text(status)
+                Text(row.status)
                     .font(.footnote)
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.trailing)
@@ -433,15 +337,8 @@ struct ImportSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(
-            [side.map(\.label), opponent ?? chapter.name, verdict, when].compactMap { $0 }
-                .joined(separator: " · ")
-        )
-        .accessibilityValue(status)
-    }
-
-    private func summary(of plan: PGNImport.ImportPlan) -> String {
-        localized("import.plan.games", plural: plan.chapters.count)
+        .accessibilityLabel(row.spoken)
+        .accessibilityValue(row.status)
     }
 
     /// What went wrong, and the one thing there is to do about it. The wording comes with
@@ -461,9 +358,7 @@ struct ImportSheet: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Palette.alarm.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
-            primaryButton(
-                error.isAboutInput ? fetchLabel : localized("retry"), isEnabled: canFetch, action: fetch
-            )
+            primaryButton(doors.retryLabel, isEnabled: doors.canFetch, action: fetch)
         }
     }
 
@@ -496,48 +391,9 @@ struct ImportSheet: View {
 
     // ------------------------------------------------------------------ doing
 
-    private var input: String {
-        (typed[door] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var inputBinding: Binding<String> {
-        Binding(get: { typed[door] ?? "" }, set: { typed[door] = $0 })
-    }
-
-    private var canFetch: Bool { !input.isEmpty }
-
-    /// What the button will do, said with the name and the number it will do it with — the
-    /// sentence is the check that the right account is about to be asked.
-    private var fetchLabel: String {
-        switch door {
-        case .lichess, .chessCom:
-            input.isEmpty
-                ? localized("import.fetch") : localized("import.fetch.recent", plural: count, input)
-        case .chessease: localized("import.fetch.share")
-        case .link: localized("import.fetch")
-        }
-    }
-
     private func fetch() {
-        guard canFetch else { return }
+        guard doors.canFetch else { return }
         isEditing = false
-        switch door {
-        case .lichess, .chessCom:
-            Task { await session.recent(of: input, count: count, on: door.site!) }
-        case .chessease, .link:
-            Task { await session.run(input) }
-        }
-    }
-}
-
-extension PGNImport.Error {
-    /// A failure the typed text is answerable for — as against one the network or the site is.
-    /// The sheet marks the field for these, and offers the fetch again rather than a bare retry,
-    /// because what is wanted is a corrected input and not the same one a second time.
-    var isAboutInput: Bool {
-        switch self {
-        case .notALink, .unknownPlayer, .notAPlayer, .noGames, .unreadableShare, .missingGame: true
-        default: false
-        }
+        Task { await doors.fetch() }
     }
 }

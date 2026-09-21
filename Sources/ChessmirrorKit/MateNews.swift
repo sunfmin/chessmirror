@@ -40,6 +40,20 @@ public struct MoveArrow: Hashable, Sendable {
     }
 }
 
+/// One move of a line as a card lists it: the figure on its chip — which is the figure on its
+/// arrow — the move, and whether the player's side makes it.
+public struct LineStep: Hashable, Sendable {
+    public let step: Int
+    public let san: String
+    public let isYours: Bool
+
+    public init(step: Int, san: String, isYours: Bool) {
+        self.step = step
+        self.san = san
+        self.isYours = isYours
+    }
+}
+
 /// A mate the engine can already see from the position on screen, whoever it belongs to
 /// (docs/adr/0025).
 ///
@@ -68,6 +82,10 @@ public struct MateNews: Hashable, Sendable {
     public let san: [String]
     /// The line as numbered arrows, in the same violet-and-red the five-move plan is drawn in.
     public let arrows: [MoveArrow]
+    /// The line as the card's chips: every move the engine gave, the ones past the arrows too,
+    /// each the player's or not by the rule the arrows use. The card worked the colour out of the
+    /// arrows and called every move past the sixth somebody else's.
+    public let steps: [LineStep]
     /// How many of the replies to the mating side's moves were the only legal move on the board.
     public let forcedReplies: Int
     /// How many replies there are in the line at all, so the count above has a denominator.
@@ -142,12 +160,20 @@ public struct MateNews: Hashable, Sendable {
             moves: moves, replies: replies, forced: forced, reachesMate: reachesMate
         )
 
+        let steps = san.enumerated().map { index, move in
+            LineStep(
+                step: index + 1, san: move,
+                isYours: isYours(index.isMultiple(of: 2) ? opening : opening.opposite)
+            )
+        }
+
         return MateNews(
             moves: moves,
             mater: mater,
             isOurs: isOurs,
             san: san,
             arrows: arrows,
+            steps: steps,
             forcedReplies: forced,
             replies: replies,
             reachesMate: reachesMate,

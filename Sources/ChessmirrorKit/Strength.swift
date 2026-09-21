@@ -17,6 +17,13 @@ public enum Strength: Hashable, Sendable {
     /// Bound to an Elo with Stockfish's own `UCI_LimitStrength` and `UCI_Elo`.
     case elo(Int)
 
+    /// What the engine's bar calls the engine at this rung: 「Stockfish 18 · 1800」, or the name
+    /// alone at 满力 (docs/adr/0038).
+    public var engineName: String {
+        let name = Controller.engine.playerName
+        return self == .full ? name : "\(name) · \(label)"
+    }
+
     /// The rungs on offer, weakest first and 满力 last. A short list of round numbers, because
     /// this is picked with a thumb between moves and every rung is a row on the 连正榜.
     public static let ladder: [Strength] = [

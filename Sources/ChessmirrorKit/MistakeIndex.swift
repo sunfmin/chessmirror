@@ -88,6 +88,75 @@ import Foundation
         }
     }
 
+    /// Follows a library *and* the player's lines: a moved 记录线 or 入列线 changes which moves
+    /// count, so the book follows the settings the way it follows the games. The library screen
+    /// used to watch the lines itself and hand them in.
+    public func follow(_ library: GameLibrary, settings: PlayerSettings) {
+        following += 1
+        let registration = following
+        update(from: library.entries, lines: settings.lines)
+        withObservationTracking {
+            _ = library.entries
+            _ = settings.lines
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, registration == following else { return }
+                follow(library, settings: settings)
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ practising
+
+    /// A drill of one 错题, written into this index's log under its lines — and when its attempt
+    /// is settled, today's queue is worked out again, because the log it is read from has just
+    /// grown. The drill screen used to watch for that itself. Nil for a position that will not
+    /// parse.
+    public func practise(
+        _ mistake: Mistake, engine: (any Engine)?, source: Drill.Source = .picked
+    ) -> Drill? {
+        guard let drill = Drill(
+            position: mistake.position, engine: engine, log: log, lines: lines, source: source
+        ) else { return nil }
+        refresh(whenSettled: drill)
+        return drill
+    }
+
+    private func refresh(whenSettled drill: Drill) {
+        withObservationTracking {
+            _ = drill.isSettled
+        } onChange: { [weak self, weak drill] in
+            Task { @MainActor [weak self, weak drill] in
+                guard let self, let drill else { return }
+                if drill.isSettled { refresh() } else { refresh(whenSettled: drill) }
+            }
+        }
+    }
+
+    /// The question after this one. From 日课, the next card of today's queue that is not this
+    /// position; picked off the book, the next 错题 in the book's order, round to the first.
+    /// Nil when there is nothing else to ask — the end of the queue, or a book of one.
+    public func next(after mistake: Mistake, source: Drill.Source) -> Mistake? {
+        switch source {
+        case .daily:
+            return daily.cards.first { $0.position != mistake.position }?.mistake
+        case .picked:
+            let mistakes = book.mistakes
+            guard let here = mistakes.firstIndex(where: { $0.position == mistake.position }),
+                  mistakes.count > 1 else { return nil }
+            return mistakes[(here + 1) % mistakes.count]
+        }
+    }
+
+    /// What the 日课 door says: how many are left today, that today's are done, or that there is
+    /// nothing in the book to practise yet. The door stays on the screen with nothing due — a
+    /// door that disappears once it is done is a door nobody learns is there.
+    public var dailyLabel: String {
+        let left = daily.remaining
+        if left > 0 { return localized("daily.left", plural: left) }
+        return localized(book.isEmpty ? "daily.none" : "daily.done")
+    }
+
     /// Stops following, for a caller that wants the book to stand still.
     public func unfollow() { following += 1 }
 

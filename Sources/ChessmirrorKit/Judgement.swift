@@ -20,16 +20,44 @@ import Foundation
 public struct JudgementLines: Hashable, Sendable, Codable {
     /// Whether 把关 is on: a move costing the 记录线 or more is taken back. Off is the ordinary game.
     public var noSlips: Bool
-    /// Where a move gets written down, and where 把关 takes it back.
-    public var record: Double
-    /// Where a written-down move also earns practice time.
-    public var enqueue: Double
+    /// Where a move gets written down, and where 把关 takes it back. Raising it past the 入列线
+    /// takes the 入列线 with it.
+    public var record: Double {
+        didSet { if enqueue < record { enqueue = record } }
+    }
+    /// Where a written-down move also earns practice time. **Never below the 记录线** — practice
+    /// time is spent on things that were written down, so a value under it is read as the 记录线
+    /// itself. CONTEXT.md said so for a year and nothing held it: the settings sheet offered the
+    /// same six numbers for both lines, and a 入列线 of five under a 记录线 of twenty enrolled
+    /// nothing that was not already enrolled at twenty while the sheet said five.
+    public var enqueue: Double {
+        didSet { if enqueue < record { enqueue = record } }
+    }
 
     public init(noSlips: Bool = false, record: Double = 10, enqueue: Double = 10) {
         self.noSlips = noSlips
         self.record = record
-        self.enqueue = enqueue
+        self.enqueue = max(enqueue, record)
     }
+
+    // Decoded through the initialiser, so a pair written down out of order is read back in order.
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            noSlips: try values.decode(Bool.self, forKey: .noSlips),
+            record: try values.decode(Double.self, forKey: .record),
+            enqueue: try values.decode(Double.self, forKey: .enqueue)
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey { case noSlips, record, enqueue }
+
+    /// The values either line is offered, because tenths of a percent are not a thing anybody
+    /// can feel and a slider would suggest they are.
+    public static let choices: [Double] = [5, 10, 15, 20, 25, 30]
+
+    /// What the 入列线 may be set to under this 记录线: the choices at or above it.
+    public var enqueueChoices: [Double] { Self.choices.filter { $0 >= record } }
 
     /// 10 / 10, with 把关 off. The numbers a person who has never touched this gets.
     ///

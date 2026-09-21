@@ -335,38 +335,10 @@ struct ImportScreenScreenshots {
         }
     }
 
-    /// A game that is not there says so, in its own words.
-    @Test("an unavailable game is named as unavailable")
-    func missingGame() async throws {
-        let tempDir = tempDir()
-        defer { try? FileManager.default.removeItem(at: tempDir) }
-
-        let session = ImportSession(
-            fetcher: ScriptedFetcher([
-                "https://lichess.org/game/export/hf3Zpe5R?evals=true&clocks=false":
-                    .failure(.missingGame)
-            ])
-        )
-        await session.run("https://lichess.org/hf3Zpe5R/black")
-
-        let rendered = await ScreenImage.write("import-sheet-missing") {
-            ImportSheet(session: session, memory: memory(), initialInput: "https://lichess.org/hf3Zpe5R/black")
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
-        }
-
-        #expect(rendered.says("找不到这局棋"))
-        #expect(rendered.says("链接可能不对"), "and both of the things it could be")
-        #expect(rendered.says("获取棋谱"), "the way forward is a corrected link, so the fetch stays, not a bare 重试")
-        #expect(!rendered.says("重试"))
-    }
-
-    /// A memory of its own for each test, in a suite nobody's phone reads, and the cloud kept
-    /// out of it — so what one test remembers is not in the next test's field.
+    /// A memory of its own for each test, kept in a dictionary and nowhere else — so what one
+    /// test remembers is not in the next test's field, and nobody's phone or iCloud hears of it.
     private func memory(remembering names: [String] = [], on site: PGNImport.Site = .lichess) -> ImportMemory {
-        let suite = "chessmirror-screens-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
-        let memory = ImportMemory(defaults: defaults, travels: false)
+        let memory = PlayerSettings(store: InMemorySettings()).imports
         for name in names.reversed() { memory.remember(name, on: site) }
         return memory
     }
@@ -448,13 +420,12 @@ struct ImportScreenScreenshots {
         #expect(rendered.says("填 chess.com 用户名"))
     }
 
-    /// The 国象联盟 door: a share link, and the game it carries, read without a download.
-    @Test("a 国象联盟 share link opens its own door with the game already read")
+    /// The 国象联盟 door, drawn: its explainer, its button, and no count.
+    @Test("the 国象联盟 door explains itself and asks for no count")
     func chesseaseDoor() async throws {
         let tempDir = tempDir()
         defer { try? FileManager.default.removeItem(at: tempDir) }
-        let quiet = ScriptedFetcher([:])
-        let session = ImportSession(fetcher: quiet)
+        let session = ImportSession(fetcher: ScriptedFetcher([:]))
 
         let idle = await ScreenImage.write("import-door-chessease") {
             ImportSheet(session: session, memory: memory(), initialDoor: .chessease)
@@ -464,15 +435,7 @@ struct ImportScreenScreenshots {
         #expect(idle.says("点「分享」"), "how to get one, before one is asked for")
         #expect(idle.says("读这局棋"))
         #expect(!idle.says("拉几局"), "no count: a share link is one game")
-
-        await session.run(Self.chesseaseShareLink)
-        let ready = await ScreenImage.write("import-door-chessease-ready") {
-            ImportSheet(session: session, memory: memory(), initialInput: Self.chesseaseShareLink)
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
-        }
-        #expect(ready.says("1 局"))
-        #expect(ready.says("国象联盟 快棋"))
-        #expect(quiet.askedURLs.isEmpty, "nothing was asked of the network")
+        // Reading the link without the network is the kit's (`ImportDoorsTests`).
     }
 
     /// The four doors on the narrowest phone still sold, in one row.
@@ -486,9 +449,4 @@ struct ImportScreenScreenshots {
         }
         #expect(rendered.says("lichess") && rendered.says("chess.com") && rendered.says("国象联盟") && rendered.says("链接"))
     }
-
-    /// A 国象联盟 share link, the way the site's own viewer expects to read it (the kit's tests
-    /// hold the same one).
-    private static let chesseaseShareLink =
-        "https://app.chessease.net/pgn/#G-YAAJwFdmN1cVGSZ7WdDBdbPv1N8sd_rCZ2cSB7excYTj1ZCeFBkij2ZATWTXA1CIxLTFte-t1FkQZAFUVaYIvGOLKB2_ATb6HuoBEdJw74EE_Yhdvu29gwnvfXQyRItxgbXHqyqGHpPzcnb1cKxLDwEL-6AzyQuUf-7DxLaEiaviabnNZoLYqJOi2qbZoJKktpkzQQGOATWSqpMUJjg-SuLg"
 }

@@ -237,7 +237,9 @@ struct DeckGallery {
         #expect(session.game.uciMoves == ["e2e4"])
         #expect(session.reading.attempts.first?.line == ["d5", "Nf3"])
     }
-    @Test func viewingAMateRequiresAnExplicitPressAndResetsAfterMoving() async throws {
+    /// The row's View button reaches the session: a real accessibility press opens the card and
+    /// reads the line out. When a card opens, shuts and is put away is the kit's (`DeckTests`).
+    @Test func theViewButtonOpensTheCard() async throws {
         let game = try #require(Game(startFEN:
             "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"))
         let engine = ScriptedEngine([Analysis(depth: 10, lines: [
@@ -245,31 +247,17 @@ struct DeckGallery {
                  san: ["Qb8+", "Nxb8", "Rd8#"])
         ])])
         let session = GameSession.fresh(game, engine: engine)
-        let move = try #require(game.state.legalMoves.first { $0.uci == "b3b8" })
         defer { session.suspend() }
-        let rendered = await ScreenImage.write("mate-after-moving", interact: { window in
-            let before = ScreenImage.words(in: window)
-            #expect(!before.contains { $0.contains("Rd8#") })
+        let rendered = await ScreenImage.write("mate-opened", interact: { window in
+            #expect(!ScreenImage.words(in: window).contains { $0.contains("Rd8#") })
             #expect(ScreenImage.activate(localized("discovery.view"), in: window),
                     "the rendered View button must accept a real accessibility action")
-            await ScreenImage.settle()
-            let after = ScreenImage.words(in: window)
-            #expect(after != before)
-            #expect(after.contains { $0.contains("Rd8#") }, "View must reveal the actual line")
-            #expect(ScreenImage.activate(localized("discovery.view"), in: window))
-            await ScreenImage.settle()
-            #expect(!ScreenImage.words(in: window).contains { $0.contains("Rd8#") },
-                    "pressing an expanded finding must collapse its answer")
-            #expect(ScreenImage.activate(localized("discovery.view"), in: window))
-            await ScreenImage.settle()
-            #expect(ScreenImage.words(in: window).contains { $0.contains("Rd8#") })
-            session.play(move)
             await ScreenImage.settle()
         }) {
             screen(session, engine: engine)
         }
-        #expect(session.game.uciMoves == ["b3b8"])
-        #expect(!rendered.says("Rd8#"), "new positions require a new explicit reveal")
+        #expect(session.openCard == .mate)
+        #expect(rendered.says("Rd8#"), "View must reveal the actual line")
     }
     @Test(.drawing(in: .chinese)) func noSlipsChinese() async throws { try await localizedNoSlips() }
     @Test(.drawing(in: .english)) func noSlipsEnglish() async throws { try await localizedNoSlips() }

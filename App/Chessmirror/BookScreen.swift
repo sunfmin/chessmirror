@@ -179,8 +179,7 @@ struct BookEntryScreen: View {
             .overlay {
                 BoardView(
                     pieces: PositionDraft(fen: mistake.position.text)?.pieces ?? [:],
-                    orientation: mistake.position.sideToMove == .white
-                        ? .whiteAtBottom : .blackAtBottom,
+                    orientation: .facing(mistake.position.sideToMove),
                     isInteractive: false
                 )
             }
@@ -227,7 +226,7 @@ struct BookEntryScreen: View {
     }
 
     private func entry(for encounter: Encounter) -> GameLibrary.Entry? {
-        library.entries.first { $0.url == encounter.game }
+        library.entry(at: encounter.game)
     }
 
     /// Straight to the move itself, so the board shows what was played rather than the moment
@@ -238,13 +237,8 @@ struct BookEntryScreen: View {
     /// record, and the strip scrolls along with them. Cutting straight to the Ply showed the
     /// position with no idea how it was reached.
     private func open(_ encounter: Encounter) {
-        guard let entry = entry(for: encounter),
-            let session = GameSession.opened(
-                entry, engine: engine.service, library: library,
-                strength: StrengthSetting.shared.strength, lines: JudgementSetting.shared.lines
-            )
-        else { return }
-        session.walkOnArrival(toPly: encounter.arrivalPly)
+        let opener = GameOpener(engine: engine.service, library: library, settings: .shared)
+        guard let session = opener.open(encounter.game, walkingTo: encounter.arrivalPly) else { return }
         path.append(.game(session))
     }
 }
@@ -255,7 +249,7 @@ struct BookEntryScreen: View {
 func thumbnail(_ position: PositionKey, side: CGFloat) -> some View {
     BoardView(
         pieces: PositionDraft(fen: position.text)?.pieces ?? [:],
-        orientation: position.sideToMove == .white ? .whiteAtBottom : .blackAtBottom,
+        orientation: .facing(position.sideToMove),
         coordinates: false,
         isInteractive: false
     )

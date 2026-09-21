@@ -680,27 +680,6 @@ struct GameScreenScreenshots {
         #expect(!rendered.says("收起"))
     }
 
-    /// A mate the finder comes back with is said on its own row and left shut: the line is not
-    /// read out, and not drawn, until somebody presses it.
-    @Test("a mate already found is announced, and not opened")
-    func aMateAlreadyFoundIsAnnouncedAndNotOpened() async throws {
-        let opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w - - 0 1"
-        let game = try #require(Game(startFEN: opera))
-        let engine = ScriptedEngine([], byPosition: [
-            game.state.fen: Analysis(depth: 10, lines: [
-                Line(score: .mate(in: 2), uciMoves: ["b3b8", "d7b8", "d1d8"], san: ["Qb8+", "Nxb8", "Rd8#"])
-            ])
-        ])
-        let session = GameSession.fresh(game, engine: engine)
-        var rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
-        await hop()
-        rendered = await ScreenImage.write("game-opens-on-a-mate") { screen(session, engine: engine) }
-
-        #expect(session.mateNews != nil)
-        #expect(rendered.says("发现杀招"))
-        #expect(!rendered.says("Qb8"), "the line stays behind the press")
-    }
-
     private func hop() async {
         for _ in 0..<20 {
             await Task.yield()
@@ -737,76 +716,22 @@ struct GameScreenScreenshots {
 
     // ------------------------------------------------------------ 掉幅 on the record
 
-    /// Every measured move on the record carries its cost under it (#48): a 正着 game prices the
-    /// player's own moves and leaves the engine's blank, and the mark at the foot of a cell speaks
-    /// as a mistake made from that position rather than as this move's cost.
-    @Test("the record says what each measured move cost")
+    /// The record draws what the record reading says (#48). What each cell says — the cost, 最佳,
+    /// the 「0」, the blank, the mark at a position the player went wrong from — is the kit's
+    /// (`RecordReading.Cell`, held by RecordReadingTests without a simulator); what is asked here is
+    /// only that the strip on the glass carries it.
+    @Test("the record draws what the record reading says about each move")
     func costsOnTheRecord() async throws {
         let session = try Self.tallied()
         let rendered = await ScreenImage.write("game-record-costs") {
             screen(session, engine: ScriptedEngine([]))
         }
-        let sep = localized("clause.separator")
+        let halves = session.game.scoresheet.flatMap { [$0.white, $0.black] }.compactMap { $0 }
+        let e4 = try #require(halves.first { $0.ply == 1 })
+        let nc6 = try #require(halves.first { $0.ply == 4 })
         #expect(session.game.hasCosts)
-        #expect(rendered.says(localized("screen.spokenMove", 1, "e4") + sep + localized("book.cost", 1)))
-        #expect(rendered.says(localized("screen.spokenMove", 7, "c3") + sep + localized("book.cost", 1)))
-        #expect(rendered.words.contains(localized("screen.spokenMove", 2, "e5")), "the engine's move was never judged: no cost, and not zero")
-        // Nh3 was refused at the position after 4. Nc6, so that cell wears the mark — and says so.
-        #expect(rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("record.slipMark", 12)))
-        #expect(!rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("book.cost", 12)), "the mark is not this move's cost")
-    }
-
-    /// A reviewed game prices both sides, and a move that cost nothing says 「0」 rather than nothing.
-    @Test("a reviewed record prices both sides, zero included")
-    func costsOnAReviewedRecord() async throws {
-        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
-        game.applyReview(
-            [30, 30, 30, 90, 90, 90, 90, 90].map { Score.centipawns($0) },
-            startEvaluation: .centipawns(30), depth: 16
-        )
-        let session = GameSession.fresh(game)
-        let rendered = await ScreenImage.write("game-record-costs-reviewed") {
-            screen(session, engine: ScriptedEngine([]))
-        }
-        let sep = localized("clause.separator")
-        let gaveAway = try #require(game.cost(atPly: 4))
-        #expect(gaveAway > 0, "4... Nc6 let the position slide")
-        #expect(rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("book.cost", Drop.points(gaveAway))))
-        #expect(rendered.says(localized("screen.spokenMove", 1, "e4") + sep + localized("book.cost", 0)), "a move that cost nothing says so")
-        #expect(rendered.says(localized("screen.spokenMove", 8, "Nf6") + sep + localized("book.cost", 0)), "the engine's moves are priced too")
-    }
-
-    /// 最佳 on the record: the engine's own first choice says so under the move rather than 「0」
-    /// — by the judgement that let it stand, or by the Review's Line from the position before —
-    /// and a nought that is only a nought stays a 「0」.
-    @Test("the record says 最佳 under the engine's own choice, and 0 under another free move")
-    func bestOnTheRecord() async throws {
-        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
-        game.applyReview(
-            [
-                .init(score: .centipawns(30), line: ["e5", "Nf3"]),
-                .init(score: .centipawns(30), line: ["d4", "exd4"]),
-                .init(score: .centipawns(30), line: ["Nc6"]),
-                .init(score: .centipawns(30), line: ["Bc4"]),
-                .init(score: .centipawns(30), line: ["Bc5"]),
-                .init(score: .centipawns(30), line: ["c3"]),
-                .init(score: .centipawns(30), line: ["Nf6"]),
-                .init(score: .centipawns(30), line: []),
-            ],
-            startEvaluation: .centipawns(30), depth: 16
-        )
-        // 1. e4 was let stand under 把关 as the engine's own choice: the judgement says so itself.
-        game.setJudgement(.init(drop: 0, score: .centipawns(30), depth: 20, intercept: 10, best: true), atPly: 0)
-        let session = GameSession.fresh(game)
-        let rendered = await ScreenImage.write("game-record-best") {
-            screen(session, engine: ScriptedEngine([]))
-        }
-        let sep = localized("clause.separator")
-        #expect(rendered.says(localized("screen.spokenMove", 1, "e4") + sep + localized("standing.best")), "by the judgement")
-        #expect(rendered.says(localized("screen.spokenMove", 2, "e5") + sep + localized("standing.best")), "by the Review's Line after e4")
-        #expect(rendered.says(localized("screen.spokenMove", 3, "Nf3") + sep + localized("book.cost", 0)), "free, but the Line wanted d4")
-        #expect(!rendered.says(localized("screen.spokenMove", 3, "Nf3") + sep + localized("standing.best")))
-        #expect(rendered.says(localized("screen.spokenMove", 4, "Nc6") + sep + localized("standing.best")))
+        #expect(rendered.says(session.reading.cell(e4).spoken), "a measured move and its cost")
+        #expect(rendered.says(session.reading.cell(nc6).spoken), "a cell wearing the mark says so")
     }
 
     // ------------------------------------------------------------------------- 复判
@@ -1072,23 +997,18 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-rung-1800") {
             screen(bound, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
-        #expect(rendered.says("Stockfish 18 · 1800"))
+        // What the name says at each rung is the kit's (StrengthTests); this is that the bar
+        // says it, and says what the number is.
+        #expect(rendered.says(bound.strength.engineName))
         #expect(rendered.says("棋力"), "VoiceOver says what the number is")
-
-        let unbound = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
-        let atFull = await ScreenImage.write("game-rung-full") {
-            screen(unbound, engine: ScriptedEngine(Self.searching, isEndless: true))
-        }
-        #expect(atFull.says("Stockfish 18"))
-        #expect(!atFull.says("Stockfish 18 ·"), "the name alone at 满力")
     }
 
     /// The bar says the 搜索预算 the setting names, not a fixed line (CONTEXT.md): with the time
     /// alone counting, the time alone is said — and the kit's every live search runs on it.
     @Test("the engine's bar says the budget the player set")
     func theEngineBarSaysTheBudget() async throws {
-        SearchSetting.shared.limit = SearchLimit(seconds: 5, depth: 12, stop: .time)
-        defer { SearchSetting.shared.limit = .standard }
+        PlayerSettings.shared.searchLimit = SearchLimit(seconds: 5, depth: 12, stop: .time)
+        defer { PlayerSettings.shared.searchLimit = .standard }
         #expect(PositionSearches.budget == .time(.seconds(5)), "the kit runs on it")
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let session = GameSession.fresh(game, controllers: [.white: .hand, .black: .engine])
@@ -1130,18 +1050,6 @@ struct GameScreenScreenshots {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
         #expect(rendered.says("Stockfish 18 · 2000"))
-    }
-
-    /// The rung picked is the one the next game starts at, on this phone and on the next one; a
-    /// phone that has never picked starts at 满力.
-    @Test("the rung picked is remembered, and a fresh phone starts at 满力")
-    func theRungIsRemembered() {
-        let setting = StrengthSetting.shared
-        #expect(setting.strength == .full, "nothing picked yet")
-        setting.strength = .elo(2200)
-        defer { setting.strength = .full }
-        #expect(UserDefaults.standard.string(forKey: "chessmirror.strength") == "2200")
-        #expect(NSUbiquitousKeyValueStore.default.string(forKey: "chessmirror.strength") == "2200")
     }
 
     // ------------------------------------------------------------------- glue

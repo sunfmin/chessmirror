@@ -2,15 +2,12 @@ import ChessmirrorKit
 import Foundation
 import Testing
 
-@testable import Chessmirror
-
-/// What the app plays for each thing a session says happened. The session no longer makes a
-/// noise itself (`GameSession.Event`), so this is where "a refusal sounds like a refusal" is
-/// kept true — against the sounds the session used to play from its own lines.
+/// Contract: what the app plays for each thing a session says happened. The session makes no
+/// noise itself (`GameSession.Event`), so this is where "a refusal sounds like a refusal" is kept
+/// true — against the sounds the session used to play from its own lines.
 @MainActor
-struct SessionSounds {
+@Suite struct SessionSoundsTests {
     final class Recording: Feedback {
-        var isSoundOn = true
         var played: [FeedbackSound] = []
         func play(_ sound: FeedbackSound) { played.append(sound) }
     }
@@ -53,16 +50,12 @@ struct SessionSounds {
         #expect(speaker.played == [.refused, .check, .move])
     }
 
-    /// The screen's wiring, end to end: a session on a screen is heard through whatever
-    /// Feedback is installed when the event arrives.
-    @Test func aSessionIsHeardThroughTheInstalledFeedback() throws {
+    /// A session is heard through whatever Feedback its listener plays to, event by event.
+    @Test func aSessionIsHeardEventByEvent() throws {
         let speaker = Recording()
-        let previous = Sounds.current
-        Sounds.current = speaker
-        defer { Sounds.current = previous }
         let (e4, game) = try move("e2e4")
         let session = GameSession.fresh(game)
-        session.onEvent = { Sounds.current.hear($0) }
+        session.onEvent = { speaker.hear($0) }
 
         session.play(e4)
         session.step(by: -1)

@@ -126,6 +126,39 @@ public struct DrillVerdict: Hashable, Sendable {
     }
 
     public var isSettled: Bool { verdict != nil }
+
+    /// Where the attempt stands, as the verdict row says it (docs/adr/0029): asking, weighing
+    /// the move, 过了, 没过, or unable to judge it at all.
+    public enum Standing: Hashable, Sendable {
+        case asking, judging, held, dropped, unjudged
+
+        /// The row's one word.
+        public var word: String {
+            switch self {
+            case .asking: localized("drill.prompt")
+            case .judging: localized("drill.judging")
+            case .held: localized("drill.held")
+            case .dropped: localized("drill.dropped")
+            case .unjudged: localized("drill.noEngine")
+            }
+        }
+    }
+
+    public var standing: Standing {
+        if let verdict { return verdict.passed ? .held : .dropped }
+        if couldNotJudge { return .unjudged }
+        return isJudging ? .judging : .asking
+    }
+
+    /// Why, and only when the answer was no. A move that held has been told that it held; a
+    /// paragraph explaining a right answer is the app arguing with it (docs/adr/0027).
+    public var explanation: String? {
+        guard let verdict, !verdict.passed else { return nil }
+        return verdict.sentence
+    }
+
+    /// Whether the row offers the way on: once there is an answer, or once there cannot be one.
+    public var offersWayOn: Bool { isSettled || couldNotJudge }
     /// Whose move it is here, which is the side that has to find something.
     public var mover: PieceColour { position.sideToMove }
 

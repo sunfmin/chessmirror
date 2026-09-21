@@ -214,8 +214,7 @@ struct BoardView: View {
     // ------------------------------------------------------------- geometry
 
     func pieceRotation(for colour: PieceColour) -> Double {
-        let top: PieceColour = orientation == .whiteAtBottom ? .black : .white
-        return isFaceToFace && colour == top ? 180 : 0
+        isFaceToFace && colour == orientation.top ? 180 : 0
     }
 
     private func square(at point: CGPoint, side: CGFloat) -> Square? {

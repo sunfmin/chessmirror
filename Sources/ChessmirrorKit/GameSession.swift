@@ -199,6 +199,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// that means for it: the finder drops its shot, the strip puts its 应招 away, the 复判
     /// yields unwritten.
     private func letGoOfThePosition() {
+        opened = nil
         finder.forget()
         replyOnStrip.close()
         rejudgeOnStrip.cancel()
@@ -229,6 +230,100 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             isDealt: dealsCards, mate: mateNews != nil, tactic: tactic != nil,
             isSearching: isSearching || isProbingTactics
         )
+    }
+
+    // ------------------------------------------------------------------ the open card
+
+    /// Which card is open, whether its line is on the board, and the position it was opened on
+    /// (docs/adr/0025). It was a class of the screen's for a year, and the screen shut it by
+    /// watching the board's FEN — so whether a card opened on one position was still open on the
+    /// next was a fact nobody could ask without a simulator.
+    private struct Opened: Equatable {
+        let card: Deck.Card
+        let position: String
+        var drawsLine: Bool
+    }
+
+    private var opened: Opened?
+
+    /// Whether the deck has been dealt: once per game on screen, not on every appearance, or
+    /// coming back from a Review would ask the engine again for what is already on the table.
+    public private(set) var isDeckDealt = false
+
+    /// The card that is open, if one is. Nothing is open until a finding is pressed: a finding
+    /// is an invitation, and opening one on somebody's behalf is answering a question they did
+    /// not ask. Nothing opened on one position is open on another — the eye moving is the card
+    /// being put away, and so is the board changing under a cursor that did not move.
+    public var openCard: Deck.Card? {
+        guard let opened, opened.position == viewed.state.fen else { return nil }
+        return opened.card
+    }
+
+    public func isOpen(_ card: Deck.Card) -> Bool { openCard == card }
+
+    /// Whether this card's line is the one on the board.
+    public func draws(_ card: Deck.Card) -> Bool { isOpen(card) && opened?.drawsLine == true }
+
+    /// The card whose line is on the board, when one is.
+    public var drawnCard: Deck.Card? { openCard.flatMap { draws($0) ? $0 : nil } }
+
+    /// What the board draws for the deck: the drawn card's line, or nothing.
+    public var deckArrows: [MoveArrow] { arrows(for: drawnCard) }
+
+    /// Pressing a finding. The one pressed opens with its line drawn — the line is most of what a
+    /// finding is for — and whatever was open shuts; pressing the open one shuts it. A row with
+    /// nothing behind it does not press. Opening one in a 练习 is help, and is counted as help.
+    public func press(_ card: Deck.Card) {
+        guard deck.has(card) else { return }
+        if isOpen(card) {
+            opened = nil
+            return
+        }
+        opened = Opened(card: card, position: viewed.state.fen, drawsLine: true)
+        notePracticeHelp()
+    }
+
+    /// The arrow on the open card: its line on the board, or off it.
+    public func toggleLine() {
+        guard openCard != nil else { return }
+        opened?.drawsLine.toggle()
+    }
+
+    /// The deck arriving on screen. Both findings are questions for the finder, and arriving is
+    /// what asks it (docs/adr/0023, 0025). Nothing is opened: a mate it turns up is said on its
+    /// own row — 「发现杀招」 — and opened by whoever presses it. Once: the second call is nothing.
+    public func dealDeck() {
+        guard !isDeckDealt else { return }
+        isDeckDealt = true
+        arriveAtFinder()
+        adviseForCard()
+    }
+
+    /// The card's line as chips, each the player's or not by the rule its arrows use.
+    public func steps(on card: Deck.Card) -> [LineStep] {
+        switch card {
+        case .mate:
+            return mateNews?.steps ?? []
+        case .tactics:
+            guard let tactic else { return [] }
+            let opening = viewed.state.sideToMove
+            return tactic.line.enumerated().map { index, san in
+                let mover = index.isMultiple(of: 2) ? opening : opening.opposite
+                return LineStep(step: index + 1, san: san, isYours: controller(for: mover) == .hand)
+            }
+        }
+    }
+
+    /// What the 杀招 card says when it has no mate to show. No news is news, and it is three
+    /// different pieces of it — the game is over, there is no mate, nobody has looked yet — and
+    /// nothing at all while a search is running: a card that goes blank when there is no mate is
+    /// a card that looks broken (docs/adr/0025). Nil when there is a mate.
+    public var mateQuiet: String? {
+        guard mateNews == nil else { return nil }
+        if viewed.isOver { return localized("screen.finished") }
+        if isProbingTactics || isSearching { return nil }
+        if isFindingTactics || analysis != nil { return localized("screen.noMate") }
+        return localized("screen.mateIdle")
     }
 
     /// The open card's line as numbered arrows on the position on screen. Nothing for a card
@@ -324,11 +419,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         shaky: Set<Square> = [],
         engine: (any Engine)? = nil,
         library: GameLibrary? = nil,
+        strength: Strength = .full,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
             game: game, orientation: orientation, origin: .recognised, picture: picture, shaky: shaky,
-            lines: lines
+            strength: strength, lines: lines
         )
         session.attach(engine: engine, library: library)
         return session
@@ -382,7 +478,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         )
         session.attach(engine: engine, library: library)
         session.practice = drill
-        session.orientation = drill.mover == .white ? .whiteAtBottom : .blackAtBottom
+        session.orientation = .facing(drill.mover)
         return session
     }
 
@@ -417,10 +513,50 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
     public private(set) var reviewNews: ReviewNews?
 
+    /// The row under the record for an imported game's Review (docs/adr/0016, 0044): how far it
+    /// has got, the offer to start it, or what it found. Nil for every game that is not an
+    /// import awaiting or just given its Review — which is every game played here.
+    public enum ReviewRow: Hashable, Sendable {
+        /// Running: positions settled of positions to settle, or queued behind another game.
+        case running(ImportReview.Progress)
+        /// Offered, as a press rather than something that starts itself — seconds of engine per
+        /// move. `failed` when the last try could not settle every position; `canStart` false
+        /// while there is no engine or library to run it with.
+        case offered(failed: Bool, canStart: Bool)
+        /// Landed, with this many 错招 found.
+        case done(slips: Int)
+
+        /// What the row says.
+        public var text: String {
+            switch self {
+            case .running(let progress):
+                progress.total > 0
+                    ? localized("review.progress", progress.judged, progress.total)
+                    : localized("import.status.queued")
+            case .offered(let failed, _): localized(failed ? "review.failed" : "review.offer")
+            case .done(let slips):
+                slips > 0 ? localized("review.done", slips) : localized("review.done.clean")
+            }
+        }
+
+        /// The button's word, for the one state that has a button.
+        public var action: String? {
+            guard case .offered(_, let canStart) = self else { return nil }
+            return localized(canStart ? "review.start" : "review.waiting")
+        }
+    }
+
+    public var reviewRow: ReviewRow? {
+        if let reviewProgress { return .running(reviewProgress) }
+        if awaitsReview { return .offered(failed: reviewNews == .failed, canStart: canReview) }
+        if case .done(let slips) = reviewNews { return .done(slips: slips) }
+        return nil
+    }
+
     /// Starts the Review of this imported game. Nothing happens unless `canReview`.
     public func review() {
         guard canReview, let engine, let library, let url,
-            let entry = library.entries.first(where: { $0.url == url }) else { return }
+            let entry = library.entry(at: url) else { return }
         reviewNews = nil
         library.reviewImported(entry, using: engine) { [weak self] outcome in
             guard let self else { return }
@@ -487,6 +623,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         shaky: Set<Square>,
         engine: (any Engine)?,
         library: GameLibrary?,
+        strength: Strength = .full,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
@@ -496,6 +633,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             origin: origin,
             picture: picture,
             shaky: shaky,
+            strength: strength,
             lines: lines
         )
         session.attach(engine: engine, library: library)
@@ -511,7 +649,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let pgn = entry.pgn
         let game = pgn?.game ?? Game(startFEN: PGN.standardStartFEN)!
         let hands = pgn?.handColours ?? []
-        let facing = hands.count == 1 ? hands.first! : game.startingSideToMove
         self.init(
             game: game,
             // Seated here rather than by `opened`, because seating through `setController` writes
@@ -521,7 +658,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // engine had White) opens with that side at the bottom: it is their game, seen from
             // their chair. Any other record faces the side about to move: reading begins where
             // the play does.
-            orientation: .facing(facing),
+            orientation: pgn?.orientation ?? .facing(game.startingSideToMove),
             origin: entry.origin,
             picture: entry.origin == .recognised ? library?.picture(for: entry.url) : nil,
             url: entry.url,
@@ -618,6 +755,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public func controller(for colour: PieceColour) -> Controller {
         controllers[colour] ?? .hand
+    }
+
+    /// Whether a seat chip may be pressed: never while the board is spoken for — the same refusal
+    /// `setController` makes — and the engine's only once there is an engine. Seating it before
+    /// one has arrived is allowed in the kit (a game can be made before the host is ready); it is
+    /// the chip that has nothing to offer yet.
+    public func canSeat(_ controller: Controller) -> Bool {
+        !isOccupied && (controller == .hand || engine != nil)
     }
 
     public func setController(_ controller: Controller, for colour: PieceColour) {
@@ -745,9 +890,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Swaps the position the game starts from. Only for a game nobody has moved in yet — which
     /// is the case this exists for: correcting a piece straight after the photograph should fix
     /// the game in front of you, not leave a second record behind.
+    /// Whether a corrected position can go back into this game rather than make a second one:
+    /// nothing played in it yet, and the board not spoken for. What the editor's button reads to
+    /// say which of the two it will do — it read only the first, and said 「用这个」 over a press
+    /// that then made a second game.
+    public var canReplaceStart: Bool { !isOccupied && game.plies.isEmpty }
+
     public func replaceStart(with fresh: Game) -> Bool {
-        guard !isOccupied else { return false }
-        guard game.plies.isEmpty else { return false }
+        guard canReplaceStart else { return false }
         stopSearching()
         game = fresh
         cursor = 0
@@ -845,6 +995,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// only on the screen that draws the switch, so a screen that offers it by accident offers a
     /// switch that does nothing rather than taking a drill out of 把关.
     public var acceptsLines: Bool { !isOccupied && practice == nil }
+
+    /// Whether the 把关 switch is pressable: the session has to accept a change of 线 at all
+    /// (`acceptsLines` — not mid-move, not in a 练习), and turning it *on* needs an engine to do
+    /// the stopping. Turning it off never does.
+    public var canSwitchNoSlips: Bool { acceptsLines && (engine != nil || isNoSlipsOn) }
 
     /// Switches 把关 on or off. It stops the player at the 记录线, **the only dial 把关 has on the
     /// judgement of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how
@@ -1155,11 +1310,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// filled in when the answer arrives, and closed by the next tap or by the board moving on.
     public struct ReplyReading: Equatable, Sendable {
         /// One numbered step of the line, as the chips under the board say it.
-        public struct Step: Hashable, Sendable {
-            public let step: Int
-            public let san: String
-            public let isYours: Bool
-        }
+        public typealias Step = LineStep
 
         /// Which of `reading.wrongs` is open.
         public let index: Int
@@ -1189,6 +1340,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The 应招 open on the strip, if one is (`readReply(at:)`).
     public var replyReading: ReplyReading? { replyOnStrip.reading }
 
+    /// Whether a wrong move on the strip may be asked about: not while a 惩罚 exercise has the
+    /// board, which is the one thing in the strip asking something of the player (docs/adr/0031).
+    public var canReadReply: Bool { activePunishment == nil }
+
     /// Reads the 应招 of a 试招 on the strip, or puts it away again if it is the one open.
     ///
     /// A move that carries its answer is read at once; one refused before replies were written
@@ -1201,7 +1356,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         let wrongs = reading.wrongs
-        guard activePunishment == nil, wrongs.indices.contains(index),
+        guard canReadReply, wrongs.indices.contains(index),
             let position = refusedPosition
         else { return }
         let wrong = wrongs[index]
@@ -1372,7 +1527,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// the bottom side supplies the perspective, just as it does for the bar.
     private var feedbackColour: PieceColour {
         let hands = [PieceColour.white, .black].filter { controller(for: $0) == .hand }
-        return hands.count == 1 ? hands[0] : (orientation == .whiteAtBottom ? .white : .black)
+        return hands.count == 1 ? hands[0] : orientation.bottom
     }
 
     /// What the strip under the board says right now (`Standing`): one sentence, by one priority.
@@ -2014,9 +2169,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     /// Takes the last move of the game off. Only from the latest position: in the middle of a
     /// game, going backwards is browsing, and deleting is not what a back button means.
+    /// Whether 撤销 may be pressed: the three refusals `undo()` makes, read by the menu that
+    /// offers it. The menu used to spell only two of them, so it stayed live while a move was
+    /// being weighed and did nothing when pressed.
+    public var canUndo: Bool { !isOccupied && isAtLatest && !game.plies.isEmpty }
+
     public func undo() {
-        guard !isOccupied else { return }
-        guard isAtLatest, !game.plies.isEmpty else { return }
+        guard canUndo else { return }
         stopSearching()
         game.undo()
         emit(.stepped)

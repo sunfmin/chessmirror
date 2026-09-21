@@ -29,7 +29,6 @@ struct GameScreen: View {
     /// the eye just was. Every other way the cursor moves still centres.
     @State private var isTappingStrip = false
     @State private var promotion: PromotionRequest?
-    @State private var isSoundOn = Sounds.current.isSoundOn
     /// Which side's own controls are open. Nobody's, unless somebody said otherwise — and then
     /// their answer stands for as long as the screen does. Never derived from the game: an unfold
     /// that answers to the moves is an unfold that opens and shuts under your thumb, and the board
@@ -40,9 +39,6 @@ struct GameScreen: View {
     /// this to nil, which it already was. A fresh board and a game under way both open with every
     /// strip shut, and only a thumb opens one.
     @State private var unfolded: PieceColour?
-    /// What the deck of findings under the record is showing. The deck keeps it, because it is
-    /// the deck's; this screen holds the object so the board can ask which line to draw.
-    @State private var deck = Deck()
     /// Whether a thumb is on 让引擎走 right now. The engine is thinking for exactly as long as it is —
     /// which is why this is read off the session rather than kept here as well. A screen holding
     /// its own copy of "a finger is down" is a screen that can be left holding it: a press that
@@ -79,7 +75,7 @@ struct GameScreen: View {
                 .chromeType()
 
                 if session.dealsCards {
-                    DeckView(session: session, deck: deck, selected: $selected)
+                    DeckView(session: session, selected: $selected)
                 }
               }
               .frame(width: proxy.size.width)
@@ -92,11 +88,6 @@ struct GameScreen: View {
         // the record walks to that Ply rather than being cut to it. Nothing happens for a game
         // opened any other way — there is no Ply to walk to.
         .task { await session.walkToArrival() }
-        .onChange(of: viewed.state.fen) { _, _ in deck.shut() }
-        .onChange(of: session.thinking) { _, now in
-            guard now == nil, session.dealsCards else { return }
-            session.adviseForCard()
-        }
         // The card stands on the glass. The home indicator is a mark on top of it, not a
         // margin that holds the deck off the bottom of the phone.
         // No title, and now nothing in its place either. The screen is a board; a word saying
@@ -143,16 +134,16 @@ struct GameScreen: View {
                     } label: {
                         Label(localized("game.undo"), systemImage: "arrow.uturn.backward")
                     }
-                    .disabled(!session.isAtLatest || session.game.plies.isEmpty)
+                    .disabled(!session.canUndo)
                     Button {
                         path.append(.confirm(PositionProposal(reopening: session)))
                     } label: {
                         Label(localized("edit.title"), systemImage: "hand.point.up.left")
                     }
-                    Toggle(isOn: $isSoundOn) {
+                    Toggle(isOn: Bindable(PlayerSettings.shared).isSoundOn) {
                         Label(
                             localized("game.sound"),
-                            systemImage: isSoundOn ? "speaker.wave.2" : "speaker.slash"
+                            systemImage: PlayerSettings.shared.isSoundOn ? "speaker.wave.2" : "speaker.slash"
                         )
                     }
                     if let url = session.url {
@@ -200,13 +191,6 @@ struct GameScreen: View {
         .onDisappear {
             session.onEvent = nil
             session.disappear()
-        }
-        .onChange(of: isSoundOn) { _, isOn in Sounds.current.isSoundOn = isOn }
-        // The setting travels between devices (docs/adr/0012), so it can change while this
-        // screen is the one on show — and a toggle that disagrees with the sound is worse than
-        // no toggle.
-        .onReceive(NotificationCenter.default.publisher(for: NSUbiquitousKeyValueStore.didChangeExternallyNotification)) { _ in
-            isSoundOn = Sounds.current.isSoundOn
         }
         .confirmationDialog(
             localized("game.promotion"), isPresented: .constant(promotion != nil),
@@ -297,7 +281,7 @@ struct GameScreen: View {
                 // The width is the depth label's either way, so the row does not jump when the
                 // first depth lands.
                 if let depth = strip.depth {
-                    Text(depth > 0 ? localized("game.depth", depth) : localized("noSlips.judging"))
+                    Text(Depth.label(depth))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -354,7 +338,7 @@ struct GameScreen: View {
             .accessibilityElement(children: .combine)
         }
         .buttonStyle(.plain)
-        .disabled(session.activePunishment != nil)
+        .disabled(!session.canReadReply)
         .accessibilityLabel(wrong.san)
         .accessibilityValue(Drop.figure(wrong.drop))
         .accessibilityHint(localized("tried.reply.hint"))
@@ -364,7 +348,6 @@ struct GameScreen: View {
     /// arrows on the board. One move is the refused one and the rest are the answers to it, so
     /// the row begins with the move the player made and not with what happened to it.
     @ViewBuilder private func replyRow(_ reading: GameSession.ReplyReading) -> some View {
-        let chips = reading.steps.map { CardMoves.Move(step: $0.step, san: $0.san, isYours: $0.isYours) }
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text(localized("tried.reply")).font(.caption).foregroundStyle(Palette.inkSoft)
@@ -376,8 +359,8 @@ struct GameScreen: View {
                 rejudgeControl(reading)
             }
             .frame(minHeight: 22)
-            if !chips.isEmpty {
-                CardMoves(moves: chips)
+            if !reading.steps.isEmpty {
+                CardMoves(moves: reading.steps)
             } else if !reading.isAsking {
                 Text(localized("tried.reply.none")).font(.caption).foregroundStyle(Palette.inkSoft)
             }
@@ -394,7 +377,7 @@ struct GameScreen: View {
     @ViewBuilder private func rejudgeControl(_ reading: GameSession.ReplyReading) -> some View {
         if let running = session.rejudging, running.index == reading.index {
             ProgressView().controlSize(.mini)
-            Text(running.depth > 0 ? localized("game.depth", running.depth) : localized("noSlips.judging"))
+            Text(Depth.label(running.depth))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.inkSoft)
         } else {
@@ -437,14 +420,7 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localized("noSlips.name"))
         .accessibilityValue(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
-        .disabled(!maySwitchNoSlips)
-    }
-
-    /// Whether the 把关 switch is pressable: the session has to accept a change of 线 at all
-    /// (`acceptsLines` — not mid-move, not in a 练习), and turning it *on* has to be possible
-    /// without an engine to stop anybody. One rule, read by both places that draw the switch.
-    private var maySwitchNoSlips: Bool {
-        session.acceptsLines && (engine.isReady || session.isNoSlipsOn)
+        .disabled(!session.canSwitchNoSlips)
     }
 
     // ------------------------------------------------------------------ the two sides
@@ -475,7 +451,7 @@ struct GameScreen: View {
                     rungMenu
                     // What the engine gets over a move: the 搜索预算 every live position search
                     // gets, said so nobody waits for a clock that does not exist (docs/adr/0039).
-                    Text(SearchSetting.shared.limit.label)
+                    Text(PlayerSettings.shared.searchLimit.label)
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
                 } else {
@@ -605,7 +581,7 @@ struct GameScreen: View {
             ForEach(Strength.ladder, id: \.self) { rung in
                 Button {
                     session.setStrength(rung)
-                    StrengthSetting.shared.strength = rung
+                    PlayerSettings.shared.strength = rung
                 } label: {
                     if rung == session.strength {
                         Label(rung.label, systemImage: "checkmark")
@@ -616,7 +592,7 @@ struct GameScreen: View {
             }
         } label: {
             HStack(spacing: 3) {
-                Text(rungTitle)
+                Text(session.strength.engineName)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 8, weight: .semibold))
             }
@@ -626,13 +602,7 @@ struct GameScreen: View {
         }
         .disabled(session.isOccupied)
         .accessibilityLabel(localized("strength"))
-        .accessibilityValue(rungTitle)
-    }
-
-    /// 「Stockfish 18 · 1800」, or the name alone at 满力.
-    private var rungTitle: String {
-        let name = Controller.engine.playerName
-        return session.strength == .full ? name : "\(name) · \(session.strength.label)"
+        .accessibilityValue(session.strength.engineName)
     }
 
     private func unfoldButton(_ colour: PieceColour) -> some View {
@@ -674,7 +644,7 @@ struct GameScreen: View {
                                         in: RoundedRectangle(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
-                    .disabled(controller == .engine && !engine.isReady)
+                    .disabled(!session.canSeat(controller))
                 }
             }
             .frame(minHeight: 36)
@@ -683,7 +653,7 @@ struct GameScreen: View {
                 HStack(spacing: 8) {
                     Text(localized("game.perMove")).foregroundStyle(Palette.inkSoft)
                     Spacer()
-                    Text(SearchSetting.shared.limit.label).foregroundStyle(Palette.ink)
+                    Text(PlayerSettings.shared.searchLimit.label).foregroundStyle(Palette.ink)
                 }
                 .padding(.vertical, 5)
             }
@@ -694,7 +664,7 @@ struct GameScreen: View {
                 set: { session.setNoSlips($0) }
             ))
             .toggleStyle(SettingToggleStyle(label: localized("noSlips.name")))
-            .disabled(!maySwitchNoSlips)
+            .disabled(!session.canSwitchNoSlips)
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))
@@ -814,15 +784,12 @@ struct GameScreen: View {
     /// row below fills in on its own, because it reads the same game. Absent for every game that
     /// is not an unreviewed import, which is every game the player played here.
     @ViewBuilder private var reviewRow: some View {
-        if let progress = session.reviewProgress {
+        switch session.reviewRow {
+        case .running(let progress)?:
             VStack(alignment: .leading, spacing: 6) {
-                Text(
-                    progress.total > 0
-                        ? localized("review.progress", progress.judged, progress.total)
-                        : localized("import.status.queued")
-                )
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(Palette.ink)
+                Text(GameSession.ReviewRow.running(progress).text)
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(Palette.ink)
                 ProgressView(value: progress.fraction)
                     .tint(Palette.analysis)
             }
@@ -830,37 +797,34 @@ struct GameScreen: View {
             .reviewChrome()
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.updatesFrequently)
-        } else if session.awaitsReview {
-            let failed = session.reviewNews == .failed
+        case .offered(let failed, let canStart)?:
+            let row = GameSession.ReviewRow.offered(failed: failed, canStart: canStart)
             HStack(spacing: 10) {
-                Text(localized(failed ? "review.failed" : "review.offer"))
+                Text(row.text)
                     .font(.footnote)
                     .foregroundStyle(failed ? Palette.alarm : Palette.inkSoft)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button { session.review() } label: {
-                    Text(localized(session.canReview ? "review.start" : "review.waiting"))
+                    Text(row.action ?? "")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(session.canReview ? Palette.raised : Palette.inkSoft)
+                        .foregroundStyle(canStart ? Palette.raised : Palette.inkSoft)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(
-                            session.canReview ? Palette.analysis : Palette.chipRest, in: Capsule()
-                        )
+                        .background(canStart ? Palette.analysis : Palette.chipRest, in: Capsule())
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(!session.canReview)
+                .disabled(!canStart)
             }
             .reviewChrome()
-        } else if case .done(let count) = session.reviewNews {
-            Label(
-                count > 0 ? localized("review.done", count) : localized("review.done.clean"),
-                systemImage: "checkmark.circle.fill"
-            )
-            .font(.footnote)
-            .foregroundStyle(Palette.analysis)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .reviewChrome()
+        case .done(let slips)?:
+            Label(GameSession.ReviewRow.done(slips: slips).text, systemImage: "checkmark.circle.fill")
+                .font(.footnote)
+                .foregroundStyle(Palette.analysis)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .reviewChrome()
+        case nil:
+            EmptyView()
         }
     }
 
@@ -890,7 +854,7 @@ struct GameScreen: View {
         let answered = session.punishment?.revealedMove
         if !slips.isEmpty || !attempts.isEmpty || exercise != nil || answered != nil {
             VStack(spacing: 0) {
-                if !slips.isEmpty { slipTiles(slips) }
+                if !slips.isEmpty { slipTiles(session.reading.tiles) }
                 if !slips.isEmpty, !attempts.isEmpty {
                     Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.leading, 13)
                 }
@@ -947,11 +911,11 @@ struct GameScreen: View {
 
     /// The positions this game has something wrong at, in the order they happen, with 下一处 to be
     /// walked to the next one.
-    private func slipTiles(_ slips: [Slip]) -> some View {
+    private func slipTiles(_ tiles: [RecordReading.Tile]) -> some View {
         HStack(spacing: 6) {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    ForEach(slips) { slip in slipTile(slip) }
+                    ForEach(tiles) { tile in slipTile(tile) }
                 }
                 .padding(.vertical, 4)
             }
@@ -991,16 +955,15 @@ struct GameScreen: View {
     /// belong to, and a tile no wider than its own board is one the row fits nearly twice as many
     /// of — which is the errand: seeing the whole game's worth of wrong places at once, and
     /// pressing the one you mean.
-    private func slipTile(_ slip: Slip) -> some View {
-        let on = session.cursor == slip.positionPly
-        let owed = slip.isWorthDrilling(session.lines)
+    private func slipTile(_ tile: RecordReading.Tile) -> some View {
+        let on = session.cursor == tile.slip.positionPly
         return Button {
-            jumpTo(slip: slip)
+            jumpTo(slip: tile.slip)
         } label: {
             VStack(spacing: 3) {
                 // Sixty-four points, which is the size the 错题本 already uses for the same job:
                 // the board is the name of a position, and a name has to be legible.
-                thumbnail(slip.position, side: 64)
+                thumbnail(tile.slip.position, side: 64)
                     .overlay(
                         RoundedRectangle(cornerRadius: 4)
                             .stroke(
@@ -1013,7 +976,7 @@ struct GameScreen: View {
                 // width on the first two figures and truncated the cost, which is the one figure
                 // that says whether to stop. Squeezed rather than wrapped or cut: none of the
                 // three parts is decoration.
-                slipCaption(slip, owed: owed)
+                slipCaption(tile)
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
                     .frame(width: 64)
@@ -1024,45 +987,43 @@ struct GameScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(slipSpoken(slip))\(localized("clause.separator"))\(Drop.cost(slip.drop))\(slip.wrong.count > 1 ? localized("clause.separator") + localized("slips.wrong", slip.wrong.count) : "")"
-        )
+        .accessibilityLabel(tile.spoken)
         .accessibilityHint(localized("slips.hint"))
     }
 
     /// The caption under a 错题's board: where in the game, how many wrong moves were tried there,
     /// and what the worst of them cost — as one Text, so it is one thing that shrinks to the
     /// board's width rather than three that fight over it.
-    private func slipCaption(_ slip: Slip, owed: Bool) -> Text {
-        var line = Text(slipNumber(slip))
+    private func slipCaption(_ tile: RecordReading.Tile) -> Text {
+        var line = Text(tile.number)
             .font(.caption2.monospacedDigit().weight(.medium))
             .foregroundStyle(Palette.ink)
-        if slip.wrong.count > 1 {
+        if let times = tile.times {
             line = line
-                + Text(" ×\(slip.wrong.count)")
+                + Text(" ×\(times)")
                 .font(.caption2.monospacedDigit().weight(.semibold))
                 .foregroundStyle(Palette.alarm)
         }
         return line
-            + Text(" " + Drop.figure(slip.drop))
+            + Text(" " + tile.figure)
             .font(.caption2.monospacedDigit())
-            .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
+            .foregroundStyle(tile.isOwed ? Palette.alarm : Palette.inkSoft)
     }
 
     /// The wrong moves made at the position on the board, newest first, under the positions
     /// they belong to — the lower register of the same strip.
     private func wrongTokens(_ wrongs: [RecordReading.WrongMove]) -> some View {
-        // Whether anything here was taken back. A row of refusals is led by an ✕; a row that is
-        // only the move that stood — an imported game's — by a mark that says it was played.
-        let returned = wrongs.contains { !$0.stood }
+        // A row of refusals is led by an ✕; a row that is only the move that stood — an imported
+        // game's — by a mark that says it was played (`RecordReading.lead`).
+        let lead = session.reading.lead ?? .stood
         return HStack(spacing: 8) {
             // A mark and nothing else: the word — 「已退回」 or 「走了的错招」 — is what VoiceOver reads
             // out for it rather than sixty points of the row.
-            Image(systemName: returned ? "xmark" : "exclamationmark")
+            Image(systemName: lead == .returned ? "xmark" : "exclamationmark")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Palette.alarm)
                 .frame(width: 18)
-                .accessibilityLabel(localized(returned ? "noSlips.returned" : "wrong.stood"))
+                .accessibilityLabel(lead.spoken)
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     ForEach(Array(wrongs.reversed().enumerated()), id: \.offset) { offset, wrong in
@@ -1076,25 +1037,6 @@ struct GameScreen: View {
         .padding(.trailing, 8)
         .padding(.vertical, 5)
         .transition(.move(edge: .top).combined(with: .opacity))
-    }
-
-    /// A position in the words a scoresheet gives it: the move number and whose move it is — the
-    /// same figure the cell above carries, so the eye can match a tile to the strip.
-    ///
-    /// **Including the position the game stops on**, which said 「现在」 and now says the number of
-    /// the move nobody has played there yet. It has one: a 错招 at the end of a game sits at the Ply
-    /// one past the last move (docs/adr/0037), and when a move is finally played there that is the
-    /// Ply it takes. Every tile in the row is then the same kind of label — 「1.」「2…」「3.」 — which
-    /// is what a row of tiles wants, rather than one of them being a word in the middle of figures.
-    private func slipNumber(_ slip: Slip) -> String {
-        session.game.moveLabel(ofPly: slip.ply)
-    }
-
-    /// The same place said out loud, in the number the record counts in.
-    private func slipSpoken(_ slip: Slip) -> String {
-        slip.ply > session.game.plies.count
-            ? localized("record.now")
-            : localized("record.ply", slip.ply)
     }
 
     /// Takes the board to a 错题 and leaves the eye on the position the move was played from — the
@@ -1118,24 +1060,21 @@ struct GameScreen: View {
     }
 
     private var moveStrip: some View {
-        // Walked once for the whole strip: the marks are a lookup per half, and the walk behind
-        // them is a rules probe per Ply.
-        let slips = session.reading.slipByPosition
-        // Whether the record has a line of costs to draw at all: none when nothing in the game
-        // has been measured, so a game nobody judged is the strip exactly as it was.
-        let costs = session.game.hasCosts
+        // Read once for the whole strip: what every cell says, its caption and its mark, is the
+        // record's (`RecordReading.cell`), and the walk behind the marks is a rules probe per Ply.
+        let reading = session.reading
         return ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    openingCell
+                    openingCell(reading.opening)
                     ForEach(session.game.scoresheet) { card in
                         HStack(spacing: 6) {
                             Text("\(card.number)")
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(Palette.inkSoft)
                                 .frame(minWidth: 13, alignment: .trailing)
-                            if let white = card.white { half(white, slips[white.ply], costs: costs) }
-                            if let black = card.black { half(black, slips[black.ply], costs: costs) }
+                            if let white = card.white { half(white, reading.cell(white)) }
+                            if let black = card.black { half(black, reading.cell(black)) }
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1181,14 +1120,10 @@ struct GameScreen: View {
 
     /// The position the game began in, at the head of its own record. It is a place in the game
     /// like any other, and without it there is no way back to it in one tap.
-    private var openingCell: some View {
-        let slip = session.reading.slipByPosition[0]
+    private func openingCell(_ cell: RecordReading.Cell) -> some View {
         let on = session.cursor == 0
-        // One name for one place. It used to say 「从这里开始走」 while the game had no moves in it,
-        // which is an instruction standing where every other cell in the strip names a place.
-        let name = localized("record.opening")
         return Button { walk(to: 0) } label: {
-            Text(name)
+            Text(cell.name)
                 .font(.caption)
                 .foregroundStyle(on ? Palette.parchment : Palette.inkSoft)
                 .padding(.horizontal, 9)
@@ -1197,24 +1132,11 @@ struct GameScreen: View {
                     on ? AnyShapeStyle(Palette.analysis) : AnyShapeStyle(Palette.chipRest),
                     in: RoundedRectangle(cornerRadius: 9)
                 )
-                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
+                .overlay(alignment: .bottom) { slipMark(cell.mark) }
         }
         .buttonStyle(.plain)
         .id(0)
-        .accessibilityLabel(spoken(name, cost: nil, slip: slip))
-    }
-
-    /// What a cell says out loud: its name, what the move cost if it has been measured, and —
-    /// when the mark at its foot is there — that the player went wrong from this position.
-    private func spoken(_ name: String, cost: Double?, best: Bool = false, slip: Slip?) -> String {
-        var clauses = [name]
-        if best {
-            clauses.append(localized("standing.best"))
-        } else if let cost {
-            clauses.append(Drop.cost(max(0, cost)))
-        }
-        if let slip { clauses.append(localized("record.slipMark", Drop.points(slip.drop))) }
-        return clauses.joined(separator: localized("clause.separator"))
+        .accessibilityLabel(cell.spoken)
     }
 
     /// The mark a 错招 leaves at the foot of the position it was made at.
@@ -1223,26 +1145,22 @@ struct GameScreen: View {
     /// without: the curve behind the strip is drawn against these cards being even. Two weights on
     /// the one scale the app already has (docs/adr/0027): pale is what the 记录线 put in the file,
     /// the alarm colour is what the 入列线 says the player still owes.
-    @ViewBuilder private func slipMark(_ slip: Slip?, on: Bool) -> some View {
-        if let slip {
+    @ViewBuilder private func slipMark(_ mark: RecordReading.Mark?) -> some View {
+        if let mark {
             UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
-                .fill(Palette.alarm.opacity(slip.isWorthDrilling(session.lines) ? 1 : 0.5))
+                .fill(Palette.alarm.opacity(mark == .owed ? 1 : 0.5))
                 .frame(height: 3)
         }
     }
 
     /// One half of a move, and — when the player got a position wrong here — a mark at its foot.
+    /// What it reads, says and is marked with is the record's (`RecordReading.Cell`); the tree it
+    /// sits in is the half's.
     ///
-    /// The `slip` passed in is the one whose *position* this cell is, which is the position before
-    /// the next move rather than after this one (see `slipByPosition`).
-    ///
-    /// With `costs`, every cell carries a second line — what the move cost, by whatever number the
-    /// game holds for it (`Game.cost(atPly:)`) — so the whole row grows together and the curve
-    /// behind it is drawn against cells that are still even.
-    private func half(_ cell: Game.Half, _ slip: Slip?, costs: Bool) -> some View {
+    /// With a caption, every cell carries a second line, so the whole row grows together and the
+    /// curve behind it is drawn against cells that are still even.
+    private func half(_ cell: Game.Half, _ said: RecordReading.Cell) -> some View {
         let on = cell.ply == session.cursor
-        let cost = costs ? session.game.cost(atPly: cell.ply) : nil
-        let best = costs && session.game.isBest(atPly: cell.ply)
         // A 树枝 is inked in its own colour, so a line tried from an earlier position cannot be
         // mistaken for the game (docs/adr/0043). A cell on a fork is outlined rather than filled
         // when the eye is on it, so the rail beside it reads as part of the same cell.
@@ -1268,7 +1186,7 @@ struct GameScreen: View {
                     Text(cell.san)
                         .font(.footnote.weight(on ? .medium : .regular))
                         .foregroundStyle(filled ? Palette.parchment : mark)
-                    if costs { costCaption(cost, best: best, on: filled) }
+                    if let caption = said.caption { costCaption(caption, on: filled) }
                 }
                 .padding(.horizontal, cell.isFork ? 3 : 5)
                 .padding(.vertical, 2)
@@ -1279,14 +1197,14 @@ struct GameScreen: View {
                         RoundedRectangle(cornerRadius: 5).stroke(mark, lineWidth: 1.2)
                     }
                 }
-                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
+                .overlay(alignment: .bottom) { slipMark(said.mark) }
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
             // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver
             // is a move with no place in the game, and place is the whole of what this strip is
             // for — and what it cost, and a mistake made from here, are worth saying out loud too.
-            .accessibilityLabel(spoken(cell.spoken, cost: cost, best: best, slip: slip))
+            .accessibilityLabel(said.spoken)
             .accessibilityHint(localized("record.jump"))
         }
         .id(cell.ply)
@@ -1296,35 +1214,24 @@ struct GameScreen: View {
     /// choice, a muted 「0」 for another move that cost nothing — that is information: the move
     /// was right — and a blank of the same height under a move nobody has measured, which is
     /// not the same thing as zero.
-    private func costCaption(_ cost: Double?, best: Bool, on: Bool) -> some View {
-        let points = cost.map { Drop.points(max(0, $0)) }
-        let figure: String
-        switch points {
-        case nil: figure = " "
-        case 0: figure = best ? localized("record.best") : "0"
-        case let points?: figure = "−\(points)%"
-        }
+    private func costCaption(_ caption: RecordReading.Caption, on: Bool) -> some View {
         let ink = on ? Palette.parchment : Palette.inkSoft
-        let colour: Color = best ? (on ? Palette.parchment : Palette.analysis)
-            : points == 0 ? ink.opacity(0.55) : ink
-        return Text(verbatim: figure)
+        let colour: Color = switch caption {
+        case .best: on ? Palette.parchment : Palette.analysis
+        case .free: ink.opacity(0.55)
+        case .unmeasured, .cost: ink
+        }
+        return Text(verbatim: caption.figure)
             .font(.caption2.monospacedDigit())
             .foregroundStyle(colour)
     }
 
     // ------------------------------------------------------------------ the deck
 
-    /// The open finding's line, as numbered arrows. Nothing when nothing is open, or when the
-    /// deck is not on this screen at all: arrows from a card nobody can see are arrows about a
-    /// question nobody asked (docs/adr/0025).
-    private var deckArrows: [MoveArrow] {
-        session.arrows(for: deck.drawn)
-    }
-
     /// One finding of the deck under the record — the kit's (`Deck.Card`, docs/adr/0025). The
     /// name stays here because the screen's open card, its animations and its tests all spell it
     /// `GameScreen.Card`; what a card *is* is not the screen's to say.
-    typealias Card = ChessmirrorKit.Deck.Card
+    typealias Card = Deck.Card
 
     // ------------------------------------------------------------------ the bar at the top
 
@@ -1333,8 +1240,7 @@ struct GameScreen: View {
     private var flip: some View {
         Button {
             withAnimation(.snappy(duration: 0.2)) {
-                session.orientation =
-                    session.orientation == .whiteAtBottom ? .blackAtBottom : .whiteAtBottom
+                session.orientation = .facing(session.orientation.top)
             }
         } label: {
             Image(systemName: "arrow.up.arrow.down")
@@ -1346,81 +1252,15 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ the board
 
-    // The deck's room, as named numbers rather than one unexplained `388`.
-
-    /// The most a card is ever asked for: what `boardSide` holds back for the deck, so that the
-    /// card is this big before the board takes another eight points of width.
-    ///
-    /// Measured rather than chosen — 164pt is what a card on a 402×874 phone came out at when the
-    /// screen was laid out by hand, and `DeckFloorTests` reads the same figure back off the picture.
-    static let cardWanted: CGFloat = 162
-
-    /// The least a card may be and still be a card: the bound `DeckFloor` holds every screen the app
-    /// runs on to, and the reason the board reserves `cardWanted` rather than this.
-    ///
-    /// A bound rather than a clamp in the layout itself: the room the deck gets is whatever the
-    /// board leaves, and the board's own budget is what keeps that above this (docs/adr/0025). The
-    /// shortest screen the app runs on leaves 137pt, so this is a number nothing reaches — which is
-    /// the shape to keep it in. A floor that is doing work is a floor that has been hit.
-    static let cardFloor: CGFloat = 120
-
-    /// What the five names take. The rail measures itself and corrects this; it is here so the
-    /// board can be sized before anything has been laid out.
-    static let railReserve: CGFloat = 48
-
-    /// Everything above the deck: two player bars, the standing strip, the record row.
-    static let chrome: CGFloat = 178
-
-    /// Below this a board is not a board. It is the one thing that can still win an argument with
-    /// the deck, and it only wins one on a screen with no business running this app.
-    static let minBoard: CGFloat = 240
-
-    /// How big the board is, and it depends on the screen and nothing else.
+    /// How big the board is, and it depends on the screen and nothing else: the full width.
     ///
     /// It used to take whatever height was left over, which meant the board changed size when the
-    /// engine found a third line to show — the one thing on this screen that must never move. So
-    /// it is sized from the width, all but full bleed, and shrinks to leave the rest of the screen
-    /// what it needs. Rounded to a multiple of eight so every square is a whole number of points
-    /// and no grid line lands on a half pixel.
-    ///
-    /// Two bars and a record cost more than the deck they replaced, and the difference comes off
-    /// the board rather than off the reading: a board forty points wider is not worth a 改棋子 row
-    /// cut in half by the footer on the one screen — a board straight off a photograph — where
-    /// that row is the whole job.
-    ///
-    /// **The board yields to the deck, not the other way round.** The height it may take is the
-    /// screen less the chrome, less the names, less the card the deck wants. It used to be
-    /// `max(240, size.height - 388)`, and the `max` was the bug: on a screen shorter than that sum
-    /// the board kept its 240 and the deck paid the difference — on a phone on its side, all of it,
-    /// silently, `opacity(0)`, with every action on the cards gone (docs/adr/0025). `minBoard` is
-    /// still the floor for a screen too short for a board at all; what changed is that the deck's
-    /// room is now part of the sum rather than what was left after it.
-    static func boardSide(in size: CGSize, accessibilityText: Bool = false) -> CGFloat {
-        let byWidth = max(0, size.width)
-        // And at an accessibility text size it gives back what the rows above it cost when they
-        // grow — capped growth, but growth (see `chromeType`). A board is a grid: 312pt of it is
-        // still a board to look at, where a card squeezed by the labels to 104pt is two lines of
-        // itself and nothing else. `DeckFloor` reads the largest text size back off the render.
-        return byWidth
-    }
-
-    /// What the rows above the board take when the reader's text is at an accessibility size: the
-    /// capped growth of two player bars, the standing strip and the record, measured at the largest
-    /// size the system offers (240pt of chrome against 178 at the default), rounded to a whole
-    /// number of board squares.
-    static let accessibilityChrome: CGFloat = 64
-
-    /// What the deck is left under the record on a screen the layout has been handed this much
-    /// height — the sum the column comes to, written out so a test can hold it without a window.
-    /// The deck takes exactly this by being the one flexible child of a column whose other children
-    /// are fixed, which is why `deck` needs no measurement of its own (docs/adr/0025).
-    ///
-    /// That height is what `proxy.size.height` is: the glass less the status bar and the navigation
-    /// bar, and including the home-indicator band, because the deck is drawn down to the glass
-    /// (`.ignoresSafeArea(edges: .bottom)`). On a 402×874 phone it is 758, which is the figure
-    /// `DeckFloor` measures back off `game-in-play.png`: 368 of board, 212 of deck.
-    static func deckRoom(readerHeight: CGFloat, width: CGFloat) -> CGFloat {
-        readerHeight - chrome - boardSide(in: CGSize(width: width, height: readerHeight))
+    /// engine found a third line to show — the one thing on this screen that must never move. It
+    /// then went through a height budget against the deck (docs/adr/0025), and that budget is gone
+    /// with the deck's fixed floor: the board is full bleed at every size and every text size, and
+    /// the deck is the one flexible child under it.
+    static func boardSide(in size: CGSize) -> CGFloat {
+        max(0, size.width)
     }
 
     private var board: some View {
@@ -1435,14 +1275,14 @@ struct GameScreen: View {
             // visible where it matters, and 改棋子 is one tap away (docs/adr/0011).
             suspects: session.unconfirmedSquares,
             selected: selected,
-            destinations: Set(candidateMoves.map(\.to)),
-            captures: Set(candidateMoves.filter(\.isCapture).map(\.to)),
+            destinations: Set(session.moves(holding: selected).map(\.to)),
+            captures: Set(session.moves(holding: selected).filter(\.isCapture).map(\.to)),
             recommendation: nil,
             // Whichever card is in front of you, and only that one: arrows left over from a card
             // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
             // A 应招 beats all of them while it is being read: it is the one line somebody has
             // just asked for, and the board can only carry one at a time.
-            plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 } ?? deckArrows,
+            plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 } ?? session.deckArrows,
             isInteractive: session.isHandTurn,
             onTap: tap
         )
@@ -1450,29 +1290,22 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ doing
 
+    /// What the tap means is the session's (`GameSession.tap`); what is left here is holding the
+    /// picked-up square and asking for the promotion piece.
     private func tap(_ square: Square) {
-        guard session.isHandTurn else { return }
-
-        if let selected {
-            let moves = session.board.state.moves(from: selected).filter { $0.to == square }
-            // More than one move to the same square means a promotion, and only a promotion.
-            if moves.count > 1 {
-                promotion = PromotionRequest(moves: moves)
-                self.selected = nil
-                return
-            }
-            if let move = moves.first {
-                session.play(move)
-                self.selected = nil
-                return
-            }
-        }
-
-        // Not a destination, so it is either a new selection or a deselection.
-        if let piece = boardPieces[square], piece.colour == session.board.state.sideToMove {
+        switch session.tap(square, holding: selected) {
+        case .ignored:
+            return
+        case .pick(let square):
             selected = square
-        } else {
-            if selected != nil { Sounds.current.play(.refused) }
+        case .play(let move):
+            session.play(move)
+            selected = nil
+        case .promote(let moves):
+            promotion = PromotionRequest(moves: moves)
+            selected = nil
+        case .drop(let refused):
+            if refused { Sounds.current.play(.refused) }
             selected = nil
         }
     }
@@ -1508,20 +1341,11 @@ struct GameScreen: View {
         BoardRenderer.placement(session.board.state.fen) ?? [:]
     }
 
-    private var candidateMoves: [Move] {
-        guard let selected, session.isHandTurn else { return [] }
-        return session.board.state.moves(from: selected)
-    }
-
     /// The colour whose pieces stand at the top of the board, and so the colour whose controls
     /// belong above it. Flipping the board moves them, which is the whole idea.
-    private var topColour: PieceColour {
-        session.orientation == .whiteAtBottom ? .black : .white
-    }
+    private var topColour: PieceColour { session.orientation.top }
 
-    private var bottomColour: PieceColour {
-        session.orientation == .whiteAtBottom ? .white : .black
-    }
+    private var bottomColour: PieceColour { session.orientation.bottom }
 
 }
 
@@ -1536,18 +1360,6 @@ private extension View {
             .overlay(alignment: .leading) { Rectangle().fill(Palette.analysis).frame(width: 3) }
             .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
             .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
-    }
-}
-
-extension Game.Half {
-    /// Said the way somebody reading a game aloud says it: a bare "Nf6" out of VoiceOver is a
-    /// move with no place in the game, and place is the whole of what the record strip is for —
-    /// and on a fork, which line this is of the ones played from here (docs/adr/0043).
-    var spoken: String {
-        let step = localized("screen.spokenMove", ply, san)
-        guard isFork else { return step }
-        let place = localized(isTrunk ? "record.trunk" : "record.twig", branchNumber, siblingCount)
-        return step + localized("clause.separator") + place
     }
 }
 
@@ -1588,7 +1400,4 @@ struct ForkRail: View {
         if current >= of { return ticks }
         return min(2, ticks)
     }
-}
-
-extension GameScreen.Card {
 }
