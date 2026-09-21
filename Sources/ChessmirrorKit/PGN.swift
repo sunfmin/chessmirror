@@ -176,6 +176,17 @@ public struct PGN: Hashable, Sendable {
         return found
     }
 
+    /// The chair a record is read from. A record that names the player's side — an import
+    /// tracked as Black, a game where the engine had White — is their game, seen from their
+    /// side; any other faces the side about to move at the start, because reading begins where
+    /// the play does. The library's thumbnail and the opened game each had a rule of their own,
+    /// and a record that started with Black to move was drawn one way on the shelf and opened
+    /// the other.
+    public var orientation: Orientation {
+        let hands = handColours
+        return .facing(hands.count == 1 ? hands.first ?? .white : game.startingSideToMove)
+    }
+
     /// Sets a tag, adds it if it was not there, and removes it for nil.
     ///
     /// In place where it already sits, because the order tags are written in is part of the file:

@@ -699,7 +699,8 @@ struct GameList: View {
                 if let pgn = entry.pgn, let fen = entry.shownFEN {
                     BoardView(
                         pieces: PositionDraft(fen: fen)?.pieces ?? [:],
-                        orientation: pgn.handColours == [.black] ? .blackAtBottom : .whiteAtBottom,
+                        // The chair the game opens in, so the shelf and the opened board agree.
+                        orientation: pgn.orientation,
                         coordinates: false,
                         isInteractive: false
                     )

@@ -1240,8 +1240,7 @@ struct GameScreen: View {
     private var flip: some View {
         Button {
             withAnimation(.snappy(duration: 0.2)) {
-                session.orientation =
-                    session.orientation == .whiteAtBottom ? .blackAtBottom : .whiteAtBottom
+                session.orientation = .facing(session.orientation.top)
             }
         } label: {
             Image(systemName: "arrow.up.arrow.down")
@@ -1342,8 +1341,8 @@ struct GameScreen: View {
             // visible where it matters, and 改棋子 is one tap away (docs/adr/0011).
             suspects: session.unconfirmedSquares,
             selected: selected,
-            destinations: Set(candidateMoves.map(\.to)),
-            captures: Set(candidateMoves.filter(\.isCapture).map(\.to)),
+            destinations: Set(session.moves(holding: selected).map(\.to)),
+            captures: Set(session.moves(holding: selected).filter(\.isCapture).map(\.to)),
             recommendation: nil,
             // Whichever card is in front of you, and only that one: arrows left over from a card
             // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
@@ -1357,29 +1356,22 @@ struct GameScreen: View {
 
     // ------------------------------------------------------------------ doing
 
+    /// What the tap means is the session's (`GameSession.tap`); what is left here is holding the
+    /// picked-up square and asking for the promotion piece.
     private func tap(_ square: Square) {
-        guard session.isHandTurn else { return }
-
-        if let selected {
-            let moves = session.board.state.moves(from: selected).filter { $0.to == square }
-            // More than one move to the same square means a promotion, and only a promotion.
-            if moves.count > 1 {
-                promotion = PromotionRequest(moves: moves)
-                self.selected = nil
-                return
-            }
-            if let move = moves.first {
-                session.play(move)
-                self.selected = nil
-                return
-            }
-        }
-
-        // Not a destination, so it is either a new selection or a deselection.
-        if let piece = boardPieces[square], piece.colour == session.board.state.sideToMove {
+        switch session.tap(square, holding: selected) {
+        case .ignored:
+            return
+        case .pick(let square):
             selected = square
-        } else {
-            if selected != nil { Sounds.current.play(.refused) }
+        case .play(let move):
+            session.play(move)
+            selected = nil
+        case .promote(let moves):
+            promotion = PromotionRequest(moves: moves)
+            selected = nil
+        case .drop(let refused):
+            if refused { Sounds.current.play(.refused) }
             selected = nil
         }
     }
@@ -1415,20 +1407,11 @@ struct GameScreen: View {
         BoardRenderer.placement(session.board.state.fen) ?? [:]
     }
 
-    private var candidateMoves: [Move] {
-        guard let selected, session.isHandTurn else { return [] }
-        return session.board.state.moves(from: selected)
-    }
-
     /// The colour whose pieces stand at the top of the board, and so the colour whose controls
     /// belong above it. Flipping the board moves them, which is the whole idea.
-    private var topColour: PieceColour {
-        session.orientation == .whiteAtBottom ? .black : .white
-    }
+    private var topColour: PieceColour { session.orientation.top }
 
-    private var bottomColour: PieceColour {
-        session.orientation == .whiteAtBottom ? .white : .black
-    }
+    private var bottomColour: PieceColour { session.orientation.bottom }
 
 }
 

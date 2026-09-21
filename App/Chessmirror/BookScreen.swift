@@ -179,8 +179,7 @@ struct BookEntryScreen: View {
             .overlay {
                 BoardView(
                     pieces: PositionDraft(fen: mistake.position.text)?.pieces ?? [:],
-                    orientation: mistake.position.sideToMove == .white
-                        ? .whiteAtBottom : .blackAtBottom,
+                    orientation: .facing(mistake.position.sideToMove),
                     isInteractive: false
                 )
             }
@@ -250,7 +249,7 @@ struct BookEntryScreen: View {
 func thumbnail(_ position: PositionKey, side: CGFloat) -> some View {
     BoardView(
         pieces: PositionDraft(fen: position.text)?.pieces ?? [:],
-        orientation: position.sideToMove == .white ? .whiteAtBottom : .blackAtBottom,
+        orientation: .facing(position.sideToMove),
         coordinates: false,
         isInteractive: false
     )

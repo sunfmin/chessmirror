@@ -478,7 +478,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         )
         session.attach(engine: engine, library: library)
         session.practice = drill
-        session.orientation = drill.mover == .white ? .whiteAtBottom : .blackAtBottom
+        session.orientation = .facing(drill.mover)
         return session
     }
 
@@ -649,7 +649,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         let pgn = entry.pgn
         let game = pgn?.game ?? Game(startFEN: PGN.standardStartFEN)!
         let hands = pgn?.handColours ?? []
-        let facing = hands.count == 1 ? hands.first! : game.startingSideToMove
         self.init(
             game: game,
             // Seated here rather than by `opened`, because seating through `setController` writes
@@ -659,7 +658,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             // engine had White) opens with that side at the bottom: it is their game, seen from
             // their chair. Any other record faces the side about to move: reading begins where
             // the play does.
-            orientation: .facing(facing),
+            orientation: pgn?.orientation ?? .facing(game.startingSideToMove),
             origin: entry.origin,
             picture: entry.origin == .recognised ? library?.picture(for: entry.url) : nil,
             url: entry.url,
@@ -1528,7 +1527,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// the bottom side supplies the perspective, just as it does for the bar.
     private var feedbackColour: PieceColour {
         let hands = [PieceColour.white, .black].filter { controller(for: $0) == .hand }
-        return hands.count == 1 ? hands[0] : (orientation == .whiteAtBottom ? .white : .black)
+        return hands.count == 1 ? hands[0] : orientation.bottom
     }
 
     /// What the strip under the board says right now (`Standing`): one sentence, by one priority.
