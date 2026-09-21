@@ -890,7 +890,7 @@ struct GameScreen: View {
         let answered = session.punishment?.revealedMove
         if !slips.isEmpty || !attempts.isEmpty || exercise != nil || answered != nil {
             VStack(spacing: 0) {
-                if !slips.isEmpty { slipTiles(slips) }
+                if !slips.isEmpty { slipTiles(session.reading.tiles) }
                 if !slips.isEmpty, !attempts.isEmpty {
                     Rectangle().fill(Palette.hairline).frame(height: 0.5).padding(.leading, 13)
                 }
@@ -947,11 +947,11 @@ struct GameScreen: View {
 
     /// The positions this game has something wrong at, in the order they happen, with 下一处 to be
     /// walked to the next one.
-    private func slipTiles(_ slips: [Slip]) -> some View {
+    private func slipTiles(_ tiles: [RecordReading.Tile]) -> some View {
         HStack(spacing: 6) {
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    ForEach(slips) { slip in slipTile(slip) }
+                    ForEach(tiles) { tile in slipTile(tile) }
                 }
                 .padding(.vertical, 4)
             }
@@ -991,16 +991,15 @@ struct GameScreen: View {
     /// belong to, and a tile no wider than its own board is one the row fits nearly twice as many
     /// of — which is the errand: seeing the whole game's worth of wrong places at once, and
     /// pressing the one you mean.
-    private func slipTile(_ slip: Slip) -> some View {
-        let on = session.cursor == slip.positionPly
-        let owed = slip.isWorthDrilling(session.lines)
+    private func slipTile(_ tile: RecordReading.Tile) -> some View {
+        let on = session.cursor == tile.slip.positionPly
         return Button {
-            jumpTo(slip: slip)
+            jumpTo(slip: tile.slip)
         } label: {
             VStack(spacing: 3) {
                 // Sixty-four points, which is the size the 错题本 already uses for the same job:
                 // the board is the name of a position, and a name has to be legible.
-                thumbnail(slip.position, side: 64)
+                thumbnail(tile.slip.position, side: 64)
                     .overlay(
                         RoundedRectangle(cornerRadius: 4)
                             .stroke(
@@ -1013,7 +1012,7 @@ struct GameScreen: View {
                 // width on the first two figures and truncated the cost, which is the one figure
                 // that says whether to stop. Squeezed rather than wrapped or cut: none of the
                 // three parts is decoration.
-                slipCaption(slip, owed: owed)
+                slipCaption(tile)
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
                     .frame(width: 64)
@@ -1024,45 +1023,43 @@ struct GameScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(slipSpoken(slip))\(localized("clause.separator"))\(Drop.cost(slip.drop))\(slip.wrong.count > 1 ? localized("clause.separator") + localized("slips.wrong", slip.wrong.count) : "")"
-        )
+        .accessibilityLabel(tile.spoken)
         .accessibilityHint(localized("slips.hint"))
     }
 
     /// The caption under a 错题's board: where in the game, how many wrong moves were tried there,
     /// and what the worst of them cost — as one Text, so it is one thing that shrinks to the
     /// board's width rather than three that fight over it.
-    private func slipCaption(_ slip: Slip, owed: Bool) -> Text {
-        var line = Text(slipNumber(slip))
+    private func slipCaption(_ tile: RecordReading.Tile) -> Text {
+        var line = Text(tile.number)
             .font(.caption2.monospacedDigit().weight(.medium))
             .foregroundStyle(Palette.ink)
-        if slip.wrong.count > 1 {
+        if let times = tile.times {
             line = line
-                + Text(" ×\(slip.wrong.count)")
+                + Text(" ×\(times)")
                 .font(.caption2.monospacedDigit().weight(.semibold))
                 .foregroundStyle(Palette.alarm)
         }
         return line
-            + Text(" " + Drop.figure(slip.drop))
+            + Text(" " + tile.figure)
             .font(.caption2.monospacedDigit())
-            .foregroundStyle(owed ? Palette.alarm : Palette.inkSoft)
+            .foregroundStyle(tile.isOwed ? Palette.alarm : Palette.inkSoft)
     }
 
     /// The wrong moves made at the position on the board, newest first, under the positions
     /// they belong to — the lower register of the same strip.
     private func wrongTokens(_ wrongs: [RecordReading.WrongMove]) -> some View {
-        // Whether anything here was taken back. A row of refusals is led by an ✕; a row that is
-        // only the move that stood — an imported game's — by a mark that says it was played.
-        let returned = wrongs.contains { !$0.stood }
+        // A row of refusals is led by an ✕; a row that is only the move that stood — an imported
+        // game's — by a mark that says it was played (`RecordReading.lead`).
+        let lead = session.reading.lead ?? .stood
         return HStack(spacing: 8) {
             // A mark and nothing else: the word — 「已退回」 or 「走了的错招」 — is what VoiceOver reads
             // out for it rather than sixty points of the row.
-            Image(systemName: returned ? "xmark" : "exclamationmark")
+            Image(systemName: lead == .returned ? "xmark" : "exclamationmark")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Palette.alarm)
                 .frame(width: 18)
-                .accessibilityLabel(localized(returned ? "noSlips.returned" : "wrong.stood"))
+                .accessibilityLabel(lead.spoken)
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     ForEach(Array(wrongs.reversed().enumerated()), id: \.offset) { offset, wrong in
@@ -1076,25 +1073,6 @@ struct GameScreen: View {
         .padding(.trailing, 8)
         .padding(.vertical, 5)
         .transition(.move(edge: .top).combined(with: .opacity))
-    }
-
-    /// A position in the words a scoresheet gives it: the move number and whose move it is — the
-    /// same figure the cell above carries, so the eye can match a tile to the strip.
-    ///
-    /// **Including the position the game stops on**, which said 「现在」 and now says the number of
-    /// the move nobody has played there yet. It has one: a 错招 at the end of a game sits at the Ply
-    /// one past the last move (docs/adr/0037), and when a move is finally played there that is the
-    /// Ply it takes. Every tile in the row is then the same kind of label — 「1.」「2…」「3.」 — which
-    /// is what a row of tiles wants, rather than one of them being a word in the middle of figures.
-    private func slipNumber(_ slip: Slip) -> String {
-        session.game.moveLabel(ofPly: slip.ply)
-    }
-
-    /// The same place said out loud, in the number the record counts in.
-    private func slipSpoken(_ slip: Slip) -> String {
-        slip.ply > session.game.plies.count
-            ? localized("record.now")
-            : localized("record.ply", slip.ply)
     }
 
     /// Takes the board to a 错题 and leaves the eye on the position the move was played from — the
@@ -1118,24 +1096,21 @@ struct GameScreen: View {
     }
 
     private var moveStrip: some View {
-        // Walked once for the whole strip: the marks are a lookup per half, and the walk behind
-        // them is a rules probe per Ply.
-        let slips = session.reading.slipByPosition
-        // Whether the record has a line of costs to draw at all: none when nothing in the game
-        // has been measured, so a game nobody judged is the strip exactly as it was.
-        let costs = session.game.hasCosts
+        // Read once for the whole strip: what every cell says, its caption and its mark, is the
+        // record's (`RecordReading.cell`), and the walk behind the marks is a rules probe per Ply.
+        let reading = session.reading
         return ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
-                    openingCell
+                    openingCell(reading.opening)
                     ForEach(session.game.scoresheet) { card in
                         HStack(spacing: 6) {
                             Text("\(card.number)")
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(Palette.inkSoft)
                                 .frame(minWidth: 13, alignment: .trailing)
-                            if let white = card.white { half(white, slips[white.ply], costs: costs) }
-                            if let black = card.black { half(black, slips[black.ply], costs: costs) }
+                            if let white = card.white { half(white, reading.cell(white)) }
+                            if let black = card.black { half(black, reading.cell(black)) }
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1181,14 +1156,10 @@ struct GameScreen: View {
 
     /// The position the game began in, at the head of its own record. It is a place in the game
     /// like any other, and without it there is no way back to it in one tap.
-    private var openingCell: some View {
-        let slip = session.reading.slipByPosition[0]
+    private func openingCell(_ cell: RecordReading.Cell) -> some View {
         let on = session.cursor == 0
-        // One name for one place. It used to say 「从这里开始走」 while the game had no moves in it,
-        // which is an instruction standing where every other cell in the strip names a place.
-        let name = localized("record.opening")
         return Button { walk(to: 0) } label: {
-            Text(name)
+            Text(cell.name)
                 .font(.caption)
                 .foregroundStyle(on ? Palette.parchment : Palette.inkSoft)
                 .padding(.horizontal, 9)
@@ -1197,24 +1168,11 @@ struct GameScreen: View {
                     on ? AnyShapeStyle(Palette.analysis) : AnyShapeStyle(Palette.chipRest),
                     in: RoundedRectangle(cornerRadius: 9)
                 )
-                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
+                .overlay(alignment: .bottom) { slipMark(cell.mark) }
         }
         .buttonStyle(.plain)
         .id(0)
-        .accessibilityLabel(spoken(name, cost: nil, slip: slip))
-    }
-
-    /// What a cell says out loud: its name, what the move cost if it has been measured, and —
-    /// when the mark at its foot is there — that the player went wrong from this position.
-    private func spoken(_ name: String, cost: Double?, best: Bool = false, slip: Slip?) -> String {
-        var clauses = [name]
-        if best {
-            clauses.append(localized("standing.best"))
-        } else if let cost {
-            clauses.append(Drop.cost(max(0, cost)))
-        }
-        if let slip { clauses.append(localized("record.slipMark", Drop.points(slip.drop))) }
-        return clauses.joined(separator: localized("clause.separator"))
+        .accessibilityLabel(cell.spoken)
     }
 
     /// The mark a 错招 leaves at the foot of the position it was made at.
@@ -1223,26 +1181,22 @@ struct GameScreen: View {
     /// without: the curve behind the strip is drawn against these cards being even. Two weights on
     /// the one scale the app already has (docs/adr/0027): pale is what the 记录线 put in the file,
     /// the alarm colour is what the 入列线 says the player still owes.
-    @ViewBuilder private func slipMark(_ slip: Slip?, on: Bool) -> some View {
-        if let slip {
+    @ViewBuilder private func slipMark(_ mark: RecordReading.Mark?) -> some View {
+        if let mark {
             UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
-                .fill(Palette.alarm.opacity(slip.isWorthDrilling(session.lines) ? 1 : 0.5))
+                .fill(Palette.alarm.opacity(mark == .owed ? 1 : 0.5))
                 .frame(height: 3)
         }
     }
 
     /// One half of a move, and — when the player got a position wrong here — a mark at its foot.
+    /// What it reads, says and is marked with is the record's (`RecordReading.Cell`); the tree it
+    /// sits in is the half's.
     ///
-    /// The `slip` passed in is the one whose *position* this cell is, which is the position before
-    /// the next move rather than after this one (see `slipByPosition`).
-    ///
-    /// With `costs`, every cell carries a second line — what the move cost, by whatever number the
-    /// game holds for it (`Game.cost(atPly:)`) — so the whole row grows together and the curve
-    /// behind it is drawn against cells that are still even.
-    private func half(_ cell: Game.Half, _ slip: Slip?, costs: Bool) -> some View {
+    /// With a caption, every cell carries a second line, so the whole row grows together and the
+    /// curve behind it is drawn against cells that are still even.
+    private func half(_ cell: Game.Half, _ said: RecordReading.Cell) -> some View {
         let on = cell.ply == session.cursor
-        let cost = costs ? session.game.cost(atPly: cell.ply) : nil
-        let best = costs && session.game.isBest(atPly: cell.ply)
         // A 树枝 is inked in its own colour, so a line tried from an earlier position cannot be
         // mistaken for the game (docs/adr/0043). A cell on a fork is outlined rather than filled
         // when the eye is on it, so the rail beside it reads as part of the same cell.
@@ -1268,7 +1222,7 @@ struct GameScreen: View {
                     Text(cell.san)
                         .font(.footnote.weight(on ? .medium : .regular))
                         .foregroundStyle(filled ? Palette.parchment : mark)
-                    if costs { costCaption(cost, best: best, on: filled) }
+                    if let caption = said.caption { costCaption(caption, on: filled) }
                 }
                 .padding(.horizontal, cell.isFork ? 3 : 5)
                 .padding(.vertical, 2)
@@ -1279,14 +1233,14 @@ struct GameScreen: View {
                         RoundedRectangle(cornerRadius: 5).stroke(mark, lineWidth: 1.2)
                     }
                 }
-                .overlay(alignment: .bottom) { slipMark(slip, on: on) }
+                .overlay(alignment: .bottom) { slipMark(said.mark) }
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
             // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver
             // is a move with no place in the game, and place is the whole of what this strip is
             // for — and what it cost, and a mistake made from here, are worth saying out loud too.
-            .accessibilityLabel(spoken(cell.spoken, cost: cost, best: best, slip: slip))
+            .accessibilityLabel(said.spoken)
             .accessibilityHint(localized("record.jump"))
         }
         .id(cell.ply)
@@ -1296,18 +1250,14 @@ struct GameScreen: View {
     /// choice, a muted 「0」 for another move that cost nothing — that is information: the move
     /// was right — and a blank of the same height under a move nobody has measured, which is
     /// not the same thing as zero.
-    private func costCaption(_ cost: Double?, best: Bool, on: Bool) -> some View {
-        let points = cost.map { Drop.points(max(0, $0)) }
-        let figure: String
-        switch points {
-        case nil: figure = " "
-        case 0: figure = best ? localized("record.best") : "0"
-        case let points?: figure = "−\(points)%"
-        }
+    private func costCaption(_ caption: RecordReading.Caption, on: Bool) -> some View {
         let ink = on ? Palette.parchment : Palette.inkSoft
-        let colour: Color = best ? (on ? Palette.parchment : Palette.analysis)
-            : points == 0 ? ink.opacity(0.55) : ink
-        return Text(verbatim: figure)
+        let colour: Color = switch caption {
+        case .best: on ? Palette.parchment : Palette.analysis
+        case .free: ink.opacity(0.55)
+        case .unmeasured, .cost: ink
+        }
+        return Text(verbatim: caption.figure)
             .font(.caption2.monospacedDigit())
             .foregroundStyle(colour)
     }
@@ -1539,18 +1489,6 @@ private extension View {
     }
 }
 
-extension Game.Half {
-    /// Said the way somebody reading a game aloud says it: a bare "Nf6" out of VoiceOver is a
-    /// move with no place in the game, and place is the whole of what the record strip is for —
-    /// and on a fork, which line this is of the ones played from here (docs/adr/0043).
-    var spoken: String {
-        let step = localized("screen.spokenMove", ply, san)
-        guard isFork else { return step }
-        let place = localized(isTrunk ? "record.trunk" : "record.twig", branchNumber, siblingCount)
-        return step + localized("clause.separator") + place
-    }
-}
-
 /// The tree, compressed to one column of ticks (docs/adr/0043). PGN writes a fork as
 /// parentheses; this is that crease, thin enough to live in the scoresheet's own row. Each
 /// sibling is a ring on a spine, the current one filled — a number sitting after the SAN was
@@ -1588,7 +1526,4 @@ struct ForkRail: View {
         if current >= of { return ticks }
         return min(2, ticks)
     }
-}
-
-extension GameScreen.Card {
 }

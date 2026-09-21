@@ -613,6 +613,16 @@ public struct Game: Hashable, Sendable {
 
         /// Whether the position this move was played from has more than one line out of it.
         public var isFork: Bool { siblingCount > 1 }
+
+        /// Said the way somebody reading a game aloud says it: a bare "Nf6" out of VoiceOver is a
+        /// move with no place in the game, and place is the whole of what the record strip is
+        /// for — and on a fork, which line this is of the ones played from here (docs/adr/0043).
+        public var spoken: String {
+            let step = localized("screen.spokenMove", ply, san)
+            guard isFork else { return step }
+            let place = localized(isTrunk ? "record.trunk" : "record.twig", branchNumber, siblingCount)
+            return step + localized("clause.separator") + place
+        }
     }
 
     /// One move number and its two halves — the way a scoresheet is ruled, and the unit a

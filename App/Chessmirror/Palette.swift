@@ -365,15 +365,6 @@ struct EvalBar: View {
     }
 }
 
-extension EvalBar.Finish {
-    var label: String {
-        switch self {
-        case .won(let colour): localized("standing.won", colour.label)
-        case .drawn: localized("standing.drawn")
-        }
-    }
-}
-
 /// How much of the bar is White's: White's win chance, and nothing else (docs/adr/0027).
 ///
 /// It used to be an Elo curve, `1 / (1 + 10^(-cp/400))`, which is a different shape from the one
