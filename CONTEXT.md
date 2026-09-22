@@ -111,7 +111,11 @@ were made one number. Do not reintroduce a separate dial for it.
 **入列线 (Enrol line)**:
 The 掉幅 at which a 错题 starts taking up the player's future practice time. Never below the
 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be
-worth remembering without being worth drilling. Both ship at ten.
+worth remembering without being worth drilling. Both ship at ten. **Asked of two objects and the
+two are named apart** (`Enrolment`): a 错题 is owed when the worst 遭遇 it has ever had crosses
+the line — that is what puts it in 日课 — and a 错招 is what *earned* that when its own cost
+crosses — that is what a mark on a record weighs. They can answer differently for one position,
+and both are right.
 
 ### 日课 — the day's practice
 

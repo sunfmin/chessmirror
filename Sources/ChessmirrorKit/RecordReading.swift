@@ -196,6 +196,11 @@ public struct RecordReading: Sendable {
 
     /// The mark a 错招 leaves at the foot of the position it was made at, in two weights on the one
     /// scale (docs/adr/0027): what the 记录线 wrote down, and what the 入列线 says is still owed.
+    ///
+    /// **A reading of this one 错招's own cost** (`Enrolment.slip`), not of the 错题's worth. A
+    /// position whose worst 遭遇 crossed the 入列线 is in 日课 whatever a lesser 遭遇 in another
+    /// game cost, and that lesser one's mark stays held back — how hard *this* mistake pressed is
+    /// what the mark weighs.
     public enum Mark: Hashable, Sendable {
         case written
         case owed
@@ -205,6 +210,15 @@ public struct RecordReading: Sendable {
         /// here once, so a screen does not re-derive which weight is which.
         public var weight: Double {
             self == .owed ? 1 : 0.5
+        }
+
+        /// The same fact, under the name the rest of the app asks it by.
+        public var enrolment: Enrolment {
+            self == .owed ? .owed : .written
+        }
+
+        public init(_ enrolment: Enrolment) {
+            self = enrolment == .owed ? .owed : .written
         }
     }
 
@@ -311,7 +325,7 @@ public struct RecordReading: Sendable {
     }
 
     private func mark(of slip: Slip) -> Mark {
-        slip.isWorthDrilling(lines) ? .owed : .written
+        Mark(Enrolment(slip: slip, lines: lines))
     }
 
     /// One 错题 of this game as its tile under the strip says it: where in the game, how many wrong
@@ -327,7 +341,8 @@ public struct RecordReading: Sendable {
         public let times: Int?
         /// What the worst of them cost, as a figure.
         public let figure: String
-        /// Whether the 入列线 says the player still owes it: full strength, else held back.
+        /// Whether this 错招's own cost crossed the 入列线: full strength, else held back
+        /// (`Enrolment`). Not the 错题's worth — see `Mark`.
         public let isOwed: Bool
         /// The whole tile, said out loud.
         public let spoken: String
@@ -349,7 +364,9 @@ public struct RecordReading: Sendable {
         if let times { spoken += separator + localized("slips.wrong", times) }
         return Tile(
             slip: slip, number: game.moveLabel(ofPly: slip.ply), times: times,
-            figure: Drop.figure(slip.drop), isOwed: slip.isWorthDrilling(lines), spoken: spoken
+            figure: Drop.figure(slip.drop),
+            isOwed: Enrolment(slip: slip, lines: lines).isOwed,
+            spoken: spoken
         )
     }
 
