@@ -420,7 +420,6 @@ struct GameScreen: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localized("noSlips.name"))
         .accessibilityValue(localized(session.isNoSlipsOn ? "screen.on" : "noSlips.off"))
-        .disabled(!session.canSwitchNoSlips)
     }
 
     // ------------------------------------------------------------------ the two sides
@@ -664,7 +663,6 @@ struct GameScreen: View {
                 set: { session.setNoSlips($0) }
             ))
             .toggleStyle(SettingToggleStyle(label: localized("noSlips.name")))
-            .disabled(!session.canSwitchNoSlips)
             Toggle(localized("punish.toggle"), isOn: Binding(
                 get: { session.findsPunishment }, set: { session.findsPunishment = $0 }
             ))

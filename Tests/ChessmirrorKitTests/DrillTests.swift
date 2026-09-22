@@ -414,13 +414,14 @@ func practiceKeepsItsCardsUnderNoSlips() throws {
     #expect(!game.isFindingTactics)
 }
 
-/// Contract: the 线 a drill is judged under are the session's own, and there is only the one
-/// value (docs/adr/0047). A switch that could put a 练习 out of 把关 would make the refusal the
-/// drill is built on optional.
+/// Contract: a 练习 arrives under 把关 (docs/adr/0047), and the switch still takes it out
+/// (docs/adr/0048). The 线 a drill is judged under are the session's own, one value: the switch
+/// writes into the drill, so a wrong answer played after it stands, and the number the attempt
+/// passes or fails by does not move with it.
 @MainActor
-@Test("a 练习 cannot be switched out of 把关, and the file says so")
-func practiceCannotLeaveTheGate() throws {
-    let (scripted, _) = try engine(
+@Test("a 练习 arrives under 把关, and the switch takes it out")
+func practiceCanLeaveTheGate() async throws {
+    let (scripted, move) = try engine(
         before: .centipawns(0), playing: "Qh4", after: .centipawns(133)
     )
     let log = temporaryLog()
@@ -431,17 +432,24 @@ func practiceCannotLeaveTheGate() throws {
 
     #expect(session.isNoSlipsOn, "a drill arrives under 把关 whatever the player's game is set to")
     session.setNoSlips(false)
-    #expect(session.isNoSlipsOn, "and the switch cannot take it out")
-    #expect(drill.lines.noSlips)
+    #expect(!session.isNoSlipsOn, "and the switch takes it out")
+    #expect(!drill.lines.noSlips, "into the drill, which rules the attempt")
     #expect(session.lines == drill.lines, "one value, not two kept in step")
+    #expect(session.pgn.intercept == nil, "and the file says 把关 was off")
 
-    // Nor by the long way round, which is how a reopened game is handed the player's numbers.
-    session.setLines(JudgementLines(noSlips: false, record: 25, enqueue: 25))
-    #expect(session.isNoSlipsOn)
+    // The numbers are the attempt's: the long way round, which is how a reopened game is handed
+    // the player's numbers, still cannot move them — nor the switch with them.
+    session.setLines(JudgementLines(noSlips: true, record: 25, enqueue: 25))
     #expect(session.lines.record == drill.lines.record)
+    #expect(!session.isNoSlipsOn)
 
-    // And the file it writes says 把关 was on, which is what a later reader goes by.
-    #expect(session.pgn.intercept != nil)
+    // A wrong answer is still a wrong answer. It is only not taken back.
+    session.play(move)
+    await session.settled()
+    #expect(drill.verdict?.passed == false)
+    #expect(session.refused == nil)
+    #expect(session.game.plies.map(\.san) == ["Qh4"], "the answer stands on the board")
+    #expect(log.attempts().count == 1)
 }
 
 // ------------------------------------------------------------------ under 把关

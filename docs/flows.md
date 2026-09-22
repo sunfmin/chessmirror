@@ -37,6 +37,7 @@
     `Sources/ChessmirrorKit/MistakeIndex.swift:rebuild`
 
 **这里会分叉。** 把关关掉 → 不再退回，但细判照做（[adr/0046](./adr/0046-no-slips-is-a-switch-not-a-dial.md)）。
+开关任何时候都能按，判断中途也行：这手按判完那一刻的开关裁（[adr/0048](./adr/0048-the-no-slips-switch-always-moves.md)）。
 引擎不在或棋局已结束 → 第 1 步就放行，这步棋无判地站住。
 被退回的试招可以单独要求复判，更深地重算，但「它被退回过」这件事不会因此消失（CONTEXT.md 复判）。
 

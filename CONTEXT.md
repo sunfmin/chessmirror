@@ -108,7 +108,9 @@ worth remembering without being worth drilling. Both ship at ten.
 
 **练习 (Practice)**:
 Working through 日课 or revisiting a 错题, **played under 把关**: the wrong answer comes back off
-the board and is written down where it happened (docs/adr/0047). Not the opposite of 把关, and
+the board and is written down where it happened (docs/adr/0047). It arrives with the switch on,
+and the player can still switch it off — the answer is then judged and left standing
+(docs/adr/0048). Not the opposite of 把关, and
 never was — and not a synonym for hiding the engine's answer either: 杀 and 战术 are dealt here
 the way they are in an ordinary game, and opening one is counted as help rather than refused.
 
@@ -136,7 +138,9 @@ _Avoid_: 进度, 统计, 状态
 
 **把关 (No Slips)**:
 A game against the engine in which any move costing the 记录线 or more is refused and taken
-back, with nothing said about what to play instead. Only sound moves stand. The switch and the
+back, with nothing said about what to play instead. Only sound moves stand. The switch always
+moves — mid-move, under an exercise, in a 练习, with no engine yet — and a move being weighed is
+ruled under what it says when the weighing ends (docs/adr/0048). The switch and the
 door are named for what the app does — somebody is at the gate — because 正着, the word for the
 move, read as nonsense on a switch: 「正着 开」.
 _Avoid_: 正着 as the name of the mode, 耕棋 (retired, and the ploughing words with it), 训练模式,
