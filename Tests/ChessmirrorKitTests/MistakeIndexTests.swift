@@ -504,7 +504,7 @@ func aSettledAttemptMovesTheDay() async throws {
         Analysis(depth: Drill.depth, lines: [Line(score: .centipawns(0), uciMoves: [], san: [])])
     ])
 
-    let drill = try #require(index.practise(card.mistake, engine: engine, source: .daily))
+    let drill = try #require(index.practise(card.mistake, engine: engine))
     #expect(drill.lines.noSlips, "under 把关, as every 练习 is")
     drill.play(try #require(drill.game.state.legalMoves.first))
     await drill.settled()

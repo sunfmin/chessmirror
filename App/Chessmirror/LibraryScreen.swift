@@ -376,7 +376,11 @@ struct LibraryScreen: View {
     /// **It stays on the screen with nothing due.** A door that disappears once it is done is a
     /// door nobody learns is there, and「今天的练完了」is the whole of what a day's work buys.
     @ViewBuilder private var dailyDoor: some View {
-        let left = index.daily.remaining
+        // One reading of the day (`PracticeDay.Door`) decides what the door is: its label, and
+        // whether there is anything behind it. The colour, the chevron and the disabled state
+        // were three separate `left > 0` checks in this view, any of which could have drifted
+        // from the others and from the label beside them.
+        let door = index.practiceDay.door
         Button {
             guard let next = index.daily.next else { return }
             path.append(.drill(next.mistake, .daily))
@@ -385,22 +389,22 @@ struct LibraryScreen: View {
                 Image(systemName: "sun.max.fill").font(.title3)
                 Text(localized("daily")).font(.headline)
                 Spacer(minLength: 0)
-                Text(index.dailyLabel)
+                Text(door.label)
                 .font(.caption.weight(.medium))
-                .foregroundStyle(left > 0 ? Palette.parchment : Palette.inkSoft)
-                if left > 0 {
+                .foregroundStyle(door.isOpen ? Palette.parchment : Palette.inkSoft)
+                if door.isOpen {
                     Image(systemName: "chevron.right").font(.caption2)
                 }
             }
-            .foregroundStyle(left > 0 ? Palette.parchment : Palette.ink)
+            .foregroundStyle(door.isOpen ? Palette.parchment : Palette.ink)
             .padding(.horizontal, 18)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .background(left > 0 ? Palette.analysis : Palette.chipRest)
+            .background(door.isOpen ? Palette.analysis : Palette.chipRest)
         }
         .buttonStyle(.plain)
-        .disabled(left == 0)
+        .disabled(!door.isOpen)
     }
 
     /// The way into the 错题本, carrying how many are in it (docs/adr/0028).
