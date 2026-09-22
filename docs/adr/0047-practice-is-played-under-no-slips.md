@@ -16,6 +16,10 @@ the question is this position, and a wrong move standing on the board is the que
 answered by moving on. The switch is forced on where the drill is made, so every door into one —
 the 日课 queue, 错题本's 练习 button, a screen test — gets the same game.
 
+> Amended by [ADR 0048](0048-the-no-slips-switch-always-moves.md): a drill still arrives under
+> 把关, but the player's switch can take it out — it writes into the drill, and a wrong answer
+> is then judged and left standing.
+
 Two things follow that are worth saying out loud, because both were decided rather than inherited.
 
 **A refusal is written down even when nothing else is.** A file used to need a move before it was

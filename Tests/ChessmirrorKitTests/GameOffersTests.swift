@@ -73,23 +73,24 @@ private func weighing(_ uciMoves: [String] = []) async throws -> GameSession {
         #expect(occupied.controller(for: .black) == .hand)
     }
 
-    /// 把关 turns on only with an engine to do the stopping, and does not move at all under a
-    /// judgement.
-    @Test("the 把关 switch is offered when it can move")
-    func theNoSlipsSwitchIsOfferedWhenItCanMove() async throws {
+    /// 把关 is a switch that always moves (docs/adr/0048): with no engine yet, and under the
+    /// judgement it is making.
+    @Test("the 把关 switch always moves")
+    func theNoSlipsSwitchAlwaysMoves() async throws {
         let bare = GameSession.fresh(try opening())
-        #expect(!bare.canSwitchNoSlips, "off, and nothing to turn it on with")
-
-        let engined = GameSession.fresh(
-            try opening(), engine: ScriptedEngine([analysis(0, "e2e4", "e4")], isEndless: true)
-        )
-        defer { engined.suspend() }
-        #expect(engined.canSwitchNoSlips)
+        bare.setNoSlips(true)
+        #expect(bare.isNoSlipsOn, "on with no engine yet, for when one arrives")
+        bare.setNoSlips(false)
+        #expect(!bare.isNoSlipsOn)
 
         let occupied = try await weighing()
         defer { occupied.suspend() }
         #expect(occupied.isNoSlipsOn)
-        #expect(!occupied.canSwitchNoSlips, "not under the judgement it is making")
+        occupied.setNoSlips(false)
+        #expect(!occupied.isNoSlipsOn, "off under the judgement it is making")
+        #expect(occupied.isWeighing, "which goes on, and is ruled under what the switch says")
+        occupied.setNoSlips(true)
+        #expect(occupied.isNoSlipsOn)
     }
 
     /// A wrong move on the strip cannot be asked about while a 惩罚 exercise has the board.

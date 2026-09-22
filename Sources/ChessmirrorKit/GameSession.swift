@@ -887,8 +887,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     ///
     /// **A 练习 keeps no second copy.** While one is on, the drill's 线 *are* the session's: the
     /// drill judges and rules the attempt under them (`Drill.lines`), and a session that kept its
-    /// own value beside them could be switched to 把关 off while the drill went on refusing —
-    /// 练习 is played under 把关, and a switch that can say otherwise makes ADR 0047 a suggestion.
+    /// own value beside them could be switched to 把关 off while the drill went on refusing. The
+    /// switch writes through to the drill instead (docs/adr/0048).
     public var lines: JudgementLines { practice?.lines ?? ownLines }
 
     /// The 线 for a game nobody is practising. Read through `lines`, never around it.
@@ -923,27 +923,26 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
 
-    /// Whether the 线 may be moved right now.
+    /// Whether the two numbers may be moved right now.
     ///
-    /// Not while a move is being weighed, and never in a 练习: a drill owns the 线 it judges and
-    /// rules its attempt under, and it is played under 把关 (docs/adr/0047). Said here rather than
-    /// only on the screen that draws the switch, so a screen that offers it by accident offers a
-    /// switch that does nothing rather than taking a drill out of 把关.
+    /// Not while a move is being weighed, and never in a 练习: a drill owns the 记录线 its
+    /// attempt passes or fails by, and a number moved under it would change what the attempt
+    /// was asked. The 把关 switch is not one of the numbers and does not ask (`setNoSlips`).
     public var acceptsLines: Bool { !isOccupied && practice == nil }
-
-    /// Whether the 把关 switch is pressable: the session has to accept a change of 线 at all
-    /// (`acceptsLines` — not mid-move, not in a 练习), and turning it *on* needs an engine to do
-    /// the stopping. Turning it off never does.
-    public var canSwitchNoSlips: Bool { acceptsLines && (engine != nil || isNoSlipsOn) }
 
     /// Switches 把关 on or off. It stops the player at the 记录线, **the only dial 把关 has on the
     /// judgement of a move** — how strong the opponent is (`strength`, docs/adr/0038) and how
     /// much slack the coach cuts are two different questions, and answering both with one knob
     /// makes it impossible to say who improved (docs/adr/0009).
+    ///
+    /// **Always moves** (docs/adr/0048): mid-move, under an exercise, in a 练习, with no engine
+    /// yet. A move being weighed is ruled under the switch as it stands when the weighing ends,
+    /// so switching off while 把关 is judging lets that move stand. With no engine the switch is
+    /// still the game's — nothing is measured until one arrives, and then 把关 does its job.
     public func setNoSlips(_ enabled: Bool) {
         var moved = lines
         moved.noSlips = enabled
-        setLines(moved)
+        adopt(moved)
     }
 
     /// The lines and the switch at once — what a game opened from the library starts under. The
@@ -951,10 +950,16 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// forgotten, the file says the new ones, and the search starts over.
     public func setLines(_ new: JudgementLines) {
         guard acceptsLines else { return }
+        adopt(new)
+    }
+
+    /// Where `setLines` and `setNoSlips` both end: the one write of the 线, into the drill's value
+    /// while a 练习 is on and into the session's own otherwise, and what follows a change.
+    private func adopt(_ new: JudgementLines) {
         guard new.isDrawn else { return }
         guard lines != new else { return }
         let interceptMoved = lines.intercept != new.intercept
-        ownLines = new
+        if let practice { practice.lines = new } else { ownLines = new }
         // A game going under 把关 puts its cards away; a practice session keeps them, because
         // what it deals is not decided by the switch (`dealsCards`).
         if interceptMoved, !dealsCards {
@@ -1060,7 +1065,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     /// The board is spoken for — a move being weighed, or an exercise standing in for the game —
-    /// and nothing may change the game, its lines or its seats until it is given back.
+    /// and nothing may change the game, its lines or its seats until it is given back. The 把关
+    /// switch is the one exception: it always moves (docs/adr/0048).
     public var isOccupied: Bool {
         switch phase {
         case .weighing, .exercising: true

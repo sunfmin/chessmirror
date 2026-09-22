@@ -176,7 +176,8 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     #expect(session.isHandTurn, "and the hand is Black's for it")
     #expect(!session.canPlayBestMove)
     session.setNoSlips(false)
-    #expect(session.isNoSlipsOn, "把关 is not switched off under an exercise")
+    #expect(!session.isNoSlipsOn, "把关 switches off under an exercise (docs/adr/0048)")
+    #expect(session.activePunishment === exercise, "and the exercise keeps the board")
 
     exercise.skip()
     await exercise.settled()

@@ -165,9 +165,11 @@ public struct DrillVerdict: Hashable, Sendable {
     private var judging: Task<Void, Never>?
     private let engine: (any Engine)?
     private let log: PracticeLog
-    /// The 线 this attempt is judged and ruled under, with 把关 on (docs/adr/0047): the player's
-    /// two numbers as they are, and the switch the drill does not leave to a setting.
-    public let lines: JudgementLines
+    /// The 线 this attempt is judged and ruled under, arriving with 把关 on (docs/adr/0047): the
+    /// player's two numbers as they are, and the switch the drill does not leave to a setting.
+    /// The player may still flip it — the session's switch writes here, and the attempt is ruled
+    /// under what it says when the attempt settles (docs/adr/0048).
+    public internal(set) var lines: JudgementLines
     private let source: Source
     private let clock: @Sendable () -> Date
     private let startedAt: Date

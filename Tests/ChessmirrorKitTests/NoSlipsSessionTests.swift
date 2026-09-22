@@ -274,6 +274,50 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
     }
 }
 
+/// Contract: the switch moves while a move is being weighed, and the move is ruled under what it
+/// says when the weighing ends (docs/adr/0048). Switched off while 把关 judges, a move that would
+/// have come back stands; switched on, one that would have stood comes back.
+@MainActor
+@Test(arguments: [true, false])
+func theSwitchMovesWhileAMoveIsWeighed(_ onWhenPlayed: Bool) async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let after = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let gate = AsyncStream<Analysis>.makeStream()
+    let requested = AsyncStream<Void>.makeStream()
+    let engine = ScriptedEngine([Analysis(depth: 20, lines: [
+        .init(score: .centipawns(0), uciMoves: ["d2d4"], san: ["d4"])
+    ])], controlled: { game, budget in
+        guard game.state.fen == after.state.fen, budget == PositionSearches.budget else { return nil }
+        requested.continuation.yield(())
+        requested.continuation.finish()
+        return gate.stream
+    })
+    let session = GameSession.fresh(start, engine: engine)
+    session.setNoSlips(onWhenPlayed)
+    defer { gate.continuation.finish(); session.suspend() }
+    session.play(try #require(start.state.move(matching: "e2e4")))
+    var request = requested.stream.makeAsyncIterator()
+    _ = await request.next()
+    try #require(session.isWeighing)
+
+    session.setNoSlips(!onWhenPlayed)
+    #expect(session.isNoSlipsOn == !onWhenPlayed, "the switch moves under the judgement")
+    gate.continuation.yield(Analysis(depth: 20, lines: [
+        .init(score: .centipawns(-300), uciMoves: ["e7e5"], san: ["e5"])
+    ]))
+    gate.continuation.finish()
+    await session.settled()
+
+    #expect(!session.isWeighing)
+    if onWhenPlayed {
+        #expect(session.refused == nil, "switched off while it judged, the move stands")
+        #expect(session.game.uciMoves == ["e2e4"])
+    } else {
+        #expect(session.refused?.san == "e4", "switched on while it judged, the move comes back")
+        #expect(session.game.uciMoves == start.uciMoves)
+    }
+}
+
 @MainActor
 @Test(arguments: [-133, 133])
 func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
