@@ -1262,26 +1262,23 @@ struct GameScreen: View {
     }
 
     private var board: some View {
-        BoardView(
-            pieces: boardPieces,
-            orientation: session.orientation,
-            isFaceToFace: session.isFaceToFace,
-            lastMove: session.boardLastMove,
-            checks: session.board.state.checkSquares,
-            // The doubtful squares stay ringed on the board being played on, right up until the
-            // first move — which is what replaces the old gate: the reading's own uncertainty is
-            // visible where it matters, and 改棋子 is one tap away (docs/adr/0011).
-            suspects: session.unconfirmedSquares,
+        // One reading of the board (`BoardReading`): the pieces, whose they are, the marks
+        // around them and the one line on it. What is picked up and where it may go is the
+        // finger's — a session cannot know it.
+        let reading = session.boardReading
+        return BoardView(
+            pieces: reading.pieces,
+            orientation: reading.orientation,
+            isFaceToFace: reading.isFaceToFace,
+            lastMove: reading.lastMove,
+            checks: reading.checks,
+            suspects: reading.suspects,
             selected: selected,
             destinations: Set(session.moves(holding: selected).map(\.to)),
             captures: Set(session.moves(holding: selected).filter(\.isCapture).map(\.to)),
             recommendation: nil,
-            // Whichever card is in front of you, and only that one: arrows left over from a card
-            // you swiped away from are arrows about a position nobody is looking at (docs/adr/0025).
-            // A 应招 beats all of them while it is being read: it is the one line somebody has
-            // just asked for, and the board can only carry one at a time.
-            plan: session.replyReading.map(\.arrows).flatMap { $0.isEmpty ? nil : $0 } ?? session.deckArrows,
-            isInteractive: session.isHandTurn,
+            plan: reading.plan,
+            isInteractive: reading.isInteractive,
             onTap: tap
         )
     }
@@ -1334,12 +1331,6 @@ struct GameScreen: View {
     }
 
     /// What the board draws — the trial's position when one is being tried out, and the studied
-    /// one otherwise. Only the board reads this: the engine, the record and the Review all go on
-    /// seeing the real position, which is what keeps a trial a hypothesis (docs/adr/0021).
-    private var boardPieces: [Square: Piece] {
-        BoardRenderer.placement(session.board.state.fen) ?? [:]
-    }
-
     /// The colour whose pieces stand at the top of the board, and so the colour whose controls
     /// belong above it. Flipping the board moves them, which is the whole idea.
     private var topColour: PieceColour { session.orientation.top }
