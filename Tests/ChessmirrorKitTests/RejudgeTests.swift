@@ -55,7 +55,8 @@ struct RejudgeTests {
 
         session.rejudge(at: 0)
         #expect(session.rejudging?.tried.san == "g4")
-        #expect(session.rejudgeOffer(at: 0) == .waiting, "one at a time")
+        #expect(session.rejudgeOffer(at: 0) == .running(depth: 0), "the offer the screen reads says it is going")
+        #expect(session.rejudgeOffer(at: 1) == .none, "a move that is not there is still not offered")
         await session.settled()
 
         let rewritten = session.game.pendingTries(atPly: 2)
@@ -138,6 +139,33 @@ struct RejudgeTests {
         await session.settled()
         #expect(session.game.uciMoves == ["f2f3", "e7e5", "d2d4"])
         #expect(session.game.plies[2].tried.map(\.drop) == [40], "carried along as it was")
+    }
+
+    /// The button states `RejudgeOffer.depth`, and that is the same number past which the offer
+    /// is nothing. Paused, unplugged, already there, and ready are the four the screen draws.
+    @Test func theOfferTheScreenReadsUsesOneDepth() throws {
+        let stated = RejudgeOffer.depth
+        let ready = GameSession.fresh(try pendingG4(depth: stated - 1), engine: ScriptedEngine([]))
+        defer { ready.suspend() }
+        ready.jumpToLatest()
+        #expect(ready.rejudgeOffer(at: 0) == .ready)
+
+        let done = GameSession.fresh(try pendingG4(depth: stated), engine: ScriptedEngine([]))
+        defer { done.suspend() }
+        done.jumpToLatest()
+        #expect(done.rejudgeOffer(at: 0) == .none, "judged to the depth the button states")
+
+        let engine = ScriptedEngine([])
+        engine.pause()
+        let waiting = GameSession.fresh(try pendingG4(), engine: engine)
+        defer { waiting.suspend() }
+        waiting.jumpToLatest()
+        #expect(waiting.rejudgeOffer(at: 0) == .waiting)
+
+        let unplugged = GameSession.fresh(try pendingG4())
+        defer { unplugged.suspend() }
+        unplugged.jumpToLatest()
+        #expect(unplugged.rejudgeOffer(at: 0) == .none)
     }
 
     @Test func aMoveFromAnOlderFileWithNoDepthIsOffered() throws {

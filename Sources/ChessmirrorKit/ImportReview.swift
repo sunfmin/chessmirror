@@ -67,26 +67,32 @@ public enum ImportReview {
         progress: @escaping @MainActor (Progress) -> Void = { _ in }
     ) async throws -> PGN {
         let plan = plan(for: pgn.game)
-        var scores: [Int: Score] = [:]
+        // One result per position the plan visits: the Score and the continuation the same
+        // search produced. A position settled without a search, or a search with nothing to
+        // say, keeps an empty line — never a second pass to go and fetch one (docs/adr/0021).
+        var found: [Int: ReviewedPly] = [:]
         await progress(Progress(judged: 0, total: plan.positions.count))
         for ply in plan.positions {
             try Task.checkCancellation()
             guard let position = pgn.game.rewound(to: ply) else { throw Failure.incompleteSearch(ply) }
             if let settled = position.state.outcomeScore {
-                scores[ply] = settled
+                found[ply] = ReviewedPly(score: settled)
             } else {
                 let snapshot = await engine.analyseInBackground(position, depth: depth)
                 try Task.checkCancellation()
-                if snapshot?.depth == depth, snapshot?.isPartial == false {
-                    scores[ply] = snapshot?.best?.score
+                if snapshot?.depth == depth, snapshot?.isPartial == false, let score = snapshot?.best?.score {
+                    let line = Array((snapshot?.best?.san ?? []).prefix(Game.Ply.lineLimit))
+                    found[ply] = ReviewedPly(score: score, line: line)
                 }
             }
-            guard scores[ply] != nil else { throw Failure.incompleteSearch(ply) }
-            await progress(Progress(judged: scores.count, total: plan.positions.count))
+            guard found[ply] != nil else { throw Failure.incompleteSearch(ply) }
+            await progress(Progress(judged: found.count, total: plan.positions.count))
         }
         var result = pgn
-        result.game.applyReview(pgn.game.plies.indices.map { scores[$0 + 1] },
-                                startEvaluation: scores[0], depth: depth)
+        result.game.applyReview(
+            pgn.game.plies.indices.map { found[$0 + 1] ?? ReviewedPly(score: nil) },
+            startEvaluation: found[0]?.score, depth: depth
+        )
         result.setTag(PGN.Tags.reviewSift, to: plan.usesImportedScores ? Plan.siftTag : "full-local")
         return result
     }

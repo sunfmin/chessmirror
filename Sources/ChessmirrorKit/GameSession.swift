@@ -264,11 +264,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return mateNews?.steps ?? []
         case .tactics:
             guard let tactic else { return [] }
-            let opening = viewed.state.sideToMove
-            return tactic.line.enumerated().map { index, san in
-                let mover = index.isMultiple(of: 2) ? opening : opening.opposite
-                return LineStep(step: index + 1, san: san, isYours: controller(for: mover) == .hand)
+            let played = MoveArrow.walk(tactic.line, from: viewed, limit: tactic.line.count) {
+                controller(for: $0) == .hand
             }
+            return MoveArrow.chips(for: played, naming: tactic.line)
         }
     }
 
@@ -1385,8 +1384,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     }
 
     public func rejudgeOffer(at index: Int) -> RejudgeOffer {
+        if let running = onStrip.rejudging, running.index == index {
+            return .running(depth: running.depth)
+        }
         guard let engine, let found = triedToRejudge(at: index) else { return .none }
-        if (found.tried.depth ?? 0) >= PositionSearches.deeperDepth { return .none }
+        if (found.tried.depth ?? 0) >= RejudgeOffer.depth { return .none }
         if onStrip.isRejudging || isOccupied || isThinking || isSearching || engine.isPaused {
             return .waiting
         }
@@ -1408,6 +1410,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
                 guard let self else { return }
                 // The same 细判 as the one that refused the move, at the deeper budget: one act,
                 // so the depth the number is worth and the 应招 beside it are read by one rule.
+                // `RejudgeOffer.depth` is that budget's depth — the same number the button states.
                 let weighed = await engine.weigh(played, from: before, budget: PositionSearches.deeper) {
                     onStrip.noteRejudge(depth: $0.depth)
                 }
@@ -1671,20 +1674,6 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if origin == .recognised, let picture {
             library.writePicture(picture, for: url)
         }
-    }
-
-    /// Records a Review: one Score per ply, the starting position's, and the single Depth all
-    /// of them were computed at. The Depth travels with the Scores because without it they are
-    /// numbers nothing may be compared against (docs/adr/0016).
-    public func applyReview(_ scores: [Score?], startEvaluation: Score?, depth: Int) {
-        game.applyReview(scores, startEvaluation: startEvaluation, depth: depth)
-        save()
-    }
-
-    /// The same, from a pass that kept the Line each Score came out of (docs/adr/0021).
-    public func applyReview(_ reviewed: [ReviewedPly], startEvaluation: Score?, depth: Int) {
-        game.applyReview(reviewed, startEvaluation: startEvaluation, depth: depth)
-        save()
     }
 
     public nonisolated static func == (left: GameSession, right: GameSession) -> Bool { left === right }

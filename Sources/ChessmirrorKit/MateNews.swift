@@ -21,12 +21,17 @@ public struct MoveArrow: Hashable, Sendable {
     /// Whose an arrow is comes from the caller, per colour: a 应招 counts from whoever played the
     /// refused move, the finder's line from which Controller a colour is on. The screen and the
     /// reply used to walk the line in two copies of this loop that agreed only by inspection.
+    /// `limit` is how many arrows a board can carry. A card's chips pass the whole line, so a
+    /// move past the sixth is still coloured by this replay and not by guessing from the last
+    /// arrow. The first move that will not replay ends the walk either way.
     public static func walk(
-        _ moves: [String], from position: Game, isYours: (PieceColour) -> Bool
+        _ moves: [String], from position: Game, limit: Int = MateNews.arrowLimit,
+        isYours: (PieceColour) -> Bool
     ) -> [MoveArrow] {
         var walked = position
         var arrows: [MoveArrow] = []
-        for (index, san) in moves.prefix(MateNews.arrowLimit).enumerated() {
+        let bound = max(0, limit)
+        for (index, san) in moves.prefix(bound).enumerated() {
             guard let move = SAN.move(for: san, in: walked.state) else { break }
             arrows.append(MoveArrow(
                 step: index + 1,
@@ -37,6 +42,15 @@ public struct MoveArrow: Hashable, Sendable {
             guard walked.apply(move) else { break }
         }
         return arrows
+    }
+
+    /// Chips for a walk that has already happened. The SAN and the colour are the arrow's, so a
+    /// chip cannot outlive the move that would not replay, and cannot disagree about whose it is.
+    public static func chips(for arrows: [MoveArrow], naming moves: [String]) -> [LineStep] {
+        arrows.compactMap { arrow in
+            guard moves.indices.contains(arrow.step - 1) else { return nil }
+            return LineStep(step: arrow.step, san: moves[arrow.step - 1], isYours: arrow.isYours)
+        }
     }
 }
 
@@ -131,12 +145,8 @@ public struct MateNews: Hashable, Sendable {
 
         let san = best.san
         let opening = game.state.sideToMove
-        let arrows = best.uciMoves.prefix(arrowLimit).enumerated().compactMap {
-            index, uci -> MoveArrow? in
-            guard let move = MoveSquares(uci: uci) else { return nil }
-            let mover = index.isMultiple(of: 2) ? opening : opening.opposite
-            return MoveArrow(step: index + 1, move: move, isYours: isYours(mover), isPlayed: false)
-        }
+        let played = MoveArrow.walk(san, from: game, limit: san.count, isYours: isYours)
+        let arrows = Array(played.prefix(arrowLimit))
 
         // How forced it is, counted rather than asserted: replay the line and ask the rules how
         // many moves the side being mated actually had. This is the difference between a mate
@@ -160,12 +170,7 @@ public struct MateNews: Hashable, Sendable {
             moves: moves, replies: replies, forced: forced, reachesMate: reachesMate
         )
 
-        let steps = san.enumerated().map { index, move in
-            LineStep(
-                step: index + 1, san: move,
-                isYours: isYours(index.isMultiple(of: 2) ? opening : opening.opposite)
-            )
-        }
+        let steps = MoveArrow.chips(for: played, naming: san)
 
         return MateNews(
             moves: moves,

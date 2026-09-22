@@ -417,60 +417,6 @@ public final class EngineService: @unchecked Sendable {
         return last?.best?.score
     }
 
-    /// Re-scores every Position of a finished Game at one uniform Depth.
-    ///
-    /// Uniform is the whole point (see Review in CONTEXT.md): the Scores an Analysis
-    /// happened to reach depend on how long each position was looked at, so they cannot be
-    /// compared with each other. These can. The returned array has one entry per ply,
-    /// each being the Score *after* that ply.
-    ///
-    /// Each ply comes back with the Line its search produced as well as its Score. The Line is
-    /// free here and expensive anywhere else: this is the one pass that visits every position of
-    /// a Game, and a board asking for a continuation later would be starting a Stint
-    /// (docs/adr/0020, 0021).
-    ///
-    /// `onPly` reports each result as it lands, because a Review of a long game is a wait
-    /// worth showing progress through rather than a spinner. It is called from the engine's
-    /// queue, so anything it touches must be ready for that.
-    public func review(
-        _ game: Game, depth: Int, onPly: (@Sendable (Int, ReviewedPly) -> Void)? = nil
-    ) async -> [ReviewedPly] {
-        guard !game.plies.isEmpty else { return [] }
-        var reviewed: [ReviewedPly] = []
-        for ply in 1...game.plies.count {
-            guard let position = game.rewound(to: ply) else {
-                reviewed.append(ReviewedPly(score: nil))
-                onPly?(ply - 1, ReviewedPly(score: nil))
-                continue
-            }
-            // A Review holds where it stands while the app is away, and a ply the app left in
-            // the middle of is done again rather than kept.
-            //
-            // Both halves matter, and neither used to happen. Pausing stops the running search,
-            // so a ply interrupted by it reports whatever Depth it had got to; and the loop
-            // would then start the next ply regardless, so every remaining one came back
-            // shallow too. A Review whose Scores are not all at one Depth cannot be compared
-            // against itself, which is the only thing it is for.
-            var best: Analysis?
-            repeat {
-                await waitWhilePaused()
-                if Task.isCancelled { break }
-                best = nil
-                // One line: a Review reads the best Score only, and every extra line is
-                // twice the wait per ply of a walk that visits every ply of a long game.
-                for await analysis in analyse(position, budget: .depth(depth), lines: 1) { best = analysis }
-            } while isPaused && !Task.isCancelled
-            let result = ReviewedPly(
-                score: best?.best?.score,
-                line: Array((best?.best?.san ?? []).prefix(Game.Ply.lineLimit))
-            )
-            reviewed.append(result)
-            onPly?(ply - 1, result)
-            if Task.isCancelled { break }
-        }
-        return reviewed
-    }
-
     /// Forgets the transposition table and history. The honest thing to do before a Review,
     /// so an earlier Analysis of the same position cannot make one ply look deeper than the
     /// uniform Depth asked for.

@@ -130,9 +130,11 @@ import ChessmirrorKitTesting
                 mateAnalysis(.mate(in: 4), line), in: try game(Self.opera), hands: [.white]
             )
         )
-        #expect(news.arrows.count == MateNews.arrowLimit)
+        #expect(news.arrows.count == 3, "the walk stops at the first move that will not replay")
+        #expect(news.steps.map(\.san) == ["Qb8+", "Nxb8", "Rd8#"])
+        #expect(news.steps.map(\.isYours) == news.arrows.map(\.isYours))
         #expect(!news.isFullyDrawn)
-        #expect(news.san.count == 7, "the rows keep the whole line even when the board cannot")
+        #expect(news.san.count == 7, "the sentence keeps the whole line even when the board cannot")
     }
 
     @Test("with nobody playing by hand, neither side is called yours")
