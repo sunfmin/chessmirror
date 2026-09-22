@@ -52,6 +52,18 @@ public struct Encounter: Hashable, Sendable, Identifiable {
     public let notFound: Bool
     public var id: String { "\(game.absoluteString)#\(ply)-\(attempt.map(String.init) ?? "played")" }
 
+    /// The Ply to open the game at to read this one (docs/adr/0036).
+    ///
+    /// A move that stood opens on the position *after* it, with the blunder on the board — that
+    /// is what reading a game wants. A move 把关 took back never stood, so there is no position
+    /// after it: the board it belongs to is the one it was played from, which is also the one to
+    /// try again from.
+    ///
+    /// Beside the type it reads rather than beside the walk that produced it: `Encounter`'s
+    /// answer to 「打开哪一局面」 was living in `Stops.swift`, two files away from the fields it
+    /// is computed from.
+    public var arrivalPly: Int { attempt == nil ? ply : ply - 1 }
+
     public init(
         game: URL, ply: Int, when: Date, played: String, wanted: String?, cost: Double,
         origin: GameOrigin, attempt: Int? = nil, notFound: Bool = false
@@ -185,17 +197,11 @@ public struct MistakeBook: Sendable {
         let game = pgn.game
         var found: [(PositionKey, Encounter)] = []
         for stop in game.stops(by: pgn.handColours) {
-            // The move that stood, by the book's own gate: a Review's number and nothing else,
-            // because the book compares across games (docs/adr/0016) — and not a second time when
-            // a 惩罚 exercise already wrote it down as the move the player did not find. The
-            // 试招 come first, because they happened first: they are what the player reached
-            // for before the move that stands.
-            var stood: Double?
-            if let move = stop.move, game.isReviewed,
-                !stop.tried.contains(where: { $0.notFound && $0.san == move.san }) {
-                stood = game.drop(atPly: stop.ply)
-            }
-            for wrong in stop.wrong(recordedBy: lines, stood: stood) {
+            // The book's own gate (`Gate.book`): a Review's number and nothing else for a move
+            // that stood, because the book compares across games (docs/adr/0016). The 试招 come
+            // first, because they happened first: they are what the player reached for before
+            // the move that stands.
+            for wrong in Gate.book.wrong(at: stop, in: game, lines: lines) {
                 found.append(
                     (
                         stop.position,

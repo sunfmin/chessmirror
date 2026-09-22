@@ -83,10 +83,11 @@ extension Game {
     /// compared and so must come from one uniform pass (docs/adr/0016).
     public func slips(by mine: Set<PieceColour>, lines: JudgementLines) -> [Slip] {
         stops(by: mine).compactMap { stop in
-            // Everything wrong that happened here, whether it stood or not — the 试招 in the order
-            // they were refused, and the move that finally stood if it was too expensive too, by
-            // the cost this game holds for it: the `[%judged]` 把关 wrote, else the Review's.
-            let wrong = stop.wrong(recordedBy: lines, stood: cost(atPly: stop.ply))
+            // Everything wrong that happened here, whether it stood or not — the 试招 in the
+            // order they were refused, and the move that finally stood if it was too expensive
+            // too, by this game's own gate (`Gate.record`): the `[%judged]` 把关 wrote, else the
+            // Review's. The book asks a different question of the same walk (`Gate.book`).
+            let wrong = Gate.record.wrong(at: stop, in: self, lines: lines)
             guard !wrong.isEmpty else { return nil }
             return Slip(
                 ply: stop.ply, position: stop.position,

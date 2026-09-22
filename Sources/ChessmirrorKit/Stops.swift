@@ -49,8 +49,11 @@ extension Game {
 
         /// Everything wrong that happened here, in the order it happened: the 试招 the 记录线
         /// writes down, and then the move that stood if `stood` names what it cost and that
-        /// is over the line too. Which cost a stood move is read by — the `[%judged]` 把关
-        /// wrote, or a Review's number alone — is the reader's question, and is handed in.
+        /// is over the line too.
+        ///
+        /// `stood` is handed in because which cost a stood move is read by is a gate's question
+        /// and not this walk's (`Gate`): the book admits only a Review's number, and one game's
+        /// own record admits whatever measured it. Ask `gate.wrong(at:in:lines:)` to run one.
         public func wrong(recordedBy lines: JudgementLines, stood: Double?) -> [Wrong] {
             var wrong = tried.enumerated()
                 .filter { lines.records($0.element.drop) }
@@ -107,14 +110,4 @@ extension Game {
         }
         return stops.sorted { $0.ply < $1.ply }
     }
-}
-
-extension Encounter {
-    /// The Ply to open the game at to read this one.
-    ///
-    /// A move that stood opens on the position *after* it, with the blunder on the board — that
-    /// is what reading a game wants (docs/adr/0036). A move 把关 took back never stood, so there
-    /// is no position after it: the board it belongs to is the one it was played from, which is
-    /// also the one to try again from.
-    public var arrivalPly: Int { attempt == nil ? ply : ply - 1 }
 }
