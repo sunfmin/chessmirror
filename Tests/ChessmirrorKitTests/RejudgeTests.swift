@@ -10,11 +10,6 @@ import ChessmirrorKitTesting
 @Suite("复判")
 @MainActor
 struct RejudgeTests {
-    private func until(_ condition: @escaping @MainActor () -> Bool) async {
-        let deadline = ContinuousClock.now + .seconds(5)
-        while !condition(), ContinuousClock.now < deadline { await Task.yield() }
-    }
-
     /// f3 e5, with g4 refused and pending at the position on the board.
     private func pendingG4(depth: Int? = 20) throws -> Game {
         var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3", "e7e5"]))
@@ -111,29 +106,44 @@ struct RejudgeTests {
         #expect(!reading.isAsking)
     }
 
-    @Test func amoveOrTheEyeMovingOnCancelsItUnwritten() async throws {
-        // Every everyday search answers, so a move played can be weighed and stand; only the
-        // deeper one hangs, which is the 复判 under test.
-        let engine = ScriptedEngine([Analysis(depth: 20, lines: [
+    /// An engine whose everyday searches answer and whose deeper one never finishes, so a 复判
+    /// stays in progress until the eye or a move ends it.
+    private func hangingDeeper() -> ScriptedEngine {
+        ScriptedEngine([Analysis(depth: 20, lines: [
             .init(score: .centipawns(0), uciMoves: ["d2d4"], san: ["d4"])
         ])], controlled: { _, budget in
             budget == PositionSearches.deeper ? AsyncStream { _ in } : nil
         })
+    }
+
+    @Test func movingTheEyeCancelsARejudgeUnwritten() throws {
         let game = try pendingG4()
-        let session = GameSession.fresh(game, engine: engine)
+        let session = GameSession.fresh(game, engine: hangingDeeper())
         defer { session.suspend() }
         session.jumpToLatest()
 
         session.rejudge(at: 0)
-        await until { engine.searchCount == 1 }
-        #expect(session.rejudging != nil)
+        guard case .running = session.rejudgeOffer(at: 0) else {
+            Issue.record("the offer the screen reads should say the rejudge is in progress, got \(session.rejudgeOffer(at: 0))")
+            return
+        }
         session.jump(toPly: 1)
         #expect(session.rejudging == nil, "the eye moved on")
-        session.jumpToLatest()
+        if case .running = session.rejudgeOffer(at: 0) {
+            Issue.record("moving the eye should take the running offer away")
+        }
         #expect(session.game.pendingTries(atPly: 2) == game.pendingTries(atPly: 2), "nothing written")
+    }
 
+    @Test func aMovePlayedCancelsARejudgeUnwritten() async throws {
+        let session = GameSession.fresh(try pendingG4(), engine: hangingDeeper())
+        defer { session.suspend() }
+        session.jumpToLatest()
         session.rejudge(at: 0)
-        await until { engine.searchCount == 2 }
+        guard case .running = session.rejudgeOffer(at: 0) else {
+            Issue.record("the offer the screen reads should say the rejudge is in progress, got \(session.rejudgeOffer(at: 0))")
+            return
+        }
         session.play(try #require(session.game.state.move(matching: "d2d4")))
         #expect(session.rejudging == nil, "a move was played")
         await session.settled()
