@@ -20,7 +20,7 @@ func savedRecordFacesSideToMove() throws {
         pgn: PGN(game: blackToMove, tags: [PGN.Tag(GameOrigin.tagName, GameOrigin.recognised.rawValue)]),
         modified: Date(timeIntervalSince1970: 1_786_000_000)
     )
-    #expect(try #require(GameSession.opened(entry)).orientation == .blackAtBottom)
+    #expect(try #require(GameSession.opened(entry).session).orientation == .blackAtBottom)
 
     // And the usual case: a game that began with White to move opens white at the bottom.
     let standard = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -29,7 +29,7 @@ func savedRecordFacesSideToMove() throws {
         pgn: PGN(game: standard, tags: []),
         modified: Date(timeIntervalSince1970: 1_786_000_100)
     )
-    #expect(try #require(GameSession.opened(standardEntry)).orientation == .whiteAtBottom)
+    #expect(try #require(GameSession.opened(standardEntry).session).orientation == .whiteAtBottom)
 }
 
 @MainActor @Test("a record that knows whose game it is opens from that chair")
@@ -48,7 +48,7 @@ func trackedRecordFacesItsPlayer() throws {
         url: URL(filePath: "/games/chessmirror-as-black.pgn"), pgn: asBlack,
         modified: Date(timeIntervalSince1970: 1_786_000_200)
     )
-    #expect(try #require(GameSession.opened(entry)).orientation == .blackAtBottom)
+    #expect(try #require(GameSession.opened(entry).session).orientation == .blackAtBottom)
 
     // The same game with nobody tracked names two other people: it reads from White's side,
     // where the play begins.
@@ -57,7 +57,7 @@ func trackedRecordFacesItsPlayer() throws {
         url: URL(filePath: "/games/chessmirror-theirs.pgn"), pgn: asBlack,
         modified: Date(timeIntervalSince1970: 1_786_000_300)
     )
-    #expect(try #require(GameSession.opened(untracked)).orientation == .whiteAtBottom)
+    #expect(try #require(GameSession.opened(untracked).session).orientation == .whiteAtBottom)
 }
 
 @MainActor @Test("handing the first move over turns the board round with it")
@@ -84,7 +84,7 @@ func recordOpensWithEngineOpponent() throws {
     )
 
     // White moves first: the person's side, with the engine on the answer and no advice shown.
-    let session = try #require(GameSession.opened(entry, engine: silentEngine()))
+    let session = try #require(GameSession.opened(entry, engine: silentEngine()).session)
     #expect(session.controller(for: .white) == .hand)
     #expect(session.controller(for: .black) == .engine)
 
@@ -99,13 +99,13 @@ func recordOpensWithEngineOpponent() throws {
             modified: Date(timeIntervalSince1970: 1_786_000_500)
         ),
         engine: silentEngine()
-    ))
+    ).session)
     #expect(blackFirst.controller(for: .black) == .hand)
     #expect(blackFirst.controller(for: .white) == .engine)
 
     // The default is the record's own state, not something the engine's presence decides: a
     // record opened before the engine has finished loading answers the moment it has.
-    let beforeEngineArrives = try #require(GameSession.opened(entry))
+    let beforeEngineArrives = try #require(GameSession.opened(entry).session)
     #expect(beforeEngineArrives.controller(for: .white) == .hand)
     #expect(beforeEngineArrives.controller(for: .black) == .engine)
 }
@@ -184,7 +184,7 @@ func aReopenedRecordKeepsItsSeats() throws {
     #expect(MistakeBook.derive(from: [entry]).mistakes.count == 1, "the 试招 is a 错题 of the player's")
 
     let session = try #require(
-        GameSession.opened(entry, engine: silentEngine(), library: library)
+        GameSession.opened(entry, engine: silentEngine(), library: library).session
     )
     #expect(session.controller(for: .black) == .hand, "Black was theirs and stays theirs")
     #expect(session.controller(for: .white) == .engine)
@@ -217,7 +217,7 @@ func anImportTrackedAsBlackSitsAsBlack() throws {
             modified: Date(timeIntervalSince1970: 1_786_000_600)
         ),
         engine: silentEngine()
-    ))
+    ).session)
     #expect(session.controller(for: .black) == .hand)
     #expect(session.controller(for: .white) == .engine)
     #expect(session.orientation == .blackAtBottom)

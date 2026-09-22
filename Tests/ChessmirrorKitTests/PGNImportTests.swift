@@ -442,7 +442,7 @@ func importedGamePlayedOnKeepsItsOrigin() throws {
         ),
         modified: Date()
     )
-    let session = try #require(GameSession.opened(entry))
+    let session = try #require(GameSession.opened(entry).session)
     #expect(session.origin == .imported)
 
     let move = try #require(session.viewed.state.legalMoves.first)

@@ -473,7 +473,7 @@ struct LibraryScreen: View {
     /// A best on the ladder, and the way to the game it was made in.
     private func best(_ title: String, _ best: Ladder.Best) -> some View {
         Button {
-            if let session = opener.open(best.game) { path.append(.game(session)) }
+            if let session = opener.open(best.game).session { path.append(.game(session)) }
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title).font(.caption).foregroundStyle(Palette.inkSoft)
@@ -647,7 +647,7 @@ struct LibraryScreen: View {
     }
 
     private func open(_ entry: GameLibrary.Entry) {
-        guard let session = opener.open(entry) else { return }
+        guard let session = opener.open(entry).session else { return }
         path.append(.game(session))
     }
 

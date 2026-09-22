@@ -559,6 +559,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// would give an empty board wearing the real game's file name, and the autosave after the
     /// first move would write it over the game that was on its way (docs/adr/0012). Every door
     /// into a saved game goes through this one, so the refusal cannot be forgotten.
+    ///
+    /// That refusal is named (`Opening.notArrived`) rather than left as a nil every caller had
+    /// to remember is not a failure. `Opening.session` is the short path for a caller that has
+    /// already decided the refusal is not its question; switching on `Opening` is the one that
+    /// wants to say something about it.
+    public enum Opening {
+        /// The game, opened at the position it began in.
+        case ready(GameSession)
+        /// Still on the way from iCloud (docs/adr/0012).
+        case notArrived
+
+        /// The session, or nil for the one refusal. What `#require` takes in a test that is not
+        /// about the refusal itself.
+        public var session: GameSession? {
+            if case .ready(let session) = self { session } else { nil }
+        }
+    }
+
     public static func opened(
         _ entry: GameLibrary.Entry,
         engine: (any Engine)? = nil,
@@ -567,11 +585,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         /// The player's lines as they are now. The file says whether 把关 is on; where it stops
         /// the player is the 记录线 handed in here (docs/adr/0046).
         lines: JudgementLines = .standard
-    ) -> GameSession? {
-        guard !entry.isDownloading else { return nil }
+    ) -> Opening {
+        guard !entry.isDownloading else { return .notArrived }
         let session = GameSession(entry: entry, library: library, strength: strength, lines: lines)
         session.attach(engine: engine, library: library)
-        return session
+        return .ready(session)
     }
 
     /// A position the Piece Editor hands back (docs/adr/0011). Carries the shaky squares it came

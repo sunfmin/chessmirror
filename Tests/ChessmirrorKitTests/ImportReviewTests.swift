@@ -53,7 +53,7 @@ import ChessmirrorKitTesting
     #expect(library.entries.count == 1)
     let reopened = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
     #expect(reopened.handColours == [.white])
-    let session = try #require(GameSession.opened(entry, engine: nil, library: library))
+    let session = try #require(GameSession.opened(entry, engine: nil, library: library).session)
     defer { session.suspend() }
     #expect(session.pgn.tag("White") == "Original White")
     #expect(session.pgn.tag("Black") == "Original Black")
@@ -188,7 +188,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     ])])
     let session = try #require(GameSession.opened(
         entry, engine: engineArrivesLate ? nil : engine, library: library
-    ))
+    ).session)
     defer { session.suspend() }
     // Opening the game starts nothing: the Review is offered, and the player asks for it.
     #expect(session.awaitsReview)
@@ -264,7 +264,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     let shallow = ScriptedEngine([Analysis(depth: 8, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
     ])])
-    let session = try #require(GameSession.opened(entry, engine: shallow, library: library))
+    let session = try #require(GameSession.opened(entry, engine: shallow, library: library).session)
     defer { session.suspend() }
     session.review()
     #expect(session.isReviewing)

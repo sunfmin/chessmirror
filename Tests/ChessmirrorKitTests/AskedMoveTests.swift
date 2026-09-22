@@ -267,7 +267,7 @@ struct AskedMove {
                 PGN.Tag(GameOrigin.tagName, GameOrigin.recognised.rawValue)
             ]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
-        )))
+        )).session)
         #expect(reopened.canEditPosition, "a photograph is still a photograph after it is saved")
 
         // The rings go once a move is played — by then the position has been accepted in practice —
@@ -283,7 +283,7 @@ struct AskedMove {
                 PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue)
             ]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
-        )))
+        )).session)
         #expect(!imported.canEditPosition)
         #expect(imported.unconfirmedSquares.isEmpty)
     }

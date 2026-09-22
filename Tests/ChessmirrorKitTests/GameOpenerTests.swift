@@ -70,7 +70,7 @@ import Testing
         #expect(library.entry(at: url) != nil)
 
         let opener = GameOpener(engine: nil, library: library, strength: rung, lines: lines)
-        let session = try #require(opener.open(url, walkingTo: 3))
+        let session = try #require(opener.open(url, walkingTo: 3).session)
         #expect(session.url == url)
         #expect(session.strength == rung)
         #expect(session.game.uciMoves == game.uciMoves)
@@ -78,7 +78,24 @@ import Testing
         await session.walkToArrival(step: .zero)
         #expect(session.cursor == 3, "walked to the move it was asked for at")
 
-        #expect(opener.open(directory.appending(path: "not-here.pgn")) == nil)
-        #expect(GameOpener(engine: nil, library: nil).open(url) == nil, "no library, no shelf")
+        #expect(opener.open(directory.appending(path: "not-here.pgn")).session == nil)
+        #expect(GameOpener(engine: nil, library: nil).open(url).session == nil, "no library, no shelf")
+    }
+
+    /// A game still on its way from iCloud is a named refusal, not a nil every caller had to
+    /// remember is not a failure (docs/adr/0012).
+    @Test("a game that has not arrived is a named refusal")
+    func aGameThatHasNotArrivedIsANamedRefusal() throws {
+        let entry = GameLibrary.Entry(
+            url: URL(filePath: "/games/on-its-way.pgn"),
+            pgn: nil,
+            modified: Date(timeIntervalSince1970: 1_786_000_000),
+            isDownloading: true
+        )
+        guard case .notArrived = GameSession.opened(entry) else {
+            Issue.record("a file still on the way is refused by name, not opened empty")
+            return
+        }
+        #expect(GameSession.opened(entry).session == nil)
     }
 }

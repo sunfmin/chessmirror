@@ -200,7 +200,7 @@ struct GameScreenScreenshots {
             pgn: PGN(game: game, tags: [PGN.Tag("White", "手动"), PGN.Tag("Black", "引擎")]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )
-        let session = try #require(GameSession.opened(entry))
+        let session = try #require(GameSession.opened(entry).session)
 
         let rendered = await ScreenImage.write("game-reopened") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
@@ -1043,7 +1043,7 @@ struct GameScreenScreenshots {
             pgn: PGN(game: game, tags: [PGN.Tag("White", "手动"), PGN.Tag("Black", "Stockfish 18")]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )
-        let session = try #require(GameSession.opened(entry, strength: .elo(1400)))
+        let session = try #require(GameSession.opened(entry, strength: .elo(1400)).session)
         #expect(session.strength == .elo(2000))
 
         let rendered = await ScreenImage.write("game-reopened-rung") {
@@ -1107,7 +1107,7 @@ struct GameScreenScreenshots {
         defer { try? FileManager.default.removeItem(at: folder) }
         let (library, entry) = try importedGame(in: folder)
         let engine = ScriptedEngine([], byPosition: try reviewer(of: try #require(entry.pgn).game))
-        let session = try #require(GameSession.opened(entry, engine: engine, library: library))
+        let session = try #require(GameSession.opened(entry, engine: engine, library: library).session)
         defer { session.suspend() }
 
         let rendered = await ScreenImage.write("game-import-unreviewed") {
@@ -1139,7 +1139,7 @@ struct GameScreenScreenshots {
         let engine = ScriptedEngine([], byPosition: byPosition, controlled: { position, budget in
             position.state.fen == held && budget == .depth(ImportReview.depth) ? gate.stream : nil
         })
-        let session = try #require(GameSession.opened(entry, engine: engine, library: library))
+        let session = try #require(GameSession.opened(entry, engine: engine, library: library).session)
         defer { session.suspend() }
         session.review()
         var deadline = ContinuousClock.now + .seconds(5)
@@ -1173,7 +1173,7 @@ struct GameScreenScreenshots {
         defer { try? FileManager.default.removeItem(at: folder) }
         let (library, entry) = try importedGame(in: folder)
         let engine = ScriptedEngine([], byPosition: try reviewer(of: try #require(entry.pgn).game))
-        let session = try #require(GameSession.opened(entry, engine: engine, library: library))
+        let session = try #require(GameSession.opened(entry, engine: engine, library: library).session)
         defer { session.suspend() }
         session.review()
         let deadline = ContinuousClock.now + .seconds(5)

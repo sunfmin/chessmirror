@@ -389,7 +389,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     try session.pgn.text.write(to: file, atomically: true, encoding: .utf8)
     let saved = try PGN(parsing: String(contentsOf: file, encoding: .utf8))
     #expect(saved.tag("Intercept") == nil)
-    let reopened = try #require(GameSession.opened(.init(url: file, pgn: saved, modified: Date())))
+    let reopened = try #require(GameSession.opened(.init(url: file, pgn: saved, modified: Date())).session)
     #expect(!reopened.isNoSlipsOn)
     reopened.setNoSlips(true)
     #expect(reopened.isNoSlipsOn)
@@ -413,7 +413,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
         1. e4 {[%judged 20 0.0 0.33 under 5.0]} e5 *
         """)
     let entry = GameLibrary.Entry(url: URL(filePath: "/games/old.pgn"), pgn: saved, modified: Date())
-    let opened = try #require(GameSession.opened(entry, lines: JudgementLines(record: 15, enqueue: 15)))
+    let opened = try #require(GameSession.opened(entry, lines: JudgementLines(record: 15, enqueue: 15)).session)
     #expect(opened.isNoSlipsOn, "the file's word on the switch")
     #expect(opened.lines.intercept == 15, "the player's word on the line")
     #expect(opened.game.plies[0].judgement?.intercept == 5, "what stood under five still says five")
@@ -424,7 +424,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     off.setTag("InterceptPreference", to: "37.0")
     let quiet = try #require(GameSession.opened(
         GameLibrary.Entry(url: URL(filePath: "/games/off.pgn"), pgn: off, modified: Date())
-    ))
+    ).session)
     #expect(!quiet.isNoSlipsOn)
     #expect(quiet.pgn.tag("InterceptPreference") == nil, "a dial that is gone has nothing to come back to")
     quiet.setNoSlips(true)
@@ -624,7 +624,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     let pgn = try PGN(parsing: session.pgn.text)
     let opened = try #require(GameSession.opened(GameLibrary.Entry(
         url: URL(filePath: "/games/no-slips.pgn"), pgn: pgn, modified: Date()
-    )))
+    )).session)
     #expect(pgn.intercept == line, "the file says where the moves in it were stopped")
     #expect(opened.isNoSlipsOn)
     #expect(opened.lines.intercept == JudgementLines.standard.record, "and the player says where the next is")
