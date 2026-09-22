@@ -1808,8 +1808,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             return
         }
         guard isHandTurn, !isWeighing else { return }
+        // A 练习 is one answer at one position, ruled under its own 线 (docs/adr/0047). The
+        // attempt owns the intake; the session only lands what comes back — the same `land` a
+        // move under 把关 ends at.
         if let practice, !practice.isSettled {
-            commit(move, by: .hand)
+            playPractice(move, into: practice, by: .hand)
             return
         }
         // 把关 measures a move before it is allowed to stand, wherever it is played. It used to
@@ -1824,6 +1827,47 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
         weigh(move)
     }
+
+    /// Hands the move to a 练习 and lands whatever the attempt rules. One mover into the same
+    /// `land` a hand move under 把关 uses; the attempt keeps its own 线 and its own verdict.
+    private func playPractice(_ move: Move, into practice: Drill, by mover: Mover) {
+        guard isAtLatest, game.state.fen == practice.game.state.fen else { return }
+        stopSearching()
+        // The hand walking its own move is not help; the engine walking it for them is.
+        if mover != .hand { practice.noteHelp() }
+        switch practice.take(move) {
+        case .refused:
+            return
+        case .unjudged(let played):
+            game = played
+            cursor = game.plies.count
+            save()
+            retune()
+        case .judging(let played):
+            game = played
+            cursor = game.plies.count
+            analysis = nil
+            emit(.landed(move, outcome: game.state.outcome))
+            beginWeighing(from: nil, task: Task { [weak self] in
+                await practice.settled()
+                guard let self, !Task.isCancelled else { return }
+                endWeighing()
+                // The drill rules its own attempt, under its own 线, and its refusal goes through
+                // the same door as 把关's: into the Game, at the position it happened at
+                // (docs/adr/0037). A drill that could not be judged is a move that stands unmeasured.
+                guard let ruling = practice.ruling, let engine else {
+                    game = practice.game
+                    cursor = game.plies.count
+                    save()
+                    retune()
+                    return
+                }
+                land(ruling, played: practice.game, engine: engine)
+            })
+        }
+    }
+
+
 
     /// Plays the move, asks what it cost, and either lets it stand or puts it back.
     ///
@@ -1917,39 +1961,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         }
     }
 
-    /// The one way a move lands: the write, the cursor, the noise, the save, the retune. The
-    /// three public paths differ only in who is moving, and having them each hand-roll this is
-    /// how one of them eventually forgets a line of it.
+    /// The one way a move lands without a weighing: the write, the cursor, the noise, the save,
+    /// the retune. A 练习 goes through `playPractice` and the same `land` a ruled move uses.
     private func commit(_ move: Move, by mover: Mover) {
         guard !isWeighing else { return }
         // A move played is the game moving on: a 复判 of a 试招 here yields to it, unwritten.
         onStrip.cancelRejudge()
         if let practice, !practice.isSettled {
-            guard isAtLatest, game.state.fen == practice.game.state.fen else { return }
-            stopSearching()
-            if mover != .hand { notePracticeHelp() }
-            practice.play(move)
-            guard practice.isJudging else { return }
-            game = practice.game
-            cursor = game.plies.count
-            analysis = nil
-            emit(.landed(move, outcome: game.state.outcome))
-            beginWeighing(from: nil, task: Task { [weak self] in
-                await practice.settled()
-                guard let self, !Task.isCancelled else { return }
-                endWeighing()
-                // The drill rules its own attempt, under its own 线, and its refusal goes through
-                // the same door as 把关's: into the Game, at the position it happened at
-                // (docs/adr/0037). A drill that could not be judged is a move that stands unmeasured.
-                guard let ruling = practice.ruling, let engine else {
-                    game = practice.game
-                    cursor = game.plies.count
-                    save()
-                    retune()
-                    return
-                }
-                land(ruling, played: practice.game, engine: engine)
-            })
+            playPractice(move, into: practice, by: mover)
             return
         }
         if mover == .asked, isAtLatest {
