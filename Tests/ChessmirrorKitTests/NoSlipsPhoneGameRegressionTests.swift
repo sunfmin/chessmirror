@@ -7,6 +7,7 @@ import Testing
 // No library is attached: the phone/iCloud PGN is never written.
 @MainActor
 @Test func phoneGameInterceptionDiagnosis() async throws {
+        try await Quietly.alone {
     let pgn = try PGN(parsing: """
     [Result "0-1"]
     1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. d3 Nf6 5. Bg5 h6 6. Bh4 d6 7. O-O a6 8. c3 Ba7
@@ -62,4 +63,5 @@ import Testing
             print("Phone regression: \(index / 2 + 1) stood at the session's own judgement, drop=\(judged.drop)")
         }
     }
-}
+
+        }}

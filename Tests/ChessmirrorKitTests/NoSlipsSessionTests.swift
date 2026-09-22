@@ -434,6 +434,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 /// A real post-move depth-20 judgement, followed by an opponent reply on its own clock.
 @MainActor
 @Test func realPreparedMoveWaitsForThePlayedPositionBeforeTheOpponentSearch() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -488,7 +489,8 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let filled = legacy.game
     await legacy.fillMissingNoSlipsJudgements()
     #expect(legacy.game == filled)
-}
+
+        }}
 
 @MainActor
 @Test func incompleteJudgementDoesNotLetAMoveStand() async throws {
@@ -639,6 +641,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 /// stands → PGN retains the refused move once. The disabled setting must allow the same blunder.
 @MainActor
 @Test func noSlipsRejectsMateAndPreservesTheRetry() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -674,10 +677,12 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     #expect(!disabled.isWeighing)
     #expect(disabled.game.uciMoves.last == "g2g4")
     #expect(disabled.refused == nil)
-}
+
+        }}
 
 @MainActor
 @Test func suspendingNoSlipsRestoresTheUnjudgedPosition() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1)
@@ -692,7 +697,8 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     #expect(!session.isWeighing)
     await Task.yield()
     #expect(session.game.uciMoves == game.uciMoves)
-}
+
+        }}
 
 /// Contract: a 试招 that no move absorbed is still there when the game is opened again.
 ///

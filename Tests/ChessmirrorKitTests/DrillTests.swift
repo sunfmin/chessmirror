@@ -95,6 +95,7 @@ private func engine(
 /// move in the same session → persisted PGN, without a second practice attempt.
 @MainActor
 @Test func practiceFlowsIntoTheSameGame() async throws {
+        try await Quietly.alone {
     let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
@@ -130,7 +131,8 @@ private func engine(
     let saved = try PGN(parsing: String(contentsOf: url, encoding: .utf8))
     #expect(saved.game.uciMoves == session.game.uciMoves)
     #expect(saved.game.plies.first?.judgement?.depth == 20)
-}
+
+        }}
 
 @MainActor
 @Test("a move that is not the engine's first choice passes, so long as it costs little")

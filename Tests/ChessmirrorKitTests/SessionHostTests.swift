@@ -64,6 +64,7 @@ struct SessionHostTests {
     }
 
     @Test func theEngineArrivingIsTakenAndSearched() async throws {
+        try await Quietly.alone {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let host = EngineHost(nets: { .init(big: Nets.big, small: Nets.small) })
         let session = GameSession.fresh(game)
@@ -76,7 +77,8 @@ struct SessionHostTests {
         #expect(host.isReady)
         await until { session.isSearching }
         #expect(session.isSearching, "the engine arrived, and the session took it without being told")
-    }
+    
+        }}
 
     /// The host's two facts are one seam (`onStatusChange`): a subscriber is a standing
     /// subscription, and dropping the token is what unsubscribes.

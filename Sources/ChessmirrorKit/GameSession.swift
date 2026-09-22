@@ -193,34 +193,42 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var isProbingTactics: Bool { finder.isProbing }
 
     /// 牌堆 — what the deck under the record shows right now (`Deck`, docs/adr/0025): which of
-    /// the two cards have a finding behind them, what each row says, and whether anything is
-    /// still being looked for. The screen draws this; it does not work it out.
+    /// the two cards have a finding behind them, what each row says, which one is open, and
+    /// whether anything is still being looked for. The screen draws this; it does not work it
+    /// out. This is the one reading of the open card — `openCard`, `draws` and `drawnCard`
+    /// read it back rather than reaching into `Findings` themselves, so the deck cannot say
+    /// one thing and the arrows another.
     public var deck: Deck {
         Deck.dealt(
             isDealt: dealsCards, mate: mateNews != nil, tactic: tactic != nil,
-            isSearching: isSearching || isProbingTactics
+            isSearching: isSearching || isProbingTactics,
+            open: findings.openCard(on: viewed.state.fen),
+            drawsLine: findings.drawsLine(on: viewed.state.fen)
         )
     }
 
     // ------------------------------------------------------------------ the open card
 
     /// Which card is open, whether its line is on the board, and the position it was opened on
-    /// (docs/adr/0025). One state machine behind one seam (`Findings`).
+    /// (docs/adr/0025). One state machine behind one seam (`Findings`); `deck` is what the
+    /// screen is handed of it.
     var findings = Findings()
 
-    /// Whether the deck has been dealt.
+    /// Whether the deck has been dealt onto the screen once for this game. Not `dealsCards`,
+    /// which is whether cards are allowed at all: coming back from a Review must not ask the
+    /// engine again for what is already on the table.
     public var isDeckDealt: Bool { findings.isDealt }
 
     /// The card that is open, if one is.
-    public var openCard: Deck.Card? { findings.openCard(on: viewed.state.fen) }
+    public var openCard: Deck.Card? { deck.rows.first(where: \.isOpen)?.card }
 
-    public func isOpen(_ card: Deck.Card) -> Bool { findings.isOpen(card, on: viewed.state.fen) }
+    public func isOpen(_ card: Deck.Card) -> Bool { deck.row(card)?.isOpen == true }
 
     /// Whether this card's line is the one on the board.
-    public func draws(_ card: Deck.Card) -> Bool { findings.draws(card, on: viewed.state.fen) }
+    public func draws(_ card: Deck.Card) -> Bool { deck.row(card)?.drawsLine == true }
 
     /// The card whose line is on the board, when one is.
-    public var drawnCard: Deck.Card? { openCard.flatMap { draws($0) ? $0 : nil } }
+    public var drawnCard: Deck.Card? { deck.rows.first { $0.isOpen && $0.drawsLine }?.card }
 
     /// What the board draws for the deck: the drawn card's line, or nothing.
     public var deckArrows: [MoveArrow] { arrows(for: drawnCard) }

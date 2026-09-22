@@ -7,6 +7,7 @@ import ChessmirrorKitTesting
 /// the following engine turn after a human reply. Real Stockfish must commit both moves.
 @MainActor
 @Test func automaticFindingsDoNotDisplaceEngineMoves() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(bigNetURL: Nets.big, smallNetURL: Nets.small,
                                   configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1))
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -30,7 +31,8 @@ import ChessmirrorKitTesting
     deadline = ContinuousClock.now + .seconds(5)
     while session.game.plies.count == 2, ContinuousClock.now < deadline { await Task.yield() }
     #expect(session.game.plies.count == 3)
-}
+
+        }}
 
 /// Contract: explicit import ownership survives disk, session save, and duplicate import;
 /// each side's real reviewed loss enters only that side's personal book.
@@ -73,6 +75,7 @@ import ChessmirrorKitTesting
 /// Contract: a queued import cannot stop foreground analysis; cancellation removes its queued
 /// work, and a subsequent background request completes after foreground analysis is cancelled.
 @Test func backgroundImportWaitsForForegroundAndCanBeCancelled() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)
@@ -107,11 +110,13 @@ import ChessmirrorKitTesting
     let result = try #require(await waiting.value)
     #expect(result.depth == 16)
     #expect(!result.isPartial)
-}
+
+        }}
 
 /// Contract: deliberately misleading foreign scores change search order, not coverage; the
 /// real local engine still finds the same mistake positions as the unannotated game.
 @Test func realImportedScoresCannotHideLocalMistakes() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)
@@ -135,10 +140,12 @@ import ChessmirrorKitTesting
     #expect(mistakes(prioritized) == mistakes(full))
     #expect(try #require(prioritized.game.drop(atPly: 3)) >= 20)
     #expect(prioritized.game.plies.allSatisfy { $0.evaluation != nil })
-}
+
+        }}
 
 /// A complete, nontrivial local pass used to report issue #35's measured elapsed time.
 @Test func measureRealImportReview() async throws {
+        try await Quietly.alone {
     let pgn = try PGN(parsing: """
         1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5
         6. Bc4 Nf6 7. Qb3 Qe7 8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5
@@ -156,7 +163,8 @@ import ChessmirrorKitTesting
     #expect(reviewed.game.reviewDepth == 16)
     #expect(reviewed.game.plies.allSatisfy { $0.evaluation != nil })
     print("IMPORT REVIEW: 33 plies, depth 16, 2 threads, 32 MiB hash: \(elapsed)")
-}
+
+        }}
 
 @MainActor
 @Test(arguments: [false, true])
