@@ -111,13 +111,15 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
 
-    session.beginAskedMove()
+    let hold = Task { await session.holdForMove() }
     await Task.yield()
 
     #expect(session.phase == .thinking(.asked))
     #expect(!session.isOccupied)
     #expect(session.isOnClock(.white))
     #expect(session.canPlayBestMove, "the button is still under the thumb holding it")
+    hold.cancel()
+    _ = await hold.value
 }
 
 /// The walk to a mistake is a phase of its own: the board is nobody's while the moves land,
@@ -200,7 +202,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
     session.jump(toPly: 0)
-    session.beginAskedMove()
+    let hold = Task { await session.holdForMove() }
     await Task.yield()
     try #require(session.phase == .thinking(.asked))
 
@@ -209,7 +211,8 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
 
     #expect(session.phase == .walking)
     #expect(session.thinking == nil, "the thought ended when the walk began")
-    session.endAskedMove()
+    let move = await hold.value
+    #expect(move == nil, "a walk taking the board is a hold let go of before it had an answer")
     await walk.value
     #expect(session.game.uciMoves == ["e2e4", "e7e5", "g1f3", "b8c6"], "and no move of it landed")
     #expect(session.cursor == 4)
@@ -226,7 +229,8 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
 
     let walk = Task { await session.walk(toPly: 4, step: .milliseconds(100)) }
     try? await Task.sleep(for: .milliseconds(150))
-    session.beginAskedMove()
+    let hold = Task { await session.holdForMove() }
+    _ = await hold.value
 
     #expect(session.phase == .walking, "the walk is what the session is doing, and stays so")
     #expect(session.thinking == nil)
@@ -242,13 +246,14 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
     let engine = ScriptedEngine([analysis(20, "e2e4", "e4")], isEndless: true)
     let session = GameSession.fresh(game, engine: engine)
     defer { session.suspend() }
-    session.beginAskedMove()
+    let hold = Task { await session.holdForMove() }
     await Task.yield()
     try #require(session.phase == .thinking(.asked))
 
     session.play(try #require(game.state.move(matching: "d2d4")))
 
     #expect(session.phase != .thinking(.asked), "a hand move is not played under a held button")
+    _ = await hold.value
 }
 
 /// Leaving mid-weighing lets go of everything the weighing owned at once: the 原局 is back, the

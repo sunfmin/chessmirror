@@ -73,7 +73,7 @@ struct AskedMove {
         let held = heldSearch(at: game.state.fen)
         let session = try session(ScriptedEngine(Self.searching, controlled: held.control))
 
-        session.beginAskedMove()
+        let hold = Task { await session.holdForMove() }
         await hop()
         held.continuation.yield(Self.searching[0])
         held.continuation.yield(Self.searching[1])
@@ -88,27 +88,29 @@ struct AskedMove {
         // Ten seconds or depth twenty ends it, thumb or no thumb, and the move it was asked for
         // is played: a press that has stopped waiting for anything is a press that has finished.
         held.continuation.finish()
-        await hop()
+        let move = await hold.value
         #expect(!session.isThinking)
         #expect(session.game.plies.count == 9)
-        #expect(session.game.plies.last?.san == "d4")
+        #expect(move?.uci == "d2d4")
     }
 
-    /// Letting go plays what it found, for whichever colour was on the clock.
+    /// Letting go plays what it found, for whichever colour was on the clock. Letting go of
+    /// this one call is cancelling it — there is no second call to forget to pair with it.
     @Test("letting go plays the move the search settled on")
     func lettingGoPlays() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
         let held = heldSearch(at: game.state.fen)
         let session = try session(ScriptedEngine(Self.searching, controlled: held.control))
 
-        session.beginAskedMove()
+        let hold = Task { await session.holdForMove() }
         await hop()
         held.continuation.yield(Self.searching[1])
         await hop()
-        session.endAskedMove()
+        hold.cancel()
+        let move = await hold.value
 
         #expect(session.game.plies.count == 9, "letting go plays at once")
-        #expect(session.game.plies.last?.san == "d4")
+        #expect(move?.uci == "d2d4")
         #expect(!session.isThinking)
     }
 
@@ -120,12 +122,15 @@ struct AskedMove {
         let engine = ScriptedEngine(Self.searching, controlled: held.control)
         let session = try session(engine)
 
-        session.beginAskedMove()
-        session.beginAskedMove()
+        async let first = session.holdForMove()
+        async let second = session.holdForMove()
         await hop()
 
         #expect(engine.searchCount == 1, "one thumb, one search")
         #expect(session.isThinking)
+        held.continuation.finish()
+        _ = await first
+        _ = await second
     }
 
     /// A tap is a press let go of before the engine has said a word, and it still moves.
@@ -138,11 +143,12 @@ struct AskedMove {
         await hop()
         #expect(session.analysis?.bestMove == "d2d4", "the arrow on the board")
 
-        session.beginAskedMove()
-        session.endAskedMove()
+        let hold = Task { await session.holdForMove() }
+        hold.cancel()
+        let move = await hold.value
 
+        #expect(move?.uci == "d2d4")
         #expect(session.game.plies.count == 9)
-        #expect(session.game.plies.last?.san == "d4")
     }
 
     /// The two searches are told apart, and this is the fact the screen leans on: it chooses
@@ -156,7 +162,7 @@ struct AskedMove {
         let held = heldSearch(at: game.state.fen)
         let session = try session(ScriptedEngine(Self.searching, controlled: held.control))
 
-        session.beginAskedMove()
+        let hold = Task { await session.holdForMove() }
         await hop()
         held.continuation.yield(Self.searching[1])
         await hop()
@@ -172,10 +178,11 @@ struct AskedMove {
         #expect(session.thinking == .asked, "stopping the engine's clock is not stopping a thumb")
         #expect(session.game.plies.count == 8, "and nothing is played behind the thumb's back")
 
-        session.endAskedMove()
+        hold.cancel()
+        let move = await hold.value
 
         #expect(session.game.plies.count == 9, "the press still ends where a press ends: a move")
-        #expect(session.game.plies.last?.san == "d4")
+        #expect(move?.uci == "d2d4")
     }
 
     /// The other kind. This is the one 马上走 is for, and cutting it short plays what it had.
@@ -205,11 +212,38 @@ struct AskedMove {
     func aHeldSearchKeepsTheStopwatch() async throws {
         let session = try session(ScriptedEngine(Self.searching, isEndless: true))
 
-        session.beginAskedMove()
+        let hold = Task { await session.holdForMove() }
         await hop()
 
         #expect(session.searchProgress?.depth == 26)
         #expect(session.analysis == nil, "no Score reaches the screen while practising")
+
+        hold.cancel()
+        _ = await hold.value
+    }
+
+    /// A hold is one call whose lifetime is the thumb's: the screen going away lets go of it,
+    /// which is what stops a press running on with nobody holding it. The move it had is played
+    /// on the way out — a press is a request for a move, and the screen leaving is not a reason
+    /// to forget it (`suspend` is what plays it, and `commit` starts no weighing of its own).
+    @Test("the screen going away lets go of a hold instead of leaving it running")
+    func theScreenGoingLetsGoOfTheHold() async throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: Self.italian))
+        let held = heldSearch(at: game.state.fen)
+        let session = try session(ScriptedEngine(Self.searching, controlled: held.control))
+
+        let hold = Task { await session.holdForMove() }
+        await hop()
+        held.continuation.yield(Self.searching[1])
+        await hop()
+        #expect(session.isThinking, "the thumb is still down")
+
+        session.disappear()
+        let move = await hold.value
+
+        #expect(!session.isThinking, "nothing is left thinking for a board nobody is looking at")
+        #expect(!session.isSearching)
+        #expect(move?.uci == "d2d4", "and what the thumb was asking for is what it gets")
     }
 
     /// A game read off a photograph goes on offering the editor for as long as it exists, saved

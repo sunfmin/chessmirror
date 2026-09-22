@@ -39,6 +39,10 @@ struct GameScreen: View {
     /// this to nil, which it already was. A fresh board and a game under way both open with every
     /// strip shut, and only a thumb opens one.
     @State private var unfolded: PieceColour?
+    /// The one hold on 让引擎走, if a thumb is on it. Its lifetime *is* the press: cancelled
+    /// here on release and on the way off the screen, which is what makes the hold one call
+    /// (`holdForMove`) that cannot run on with nobody holding it.
+    @State private var hold: Task<Move?, Never>?
     /// Whether a thumb is on 让引擎走 right now. The engine is thinking for exactly as long as it is —
     /// which is why this is read off the session rather than kept here as well. A screen holding
     /// its own copy of "a finger is down" is a screen that can be left holding it: a press that
@@ -182,14 +186,14 @@ struct GameScreen: View {
             // From here the session follows the engine host itself — the engine arriving, the app
             // leaving and coming back — and this screen wires nothing. The deck deals itself when
             // it appears, which is after this: a view cannot appear before the one containing it.
-            session.appear(on: engine, library: library)
-            // What happens on the board is the session's to say and this screen's to make a
-            // noise about. Read off `Sounds.current` when the event arrives rather than now, so
-            // whichever Feedback is installed at that moment is the one that plays.
-            session.onEvent = { Sounds.current.hear($0) }
+            // What happens on the board is the session's to say and this screen's to make a noise
+            // about. Read off `Sounds.current` when the event arrives rather than now, so whichever
+            // Feedback is installed at that moment is the one that plays. `disappear` takes both
+            // away, so neither can outlive this screen.
+            session.appear(on: engine, library: library, hearing: { Sounds.current.hear($0) })
         }
         .onDisappear {
-            session.onEvent = nil
+            hold?.cancel()
             session.disappear()
         }
         .confirmationDialog(
@@ -532,9 +536,9 @@ struct GameScreen: View {
                 fill: Double(session.searchProgress?.depth ?? 0) / SearchDepth.deepEnough,
                 onPress: {
                     selected = nil
-                    session.beginAskedMove()
+                    hold = Task { await session.holdForMove() }
                 },
-                onRelease: { session.endAskedMove() }
+                onRelease: { hold?.cancel() }
             )
             .accessibilityLabel(localized("game.letEngine"))
             .accessibilityHint(localized("game.letEngine.hint"))
@@ -1301,7 +1305,7 @@ struct GameScreen: View {
             selected = nil
         case .drop:
             // A tap that was meant as a move and was not one has already been said, as
-            // `Event.refused`, through the one noise path (`session.onEvent`).
+            // `Event.refused`, through the one noise path (`session.hear`).
             selected = nil
         }
     }

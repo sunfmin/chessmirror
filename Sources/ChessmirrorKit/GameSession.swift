@@ -126,9 +126,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case stepped
     }
 
-    /// Who is listening. One listener, set by the screen the session is on; a session nobody is
-    /// listening to is a silent one, which is what a test and a session off screen both want.
-    @ObservationIgnored public var onEvent: (@MainActor (Event) -> Void)?
+    /// Who is listening. One listener, and only `hear` sets it — `disappear` always takes it
+    /// away, so a screen cannot leave one behind on a session that outlives it.
+    @ObservationIgnored private var onEvent: (@MainActor (Event) -> Void)?
+
+    /// Listens to what happens on the board. The one listener at a time: a second `hear`
+    /// replaces the first. `disappear` takes it away.
+    public func hear(_ body: @escaping @MainActor (Event) -> Void) { onEvent = body }
 
     func emit(_ event: Event) { onEvent?(event) }
 
@@ -303,6 +307,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     var thinkingBest: String?
     /// Whether the button has already been let go of while its search was still starting up.
     var isAskReleased = false
+    /// The move `holdForMove` returns, and the hook that wakes it. Both live here so the hold
+    /// is one call whose lifetime is the thumb's: the press stores the hook, `finishAskedMove`
+    /// plays and wakes, and a press that was refused wakes without a move.
+    var heldMove: Move?
+    var holdEnded: (() -> Void)?
 
     var engine: (any Engine)?
     weak var library: GameLibrary?
@@ -624,7 +633,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     @ObservationIgnored private var host: EngineHost?
     @ObservationIgnored private var isOnScreen = false
-    @ObservationIgnored private var watch = 0
+    @ObservationIgnored private var hostWatch: EngineHost.Watch?
 
     /// The screen this session is on has appeared, with the app's one engine host and the
     /// library to save into. From here the session keeps its own searches in step with the host:
@@ -633,44 +642,49 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// disappearance, and nothing else about when the engine should be doing what — the four
     /// hooks a screen used to wire for that were an ordering contract kept in a comment.
     ///
+    /// `hearing` is who hears what happens on the board, and it is taken here rather than
+    /// assigned afterwards so a screen cannot appear and forget to say. `disappear` always
+    /// takes the listener away.
+    ///
     /// Retunes before it returns, so a card dealt right after this keeps the Stint it starts.
-    public func appear(on host: EngineHost, library: GameLibrary?) {
+    public func appear(
+        on host: EngineHost, library: GameLibrary?,
+        hearing hear: @escaping @MainActor (Event) -> Void = { _ in }
+    ) {
         self.host = host
         isOnScreen = true
+        self.hear(hear)
         attach(engine: host.service, library: library)
         retune()
         followHost()
     }
 
-    /// The screen has gone: nothing searches for a board nobody is looking at.
+    /// The screen has gone: nothing searches for a board nobody is looking at, nobody hears a
+    /// session nobody is looking at, and a thumb still down on 让引擎走 is let go of (`suspend`).
     public func disappear() {
         isOnScreen = false
-        watch += 1
+        hostWatch?.stop()
+        hostWatch = nil
+        onEvent = nil
         suspend()
     }
 
-    /// One registration per change: Observation fires once and forgets, so each firing hops to
-    /// the main actor, reads what the host says now, and registers again. `watch` names the
-    /// registration, so a screen that came and went does not leave a stale chain following.
+    /// Subscribes to the host's two facts through the host's own seam (`EngineHost.Watch`), so
+    /// "when does the engine's arrival reach this session" has one home. The token is dropped
+    /// on `disappear`, which is what stops a screen that has gone from being followed.
     private func followHost() {
+        hostWatch?.stop()
+        hostWatch = nil
         guard let host, isOnScreen else { return }
-        watch += 1
-        let registration = watch
-        withObservationTracking {
-            _ = host.isReady
-            _ = host.isActive
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, registration == watch, isOnScreen, let host = self.host else { return }
-                // The engine may have finished starting while the screen was up: take it, and
-                // the search this screen wants starts. The app leaving is a suspend, and coming
-                // back a fresh retune rather than a search left running underneath — the engine
-                // will not start one while the app is away, and a bounded one it held would
-                // otherwise slip past that gate (`EngineHost.isActive`).
-                if host.isReady, engine == nil { attach(engine: host.service, library: library) }
-                if host.isActive { retune() } else { suspend() }
-                followHost()
-            }
+        hostWatch = host.onStatusChange { [weak self] in
+            guard let self, self.isOnScreen, let host = self.host else { return }
+            // The engine may have finished starting while the screen was up: take it, and
+            // the search this screen wants starts. The app leaving is a suspend, and coming
+            // back a fresh retune rather than a search left running underneath — the engine
+            // will not start one while the app is away, and a bounded one it held would
+            // otherwise slip past that gate (`EngineHost.isActive`).
+            if host.isReady, engine == nil { attach(engine: host.service, library: library) }
+            if host.isActive { retune() } else { suspend() }
         }
     }
 
@@ -1005,9 +1019,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case walking
         case exercising(Punishment)
         case thinking(Thinking)
+
+        /// Whether this is a thumb holding 让引擎走 down. The hold ends the moment this stops
+        /// being true, which is the fact `activity`'s watcher reads.
+        var isAskedHold: Bool {
+            if case .thinking(.asked) = self { true } else { false }
+        }
     }
 
-    var activity: Activity = .reading
+    /// What the session is doing. Leaving `.thinking(.asked)` is letting go of the hold, whoever
+    /// did it — a release, a walk taking the board, a hand move being weighed, the screen going
+    /// away — so `holdForMove` is woken here rather than in each of those places. One watcher
+    /// for one fact: a hold that can only be ended by its own release is a hold that outlives
+    /// everything else on the screen.
+    var activity: Activity = .reading {
+        didSet {
+            if oldValue.isAskedHold, !activity.isAskedHold { wakeHold() }
+        }
+    }
 
     /// Starts the engine walking a move. Refused while the board is spoken for or the record is
     /// on its way somewhere: those are not things a search may take the board from.
@@ -1025,6 +1054,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// an exercise on the board is not the engine thinking, and is not ended by this.
     func stopThinking() {
         if case .thinking = activity { activity = .reading }
+    }
+
+    /// Lets go of whoever is inside `holdForMove`, with whatever move it had. Only that call
+    /// stores a hook, so this is a no-op for a session nobody is holding.
+    func wakeHold() {
+        let ended = holdEnded
+        holdEnded = nil
+        ended?()
     }
 
     /// A move is on the board and being weighed. It ends whatever the engine was walking, which

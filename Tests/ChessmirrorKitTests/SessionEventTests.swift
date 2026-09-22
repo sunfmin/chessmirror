@@ -19,7 +19,7 @@ private func analysis(_ cp: Int, _ uci: String, _ san: String) -> Analysis {
 private func listening(to session: GameSession) -> () -> [GameSession.Event] {
     final class Heard { var events: [GameSession.Event] = [] }
     let heard = Heard()
-    session.onEvent = { heard.events.append($0) }
+    session.hear { heard.events.append($0) }
     return { heard.events }
 }
 
@@ -139,7 +139,7 @@ private func listening(to session: GameSession) -> () -> [GameSession.Event] {
     session.undo()
 
     #expect(heard() == [.stepped, .stepped, .stepped, .stepped])
-    session.onEvent = nil
+    session.disappear()
     session.step(by: -1)
     #expect(heard().count == 4)
 }

@@ -55,7 +55,7 @@ import Testing
         let speaker = Recording()
         let (e4, game) = try move("e2e4")
         let session = GameSession.fresh(game)
-        session.onEvent = { speaker.hear($0) }
+        session.hear { speaker.hear($0) }
 
         session.play(e4)
         session.step(by: -1)
