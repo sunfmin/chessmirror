@@ -730,10 +730,17 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// old rung starts again under the new one (docs/adr/0038). Nothing else restarts — the bound
     /// is on the opponent's own move and on nothing else, so 细判 and the cards have nothing to
     /// redo.
-    public func setStrength(_ strength: Strength) {
+    /// Sets the 棋力 this game is played at, **and the one the next game starts at** (docs/adr/0038).
+    ///
+    /// Two facts, one call. The screen used to write `settings.strength` beside this, so
+    /// `setStrength` on its own did not do what its name says and a caller that forgot the
+    /// second line changed this game and not the next. The settings are handed in rather than
+    /// reached for as a singleton, because the kit has none — and a test has an in-memory one.
+    public func setStrength(_ strength: Strength, in settings: PlayerSettings? = nil) {
         guard !isOccupied else { return }
         guard self.strength != strength else { return }
         self.strength = strength
+        settings?.strength = strength
         if thinking == .own { retune() }
     }
 
@@ -1108,6 +1115,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// and it is what a move played next interrupts. The one thing a screen or a test holds on
     /// to instead of polling the session's state: a verdict arrives when the engine has answered
     /// and not a moment sooner, and the state after this is the state the screen would draw.
+    ///
+    /// **Waits for what is in flight and starts nothing.** Asking for the badge here as well
+    /// (`measureLatestMove`) was the obvious way to make this the one await, and it is a trap:
+    /// the badge is a `weigh`, so a session whose engine is scripted to hold one search open
+    /// would have that search stolen by the wait — the budget the test scripted, the positions
+    /// it counted, the 应招 it expected to be asked for. `retune` schedules the badge when a
+    /// move lands; a caller that wants one without a retune asks (`measureLatestMoveChange`).
     public func settled() async {
         if case .weighing(_, let task) = activity { await task.value }
         await measuring?.value

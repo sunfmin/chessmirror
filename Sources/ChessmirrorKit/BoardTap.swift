@@ -24,6 +24,12 @@ extension GameSession {
 
     /// Resolves a tap on `square` with `held` already picked up. Nothing is played here: a
     /// promotion needs a choice first, and the screen that holds the choice plays the move.
+    ///
+    /// A tap that was meant as a move and was not one emits `.refused` like every other
+    /// refusal. It used to reach the screen as `.drop(refused: true)` and the screen played the
+    /// noise itself, while `Event.refused` was the other path to the same sound — two decisions
+    /// about one noise (docs/adr/0031: the session says *what happened*, nothing about what it
+    /// sounds like).
     public func tap(_ square: Square, holding held: Square?) -> Tap {
         guard isHandTurn else { return .ignored }
         if held != nil {
@@ -36,7 +42,11 @@ extension GameSession {
         if let piece = BoardRenderer.placement(position.fen)?[square], piece.colour == position.sideToMove {
             return .pick(square)
         }
-        return .drop(refused: held != nil)
+        if held != nil {
+            emit(.refused)
+            return .drop(refused: true)
+        }
+        return .drop(refused: false)
     }
 
     /// The moves the held piece has, which is where the board rings its destinations. None when

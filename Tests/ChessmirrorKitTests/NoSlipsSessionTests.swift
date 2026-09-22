@@ -761,6 +761,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     await session.waitForPreparedInterception()
     try #require(session.game.uciMoves == ["e2e4", "e7e5"], "the engine answered")
     await session.settled()
+    await session.measureLatestMoveChange()
 
     let judgement = try #require(session.game.plies[1].judgement)
     let change = try #require(session.moveChange)

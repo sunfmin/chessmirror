@@ -41,7 +41,6 @@ import Testing
         // A move that stands afterwards carries it as its 试招.
         session.play(try #require(start.state.move(matching: "e2e4")))
         await session.settled()
-        await session.measureLatestMoveChange()
         #expect(session.game.plies.count == 1, "e4 stood")
         #expect(
             session.game.plies[0].tried.map(\.san) == ["f3"],

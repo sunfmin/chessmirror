@@ -579,8 +579,7 @@ struct GameScreen: View {
         Menu {
             ForEach(Strength.ladder, id: \.self) { rung in
                 Button {
-                    session.setStrength(rung)
-                    PlayerSettings.shared.strength = rung
+                    session.setStrength(rung, in: PlayerSettings.shared)
                 } label: {
                     if rung == session.strength {
                         Label(rung.label, systemImage: "checkmark")
@@ -1303,8 +1302,9 @@ struct GameScreen: View {
         case .promote(let moves):
             promotion = PromotionRequest(moves: moves)
             selected = nil
-        case .drop(let refused):
-            if refused { Sounds.current.play(.refused) }
+        case .drop:
+            // A tap that was meant as a move and was not one has already been said, as
+            // `Event.refused`, through the one noise path (`session.onEvent`).
             selected = nil
         }
     }
