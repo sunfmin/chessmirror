@@ -199,7 +199,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// that means for it: the finder drops its shot, the strip puts its 应招 away, the 复判
     /// yields unwritten.
     private func letGoOfThePosition() {
-        opened = nil
+        findings.forget()
         finder.forget()
         onStrip.close()
     }
@@ -234,34 +234,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     // ------------------------------------------------------------------ the open card
 
     /// Which card is open, whether its line is on the board, and the position it was opened on
-    /// (docs/adr/0025). It was a class of the screen's for a year, and the screen shut it by
-    /// watching the board's FEN — so whether a card opened on one position was still open on the
-    /// next was a fact nobody could ask without a simulator.
-    private struct Opened: Equatable {
-        let card: Deck.Card
-        let position: String
-        var drawsLine: Bool
-    }
+    /// (docs/adr/0025). One state machine behind one seam (`Findings`).
+    private var findings = Findings()
 
-    private var opened: Opened?
+    /// Whether the deck has been dealt.
+    public var isDeckDealt: Bool { findings.isDealt }
 
-    /// Whether the deck has been dealt: once per game on screen, not on every appearance, or
-    /// coming back from a Review would ask the engine again for what is already on the table.
-    public private(set) var isDeckDealt = false
+    /// The card that is open, if one is.
+    public var openCard: Deck.Card? { findings.openCard(on: viewed.state.fen) }
 
-    /// The card that is open, if one is. Nothing is open until a finding is pressed: a finding
-    /// is an invitation, and opening one on somebody's behalf is answering a question they did
-    /// not ask. Nothing opened on one position is open on another — the eye moving is the card
-    /// being put away, and so is the board changing under a cursor that did not move.
-    public var openCard: Deck.Card? {
-        guard let opened, opened.position == viewed.state.fen else { return nil }
-        return opened.card
-    }
-
-    public func isOpen(_ card: Deck.Card) -> Bool { openCard == card }
+    public func isOpen(_ card: Deck.Card) -> Bool { findings.isOpen(card, on: viewed.state.fen) }
 
     /// Whether this card's line is the one on the board.
-    public func draws(_ card: Deck.Card) -> Bool { isOpen(card) && opened?.drawsLine == true }
+    public func draws(_ card: Deck.Card) -> Bool { findings.draws(card, on: viewed.state.fen) }
 
     /// The card whose line is on the board, when one is.
     public var drawnCard: Deck.Card? { openCard.flatMap { draws($0) ? $0 : nil } }
@@ -269,31 +254,26 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// What the board draws for the deck: the drawn card's line, or nothing.
     public var deckArrows: [MoveArrow] { arrows(for: drawnCard) }
 
-    /// Pressing a finding. The one pressed opens with its line drawn — the line is most of what a
-    /// finding is for — and whatever was open shuts; pressing the open one shuts it. A row with
-    /// nothing behind it does not press. Opening one in a 练习 is help, and is counted as help.
+    /// Pressing a finding. A row with nothing behind it does not press. Opening one in a 练习
+    /// is help, and is counted as help.
     public func press(_ card: Deck.Card) {
         guard deck.has(card) else { return }
-        if isOpen(card) {
-            opened = nil
-            return
+        if findings.press(card, on: viewed.state.fen) {
+            notePracticeHelp()
         }
-        opened = Opened(card: card, position: viewed.state.fen, drawsLine: true)
-        notePracticeHelp()
     }
 
     /// The arrow on the open card: its line on the board, or off it.
     public func toggleLine() {
-        guard openCard != nil else { return }
-        opened?.drawsLine.toggle()
+        findings.toggleLine()
     }
 
     /// The deck arriving on screen. Both findings are questions for the finder, and arriving is
     /// what asks it (docs/adr/0023, 0025). Nothing is opened: a mate it turns up is said on its
     /// own row — 「发现杀招」 — and opened by whoever presses it. Once: the second call is nothing.
     public func dealDeck() {
-        guard !isDeckDealt else { return }
-        isDeckDealt = true
+        guard !findings.isDealt else { return }
+        findings.isDealt = true
         arriveAtFinder()
         adviseForCard()
     }
