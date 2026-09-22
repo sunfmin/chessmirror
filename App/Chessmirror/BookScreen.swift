@@ -238,7 +238,7 @@ struct BookEntryScreen: View {
     /// position with no idea how it was reached.
     private func open(_ encounter: Encounter) {
         let opener = GameOpener(engine: engine.service, library: library, settings: .shared)
-        guard let session = opener.open(encounter.game, walkingTo: encounter.arrivalPly) else { return }
+        guard let session = opener.open(encounter.game, walkingTo: encounter.arrivalPly).session else { return }
         path.append(.game(session))
     }
 }

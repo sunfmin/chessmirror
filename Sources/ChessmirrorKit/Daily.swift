@@ -123,7 +123,7 @@ public struct Daily: Hashable, Sendable {
             history[key]?.sort { $0.at < $1.at }
         }
 
-        let eligible = book.mistakes.filter { lines.enqueues($0.worstCost) }
+        let eligible = book.mistakes.filter { Enrolment(mistake: $0, lines: lines).isOwed }
         let all = eligible.map { mistake -> Card in
             let gone = history[mistake.position] ?? []
             var memory: FSRS.Memory?

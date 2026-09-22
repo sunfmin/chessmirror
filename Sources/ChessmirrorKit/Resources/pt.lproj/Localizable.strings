@@ -506,3 +506,5 @@
 "search.plies" = "nível %d";
 "search.limit.either" = "%1$d s / nível %2$d";
 "search.explained" = "Quanto tempo e a que profundidade o motor olha cada posição. Julgar um lance, o lance do próprio motor e uma dica são esta mesma busca, para que um custo signifique o mesmo onde quer que seja medido. Um novo julgamento vai 8 níveis mais fundo e admite 6 vezes o tempo.";
+"import.unreadableArchives.title" = "Não foi possível ler a lista de partidas de %2$@";
+"import.unreadableArchives.message" = "%1$@ respondeu, mas não com uma lista de partidas de %2$@. Tente de novo em instantes.";

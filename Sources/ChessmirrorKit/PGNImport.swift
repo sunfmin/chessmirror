@@ -112,6 +112,10 @@ public enum PGNImport {
         /// A 国象联盟 link that does not carry a game after all — cut short by whatever it was
         /// pasted through, or not a share link to begin with.
         case unreadableShare
+        /// The site handed back something we cannot read as a list of its games — chess.com's
+        /// archives index, for one. Not "what came down is not a PGN", which is what this used
+        /// to be reported as and what the player had no way to act on.
+        case unreadableArchives(Site, String)
         /// The link downloaded, but what came down is not a PGN.
         case notPGN
         /// It is a PGN, but not one game in it parses.
@@ -150,6 +154,11 @@ public enum PGNImport {
                 (
                     localized("import.unreadableShare.title"),
                     localized("import.unreadableShare.message")
+                )
+            case .unreadableArchives(let site, let name):
+                (
+                    localized("import.unreadableArchives.title", site.label, name),
+                    localized("import.unreadableArchives.message", site.label, name)
                 )
             case .notPGN:
                 (localized("import.notPGN.title"), localized("import.notPGN.message"))
@@ -666,94 +675,50 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     /// at when the same URL plus `.pgn` is the right one. The last failure is the
     /// one shown, because it is the one that would have succeeded.
     public func run(_ input: String) async {
-        // A 国象联盟 share link carries its game with it: nothing to download, and the reading
-        // is the same reading a downloaded PGN gets.
-        if let shared = PGNImport.chesseaseGame(in: input) {
-            switch shared {
-            case .success(let pgn): await read { pgn }
-            case .failure(let failure): phase = .failed(failure)
-            }
-            return
-        }
-        guard let candidates = PGNImport.candidateURLs(for: input) else {
-            phase = .failed(.notALink)
-            return
-        }
-        await run(candidates)
+        await through(
+            ImportDoors.Door.recognising(input), input: input, count: PGNImport.recentGames
+        )
     }
 
     /// The other door: somebody's recent games, newest first.
     ///
     /// The same pipeline — one download, split, one file per game — because a multi-game PGN
-    /// is a multi-game PGN whether lichess calls it a study or an account's history. chess.com
-    /// keeps that history a month to a file, so its door is a short walk back through the
-    /// newest months until there are enough games or the months run out
-    /// (`PGNImport.chessComMonthsBack`).
+    /// is a multi-game PGN whether lichess calls it a study or an account's history.
     public func recent(
         of user: String, count: Int = PGNImport.recentGames, on site: PGNImport.Site = .lichess
     ) async {
-        let typed = user.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch site {
-        case .lichess:
-            guard let url = PGNImport.recentGamesURL(user: typed, count: count) else {
-                phase = .failed(.notAPlayer(.lichess))
-                return
+        let door: ImportDoors.Door =
+            switch site {
+            case .lichess: .lichess
+            case .chessCom: .chessCom
+            case .chessease: .chessease
             }
-            await run([url], asked: typed)
-        case .chessCom:
-            guard let archives = PGNImport.chessComArchivesURL(user: typed) else {
-                phase = .failed(.notAPlayer(.chessCom))
-                return
-            }
+        await through(door, input: user, count: count)
+    }
+
+    /// The one way in, whatever the door: ask it for its plan, then read the plan's text.
+    ///
+    /// This used to be three call shapes — `run(_ candidates:)`, `recent(of:count:on:)`, and a
+    /// chessease branch in `run(_ input:)` — each of which knew a different slice of a site's
+    /// URL grammar. A door knows its own (`FetchPlan`); the session only fetches.
+    func through(_ door: ImportDoors.Door, input: String, count: Int) async {
+        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch door.fetchPlan(for: typed, count: count) {
+        case .failure(let failure):
+            phase = .failed(failure)
+        case .success(let plan):
             let fetching = fetcher
-            let many = min(max(count, 1), PGNImport.maxRecentGames)
-            await read(asked: typed) {
-                let list = try await fetching.fetch(archives)
-                guard let months = PGNImport.chessComArchives(in: list) else {
-                    throw PGNImport.Error.notPGN
-                }
-                guard !months.isEmpty else { throw PGNImport.Error.noGames(.chessCom, typed) }
-                // Newest month first, and each month's games newest first: chess.com lists a
-                // month oldest-game-first, and "the last ten" are the ten at its end.
-                var text = ""
-                var gathered = 0
-                for month in months.prefix(PGNImport.chessComMonthsBack) {
-                    let pgn = try await fetching.fetch(PGNImport.chessComMonthURL(archive: month))
-                    let blocks = PGN.split(pgn).reversed()
-                    text += blocks.joined(separator: "\n\n") + "\n\n"
-                    gathered += blocks.count
-                    if gathered >= many { break }
-                }
-                guard gathered > 0 else { throw PGNImport.Error.noGames(.chessCom, typed) }
-                return PGN.split(text).prefix(many).joined(separator: "\n\n")
+            let asked = door.asksForPlayer ? typed : nil
+            await read(asked: asked) {
+                try await plan.text(fetching: fetching, asked: asked)
             }
-        case .chessease:
-            phase = .failed(.notAPlayer(.chessease))
         }
     }
 
     private func run(_ candidates: [URL], asked: String? = nil) async {
         let fetching = fetcher
         await read(asked: asked) {
-            var lastError: PGNImport.Error = .notPGN
-            for candidate in candidates {
-                let text: String
-                do {
-                    text = try await fetching.fetch(candidate)
-                } catch let failure as PGNImport.Error {
-                    lastError = failure
-                    continue
-                } catch {
-                    lastError = .network(error.localizedDescription)
-                    continue
-                }
-                guard PGNImport.chapters(in: text).0.first != nil else {
-                    lastError = PGNImport.chapters(in: text).1 > 0 ? .noReadableGames : .notPGN
-                    continue
-                }
-                return text
-            }
-            throw lastError
+            try await FetchPlan.links(candidates).text(fetching: fetching, asked: asked)
         }
     }
 

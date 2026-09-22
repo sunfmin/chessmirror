@@ -46,6 +46,7 @@ import ChessmirrorKitTesting
 
 /// The real C++ search receives both limits together and stops for either one.
 @Test func nativeSearchStopsAtWhicheverLimitArrivesFirst() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(bigNetURL: Nets.big, smallNetURL: Nets.small,
                                    configuration: .init(threads: 2, hashMegabytes: 32))
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -59,7 +60,8 @@ import ChessmirrorKitTesting
         if budget == .timeOrDepth(.seconds(10), 4) { #expect(result.depth == 4) }
         else { #expect(result.depth < 40) }
     }
-}
+
+        }}
 
 /// Waits, briefly, for something the store does on its own actor.
 private func until(_ condition: @escaping () -> Bool) async {
@@ -79,6 +81,7 @@ private func read(_ store: PositionSearches, _ game: Game, using engine: Scripte
 /// when it ends; the deeper search then runs for the ones who asked, and when it finishes it
 /// replaces the everyday entry for everybody, on disk too. Nothing is searched twice.
 @Test func theStoreKeepsTheDeepestResultItKnows() async throws {
+        try await Quietly.alone {
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let line = [Line(score: .centipawns(30), uciMoves: ["e2e4"], san: ["e4"])]
     let shallow = Analysis(depth: 20, lines: line)
@@ -116,7 +119,8 @@ private func read(_ store: PositionSearches, _ game: Game, using engine: Scripte
     let reopened = PositionSearches(storage: directory.appending(path: "positions.json"))
     #expect(await read(reopened, game, using: engine) == deep, "on disk as well")
     #expect(engine.searchCount == 2)
-}
+
+        }}
 
 /// A deeper search that runs out of its minute short of depth 28 still replaces a shallower
 /// entry, and the position is still open to being asked deeper again — the engine's hash table

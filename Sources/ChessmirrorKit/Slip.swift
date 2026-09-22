@@ -54,10 +54,18 @@ public struct Slip: Hashable, Sendable, Identifiable {
     /// and the board it takes you to is the one to try again from.
     public var positionPly: Int { ply - 1 }
 
-    /// Whether this one is worth the player's practice time, by the 入列线 — which is what the
-    /// 日课 would hand them. Everything here is at or over the 记录线, so this is the split
-    /// between "written down" and "owed".
-    public func isWorthDrilling(_ lines: JudgementLines) -> Bool { lines.enqueues(drop) }
+    /// Whether this one is worth the player's practice time, by the 入列线 (`Enrolment`).
+    ///
+    /// **This 错招's own cost**, not the 错题's worth: the two answer differently for one
+    /// position and both are right. Everything here is at or over the 记录线, so this is the
+    /// split between "written down" and "owed".
+    public func enrolment(_ lines: JudgementLines) -> Enrolment {
+        Enrolment(slip: self, lines: lines)
+    }
+
+    public func isWorthDrilling(_ lines: JudgementLines) -> Bool {
+        enrolment(lines).isOwed
+    }
 }
 
 extension Game {
@@ -75,10 +83,11 @@ extension Game {
     /// compared and so must come from one uniform pass (docs/adr/0016).
     public func slips(by mine: Set<PieceColour>, lines: JudgementLines) -> [Slip] {
         stops(by: mine).compactMap { stop in
-            // Everything wrong that happened here, whether it stood or not — the 试招 in the order
-            // they were refused, and the move that finally stood if it was too expensive too, by
-            // the cost this game holds for it: the `[%judged]` 把关 wrote, else the Review's.
-            let wrong = stop.wrong(recordedBy: lines, stood: cost(atPly: stop.ply))
+            // Everything wrong that happened here, whether it stood or not — the 试招 in the
+            // order they were refused, and the move that finally stood if it was too expensive
+            // too, by this game's own gate (`Gate.record`): the `[%judged]` 把关 wrote, else the
+            // Review's. The book asks a different question of the same walk (`Gate.book`).
+            let wrong = Gate.record.wrong(at: stop, in: self, lines: lines)
             guard !wrong.isEmpty else { return nil }
             return Slip(
                 ply: stop.ply, position: stop.position,

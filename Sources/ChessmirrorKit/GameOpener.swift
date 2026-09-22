@@ -38,18 +38,18 @@ import Foundation
         return .playing(game, engine: engine, library: library, strength: strength, lines: lines)
     }
 
-    /// A game off the shelf. Nil for one that has not arrived on this device yet.
-    public func open(_ entry: GameLibrary.Entry) -> GameSession? {
-        .opened(entry, engine: engine, library: library, strength: strength, lines: lines)
+    public func open(_ entry: GameLibrary.Entry) -> GameSession.Opening {
+        GameSession.opened(entry, engine: engine, library: library, strength: strength, lines: lines)
     }
 
     /// The game kept at this file, walked to a ply when one is given — a 错题's encounter is
-    /// opened *at* the move, and the moves land one after another on the way there. Nil when the
-    /// library has no such game, or it has not arrived.
-    public func open(_ url: URL, walkingTo ply: Int? = nil) -> GameSession? {
-        guard let entry = library?.entry(at: url), let session = open(entry) else { return nil }
+    /// opened *at* the move, and the moves land one after another on the way there. `.notArrived`
+    /// when the library has no such game, or it has not arrived.
+    public func open(_ url: URL, walkingTo ply: Int? = nil) -> GameSession.Opening {
+        guard let entry = library?.entry(at: url) else { return .notArrived }
+        guard case .ready(let session) = open(entry) else { return .notArrived }
         if let ply { session.walkOnArrival(toPly: ply) }
-        return session
+        return .ready(session)
     }
 
     /// A game read off a photograph.

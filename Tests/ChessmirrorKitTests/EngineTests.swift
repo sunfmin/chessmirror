@@ -45,25 +45,30 @@ struct EngineTests {
 
     @Test("the engine starts once its weights are where it was told")
     func engineStarts() async throws {
+        try await Quietly.alone {
         let service = try engine()
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         // Construction sets the options; a first search proves the whole path — create,
         // options, search, report.
         #expect(await service.evaluate(game, budget: .depth(2)) != nil)
-    }
+    
+        }}
 
     @Test("a missing net is refused rather than taking the process with it")
-    func aMissingNetIsRefused() {
+    func aMissingNetIsRefused() async {
+        try await Quietly.alone {
         // Stockfish answers a failed net load with exit(EXIT_FAILURE), which in an app means
         // the process simply vanishes. The bridge checks the files first; this is that check.
         let absent = Nets.directory.appendingPathComponent("nn-000000000000.nnue")
         #expect(throws: EngineService.StartupFailure.networkMissing) {
             _ = try EngineService(bigNetURL: absent, smallNetURL: absent)
         }
-    }
+    
+        }}
 
     @Test("a file too small to be a net is refused too")
-    func aTruncatedNetIsRefused() throws {
+    func aTruncatedNetIsRefused() async throws {
+        try await Quietly.alone {
         let stub = FileManager.default.temporaryDirectory
             .appendingPathComponent("chessmirror-truncated.nnue")
         try Data(repeating: 0, count: 1024).write(to: stub)
@@ -72,10 +77,12 @@ struct EngineTests {
         #expect(throws: EngineService.StartupFailure.networkTooSmall) {
             _ = try EngineService(bigNetURL: stub, smallNetURL: stub)
         }
-    }
+    
+        }}
 
     @Test("an analysis deepens, and every line it reports is playable")
     func analysisDeepens() async throws {
+        try await Quietly.alone {
         let service = try engine()
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
 
@@ -102,10 +109,12 @@ struct EngineTests {
         } else {
             Issue.record("the start position should not be a mate score")
         }
-    }
+    
+        }}
 
     @Test("a mate is found and named as a mate")
     func mateIsFound() async throws {
+        try await Quietly.alone {
         let service = try engine()
         // Back-rank mate in one: Ra8#.
         let game = try #require(Game(startFEN: "6k1/5ppp/8/8/8/8/8/R3K2R w - - 0 1"))
@@ -115,10 +124,12 @@ struct EngineTests {
         let best = try #require(last?.best)
         #expect(best.score == .mate(in: 1))
         #expect(best.san.first == "Ra8#")
-    }
+    
+        }}
 
     @Test("scores are White-relative whichever side is to move")
     func scoresAreWhiteRelative() async throws {
+        try await Quietly.alone {
         let service = try engine()
         // White is a queen up. The sign must not depend on whose turn it is.
         let whiteToMove = try #require(Game(startFEN: "4k3/8/8/8/8/8/8/3QK3 w - - 0 1"))
@@ -138,10 +149,12 @@ struct EngineTests {
                 #expect(moves > 0, "\(label) scored #\(moves); White is the one mating")
             }
         }
-    }
+    
+        }}
 
     @Test("a time budget produces a legal move and honours the clock")
     func aTimeBudgetHonoursTheClock() async throws {
+        try await Quietly.alone {
         let service = try engine()
         let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
 
@@ -155,10 +168,12 @@ struct EngineTests {
         let uci = try #require(last?.bestMove)
         #expect(game.state.move(matching: uci) != nil)
         #expect(elapsed < .seconds(4), "took \(elapsed) for a 400 ms budget")
-    }
+    
+        }}
 
     @Test("an unbounded analysis stops when it is asked to")
     func unboundedAnalysisStops() async throws {
+        try await Quietly.alone {
         let service = try engine()
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
 
@@ -175,10 +190,12 @@ struct EngineTests {
         var after = 0
         for await _ in service.analyse(game, budget: .depth(4)) { after += 1 }
         #expect(after > 0)
-    }
+    
+        }}
 
     @Test("a review scores every ply at one uniform depth")
     func reviewScoresEveryPly() async throws {
+        try await Quietly.alone {
         let service = try engine()
         let game = try #require(
             Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"])
@@ -207,14 +224,17 @@ struct EngineTests {
         )
         // SAN, not UCI: what goes in the file is what a person can read.
         #expect(reviewed.allSatisfy { $0.line.allSatisfy { !$0.isEmpty && $0.first!.isLetter || $0.first! == "O" } })
-    }
+    
+        }}
 
     @Test("a review of a game with no moves is empty rather than nil-padded")
     func reviewOfAnEmptyGameIsEmpty() async throws {
+        try await Quietly.alone {
         let service = try engine()
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         #expect(await service.review(game, depth: 4).isEmpty)
-    }
+    
+        }}
 
     // ------------------------------------------------- the app coming and going
     //
@@ -250,6 +270,7 @@ struct EngineTests {
 
     @Test("pausing stops the search already running")
     func pausingStopsTheRunningSearch() async throws {
+        try await Quietly.alone {
         let service = try engine()
         defer { service.resume() }
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -268,10 +289,12 @@ struct EngineTests {
             "pausing did not stop the search that was running"
         )
         #expect(seen >= 2)
-    }
+    
+        }}
 
     @Test("a bounded search waits for the app rather than coming back empty")
     func aBoundedSearchHoldsWhilePaused() async throws {
+        try await Quietly.alone {
         let service = try engine()
         defer { service.resume() }
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -294,7 +317,8 @@ struct EngineTests {
 
         service.resume()
         #expect(await search.value != nil, "a held search should run on the way back, not fail")
-    }
+    
+        }}
 }
 
 /// The bound itself, on the real engine: at 1400 Stockfish picks among its top moves rather than
@@ -308,6 +332,7 @@ struct EngineTests {
 extension EngineTests {
     @Test("a bound engine chooses like a weaker player, and the next search is unbound")
     func aBoundEngineErrs() async throws {
+        try await Quietly.alone {
         let service = try engine()
         let openings = [
             ["e2e4", "e7e5", "g1f3", "b8c6"], ["d2d4", "d7d5", "c2c4"],
@@ -337,5 +362,6 @@ extension EngineTests {
         for await snapshot in service.analyse(game, budget: .depth(10), lines: 1) { again = snapshot }
         #expect(again?.bestMove != nil)
         #expect(again?.lines.count == 1, "one line asked for, one line reported: no skill MultiPV")
-    }
+    
+        }}
 }

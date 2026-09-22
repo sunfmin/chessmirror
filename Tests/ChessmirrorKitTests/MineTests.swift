@@ -33,7 +33,7 @@ struct MineTests {
             pgn: PGN(game: game, tags: [.init("White", "Someone"), .init("Black", "Me")])
         )
         let entry = try #require(ImportSession().open(chapter, into: library, tracking: .black))
-        let session = try #require(GameSession.opened(entry, library: library))
+        let session = try #require(GameSession.opened(entry, library: library).session)
         defer { session.suspend() }
 
         #expect(session.controller(for: .black) == .hand, "the side the import tracked is theirs")

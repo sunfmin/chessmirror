@@ -117,12 +117,30 @@ import Foundation
 
     // ------------------------------------------------------------------ practising
 
-    /// A drill of one 错题, written into this index's log under its lines — and when its attempt
-    /// is settled, today's queue is worked out again, because the log it is read from has just
-    /// grown. The drill screen used to watch for that itself. Nil for a position that will not
-    /// parse.
-    public func practise(
-        _ mistake: Mistake, engine: (any Engine)?, source: Drill.Source = .picked
+    /// 今天的练习 — the day and the book, as the questions a screen asks about them
+    /// (`PracticeDay`). Which question comes next and what the door reads live there; the index
+    /// keeps the walk.
+    public var practiceDay: PracticeDay { PracticeDay(daily: daily, book: book) }
+
+    /// A drill of one 错题 **that 日课 handed the player**, written into this index's log under
+    /// its lines as a scheduled go (`Drill.Source.daily`). When its attempt is settled, today's
+    /// queue is worked out again, because the log it is read from has just grown.
+    ///
+    /// Named apart from `practiseOnPurpose` so the source cannot be forgotten: a book drill
+    /// tagged `.daily` would quietly train FSRS on a go the schedule never asked for
+    /// (docs/adr/0032's exact failure mode). Nil for a position that will not parse.
+    public func practise(_ mistake: Mistake, engine: (any Engine)?) -> Drill? {
+        drill(mistake, engine: engine, source: .daily)
+    }
+
+    /// A drill the **player picked themselves** off the book. Recorded as a 计划外 go, and it
+    /// moves nothing's schedule (docs/adr/0029, 0032).
+    public func practiseOnPurpose(_ mistake: Mistake, engine: (any Engine)?) -> Drill? {
+        drill(mistake, engine: engine, source: .picked)
+    }
+
+    private func drill(
+        _ mistake: Mistake, engine: (any Engine)?, source: Drill.Source
     ) -> Drill? {
         guard let drill = Drill(
             position: mistake.position, engine: engine, log: log, lines: lines, source: source
@@ -142,29 +160,14 @@ import Foundation
         }
     }
 
-    /// The question after this one. From 日课, the next card of today's queue that is not this
-    /// position; picked off the book, the next 错题 in the book's order, round to the first.
-    /// Nil when there is nothing else to ask — the end of the queue, or a book of one.
+    /// The question after this one, and what the door reads — both readings of one day, which is
+    /// `practiceDay`'s. Kept as a door of its own so callers written against the cache still
+    /// find them; ask `practiceDay` for anything new.
     public func next(after mistake: Mistake, source: Drill.Source) -> Mistake? {
-        switch source {
-        case .daily:
-            return daily.cards.first { $0.position != mistake.position }?.mistake
-        case .picked:
-            let mistakes = book.mistakes
-            guard let here = mistakes.firstIndex(where: { $0.position == mistake.position }),
-                  mistakes.count > 1 else { return nil }
-            return mistakes[(here + 1) % mistakes.count]
-        }
+        practiceDay.next(after: mistake, source: source)
     }
 
-    /// What the 日课 door says: how many are left today, that today's are done, or that there is
-    /// nothing in the book to practise yet. The door stays on the screen with nothing due — a
-    /// door that disappears once it is done is a door nobody learns is there.
-    public var dailyLabel: String {
-        let left = daily.remaining
-        if left > 0 { return localized("daily.left", plural: left) }
-        return localized(book.isEmpty ? "daily.none" : "daily.done")
-    }
+    public var dailyLabel: String { practiceDay.door.label }
 
     /// Stops following, for a caller that wants the book to stand still.
     public func unfollow() { following += 1 }

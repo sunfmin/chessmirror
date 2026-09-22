@@ -64,6 +64,7 @@ struct SessionHostTests {
     }
 
     @Test func theEngineArrivingIsTakenAndSearched() async throws {
+        try await Quietly.alone {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
         let host = EngineHost(nets: { .init(big: Nets.big, small: Nets.small) })
         let session = GameSession.fresh(game)
@@ -76,5 +77,41 @@ struct SessionHostTests {
         #expect(host.isReady)
         await until { session.isSearching }
         #expect(session.isSearching, "the engine arrived, and the session took it without being told")
+    
+        }}
+
+    /// The host's two facts are one seam (`onStatusChange`): a subscriber is a standing
+    /// subscription, and dropping the token is what unsubscribes.
+    @Test func aWatchOnTheHostFiresOnChangeAndStopsWhenDropped() async throws {
+        let host = EngineHost(ScriptedEngine([]))
+        var fired = 0
+        var watch: EngineHost.Watch? = host.onStatusChange { fired += 1 }
+        host.setActive(false)
+        await until { fired == 1 }
+        #expect(fired == 1, "the app leaving is a change")
+
+        host.setActive(true)
+        await until { fired == 2 }
+        #expect(fired == 2, "and coming back is another")
+
+        watch?.stop()
+        watch = nil
+        host.setActive(false)
+        for _ in 0..<10 { await Task.yield() }
+        #expect(fired == 2, "a dropped token hears nothing more")
+    }
+
+    /// A listener cannot outlive its screen: `disappear` takes it away, so a session off screen
+    /// is a silent one.
+    @Test func disappearingTakesTheListenerAway() throws {
+        let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        let session = GameSession.fresh(game)
+        var heard = 0
+        session.appear(on: EngineHost(ScriptedEngine([])), library: nil, hearing: { _ in heard += 1 })
+        session.disappear()
+
+        let e4 = try #require(game.state.move(matching: "e2e4"))
+        session.play(e4)
+        #expect(heard == 0, "nothing is heard on a session nobody is looking at")
     }
 }

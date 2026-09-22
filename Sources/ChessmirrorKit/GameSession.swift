@@ -126,9 +126,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case stepped
     }
 
-    /// Who is listening. One listener, set by the screen the session is on; a session nobody is
-    /// listening to is a silent one, which is what a test and a session off screen both want.
-    @ObservationIgnored public var onEvent: (@MainActor (Event) -> Void)?
+    /// Who is listening. One listener, and only `hear` sets it — `disappear` always takes it
+    /// away, so a screen cannot leave one behind on a session that outlives it.
+    @ObservationIgnored private var onEvent: (@MainActor (Event) -> Void)?
+
+    /// Listens to what happens on the board. The one listener at a time: a second `hear`
+    /// replaces the first. `disappear` takes it away.
+    public func hear(_ body: @escaping @MainActor (Event) -> Void) { onEvent = body }
 
     func emit(_ event: Event) { onEvent?(event) }
 
@@ -189,34 +193,42 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public var isProbingTactics: Bool { finder.isProbing }
 
     /// 牌堆 — what the deck under the record shows right now (`Deck`, docs/adr/0025): which of
-    /// the two cards have a finding behind them, what each row says, and whether anything is
-    /// still being looked for. The screen draws this; it does not work it out.
+    /// the two cards have a finding behind them, what each row says, which one is open, and
+    /// whether anything is still being looked for. The screen draws this; it does not work it
+    /// out. This is the one reading of the open card — `openCard`, `draws` and `drawnCard`
+    /// read it back rather than reaching into `Findings` themselves, so the deck cannot say
+    /// one thing and the arrows another.
     public var deck: Deck {
         Deck.dealt(
             isDealt: dealsCards, mate: mateNews != nil, tactic: tactic != nil,
-            isSearching: isSearching || isProbingTactics
+            isSearching: isSearching || isProbingTactics,
+            open: findings.openCard(on: viewed.state.fen),
+            drawsLine: findings.drawsLine(on: viewed.state.fen)
         )
     }
 
     // ------------------------------------------------------------------ the open card
 
     /// Which card is open, whether its line is on the board, and the position it was opened on
-    /// (docs/adr/0025). One state machine behind one seam (`Findings`).
+    /// (docs/adr/0025). One state machine behind one seam (`Findings`); `deck` is what the
+    /// screen is handed of it.
     var findings = Findings()
 
-    /// Whether the deck has been dealt.
+    /// Whether the deck has been dealt onto the screen once for this game. Not `dealsCards`,
+    /// which is whether cards are allowed at all: coming back from a Review must not ask the
+    /// engine again for what is already on the table.
     public var isDeckDealt: Bool { findings.isDealt }
 
     /// The card that is open, if one is.
-    public var openCard: Deck.Card? { findings.openCard(on: viewed.state.fen) }
+    public var openCard: Deck.Card? { deck.rows.first(where: \.isOpen)?.card }
 
-    public func isOpen(_ card: Deck.Card) -> Bool { findings.isOpen(card, on: viewed.state.fen) }
+    public func isOpen(_ card: Deck.Card) -> Bool { deck.row(card)?.isOpen == true }
 
     /// Whether this card's line is the one on the board.
-    public func draws(_ card: Deck.Card) -> Bool { findings.draws(card, on: viewed.state.fen) }
+    public func draws(_ card: Deck.Card) -> Bool { deck.row(card)?.drawsLine == true }
 
     /// The card whose line is on the board, when one is.
-    public var drawnCard: Deck.Card? { openCard.flatMap { draws($0) ? $0 : nil } }
+    public var drawnCard: Deck.Card? { deck.rows.first { $0.isOpen && $0.drawsLine }?.card }
 
     /// What the board draws for the deck: the drawn card's line, or nothing.
     public var deckArrows: [MoveArrow] { arrows(for: drawnCard) }
@@ -303,6 +315,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     var thinkingBest: String?
     /// Whether the button has already been let go of while its search was still starting up.
     var isAskReleased = false
+    /// The move `holdForMove` returns, and the hook that wakes it. Both live here so the hold
+    /// is one call whose lifetime is the thumb's: the press stores the hook, `finishAskedMove`
+    /// plays and wakes, and a press that was refused wakes without a move.
+    var heldMove: Move?
+    var holdEnded: (() -> Void)?
 
     var engine: (any Engine)?
     weak var library: GameLibrary?
@@ -542,6 +559,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// would give an empty board wearing the real game's file name, and the autosave after the
     /// first move would write it over the game that was on its way (docs/adr/0012). Every door
     /// into a saved game goes through this one, so the refusal cannot be forgotten.
+    ///
+    /// That refusal is named (`Opening.notArrived`) rather than left as a nil every caller had
+    /// to remember is not a failure. `Opening.session` is the short path for a caller that has
+    /// already decided the refusal is not its question; switching on `Opening` is the one that
+    /// wants to say something about it.
+    public enum Opening {
+        /// The game, opened at the position it began in.
+        case ready(GameSession)
+        /// Still on the way from iCloud (docs/adr/0012).
+        case notArrived
+
+        /// The session, or nil for the one refusal. What `#require` takes in a test that is not
+        /// about the refusal itself.
+        public var session: GameSession? {
+            if case .ready(let session) = self { session } else { nil }
+        }
+    }
+
     public static func opened(
         _ entry: GameLibrary.Entry,
         engine: (any Engine)? = nil,
@@ -550,11 +585,11 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         /// The player's lines as they are now. The file says whether 把关 is on; where it stops
         /// the player is the 记录线 handed in here (docs/adr/0046).
         lines: JudgementLines = .standard
-    ) -> GameSession? {
-        guard !entry.isDownloading else { return nil }
+    ) -> Opening {
+        guard !entry.isDownloading else { return .notArrived }
         let session = GameSession(entry: entry, library: library, strength: strength, lines: lines)
         session.attach(engine: engine, library: library)
-        return session
+        return .ready(session)
     }
 
     /// A position the Piece Editor hands back (docs/adr/0011). Carries the shaky squares it came
@@ -624,7 +659,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     @ObservationIgnored private var host: EngineHost?
     @ObservationIgnored private var isOnScreen = false
-    @ObservationIgnored private var watch = 0
+    @ObservationIgnored private var hostWatch: EngineHost.Watch?
 
     /// The screen this session is on has appeared, with the app's one engine host and the
     /// library to save into. From here the session keeps its own searches in step with the host:
@@ -633,44 +668,49 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// disappearance, and nothing else about when the engine should be doing what — the four
     /// hooks a screen used to wire for that were an ordering contract kept in a comment.
     ///
+    /// `hearing` is who hears what happens on the board, and it is taken here rather than
+    /// assigned afterwards so a screen cannot appear and forget to say. `disappear` always
+    /// takes the listener away.
+    ///
     /// Retunes before it returns, so a card dealt right after this keeps the Stint it starts.
-    public func appear(on host: EngineHost, library: GameLibrary?) {
+    public func appear(
+        on host: EngineHost, library: GameLibrary?,
+        hearing hear: @escaping @MainActor (Event) -> Void = { _ in }
+    ) {
         self.host = host
         isOnScreen = true
+        self.hear(hear)
         attach(engine: host.service, library: library)
         retune()
         followHost()
     }
 
-    /// The screen has gone: nothing searches for a board nobody is looking at.
+    /// The screen has gone: nothing searches for a board nobody is looking at, nobody hears a
+    /// session nobody is looking at, and a thumb still down on 让引擎走 is let go of (`suspend`).
     public func disappear() {
         isOnScreen = false
-        watch += 1
+        hostWatch?.stop()
+        hostWatch = nil
+        onEvent = nil
         suspend()
     }
 
-    /// One registration per change: Observation fires once and forgets, so each firing hops to
-    /// the main actor, reads what the host says now, and registers again. `watch` names the
-    /// registration, so a screen that came and went does not leave a stale chain following.
+    /// Subscribes to the host's two facts through the host's own seam (`EngineHost.Watch`), so
+    /// "when does the engine's arrival reach this session" has one home. The token is dropped
+    /// on `disappear`, which is what stops a screen that has gone from being followed.
     private func followHost() {
+        hostWatch?.stop()
+        hostWatch = nil
         guard let host, isOnScreen else { return }
-        watch += 1
-        let registration = watch
-        withObservationTracking {
-            _ = host.isReady
-            _ = host.isActive
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, registration == watch, isOnScreen, let host = self.host else { return }
-                // The engine may have finished starting while the screen was up: take it, and
-                // the search this screen wants starts. The app leaving is a suspend, and coming
-                // back a fresh retune rather than a search left running underneath — the engine
-                // will not start one while the app is away, and a bounded one it held would
-                // otherwise slip past that gate (`EngineHost.isActive`).
-                if host.isReady, engine == nil { attach(engine: host.service, library: library) }
-                if host.isActive { retune() } else { suspend() }
-                followHost()
-            }
+        hostWatch = host.onStatusChange { [weak self] in
+            guard let self, self.isOnScreen, let host = self.host else { return }
+            // The engine may have finished starting while the screen was up: take it, and
+            // the search this screen wants starts. The app leaving is a suspend, and coming
+            // back a fresh retune rather than a search left running underneath — the engine
+            // will not start one while the app is away, and a bounded one it held would
+            // otherwise slip past that gate (`EngineHost.isActive`).
+            if host.isReady, engine == nil { attach(engine: host.service, library: library) }
+            if host.isActive { retune() } else { suspend() }
         }
     }
 
@@ -730,10 +770,17 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// old rung starts again under the new one (docs/adr/0038). Nothing else restarts — the bound
     /// is on the opponent's own move and on nothing else, so 细判 and the cards have nothing to
     /// redo.
-    public func setStrength(_ strength: Strength) {
+    /// Sets the 棋力 this game is played at, **and the one the next game starts at** (docs/adr/0038).
+    ///
+    /// Two facts, one call. The screen used to write `settings.strength` beside this, so
+    /// `setStrength` on its own did not do what its name says and a caller that forgot the
+    /// second line changed this game and not the next. The settings are handed in rather than
+    /// reached for as a singleton, because the kit has none — and a test has an in-memory one.
+    public func setStrength(_ strength: Strength, in settings: PlayerSettings? = nil) {
         guard !isOccupied else { return }
         guard self.strength != strength else { return }
         self.strength = strength
+        settings?.strength = strength
         if thinking == .own { retune() }
     }
 
@@ -998,9 +1045,24 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case walking
         case exercising(Punishment)
         case thinking(Thinking)
+
+        /// Whether this is a thumb holding 让引擎走 down. The hold ends the moment this stops
+        /// being true, which is the fact `activity`'s watcher reads.
+        var isAskedHold: Bool {
+            if case .thinking(.asked) = self { true } else { false }
+        }
     }
 
-    var activity: Activity = .reading
+    /// What the session is doing. Leaving `.thinking(.asked)` is letting go of the hold, whoever
+    /// did it — a release, a walk taking the board, a hand move being weighed, the screen going
+    /// away — so `holdForMove` is woken here rather than in each of those places. One watcher
+    /// for one fact: a hold that can only be ended by its own release is a hold that outlives
+    /// everything else on the screen.
+    var activity: Activity = .reading {
+        didSet {
+            if oldValue.isAskedHold, !activity.isAskedHold { wakeHold() }
+        }
+    }
 
     /// Starts the engine walking a move. Refused while the board is spoken for or the record is
     /// on its way somewhere: those are not things a search may take the board from.
@@ -1018,6 +1080,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// an exercise on the board is not the engine thinking, and is not ended by this.
     func stopThinking() {
         if case .thinking = activity { activity = .reading }
+    }
+
+    /// Lets go of whoever is inside `holdForMove`, with whatever move it had. Only that call
+    /// stores a hook, so this is a no-op for a session nobody is holding.
+    func wakeHold() {
+        let ended = holdEnded
+        holdEnded = nil
+        ended?()
     }
 
     /// A move is on the board and being weighed. It ends whatever the engine was walking, which
@@ -1108,6 +1178,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// and it is what a move played next interrupts. The one thing a screen or a test holds on
     /// to instead of polling the session's state: a verdict arrives when the engine has answered
     /// and not a moment sooner, and the state after this is the state the screen would draw.
+    ///
+    /// **Waits for what is in flight and starts nothing.** Asking for the badge here as well
+    /// (`measureLatestMove`) was the obvious way to make this the one await, and it is a trap:
+    /// the badge is a `weigh`, so a session whose engine is scripted to hold one search open
+    /// would have that search stolen by the wait — the budget the test scripted, the positions
+    /// it counted, the 应招 it expected to be asked for. `retune` schedules the badge when a
+    /// move lands; a caller that wants one without a retune asks (`measureLatestMoveChange`).
     public func settled() async {
         if case .weighing(_, let task) = activity { await task.value }
         await measuring?.value
@@ -1132,21 +1209,43 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         refusalPosition = fen
         refused = refusalByPosition[fen]
     }
-    /// The number for the position on screen: the live bounded search of it when 把关 has one,
-    /// else the curve's number for it. No recommended move is exposed here.
+    /// 优势条读数 — the one number the bar shows, and where it came from (`BarReading`).
     ///
-    /// While a move is being weighed it is the number of the position the move was played from.
-    /// The position it made has no number until the weighing ends — that is what the weighing is
-    /// — and a bar with no number draws a level game: on a phone, ten seconds and more of half
-    /// and half over a position that is nothing like it. The table, while weighing, can only be
-    /// that position's: the search that fills it was stopped when the move was played.
-    private var noSlipsScore: Score? {
-        if let table = interceptTable, table.fen == viewed.state.fen {
+    /// One priority, written here and nowhere else. While a move is being weighed, the position
+    /// it made has no number — that is what the weighing is — and a bar with no number draws a
+    /// level game over a position that is nothing like it; so the reading steps back to the
+    /// position the move was played from and says so.
+    public var barReading: BarReading {
+        // The move just played, while it is still the move just played.
+        if let badge, badge.describes(game), isAtLatest, !isWeighing {
+            return BarReading(.landed(badge.change))
+        }
+        // The live bounded search of the position on screen.
+        if let score = liveScore(of: viewed.state.fen) {
+            return BarReading(.searching(score))
+        }
+        // What the record says about the position on screen.
+        if let known = historyScore(atPly: cursor) {
+            return BarReading(.record(known))
+        }
+        // Weighing: hold the number of the position the move was played from. The table can
+        // only be that position's — its search was stopped when the move landed.
+        if isWeighing {
+            if let score = liveScore() { return BarReading(.searching(score)) }
+            if let known = historyScore(atPly: cursor - 1) { return BarReading(.record(known)) }
+        }
+        return BarReading(nil)
+    }
+
+    /// The live bounded search's number for a position. With a `fen`, only that position's
+    /// table; without one, whatever the table holds. The standing Analysis is the same search
+    /// in its other home — a card's Stint fills both (GameSession+Clock) — so it answers here
+    /// too rather than after the record.
+    private func liveScore(of fen: String? = nil) -> Score? {
+        if let table = interceptTable, fen == nil || table.fen == fen {
             return table.analysis.best?.score
         }
-        if let known = historyScore(atPly: cursor) { return known }
-        guard isWeighing else { return nil }
-        return interceptTable?.analysis.best?.score ?? historyScore(atPly: cursor - 1)
+        return analysis?.best?.score
     }
     /// The 试招 refused at the position on the board that no move has absorbed yet, oldest
     /// first. Read out of the Game, which is where a refusal is written the moment it happens.
@@ -1157,9 +1256,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// a chip should show. Held rather than recomputed, because the walk behind `slips` is the
     /// expensive half and the eye moves far more often than the game changes.
     public var reading: RecordReading {
-        // Keyed on what the answer depends on: the game, and the two lines that decide what
-        // counts. A refusal changes the game; moving the record line changes the answer.
-        let key = "\(game.uciMoves.joined(separator: " "))|\(lines.record)|\(lines.enqueue)"
+        // Keyed on what the answer depends on: the game (a refusal is written into it without
+        // touching a move, so the `game` didSet is the invalidation and this is the second
+        // check), whose moves count, and the two lines that decide what counts. Moving the
+        // record line changes the answer; changing whose hand is whose changes which moves
+        // are 错招 at all.
+        let key = "\(game.uciMoves.joined(separator: " "))|\(mine.map(String.init(describing:)).sorted().joined())|\(lines.record)|\(lines.enqueue)"
         if let stored = storedReading, stored.key == key {
             if stored.reading.cursor == cursor { return stored.reading }
             let moved = stored.reading.moved(to: cursor)
@@ -1349,25 +1451,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public var isFaceToFace = false
 
-    var measuredMove: (moves: [String], fen: String, change: MoveChange)?
+    /// The badge for the move just played (`LandedBadge`), while it is still that move.
+    var badge: LandedBadge?
     /// The game as it stood when a move last landed through `commit` with no judgement on it —
     /// the one move `measureLatestMoveChange` is owed a judgement for. A move that was already
     /// in the file when the game was opened keeps whatever it has: filling those in is the
     /// explicit migration (`fillMissingNoSlipsJudgements`), never something a screen starts.
-    var landedUnjudged: (moves: [String], fen: String)?
+    var landedUnjudged: OfGame?
 
     /// Only a newly played move gets a change badge; navigating the record is not a move.
-    public var moveChange: MoveChange? {
-        guard isAtLatest, !isWeighing, measuredMove?.moves == game.uciMoves,
-              measuredMove?.fen == game.state.fen else { return nil }
-        return measuredMove?.change
-    }
+    public var moveChange: MoveChange? { barReading.change }
 
-    /// What the bar shows, by one priority: where the move just played landed, then the position
-    /// on screen, then the standing Analysis.
-    public var feedbackScore: Score? {
-        moveChange?.after ?? noSlipsScore ?? analysis?.best?.score
-    }
+    /// What the bar shows. `barReading` is the reading; this is the number on it.
+    public var feedbackScore: Score? { barReading.score }
 
     /// The app's number for the position after `ply` moves — what the curve draws — by one
     /// priority: what the 细判 wrote onto the move, then what the badge's weighing found at
@@ -1381,9 +1477,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if ply > 0, let judgement = game.plies[ply - 1].judgement {
             return judgement.score
         }
-        if let measuredMove, measuredMove.moves == game.uciMoves, measuredMove.fen == game.state.fen {
-            if ply == game.plies.count { return measuredMove.change.after }
-            if ply == game.plies.count - 1 { return measuredMove.change.before }
+        if let badge, badge.describes(game) {
+            if ply == game.plies.count { return badge.change.after }
+            if ply == game.plies.count - 1 { return badge.change.before }
         }
         return game.reviewScore(atPly: ply)
     }

@@ -35,7 +35,7 @@ struct DrillScreen: View {
         return { goToNext() }
     }
 
-    private var next: Mistake? { index.next(after: mistake, source: source) }
+    private var next: Mistake? { index.practiceDay.next(after: mistake, source: source) }
 }
 
 /// Owns the attempt for one navigation destination, keeping its clock stable on redraws.
@@ -55,7 +55,14 @@ struct DrillHost: View {
         self.mistake = mistake
         self.source = source
         _path = path
-        _drill = State(initialValue: index.practise(mistake, engine: engine, source: source))
+        // Which door it came through decides which verb: 日课's queue moves the schedule, a
+        // pick off the book does not (计划外, docs/adr/0032). Two verbs rather than a tag to
+        // remember, because a book drill tagged `.daily` quietly trains FSRS.
+        _drill = State(
+            initialValue: source == .daily
+                ? index.practise(mistake, engine: engine)
+                : index.practiseOnPurpose(mistake, engine: engine)
+        )
     }
 
     var body: some View {

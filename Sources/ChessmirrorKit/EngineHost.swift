@@ -52,8 +52,47 @@ import Foundation
         }
     }
 
+    /// The standing subscriptions to this host's two facts. One list, so anything that follows
+    /// the host says so here instead of keeping its own `withObservationTracking` chain.
+    @ObservationIgnored private var watchers: [UUID: @MainActor () -> Void] = [:]
+
     public init(nets: @escaping @Sendable () -> Nets?) {
         self.nets = nets
+    }
+
+    /// A subscription to the host, which stops when this is dropped or `stop()` is called.
+    public struct Watch: Sendable {
+        private let stopBody: @MainActor () -> Void
+        init(_ stop: @escaping @MainActor () -> Void) { stopBody = stop }
+        @MainActor public func stop() { stopBody() }
+    }
+
+    /// Calls `body` every time the engine's arrival or the app's being-in-front changes.
+    ///
+    /// Observation fires once and forgets, so this re-arms itself: a subscriber is a standing
+    /// subscription rather than a one-shot. That was the whole of what `GameSession` did for
+    /// itself with a `watch` counter and its own `withObservationTracking`; one place knows how
+    /// to follow the host now, and a screen or a session that follows it just says so here.
+    @discardableResult
+    public func onStatusChange(_ body: @escaping @MainActor () -> Void) -> Watch {
+        let id = UUID()
+        watchers[id] = body
+        arm()
+        return Watch { [weak self] in self?.watchers[id] = nil }
+    }
+
+    private func arm() {
+        withObservationTracking {
+            _ = isReady
+            _ = isActive
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                for body in watchers.values { body() }
+                // Nothing left to tell: the chain stops here rather than waking for nobody.
+                if !watchers.isEmpty { arm() }
+            }
+        }
     }
 
     /// A host that is handed its engine rather than reading 112 MiB of weights to build one: how a

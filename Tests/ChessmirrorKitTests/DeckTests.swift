@@ -181,6 +181,28 @@ import Testing
         #expect(session.drawnCard == .mate)
     }
 
+    /// The open card is part of the deck's one reading, not a second reach into `Findings`:
+    /// a row says whether it is the one in front of the player and whether its line is on the
+    /// board, so the deck and the arrows cannot disagree.
+    @Test("the open card is read off the deck itself")
+    func theOpenCardIsReadOffTheDeckItself() async throws {
+        let (session, _) = try await dealtOnAMate()
+        defer { session.suspend() }
+
+        #expect(session.deck.row(.mate)?.isOpen == false)
+        #expect(session.deck.row(.mate)?.drawsLine == false)
+        #expect(session.deck.row(.tactics)?.isOpen == false)
+
+        session.press(.mate)
+        #expect(session.deck.row(.mate)?.isOpen == true, "the one reading says which is open")
+        #expect(session.deck.row(.mate)?.drawsLine == true)
+        #expect(session.deck.row(.tactics)?.isOpen == false)
+
+        session.toggleLine()
+        #expect(session.deck.row(.mate)?.isOpen == true, "the arrow takes the line, not the card")
+        #expect(session.deck.row(.mate)?.drawsLine == false)
+    }
+
     /// A row with nothing behind it does not press.
     @Test("a row with nothing behind it does not open")
     func aRowWithNothingBehindItDoesNotOpen() async throws {

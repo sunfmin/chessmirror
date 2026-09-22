@@ -341,7 +341,13 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let change = try #require(session.moveChange)
     #expect(change.before == .centipawns(0))
     #expect(change.after == .centipawns(score))
-    #expect(session.feedbackScore == change.after)
+    // The badge and the bar are one reading: the change and the number are the same fact,
+    // looked at two ways (`BarReading`). This used to be two assertions against two members
+    // that each kept their own priority chain.
+    #expect(session.barReading.change == change, "the badge is the bar's source")
+    #expect(session.barReading.score == change.after, "and the bar reads its number")
+    #expect(session.feedbackScore == session.barReading.score)
+    #expect(session.moveChange == session.barReading.change)
     #expect(abs(change.percent(for: .white) - (Score.centipawns(score).winPercent - 50)) < 0.001)
     #expect(change.percent(for: .black) == -change.percent(for: .white))
     session.jump(toPly: 0)
@@ -383,7 +389,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     try session.pgn.text.write(to: file, atomically: true, encoding: .utf8)
     let saved = try PGN(parsing: String(contentsOf: file, encoding: .utf8))
     #expect(saved.tag("Intercept") == nil)
-    let reopened = try #require(GameSession.opened(.init(url: file, pgn: saved, modified: Date())))
+    let reopened = try #require(GameSession.opened(.init(url: file, pgn: saved, modified: Date())).session)
     #expect(!reopened.isNoSlipsOn)
     reopened.setNoSlips(true)
     #expect(reopened.isNoSlipsOn)
@@ -407,7 +413,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
         1. e4 {[%judged 20 0.0 0.33 under 5.0]} e5 *
         """)
     let entry = GameLibrary.Entry(url: URL(filePath: "/games/old.pgn"), pgn: saved, modified: Date())
-    let opened = try #require(GameSession.opened(entry, lines: JudgementLines(record: 15, enqueue: 15)))
+    let opened = try #require(GameSession.opened(entry, lines: JudgementLines(record: 15, enqueue: 15)).session)
     #expect(opened.isNoSlipsOn, "the file's word on the switch")
     #expect(opened.lines.intercept == 15, "the player's word on the line")
     #expect(opened.game.plies[0].judgement?.intercept == 5, "what stood under five still says five")
@@ -418,7 +424,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     off.setTag("InterceptPreference", to: "37.0")
     let quiet = try #require(GameSession.opened(
         GameLibrary.Entry(url: URL(filePath: "/games/off.pgn"), pgn: off, modified: Date())
-    ))
+    ).session)
     #expect(!quiet.isNoSlipsOn)
     #expect(quiet.pgn.tag("InterceptPreference") == nil, "a dial that is gone has nothing to come back to")
     quiet.setNoSlips(true)
@@ -428,6 +434,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 /// A real post-move depth-20 judgement, followed by an opponent reply on its own clock.
 @MainActor
 @Test func realPreparedMoveWaitsForThePlayedPositionBeforeTheOpponentSearch() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -482,7 +489,8 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let filled = legacy.game
     await legacy.fillMissingNoSlipsJudgements()
     #expect(legacy.game == filled)
-}
+
+        }}
 
 @MainActor
 @Test func incompleteJudgementDoesNotLetAMoveStand() async throws {
@@ -616,7 +624,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     let pgn = try PGN(parsing: session.pgn.text)
     let opened = try #require(GameSession.opened(GameLibrary.Entry(
         url: URL(filePath: "/games/no-slips.pgn"), pgn: pgn, modified: Date()
-    )))
+    )).session)
     #expect(pgn.intercept == line, "the file says where the moves in it were stopped")
     #expect(opened.isNoSlipsOn)
     #expect(opened.lines.intercept == JudgementLines.standard.record, "and the player says where the next is")
@@ -633,6 +641,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 /// stands → PGN retains the refused move once. The disabled setting must allow the same blunder.
 @MainActor
 @Test func noSlipsRejectsMateAndPreservesTheRetry() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -668,10 +677,12 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     #expect(!disabled.isWeighing)
     #expect(disabled.game.uciMoves.last == "g2g4")
     #expect(disabled.refused == nil)
-}
+
+        }}
 
 @MainActor
 @Test func suspendingNoSlipsRestoresTheUnjudgedPosition() async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1)
@@ -686,7 +697,8 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     #expect(!session.isWeighing)
     await Task.yield()
     #expect(session.game.uciMoves == game.uciMoves)
-}
+
+        }}
 
 /// Contract: a 试招 that no move absorbed is still there when the game is opened again.
 ///
@@ -755,6 +767,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     await session.waitForPreparedInterception()
     try #require(session.game.uciMoves == ["e2e4", "e7e5"], "the engine answered")
     await session.settled()
+    await session.measureLatestMoveChange()
 
     let judgement = try #require(session.game.plies[1].judgement)
     let change = try #require(session.moveChange)
@@ -820,5 +833,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     session.play(try #require(start.state.move(matching: "e2e4")))
     for _ in 0..<20 { await Task.yield() }
     try #require(session.isWeighing, "the position the move made has no answer yet")
-    #expect(session.strip.bar?.score == .centipawns(300), "not nil, which the bar draws as 50/50")
+    // One reading feeds the bar and the strip: `BarReading` decides, and both read it.
+    #expect(session.barReading.score == .centipawns(300), "not nil, which the bar draws as 50/50")
+    #expect(session.strip.bar?.score == session.barReading.score)
 }

@@ -47,7 +47,8 @@ public struct Deck: Sendable, Equatable {
         }
     }
 
-    /// One card as its row reads it: whether the finding is in, and what the row says either way.
+    /// One card as its row reads it: whether the finding is in, what the row says either way,
+    /// and where it stands in front of the player (`Findings`).
     public struct Row: Hashable, Sendable {
         public let card: Card
         /// Whether there is something to open. A row with nothing behind it is not pressable, and
@@ -57,6 +58,13 @@ public struct Deck: Sendable, Equatable {
         /// is doing about it — 在算 while a search is running, 没算出来 when it has finished with
         /// nothing.
         public let title: String
+        /// Whether this is the card open in front of the player (docs/adr/0025). The eye moving
+        /// to another position puts it away, so this is as much about where the board is as
+        /// about which card was pressed.
+        public let isOpen: Bool
+        /// Whether its line is the one on the board. Only an open card can draw, and the arrow
+        /// on the card takes the line off and leaves the card open.
+        public let drawsLine: Bool
     }
 
     /// The rows the deck has, in the catalogue's order. Empty when the deck is not dealt at all
@@ -84,23 +92,29 @@ public struct Deck: Sendable, Equatable {
 
     // ------------------------------------------------------------------ dealing
 
-    /// The deck for a position: which findings are in, and what each row says.
+    /// The deck for a position: which findings are in, what each row says, and which one is
+    /// open in front of the player.
     ///
     /// `isDealt` is the session's rule about whether cards are on the table at all
     /// (`GameSession.dealsCards`), passed in rather than read here so this stays a reading of
-    /// findings and the rule keeps one home.
+    /// findings and the rule keeps one home. `open` is the same for `Findings`: the deck reads
+    /// what the state machine says and does not keep a second copy of it.
     public static func dealt(
-        isDealt: Bool, mate: Bool, tactic: Bool, isSearching: Bool
+        isDealt: Bool, mate: Bool, tactic: Bool, isSearching: Bool,
+        open opened: Card? = nil, drawsLine: Bool = false
     ) -> Deck {
         guard isDealt else { return Deck(rows: [], isSearching: false) }
         let rows = Card.catalogue.map { card in
             let found = card == .mate ? mate : tactic
+            let open = card == opened
             return Row(
                 card: card,
                 isFound: found,
                 title: found
                     ? localized(card == .mate ? "discovery.mateFound" : "discovery.tacticFound")
-                    : "\(card.title) · \(localized(isSearching ? "discovery.checking" : "discovery.none"))"
+                    : "\(card.title) · \(localized(isSearching ? "discovery.checking" : "discovery.none"))",
+                isOpen: open,
+                drawsLine: open && drawsLine
             )
         }
         return Deck(rows: rows, isSearching: isSearching)

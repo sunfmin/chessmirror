@@ -9,6 +9,10 @@ import Foundation
 /// Controller). `weigh` → `settle` → `Ruling` → `land` is the judged path; `play` is the
 /// router that picks the path from whose move it is and what is already on the board.
 ///
+/// What both intakes do once a move stands is one routine (`stoodOnBoard`): the badge or the
+/// owed judgement, the stale Analysis, the 试招 riding onto the move, the save, the reply on
+/// the record, the next search. It was written out twice and had drifted.
+///
 /// Why an extension and not a module: landing is the session's own effects — `game`,
 /// `cursor`, `activity`, `save`, `retune`, the 惩罚 exercise — and a `Landing` type would
 /// be an adapter over those facts rather than a deep module. `Ruling` already owns the
@@ -40,16 +44,20 @@ extension GameSession {
     /// A search out of the cache answers inside one frame, so without this the piece went to its
     /// square and came off it between two draws of the board, and the whole gesture was invisible.
     /// Long enough to read as "there" before "and back", short enough not to be a wait.
-    private static let takeBackHold = Duration.milliseconds(450)
+    ///
+    /// A `var` rather than a `let` so a test can pass `.zero` and assert the roll-back itself
+    /// instead of sleeping through a gesture the test cannot see.
+    static var takeBackHold = Duration.milliseconds(450)
 
     /// Gives the board its beat to show the move before the move is taken off it.
     private func holdTheMoveOnTheBoard() async {
-        guard let shown = standpoint?.shown, shown < Self.takeBackHold else { return }
-        try? await Task.sleep(for: Self.takeBackHold - shown)
+        let hold = Self.takeBackHold
+        guard hold > .zero, let shown = standpoint?.shown, shown < hold else { return }
+        try? await Task.sleep(for: hold - shown)
     }
 
     var isLatestMoveMeasured: Bool {
-        measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen
+        badge?.describes(game) ?? false
     }
 
     /// Badges the move just played if nothing has yet: the session asks for this itself every
@@ -73,9 +81,8 @@ extension GameSession {
         let last = after.plies.count - 1
         if let judgement = after.plies[last].judgement {
             if let before = historyScore(atPly: last) {
-                measuredMove = (
-                    after.uciMoves, after.state.fen,
-                    MoveChange(before: before, after: judgement.score, isBest: judgement.best)
+                badge = LandedBadge(
+                    after, change: MoveChange(before: before, after: judgement.score, isBest: judgement.best)
                 )
             }
             return
@@ -85,14 +92,14 @@ extension GameSession {
         guard !Task.isCancelled, !isWeighing, let weighed,
               game.uciMoves == after.uciMoves, game.startFEN == after.startFEN else { return }
         if game.plies[last].judgement == nil, let landed = landedUnjudged,
-           landed.moves == after.uciMoves, landed.fen == after.state.fen {
+           landed.matches(after) {
             game.setJudgement(weighed.judgement, atPly: last)
             landedUnjudged = nil
             save()
         }
-        measuredMove = (
-            after.uciMoves, after.state.fen,
-            MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
+        badge = LandedBadge(
+            after,
+            change: MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
         )
     }
 
@@ -277,9 +284,38 @@ extension GameSession {
         land(ruling, played: played, engine: engine)
     }
 
-    /// Puts a ruling into effect. The game and the eye go where it says; what is the session's
-    /// own is the rest — the noise, the save, the badge, the exercise, the next search. A refusal
-    /// gets no retune: the engine is not owed a reply to a move that came back.
+    /// The one routine a move that stands goes through, whoever put it there.
+    ///
+    /// `land`'s `.stands` and `commit`'s tail both end here. They had drifted — one absorbed the
+    /// refusals made where the move was played from and the other did not — and the order of the
+    /// rest was written out twice. The comments on each were a history of the bugs that caused
+    /// (docs/adr/0037, and the "seventh copy of the 细判" this file used to write).
+    ///
+    /// Nothing is judged here. Every move that lands is weighed by the one 细判, and its
+    /// judgement is written from that weighing in `measureLatestMoveChange` — the same act the
+    /// badge reads. `owedJudgement` is for the move that landed with nothing written on it yet.
+    private func stoodOnBoard(change: MoveChange?, owedJudgement: Bool) {
+        if let change { badge = LandedBadge(game, change: change) }
+        if owedJudgement { landedUnjudged = OfGame(game) }
+        // The Analysis that described the position before this move is stale.
+        analysis = nil
+        // The refusals made where it was played from ride onto it as its 试招 (docs/adr/0037).
+        // Idempotent: a `Ruling` has already folded its own in, and this finds nothing pending.
+        absorbRefusals(atPly: cursor - 1)
+        // Whatever was being said about a refusal is no longer the news.
+        refused = nil
+        save()
+        // The reply already on the record is played if there is one.
+        answerFromTheRecord()
+        // And the engine is asked what it makes of the new position — whoever moved.
+        retune()
+    }
+
+    /// Puts a ruling into effect. **The one door** (`land(Ruling,played:engine:)`): both 把关 and
+    /// a 练习 end here — the drill's attempt and a hand move under 把关 are two intakes and one
+    /// door. The game and the eye go where the ruling says; what is the session's own is the rest
+    /// — the noise, the save, the badge, the exercise, the next search. A refusal gets no retune:
+    /// the engine is not owed a reply to a move that came back.
     func land(_ ruling: Ruling, played: Game, engine: any Engine) {
         game = ruling.game
         cursor = ruling.cursor
@@ -287,10 +323,7 @@ extension GameSession {
         case .unjudged:
             retune()
         case .stands(let change):
-            if let change { measuredMove = (game.uciMoves, game.state.fen, change) }
-            save()
-            answerFromTheRecord()
-            retune()
+            stoodOnBoard(change: change, owedJudgement: false)
         case .refused(let refusal):
             // Written down by the ruling at the position it happened at, rather than when a move
             // finally stands, because a player who is refused and then walks away has played no
@@ -302,8 +335,13 @@ extension GameSession {
         }
     }
 
-    /// The one way a move lands without a weighing: the write, the cursor, the noise, the save,
-    /// the retune. A 练习 goes through `playPractice` and the same `land` a ruled move uses.
+    /// The one way a move lands without a weighing: the write, the cursor, the noise — and then
+    /// the same `stoodOnBoard` a ruled move that stands ends at. A 练习 goes through
+    /// `playPractice` and the same `land` a ruled move uses.
+    ///
+    /// `commit` used to carry the whole of its tail here as nine ordered steps, which is the
+    /// ordering that had already produced a bug per step. What remains is what is genuinely this
+    /// intake's own: who moved, and therefore where the move may land and what is written on it.
     func commit(_ move: Move, by mover: Mover) {
         guard !isWeighing else { return }
         // A move played is the game moving on: a 复判 of a 试招 here yields to it, unwritten.
@@ -338,16 +376,8 @@ extension GameSession {
         }
         emit(.landed(move, outcome: viewed.state.outcome))
         if branching { emit(.forked) }
-        // The invariant: the Analysis that described the position before this move is stale,
-        // the game is written to its file, and the engine is asked what it makes of the new
-        // position — whoever moved.
-        analysis = nil
-        absorbRefusals(atPly: cursor - 1)
-        landedUnjudged = (game.uciMoves, game.state.fen)
-        refused = nil
-        save()
-        answerFromTheRecord()
-        retune()
+        // Nobody weighed it: no engine, or the engine's own move. Its badge is owed.
+        stoodOnBoard(change: nil, owedJudgement: true)
     }
 
     /// The opponent's reply, when the move just played already had one on the record.

@@ -477,3 +477,5 @@
 "search.plies" = "深さ%d";
 "search.limit.either" = "%1$d秒 / 深さ%2$d";
 "search.explained" = "エンジンが各局面をどれだけの時間、どれだけの深さまで読むか。判定、エンジン自身の一手、ヒントはすべてこの一回の探索なので、損失はどこで測っても同じ意味になります。再判定はこれより8深く、時間は6倍まで使います。";
+"import.unreadableArchives.title" = "%2$@ の対局一覧を読めない";
+"import.unreadableArchives.message" = "%1$@ は応答しましたが、%2$@ の対局一覧ではありませんでした。しばらくしてからもう一度お試しください。";

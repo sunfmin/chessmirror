@@ -31,6 +31,7 @@ private func photographedBoard() throws -> RGBImage {
 
 @Test("recognising the same photograph over and over does not grow the footprint")
 func recognitionFootprintIsBounded() async throws {
+        try await Quietly.alone {
     let photo = try photographedBoard()
     print("[MEM] photo \(photo.width)x\(photo.height)")
 
@@ -73,7 +74,8 @@ func recognitionFootprintIsBounded() async throws {
     // recognition spikes — is measured properly by the three tests below, each of which
     // samples *during* one scoped run against a baseline taken immediately before it.
     _ = peak
-}
+
+        }}
 
 /// The highest footprint seen while `body` runs, sampled every fifty milliseconds.
 ///
@@ -130,21 +132,24 @@ private func scoreSheetStyle(_ photo: RGBImage) throws -> RGBImage {
 /// minutes, for the fix to be testable at speed.
 @Test("refining a page-sized quad does not spike the footprint")
 func refinementPeakIsBounded() async throws {
-    let page = try scoreSheetStyle(photographedBoard())
-    let quad = BoardQuad(rect: CGRect(x: 0, y: 0, width: page.width, height: page.height))
-    let baseline = footprint()
-    let peak = await peakFootprint {
-        _ = PerspectiveCorrection.refined(quad, in: page)
+    try await Quietly.alone {
+        let page = try scoreSheetStyle(photographedBoard())
+        let quad = BoardQuad(rect: CGRect(x: 0, y: 0, width: page.width, height: page.height))
+        let baseline = footprint()
+        let peak = await peakFootprint {
+            _ = PerspectiveCorrection.refined(quad, in: page)
+        }
+        print("[MEM] refine: baseline \(baseline / 1_048_576) MB, peak \(peak / 1_048_576) MB")
+        #expect(
+            peak - baseline < 1024 * 1_048_576,
+            "footprint spiked by \((peak - baseline) / 1_048_576) MB during one refinement"
+        )
     }
-    print("[MEM] refine: baseline \(baseline / 1_048_576) MB, peak \(peak / 1_048_576) MB")
-    #expect(
-        peak - baseline < 1024 * 1_048_576,
-        "footprint spiked by \((peak - baseline) / 1_048_576) MB during one refinement"
-    )
 }
 
 @Test("the peak footprint during one recognition stays under a gigabyte")
 func recognitionPeakIsBounded() async throws {
+        try await Quietly.alone {
     let photo = try photographedBoard()
     _ = try? await Recognizer.recognise(photograph: photo)
     for (label, image) in [("board", photo), ("score-sheet", try scoreSheetStyle(photo))] {
@@ -160,7 +165,8 @@ func recognitionPeakIsBounded() async throws {
             "\(label): footprint spiked by \((peak - baseline) / 1_048_576) MB during one recognition"
         )
     }
-}
+
+        }}
 
 /// The exact photograph the phone was holding when the system killed it, pinned in
 /// Resources/ — `chessmirror-photo-2026-08-13-080920.png` from the app's own folder. The
@@ -168,6 +174,7 @@ func recognitionPeakIsBounded() async throws {
 /// by the pipeline after it.
 @Test("the photograph that killed the phone is read within a bounded footprint")
 func thePhonePhotoThatKilledTheAppIsBounded() async throws {
+        try await Quietly.alone {
     let url = try #require(
         Bundle.module.url(forResource: "killer_photograph", withExtension: "png", subdirectory: "Resources")
     )
@@ -184,4 +191,5 @@ func thePhonePhotoThatKilledTheAppIsBounded() async throws {
         peak - baseline < 1024 * 1_048_576,
         "footprint spiked by \((peak - baseline) / 1_048_576) MB on the phone's own photograph"
     )
-}
+
+        }}

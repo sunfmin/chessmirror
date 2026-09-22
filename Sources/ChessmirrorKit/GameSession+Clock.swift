@@ -6,7 +6,7 @@ import Foundation
 /// Game, the cursor, the two Controllers and the cards: the engine's own move, a probe for
 /// a Tactic, the interception table 把关 reads, or a card's Stint. One `searchTask` at a
 /// time; every way a search ends goes through `stopSearching`, so a Stint clock cannot
-/// stop the search that replaced it. `beginAskedMove` / `endAskedMove` / `moveNow` are the
+/// stop the search that replaced it. `holdForMove` / `moveNow` are the
 /// two ways a human cuts that clock short.
 ///
 /// Why an extension and not a module: the clock's drivers reach into `activity`, `finder`,
@@ -76,22 +76,57 @@ extension GameSession {
         engine != nil && !viewed.isOver && !isEngineTurn && !isOccupied
     }
 
-    /// Starts the engine thinking about a move it will play when it is let go.
+    /// The one call a hold makes: it runs for as long as the button is down and hands back the
+    /// move that was played.
+    ///
+    /// **Letting go is cancelling this task** — which is also what a screen that goes away does
+    /// to it — so a press can never run on with nobody holding it. It used to be two calls,
+    /// `beginAskedMove` and `endAskedMove`, which a screen had to pair and remember to unpair
+    /// on every way off the screen; a press that ended any way other than a release left the
+    /// session thinking a finger was still down and the search running under it.
     ///
     /// Held time *is* thinking time: the move is never bound to a rung, so the only thing that
     /// shapes how well it plays is how long it is left alone — and here that is a thumb on a
-    /// button. A tap is a snap answer, two seconds is a considered one, and neither is the app
-    /// deciding.
+    /// button. A tap is a task cancelled before the engine has said a word, and it still plays:
+    /// the arrow that was already on the board.
     ///
     /// The search is the shared bounded one every other reader of this position joins
     /// (`PositionSearches`), so a press after the position has been searched plays at once and a
     /// hold deepens the answer that was already going to be there. It ends by itself at ten
     /// seconds or depth twenty, and then the move is played: a thumb still down on a search that
-    /// has stopped is waiting for nothing.
+    /// has stopped is waiting for nothing. The call returns then too.
     ///
     /// Not a Controller and not advice left standing: one move, asked for by hand, for whichever
-    /// colour is on the clock.
-    public func beginAskedMove() {
+    /// colour is on the clock. Nil when there was nothing to ask (not the hand's turn, a game
+    /// over, the board spoken for).
+    public func holdForMove() async -> Move? {
+        guard canPlayBestMove, !isThinking else { return nil }
+        heldMove = nil
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                // The hook is stored *before* the press, so a search that ends inside this turn
+                // cannot end without somebody to wake. `onCancel` hops to the main actor, so it
+                // cannot run in the middle of this body either.
+                holdEnded = { continuation.resume() }
+                beginAskedMove()
+                if thinking != .asked {
+                    // Refused, and there will be no `finishAskedMove` to wake anybody.
+                    let ended = holdEnded
+                    holdEnded = nil
+                    ended?()
+                }
+            }
+        } onCancel: {
+            Task { @MainActor in self.endAskedMove() }
+        }
+        let move = heldMove
+        heldMove = nil
+        return move
+    }
+
+    /// Starts the engine thinking about a move it will play when it is let go. The press half
+    /// of `holdForMove`; on its own it is not the interface.
+    private func beginAskedMove() {
         // Once per press. A press arrives as a drag of no distance, which reports as it is held, and
         // the button cannot know it is already down until the state saying so has come back around
         // to it — so two of them can reach here before it does. Nothing else is thinking on a hand
@@ -123,7 +158,8 @@ extension GameSession {
         }
     }
 
-    /// Let go: the engine stops where it has got to and plays what it likes best.
+    /// Let go: the engine stops where it has got to and plays what it likes best. The release
+    /// half of `holdForMove`, and what `disappear` calls so a hold cannot outlive its screen.
     ///
     /// The move is played here rather than left to the stream ending, because a press can be
     /// shorter than the trip to the engine and back: the search may not have started yet, and a
@@ -132,7 +168,7 @@ extension GameSession {
     /// task is what takes the search down, the stream's termination being the one way in. The
     /// one case where nothing is known yet waits for the first snapshot, which is the soonest
     /// an answer can exist at all, and the loop plays it the moment it lands.
-    public func endAskedMove() {
+    func endAskedMove() {
         // Only the search a thumb started: a release is an answer to a press, and there is nothing
         // for it to end when the engine is walking a move of its own.
         guard thinking == .asked else { return }
@@ -144,12 +180,16 @@ extension GameSession {
     }
 
     private func finishAskedMove(in position: Game) {
-        stopThinking()
         isAskReleased = false
         let uci = askedBest
         askedBest = nil
-        guard let uci, let move = position.state.move(matching: uci) else { return }
-        playAsked(move)
+        let move = uci.flatMap { position.state.move(matching: $0) }
+        heldMove = move
+        // Played before the hold is woken, so `await holdForMove()` returns to a game that has
+        // already moved. `stopThinking` is what wakes it (`activity`'s watcher), including when
+        // `playAsked` takes the board into a weighing of its own.
+        if let move { playAsked(move) }
+        stopThinking()
     }
 
     // ----------------------------------------------------------------- engine
@@ -349,6 +389,11 @@ extension GameSession {
     /// Cancelling is the whole of it: the stream's termination stops the engine, on its own
     /// queue and with the generation check that a bare stop call never had.
     public func suspend() {
+        // A thumb still down on 让引擎走 is let go of first, while the board is still the
+        // player's: the hold is one call whose lifetime is the screen's, and leaving it hanging
+        // is a search running under nobody and a button that never comes back up. `commit` is
+        // synchronous and starts no weighing of its own, so nothing here takes the move back.
+        endAskedMove()
         if let practice, practice.isJudging {
             practice.cancel()
             game = practice.game

@@ -92,7 +92,7 @@ import Foundation
         }
         var door = initialDoor ?? Door(rawValue: memory.door) ?? .lichess
         if !initialInput.isEmpty {
-            door = PGNImport.chesseaseGame(in: initialInput) != nil ? .chessease : .link
+            door = Door.recognising(initialInput)
             typed[door] = initialInput
         }
         self.typed = typed
@@ -189,11 +189,11 @@ import Foundation
     public func fetch() async {
         guard canFetch else { return }
         let input = input
-        if door.asksForPlayer, let site = door.site {
-            await session.recent(of: input, count: count, on: site)
-            if case .ready = session.phase { memory.remember(input, on: site) }
-        } else {
-            await session.run(input)
+        // One door, one plan: the session only fetches (`ImportSession.through`). The dispatch
+        // on `asksForPlayer` used to live here as two different session verbs.
+        await session.through(door, input: input, count: count)
+        if door.asksForPlayer, let site = door.site, case .ready = session.phase {
+            memory.remember(input, on: site)
         }
     }
 
@@ -285,7 +285,9 @@ extension PGNImport.Error {
     /// because what is wanted is a corrected input and not the same one a second time.
     public var isAboutInput: Bool {
         switch self {
-        case .notALink, .unknownPlayer, .notAPlayer, .noGames, .unreadableShare, .missingGame: true
+        case .notALink, .unknownPlayer, .notAPlayer, .noGames, .unreadableShare,
+            .unreadableArchives, .missingGame:
+            true
         default: false
         }
     }

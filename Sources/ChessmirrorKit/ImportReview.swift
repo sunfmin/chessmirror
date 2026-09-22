@@ -13,6 +13,16 @@ public enum ImportReview {
             var seen: Set<Int> = []
             return plies.flatMap { [$0 - 1, $0] }.filter { seen.insert($0).inserted }
         }
+
+        /// What the file's `ReviewSift` tag says when imported scores were used to prioritise.
+        ///
+        /// The threshold is spelled into the tag because the file is the storage (docs/adr/0010)
+        /// and a later reader has to know which rule produced the order — and it is spelled from
+        /// `siftThreshold` rather than beside it, because a threshold that moved while the string
+        /// stood still is a tag that lies about the file. The shape is stable: `7.0` reads as `7`.
+        public static var siftTag: String {
+            "imported-eval-\(Int(siftThreshold))-priority"
+        }
     }
 
     public static func plan(for game: Game) -> Plan {
@@ -77,7 +87,7 @@ public enum ImportReview {
         var result = pgn
         result.game.applyReview(pgn.game.plies.indices.map { scores[$0 + 1] },
                                 startEvaluation: scores[0], depth: depth)
-        result.setTag(PGN.Tags.reviewSift, to: plan.usesImportedScores ? "imported-eval-7-priority" : "full-local")
+        result.setTag(PGN.Tags.reviewSift, to: plan.usesImportedScores ? Plan.siftTag : "full-local")
         return result
     }
 }

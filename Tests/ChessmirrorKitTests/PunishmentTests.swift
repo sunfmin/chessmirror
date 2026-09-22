@@ -10,6 +10,7 @@ enum PunishmentExit: CaseIterable { case solve, reveal, skip }
 @MainActor
 @Test(arguments: PunishmentExit.allCases)
 func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: PunishmentExit) async throws {
+        try await Quietly.alone {
     let engine = try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
@@ -65,7 +66,8 @@ func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: Punishm
     let book = MistakeBook.derive(from: [GameLibrary.Entry(url: url, pgn: read, modified: Date())])
     #expect(book.mistakes.count == 1)
     #expect(book.mistakes.first?.encounters.count == 1)
-}
+
+        }}
 
 @MainActor
 @Test func punishmentToleranceIsTwoPercentagePoints() async throws {

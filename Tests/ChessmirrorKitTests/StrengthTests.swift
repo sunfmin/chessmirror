@@ -253,13 +253,13 @@ import ChessmirrorKitTesting
             url: URL(filePath: "/games/chessmirror-at-2000.pgn"), pgn: PGN(game: game),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )
-        #expect(try #require(GameSession.opened(played, strength: .elo(1400))).strength == .elo(2000))
+        #expect(try #require(GameSession.opened(played, strength: .elo(1400)).session).strength == .elo(2000))
 
         let fresh = GameLibrary.Entry(
             url: URL(filePath: "/games/chessmirror-fresh.pgn"), pgn: PGN(game: Self.start),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )
-        #expect(try #require(GameSession.opened(fresh, strength: .elo(1400))).strength == .elo(1400),
+        #expect(try #require(GameSession.opened(fresh, strength: .elo(1400)).session).strength == .elo(1400),
                 "with nothing in the game to say otherwise, the remembered rung")
         #expect(GameSession.playing(Self.start, strength: .elo(2200)).strength == .elo(2200))
         #expect(GameSession.playing(Self.start).strength == .full, "满力 until somebody picks")

@@ -7,62 +7,117 @@ public struct Game: Hashable, Sendable {
     /// recomputed because it depends on the position the move was made in, and that
     /// position is gone once the move is played.
     public struct Ply: Hashable, Sendable {
+        /// Everything said *about* a move rather than the move itself.
+        ///
+        /// One value, because replaying a line recomputes `uci` and `san` and loses all of it,
+        /// so anything that replays puts it back through `takeAnnotations`. That used to copy
+        /// nine fields one by one, with the comment already confessing the failure mode: "a
+        /// field being added and only two of the three call sites remembering it." A struct
+        /// cannot be half-copied. The fields stay reachable one by one below — the interface is
+        /// unchanged — but they are windows onto this.
+        public struct Annotations: Hashable, Sendable {
+            /// White-relative score after this move, written by a **Review and by nothing else**
+            /// (docs/adr/0016).
+            ///
+            /// Three writers used to share this field at three different Depths — the unbounded
+            /// search during play, a Review, and a Score that arrived inside an imported game —
+            /// and nothing said which won. That is survivable while a number only draws a curve;
+            /// it stops being survivable once the differences between consecutive Scores decide
+            /// which moves a player is asked about, because mixed Depths invent mistakes that
+            /// never happened. So the field is a Review's, and a Game with no `reviewDepth` has
+            /// nothing comparable in here at all.
+            public var evaluation: Score?
+            /// A Score that came in with an imported game: somebody else's engine, at a Depth
+            /// nobody wrote down. Kept so it can be shown as theirs, and never read when a move
+            /// is being judged.
+            public var importedEvaluation: Score?
+            /// The engine's expected continuation from the position *after* this move, in SAN,
+            /// written by a **Review and by nothing else** — the same rule as `evaluation`, and
+            /// for the same reason: a Line from a search at some other Depth cannot be compared
+            /// with the Lines around it (docs/adr/0016, 0021).
+            ///
+            /// Empty rather than optional. "The Review had nothing to say here" and "there has
+            /// been no Review" are told apart by `reviewDepth`, which is where every other
+            /// question about provenance is already answered.
+            public var line: [String] = []
+            /// The moves 把关 refused before this one was allowed to stand, in the order they
+            /// were played (docs/adr/0027).
+            ///
+            /// A comment on the move that stands rather than a 分支, because that is what they
+            /// are: a rolled-back move is a thing that happened at this position rather than
+            /// another line that might have been played (docs/adr/0028). Their cost was measured
+            /// when they were refused and is written down with them — nothing recomputes it
+            /// later, because the position they were refused in is gone.
+            public var tried: [Tried] = []
+            /// The lines played from this Ply's own starting position instead of this Ply —
+            /// each one an alternative to *this* move and everything that followed it
+            /// (docs/adr/0043).
+            ///
+            /// A 分支 is how a line that was played and then played over stops being lost. Step
+            /// back to move ten of an imported game, play something else, and the thirty moves
+            /// that were there move in here rather than into the bin; PGN has written them in
+            /// brackets since 1994 and this is the same thing.
+            public var variations: [[Ply]] = []
+            /// Whether this Ply belongs to the 树干 — the line the game arrived as, imported or
+            /// played out — rather than a line tried from an earlier Ply. The record colours the
+            /// two differently, so a 树枝 cannot be mistaken for the game.
+            public var isTrunk: Bool = true
+            /// How many rungs of the hint ladder were open when the move that stands was played
+            /// (docs/adr/0031). Zero is "unaided", which is the ordinary case.
+            public var hints: Int = 0
+            /// The completed interception judgement, kept separate from a full-game Review.
+            public var judgement: Judgement?
+            /// The 棋力 the engine played this move at, for a move the engine played under its
+            /// own Controller; nil for a move by hand (docs/adr/0038). 满力 is written as such
+            /// rather than left blank, because a blank is a hand, and the 连正榜 has to tell the
+            /// two apart.
+            public var strength: Strength?
+
+            public init() {}
+        }
+
         public let uci: String
         public let san: String
-        /// White-relative score after this move, written by a **Review and by nothing else**
-        /// (docs/adr/0016).
-        ///
-        /// Three writers used to share this field at three different Depths — the unbounded
-        /// search during play, a Review, and a Score that arrived inside an imported game —
-        /// and nothing said which won. That is survivable while a number only draws a curve;
-        /// it stops being survivable once the differences between consecutive Scores decide
-        /// which moves a player is asked about, because mixed Depths invent mistakes that
-        /// never happened. So the field is a Review's, and a Game with no `reviewDepth` has
-        /// nothing comparable in here at all.
-        public var evaluation: Score?
-        /// A Score that came in with an imported game: somebody else's engine, at a Depth
-        /// nobody wrote down. Kept so it can be shown as theirs, and never read when a move
-        /// is being judged.
-        public var importedEvaluation: Score?
-        /// The engine's expected continuation from the position *after* this move, in SAN,
-        /// written by a **Review and by nothing else** — the same rule as `evaluation`, and for
-        /// the same reason: a Line from a search at some other Depth cannot be compared with the
-        /// Lines around it (docs/adr/0016, 0021).
-        ///
-        /// Empty rather than optional. "The Review had nothing to say here" and "there has been
-        /// no Review" are told apart by `reviewDepth`, which is where every other question about
-        /// provenance is already answered.
-        public var line: [String] = []
-        /// The moves 把关 refused before this one was allowed to stand, in the order they were
-        /// played (docs/adr/0027).
-        ///
-        /// A comment on the move that stands rather than a 分支, because that is what they are:
-        /// a rolled-back move is a thing that happened at this position rather than another line
-        /// that might have been played (docs/adr/0028). Their cost was measured when they were
-        /// refused and is written down with them — nothing recomputes it later, because the
-        /// position they were refused in is gone.
-        public var tried: [Tried] = []
-        /// The lines played from this Ply's own starting position instead of this Ply — each one
-        /// an alternative to *this* move and everything that followed it (docs/adr/0043).
-        ///
-        /// A 分支 is how a line that was played and then played over stops being lost. Step back
-        /// to move ten of an imported game, play something else, and the thirty moves that were
-        /// there move in here rather than into the bin; PGN has written them in brackets since
-        /// 1994 and this is the same thing.
-        public var variations: [[Ply]] = []
-        /// Whether this Ply belongs to the 树干 — the line the game arrived as, imported or played
-        /// out — rather than a line tried from an earlier Ply. The record colours the two
-        /// differently, so a 树枝 cannot be mistaken for the game.
-        public var isTrunk: Bool = true
-        /// How many rungs of the hint ladder were open when the move that stands was played
-        /// (docs/adr/0031). Zero is "unaided", which is the ordinary case.
-        public var hints: Int = 0
-        /// The completed interception judgement, kept separate from a full-game Review.
-        public var judgement: Judgement?
-        /// The 棋力 the engine played this move at, for a move the engine played under its own
-        /// Controller; nil for a move by hand (docs/adr/0038). 满力 is written as such rather than
-        /// left blank, because a blank is a hand, and the 连正榜 has to tell the two apart.
-        public var strength: Strength?
+        /// Everything said about this move rather than the move itself. Copied in one
+        /// assignment when a line is replayed (`takeAnnotations`).
+        public var annotations = Annotations()
+
+        public var evaluation: Score? {
+            get { annotations.evaluation }
+            set { annotations.evaluation = newValue }
+        }
+        public var importedEvaluation: Score? {
+            get { annotations.importedEvaluation }
+            set { annotations.importedEvaluation = newValue }
+        }
+        public var line: [String] {
+            get { annotations.line }
+            set { annotations.line = newValue }
+        }
+        public var tried: [Tried] {
+            get { annotations.tried }
+            set { annotations.tried = newValue }
+        }
+        public var variations: [[Ply]] {
+            get { annotations.variations }
+            set { annotations.variations = newValue }
+        }
+        public var isTrunk: Bool {
+            get { annotations.isTrunk }
+            set { annotations.isTrunk = newValue }
+        }
+        public var hints: Int {
+            get { annotations.hints }
+            set { annotations.hints = newValue }
+        }
+        public var judgement: Judgement? {
+            get { annotations.judgement }
+            set { annotations.judgement = newValue }
+        }
+        public var strength: Strength? {
+            get { annotations.strength }
+            set { annotations.strength = newValue }
+        }
 
         public struct Judgement: Hashable, Sendable {
             public let drop: Double
@@ -165,15 +220,7 @@ public struct Game: Hashable, Sendable {
         /// in one place, because the way this goes wrong is a field being added and only two of
         /// the three call sites remembering it.
         mutating func takeAnnotations(from other: Self) {
-            evaluation = other.evaluation
-            importedEvaluation = other.importedEvaluation
-            line = other.line
-            tried = other.tried
-            hints = other.hints
-            judgement = other.judgement
-            strength = other.strength
-            variations = other.variations
-            isTrunk = other.isTrunk
+            annotations = other.annotations
         }
     }
 

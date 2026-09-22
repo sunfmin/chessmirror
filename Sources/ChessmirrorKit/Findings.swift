@@ -29,6 +29,12 @@ struct Findings: Equatable, Sendable {
         isOpen(card, on: fen) && opened?.drawsLine == true
     }
 
+    /// Whether the card open on `fen` has its line on the board. What `Deck` is handed: the
+    /// deck is a reading of this state machine, not a second copy of it.
+    func drawsLine(on fen: String) -> Bool {
+        openCard(on: fen) != nil && opened?.drawsLine == true
+    }
+
     /// Pressing a finding. The one pressed opens with its line drawn; pressing the open one
     /// shuts it. Returns whether something was opened (so a 练习 can count help).
     @discardableResult
