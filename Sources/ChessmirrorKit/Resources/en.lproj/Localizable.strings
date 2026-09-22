@@ -551,3 +551,5 @@
 "search.plies" = "depth %d";
 "search.limit.either" = "%1$d s / depth %2$d";
 "search.explained" = "How long and how deep the engine looks at each position. Judging a move, the engine's own move and a hint are all this one search, so a cost means the same thing wherever it was measured. A re-judge goes 8 deeper and allows 6 times the time.";
+"import.unreadableArchives.title" = "Cannot read %2$@'s game list";
+"import.unreadableArchives.message" = "%1$@ answered, but not with a list of %2$@'s games. Try again in a moment.";

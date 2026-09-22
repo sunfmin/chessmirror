@@ -522,3 +522,5 @@
 "search.plies" = "%d 层";
 "search.limit.either" = "%1$d 秒 / %2$d 层";
 "search.explained" = "引擎看每个局面用多久、看多深。细判、引擎自己走子、提示，全都是这一次搜索，所以掉幅在哪里都是同一个意思。复判在此之上再深 8 层、时间放宽到 6 倍。";
+"import.unreadableArchives.title" = "读不到 %2$@ 的对局列表";
+"import.unreadableArchives.message" = "%1$@ 回了东西，但不是 %2$@ 的对局列表。稍后再试一次。";

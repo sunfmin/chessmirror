@@ -506,3 +506,5 @@
 "search.plies" = "profondeur %d";
 "search.limit.either" = "%1$d s / profondeur %2$d";
 "search.explained" = "Combien de temps et à quelle profondeur le moteur examine chaque position. Juger un coup, le coup du moteur lui-même et un indice sont cette même recherche, pour qu'un coût veuille dire la même chose partout. Un nouveau jugement va 8 plus profond et dispose de 6 fois le temps.";
+"import.unreadableArchives.title" = "Impossible de lire la liste de parties de %2$@";
+"import.unreadableArchives.message" = "%1$@ a répondu, mais pas avec une liste de parties de %2$@. Réessayez dans un instant.";

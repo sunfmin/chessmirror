@@ -506,3 +506,5 @@
 "search.plies" = "nivel %d";
 "search.limit.either" = "%1$d s / nivel %2$d";
 "search.explained" = "Cuánto tiempo y a qué profundidad mira el motor cada posición. Juzgar una jugada, la jugada del propio motor y una pista son esta misma búsqueda, así que un coste significa lo mismo donde sea que se mida. Un nuevo juicio va 8 niveles más hondo y admite 6 veces el tiempo.";
+"import.unreadableArchives.title" = "No se puede leer la lista de partidas de %2$@";
+"import.unreadableArchives.message" = "%1$@ respondió, pero no con una lista de partidas de %2$@. Vuelve a intentarlo en un momento.";

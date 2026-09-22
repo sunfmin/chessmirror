@@ -477,3 +477,5 @@
 "search.plies" = "깊이 %d";
 "search.limit.either" = "%1$d초 / 깊이 %2$d";
 "search.explained" = "엔진이 각 국면을 얼마나 오래, 얼마나 깊이 보는지. 판정, 엔진 자신의 수, 힌트가 모두 이 한 번의 탐색이므로 손실은 어디서 재든 같은 뜻입니다. 재판정은 이보다 8 깊게, 시간은 6배까지 씁니다.";
+"import.unreadableArchives.title" = "%2$@의 대국 목록을 읽을 수 없다";
+"import.unreadableArchives.message" = "%1$@가 응답했지만 %2$@의 대국 목록이 아닙니다. 잠시 후 다시 시도하세요.";

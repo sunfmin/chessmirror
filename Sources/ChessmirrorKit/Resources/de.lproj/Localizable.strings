@@ -505,3 +505,5 @@
 "search.plies" = "Tiefe %d";
 "search.limit.either" = "%1$d s / Tiefe %2$d";
 "search.explained" = "Wie lange und wie tief die Engine jede Stellung ansieht. Die Bewertung eines Zugs, der Zug der Engine und ein Hinweis sind ein und dieselbe Suche, damit ein Verlust überall dasselbe bedeutet. Eine Neubewertung geht 8 tiefer und darf 6-mal so lange dauern.";
+"import.unreadableArchives.title" = "%2$@s Partieliste kann nicht gelesen werden";
+"import.unreadableArchives.message" = "%1$@ hat geantwortet, aber nicht mit einer Liste von %2$@s Partien. Versuchen Sie es gleich noch einmal.";
