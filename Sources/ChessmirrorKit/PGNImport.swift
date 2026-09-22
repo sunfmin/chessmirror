@@ -747,8 +747,12 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
                     lastError = .network(error.localizedDescription)
                     continue
                 }
-                guard PGNImport.chapters(in: text).0.first != nil else {
-                    lastError = PGNImport.chapters(in: text).1 > 0 ? .noReadableGames : .notPGN
+                // Split and parse once. This used to call `chapters(in:)` twice on the same text
+                // to choose between `.notPGN` and `.noReadableGames` — the whole multi-game cut
+                // and a parse of every chapter, run twice, before `read` ran it a third time.
+                let (found, unreadable) = PGNImport.chapters(in: text)
+                guard found.first != nil else {
+                    lastError = unreadable > 0 ? .noReadableGames : .notPGN
                     continue
                 }
                 return text
