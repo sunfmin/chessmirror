@@ -1132,21 +1132,43 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         refusalPosition = fen
         refused = refusalByPosition[fen]
     }
-    /// The number for the position on screen: the live bounded search of it when 把关 has one,
-    /// else the curve's number for it. No recommended move is exposed here.
+    /// 优势条读数 — the one number the bar shows, and where it came from (`BarReading`).
     ///
-    /// While a move is being weighed it is the number of the position the move was played from.
-    /// The position it made has no number until the weighing ends — that is what the weighing is
-    /// — and a bar with no number draws a level game: on a phone, ten seconds and more of half
-    /// and half over a position that is nothing like it. The table, while weighing, can only be
-    /// that position's: the search that fills it was stopped when the move was played.
-    private var noSlipsScore: Score? {
-        if let table = interceptTable, table.fen == viewed.state.fen {
+    /// One priority, written here and nowhere else. While a move is being weighed, the position
+    /// it made has no number — that is what the weighing is — and a bar with no number draws a
+    /// level game over a position that is nothing like it; so the reading steps back to the
+    /// position the move was played from and says so.
+    public var barReading: BarReading {
+        // The move just played, while it is still the move just played.
+        if let badge, badge.describes(game), isAtLatest, !isWeighing {
+            return BarReading(.landed(badge.change))
+        }
+        // The live bounded search of the position on screen.
+        if let score = liveScore(of: viewed.state.fen) {
+            return BarReading(.searching(score))
+        }
+        // What the record says about the position on screen.
+        if let known = historyScore(atPly: cursor) {
+            return BarReading(.record(known))
+        }
+        // Weighing: hold the number of the position the move was played from. The table can
+        // only be that position's — its search was stopped when the move landed.
+        if isWeighing {
+            if let score = liveScore() { return BarReading(.searching(score)) }
+            if let known = historyScore(atPly: cursor - 1) { return BarReading(.record(known)) }
+        }
+        return BarReading(nil)
+    }
+
+    /// The live bounded search's number for a position. With a `fen`, only that position's
+    /// table; without one, whatever the table holds. The standing Analysis is the same search
+    /// in its other home — a card's Stint fills both (GameSession+Clock) — so it answers here
+    /// too rather than after the record.
+    private func liveScore(of fen: String? = nil) -> Score? {
+        if let table = interceptTable, fen == nil || table.fen == fen {
             return table.analysis.best?.score
         }
-        if let known = historyScore(atPly: cursor) { return known }
-        guard isWeighing else { return nil }
-        return interceptTable?.analysis.best?.score ?? historyScore(atPly: cursor - 1)
+        return analysis?.best?.score
     }
     /// The 试招 refused at the position on the board that no move has absorbed yet, oldest
     /// first. Read out of the Game, which is where a refusal is written the moment it happens.
@@ -1157,9 +1179,12 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// a chip should show. Held rather than recomputed, because the walk behind `slips` is the
     /// expensive half and the eye moves far more often than the game changes.
     public var reading: RecordReading {
-        // Keyed on what the answer depends on: the game, and the two lines that decide what
-        // counts. A refusal changes the game; moving the record line changes the answer.
-        let key = "\(game.uciMoves.joined(separator: " "))|\(lines.record)|\(lines.enqueue)"
+        // Keyed on what the answer depends on: the game (a refusal is written into it without
+        // touching a move, so the `game` didSet is the invalidation and this is the second
+        // check), whose moves count, and the two lines that decide what counts. Moving the
+        // record line changes the answer; changing whose hand is whose changes which moves
+        // are 错招 at all.
+        let key = "\(game.uciMoves.joined(separator: " "))|\(mine.map(String.init(describing:)).sorted().joined())|\(lines.record)|\(lines.enqueue)"
         if let stored = storedReading, stored.key == key {
             if stored.reading.cursor == cursor { return stored.reading }
             let moved = stored.reading.moved(to: cursor)
@@ -1349,25 +1374,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     public var isFaceToFace = false
 
-    var measuredMove: (moves: [String], fen: String, change: MoveChange)?
+    /// The badge for the move just played (`LandedBadge`), while it is still that move.
+    var badge: LandedBadge?
     /// The game as it stood when a move last landed through `commit` with no judgement on it —
     /// the one move `measureLatestMoveChange` is owed a judgement for. A move that was already
     /// in the file when the game was opened keeps whatever it has: filling those in is the
     /// explicit migration (`fillMissingNoSlipsJudgements`), never something a screen starts.
-    var landedUnjudged: (moves: [String], fen: String)?
+    var landedUnjudged: OfGame?
 
     /// Only a newly played move gets a change badge; navigating the record is not a move.
-    public var moveChange: MoveChange? {
-        guard isAtLatest, !isWeighing, measuredMove?.moves == game.uciMoves,
-              measuredMove?.fen == game.state.fen else { return nil }
-        return measuredMove?.change
-    }
+    public var moveChange: MoveChange? { barReading.change }
 
-    /// What the bar shows, by one priority: where the move just played landed, then the position
-    /// on screen, then the standing Analysis.
-    public var feedbackScore: Score? {
-        moveChange?.after ?? noSlipsScore ?? analysis?.best?.score
-    }
+    /// What the bar shows. `barReading` is the reading; this is the number on it.
+    public var feedbackScore: Score? { barReading.score }
 
     /// The app's number for the position after `ply` moves — what the curve draws — by one
     /// priority: what the 细判 wrote onto the move, then what the badge's weighing found at
@@ -1381,9 +1400,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         if ply > 0, let judgement = game.plies[ply - 1].judgement {
             return judgement.score
         }
-        if let measuredMove, measuredMove.moves == game.uciMoves, measuredMove.fen == game.state.fen {
-            if ply == game.plies.count { return measuredMove.change.after }
-            if ply == game.plies.count - 1 { return measuredMove.change.before }
+        if let badge, badge.describes(game) {
+            if ply == game.plies.count { return badge.change.after }
+            if ply == game.plies.count - 1 { return badge.change.before }
         }
         return game.reviewScore(atPly: ply)
     }

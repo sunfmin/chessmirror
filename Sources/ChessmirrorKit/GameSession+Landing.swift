@@ -49,7 +49,7 @@ extension GameSession {
     }
 
     var isLatestMoveMeasured: Bool {
-        measuredMove?.moves == game.uciMoves && measuredMove?.fen == game.state.fen
+        badge?.describes(game) ?? false
     }
 
     /// Badges the move just played if nothing has yet: the session asks for this itself every
@@ -73,9 +73,8 @@ extension GameSession {
         let last = after.plies.count - 1
         if let judgement = after.plies[last].judgement {
             if let before = historyScore(atPly: last) {
-                measuredMove = (
-                    after.uciMoves, after.state.fen,
-                    MoveChange(before: before, after: judgement.score, isBest: judgement.best)
+                badge = LandedBadge(
+                    after, change: MoveChange(before: before, after: judgement.score, isBest: judgement.best)
                 )
             }
             return
@@ -85,14 +84,14 @@ extension GameSession {
         guard !Task.isCancelled, !isWeighing, let weighed,
               game.uciMoves == after.uciMoves, game.startFEN == after.startFEN else { return }
         if game.plies[last].judgement == nil, let landed = landedUnjudged,
-           landed.moves == after.uciMoves, landed.fen == after.state.fen {
+           landed.matches(after) {
             game.setJudgement(weighed.judgement, atPly: last)
             landedUnjudged = nil
             save()
         }
-        measuredMove = (
-            after.uciMoves, after.state.fen,
-            MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
+        badge = LandedBadge(
+            after,
+            change: MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
         )
     }
 
@@ -287,7 +286,7 @@ extension GameSession {
         case .unjudged:
             retune()
         case .stands(let change):
-            if let change { measuredMove = (game.uciMoves, game.state.fen, change) }
+            if let change { badge = LandedBadge(game, change: change) }
             save()
             answerFromTheRecord()
             retune()
@@ -343,7 +342,7 @@ extension GameSession {
         // position — whoever moved.
         analysis = nil
         absorbRefusals(atPly: cursor - 1)
-        landedUnjudged = (game.uciMoves, game.state.fen)
+        landedUnjudged = OfGame(game)
         refused = nil
         save()
         answerFromTheRecord()

@@ -33,6 +33,15 @@ The one place a positive number is honest, and it is settled only after the move
 A reading of the Game with no screen at present (docs/adr/0040).
 _Avoid_: 抓住, 反击
 
+**优势条读数 (Bar reading)**:
+The one number the advantage bar shows, and where it came from (`BarReading`). One priority,
+written once: the move just landed, then a live search of the position on screen, then what
+the record says of it, then the standing Analysis. While a move is being weighed the position
+it made has no number — that is what the weighing is — so the reading steps back to the
+position the move was played from. A Score is a number; this is the number *for the glass*
+and the door it came through.
+_Avoid_: 估值, 局面分, feedback
+
 **牌堆 (Deck)**:
 The findings under the record: 杀招 and 战术, two cards in one order that never changes, each
 shut until it is pressed (docs/adr/0025). A card with nothing behind it takes up no room, and

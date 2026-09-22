@@ -341,7 +341,13 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
     let change = try #require(session.moveChange)
     #expect(change.before == .centipawns(0))
     #expect(change.after == .centipawns(score))
-    #expect(session.feedbackScore == change.after)
+    // The badge and the bar are one reading: the change and the number are the same fact,
+    // looked at two ways (`BarReading`). This used to be two assertions against two members
+    // that each kept their own priority chain.
+    #expect(session.barReading.change == change, "the badge is the bar's source")
+    #expect(session.barReading.score == change.after, "and the bar reads its number")
+    #expect(session.feedbackScore == session.barReading.score)
+    #expect(session.moveChange == session.barReading.change)
     #expect(abs(change.percent(for: .white) - (Score.centipawns(score).winPercent - 50)) < 0.001)
     #expect(change.percent(for: .black) == -change.percent(for: .white))
     session.jump(toPly: 0)
@@ -820,5 +826,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     session.play(try #require(start.state.move(matching: "e2e4")))
     for _ in 0..<20 { await Task.yield() }
     try #require(session.isWeighing, "the position the move made has no answer yet")
-    #expect(session.strip.bar?.score == .centipawns(300), "not nil, which the bar draws as 50/50")
+    // One reading feeds the bar and the strip: `BarReading` decides, and both read it.
+    #expect(session.barReading.score == .centipawns(300), "not nil, which the bar draws as 50/50")
+    #expect(session.strip.bar?.score == session.barReading.score)
 }
