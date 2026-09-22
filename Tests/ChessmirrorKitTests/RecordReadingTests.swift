@@ -262,6 +262,52 @@ import Testing
                 "and a move nobody forked at is only its place")
     }
 
+    // ------------------------------------------------------------------ ready to draw
+
+    @Test("the strip is handed as rows: halves glued under their move number, each ready to draw")
+    func rowsGlueTheScoresheetHalves() throws {
+        let game = try tallied()
+        let read = RecordReading(game: game, mine: [.white], lines: JudgementLines(noSlips: true), cursor: 4)
+        #expect(read.rows.map(\.number) == [1, 2, 3, 4], "the scoresheet's own ruling")
+        let second = try #require(read.rows.first { $0.number == 2 })
+        #expect(second.white?.name == "Nf3")
+        #expect(second.black?.name == "Nc6")
+        #expect(second.white?.caption != nil, "a measured half carries its caption with it")
+        #expect(second.black?.mark == .owed, "and the mark on the half that took the slip")
+        #expect(second.white?.isCursor == false)
+        #expect(second.black?.isCursor == true, "the eye is on 4... Nc6")
+        #expect(second.black?.isFilled == true, "and a cell nobody forked at is filled when it is the cursor")
+        let fourth = try #require(read.rows.first { $0.number == 4 })
+        #expect(fourth.black?.isCursor == false)
+        #expect(read.opening.isCursor == false)
+        #expect(reading(game, at: 0).opening.isCursor == true)
+    }
+
+    @Test("a row on a fork carries the ticks, the trunk mark and which line is which")
+    func aRowCarriesTheForkTicks() throws {
+        var game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"]))
+        let replaced = try #require(game.rewound(to: 2)?.state.move(matching: "f1c4"))
+        guard game.play(replaced, atPly: 2) else {
+            Issue.record("Bc4 from the position after 2... e5 would not go")
+            return
+        }
+        let read = reading(game, at: 3)
+        let second = try #require(read.rows.first { $0.number == 2 })
+        let twig = try #require(second.white)
+        #expect(twig.name == "Bc4")
+        #expect(twig.isFork && !twig.isTrunk && twig.branchNumber == 2 && twig.siblingCount == 2)
+        #expect(twig.isFilled == false, "a fork cell under the eye is outlined, not filled")
+        #expect(twig.spoken.hasSuffix(localized("record.twig", 2, 2)))
+        let first = try #require(read.rows.first { $0.number == 1 })
+        #expect(first.white?.isFork == false && first.white?.isTrunk == true)
+    }
+
+    @Test("the mark's weight is what the mark means, not a rule the screen re-derives")
+    func theMarkCarriesItsOwnWeight() {
+        #expect(RecordReading.Mark.owed.weight == 1)
+        #expect(RecordReading.Mark.written.weight == 0.5)
+    }
+
     @Test("a finished game's bar says who won instead of a score")
     func aFinishSaysWhoWon() {
         #expect(Finish.won(.white).label == localized("standing.won", PieceColour.white.label))

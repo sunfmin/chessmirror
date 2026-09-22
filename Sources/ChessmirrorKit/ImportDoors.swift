@@ -212,11 +212,13 @@ import Foundation
         public let applied: String?
     }
 
-    /// The plan read against the library and the 错题本 it would be written into.
+    /// The plan read against the library and the per-game wrong-count face it would be written
+    /// into (`MistakeIndex.wrongByGame`) — never the whole book.
     public func reading(
-        _ plan: PGNImport.ImportPlan, in library: GameLibrary, book: MistakeIndex, hasEngine: Bool
+        _ plan: PGNImport.ImportPlan, in library: GameLibrary, wrongByGame: [URL: Int],
+        hasEngine: Bool
     ) -> Reading {
-        let standing = plan.chapters.map { session.status(of: $0, in: library, book: book) }
+        let standing = plan.chapters.map { session.status(of: $0, in: library, wrongByGame: wrongByGame) }
         let toAdd = standing.count { $0 == .notImported }
         var applied: String?
         var apply: String?
@@ -264,7 +266,7 @@ import Foundation
     }
 
     public func row(
-        _ chapter: PGNImport.ImportChapter, in library: GameLibrary, book: MistakeIndex
+        _ chapter: PGNImport.ImportChapter, in library: GameLibrary, wrongByGame: [URL: Int]
     ) -> Row {
         let side = account.flatMap { PGNImport.side(of: $0, in: chapter.pgn) }
         return Row(
@@ -272,7 +274,7 @@ import Foundation
             title: side.map { chapter.pgn.playerName($0.opposite) ?? "?" } ?? chapter.name,
             verdict: side.flatMap { PGNImport.verdict(for: $0, in: chapter.pgn) },
             when: side != nil ? PGNImport.playedAt(chapter.pgn) : nil,
-            status: session.status(of: chapter, in: library, book: book).label
+            status: session.status(of: chapter, in: library, wrongByGame: wrongByGame).label
         )
     }
 }

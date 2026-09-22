@@ -328,18 +328,33 @@ func importStatusReadsTheBook() throws {
 
     let reviewed = try game(seed: 7, at: now)
     index.update(from: [reviewed])
-    #expect(PGNImport.Status(reviewed, in: library, book: index) == .ready(1))
+    #expect(PGNImport.Status(scoring: nil, isReviewed: true, wrong: 1) == .ready(1))
+    #expect(
+        PGNImport.Status(
+            scoring: library.reviewing[reviewed.url],
+            isReviewed: reviewed.pgn?.game.isReviewed == true,
+            wrong: index.wrongByGame[reviewed.url] ?? 0
+        ) == .ready(1),
+        "the facts the status is made of are the review state and the book's count"
+    )
 
     let pending = GameLibrary.Entry(
         url: URL(filePath: "/games/pending.pgn"),
         pgn: PGN(game: try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"])), tags: []),
         modified: now
     )
-    #expect(PGNImport.Status(pending, in: library, book: index) == .awaitingReview)
+    #expect(
+        PGNImport.Status(
+            scoring: nil,
+            isReviewed: pending.pgn?.game.isReviewed == true,
+            wrong: 0
+        ) == .awaitingReview
+    )
 
     let clean = GameLibrary.Entry(url: URL(filePath: "/games/clean.pgn"), pgn: reviewedButClean(), modified: now)
     index.update(from: [reviewed, clean])
-    #expect(PGNImport.Status(clean, in: library, book: index) == .ready(0), "reviewed with nothing wrong is ready, at zero")
+    #expect(PGNImport.Status(scoring: nil, isReviewed: true, wrong: 0) == .ready(0), "reviewed with nothing wrong is ready, at zero")
+    #expect(PGNImport.Status(scoring: .init(judged: 1, total: 3), isReviewed: false, wrong: 0) == .scoring(.init(judged: 1, total: 3)))
 }
 
 /// A reviewed game in which nobody gave anything away.

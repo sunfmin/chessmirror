@@ -169,12 +169,12 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     let importer = ImportSession()
     let chapter = PGNImport.ImportChapter(id: 2, name: "Selected game",
                                          pgn: try PGN(parsing: "1. e4 e5 *"))
-    #expect(importer.status(of: chapter, in: library, book: book) == .notImported)
+    #expect(importer.status(of: chapter, in: library, wrongByGame: book.wrongByGame) == .notImported)
     let entry = try #require(importer.open(chapter, into: library))
     #expect(library.entries.count == 1)
     #expect(library.reviewingURLs.isEmpty)
     #expect(entry.pgn?.game.isReviewed == false)
-    #expect(importer.status(of: chapter, in: library, book: book) == .awaitingReview)
+    #expect(importer.status(of: chapter, in: library, wrongByGame: book.wrongByGame) == .awaitingReview)
     let engine = ScriptedEngine([Analysis(depth: 16, lines: [
         Line(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])
     ])])
@@ -205,8 +205,8 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     session.review()
     session.attach(engine: engine, library: library)
     #expect(library.reviewingURLs.contains(entry.url))
-    guard case .scoring = importer.status(of: chapter, in: library, book: book) else {
-        Issue.record("expected the chapter to be scoring, got \(importer.status(of: chapter, in: library, book: book))")
+    guard case .scoring = importer.status(of: chapter, in: library, wrongByGame: book.wrongByGame) else {
+        Issue.record("expected the chapter to be scoring, got \(importer.status(of: chapter, in: library, wrongByGame: book.wrongByGame))")
         return
     }
     await library.waitForImportReviews()
@@ -221,7 +221,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
     #expect(disk.game.reviewDepth == 16)
     #expect(disk.tag("ReviewSift") == "full-local")
-    #expect(importer.status(of: chapter, in: library, book: book) == .ready(0))
+    #expect(importer.status(of: chapter, in: library, wrongByGame: book.wrongByGame) == .ready(0))
     let again = try #require(importer.open(chapter, into: library))
     #expect(again.url == entry.url)
     #expect(library.entries.count == 1)

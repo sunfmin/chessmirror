@@ -1060,21 +1060,22 @@ struct GameScreen: View {
     }
 
     private var moveStrip: some View {
-        // Read once for the whole strip: what every cell says, its caption and its mark, is the
-        // record's (`RecordReading.cell`), and the walk behind the marks is a rules probe per Ply.
+        // Read once for the whole strip: the reading hands every cell ready to draw — its caption,
+        // its mark, its 分支 ticks, its spoken string and whether the eye is on it — and the
+        // screen paints what it is given (`RecordReading.rows`).
         let reading = session.reading
         return ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 HStack(spacing: 6) {
                     openingCell(reading.opening)
-                    ForEach(session.game.scoresheet) { card in
+                    ForEach(reading.rows) { row in
                         HStack(spacing: 6) {
-                            Text("\(card.number)")
+                            Text("\(row.number)")
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(Palette.inkSoft)
                                 .frame(minWidth: 13, alignment: .trailing)
-                            if let white = card.white { half(white, reading.cell(white)) }
-                            if let black = card.black { half(black, reading.cell(black)) }
+                            if let white = row.white { half(white) }
+                            if let black = row.black { half(black) }
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -1121,15 +1122,14 @@ struct GameScreen: View {
     /// The position the game began in, at the head of its own record. It is a place in the game
     /// like any other, and without it there is no way back to it in one tap.
     private func openingCell(_ cell: RecordReading.Cell) -> some View {
-        let on = session.cursor == 0
         return Button { walk(to: 0) } label: {
             Text(cell.name)
                 .font(.caption)
-                .foregroundStyle(on ? Palette.parchment : Palette.inkSoft)
+                .foregroundStyle(cell.isCursor ? Palette.parchment : Palette.inkSoft)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
                 .background(
-                    on ? AnyShapeStyle(Palette.analysis) : AnyShapeStyle(Palette.chipRest),
+                    cell.isCursor ? AnyShapeStyle(Palette.analysis) : AnyShapeStyle(Palette.chipRest),
                     in: RoundedRectangle(cornerRadius: 9)
                 )
                 .overlay(alignment: .bottom) { slipMark(cell.mark) }
@@ -1144,28 +1144,29 @@ struct GameScreen: View {
     /// An overlay rather than a row, so a card with a mistake in it is exactly as tall as one
     /// without: the curve behind the strip is drawn against these cards being even. Two weights on
     /// the one scale the app already has (docs/adr/0027): pale is what the 记录线 put in the file,
-    /// the alarm colour is what the 入列线 says the player still owes.
+    /// the alarm colour is what the 入列线 says the player still owes. Which weight is which is
+    /// the mark's own (`Mark.weight`).
     @ViewBuilder private func slipMark(_ mark: RecordReading.Mark?) -> some View {
         if let mark {
             UnevenRoundedRectangle(bottomLeadingRadius: 2, bottomTrailingRadius: 2)
-                .fill(Palette.alarm.opacity(mark == .owed ? 1 : 0.5))
+                .fill(Palette.alarm.opacity(mark.weight))
                 .frame(height: 3)
         }
     }
 
     /// One half of a move, and — when the player got a position wrong here — a mark at its foot.
-    /// What it reads, says and is marked with is the record's (`RecordReading.Cell`); the tree it
-    /// sits in is the half's.
+    /// What it reads, says, is marked with, sits on a fork with, and whether the eye is on it is
+    /// the record's (`RecordReading.Cell`); the screen only paints it.
     ///
     /// With a caption, every cell carries a second line, so the whole row grows together and the
     /// curve behind it is drawn against cells that are still even.
-    private func half(_ cell: Game.Half, _ said: RecordReading.Cell) -> some View {
-        let on = cell.ply == session.cursor
+    private func half(_ cell: RecordReading.Cell) -> some View {
         // A 树枝 is inked in its own colour, so a line tried from an earlier position cannot be
         // mistaken for the game (docs/adr/0043). A cell on a fork is outlined rather than filled
-        // when the eye is on it, so the rail beside it reads as part of the same cell.
+        // when the eye is on it (`cell.isFilled`), so the rail beside it reads as part of the
+        // same cell.
         let mark = cell.isTrunk ? Palette.ink : Palette.mine
-        let filled = on && !cell.isFork
+        let filled = cell.isFilled
         return HStack(spacing: 3) {
             if cell.isFork {
                 Button {
@@ -1183,28 +1184,28 @@ struct GameScreen: View {
             }
             Button { walk(to: cell.ply) } label: {
                 VStack(spacing: 1) {
-                    Text(cell.san)
-                        .font(.footnote.weight(on ? .medium : .regular))
+                    Text(cell.name)
+                        .font(.footnote.weight(cell.isCursor ? .medium : .regular))
                         .foregroundStyle(filled ? Palette.parchment : mark)
-                    if let caption = said.caption { costCaption(caption, on: filled) }
+                    if let caption = cell.caption { costCaption(caption, on: filled) }
                 }
                 .padding(.horizontal, cell.isFork ? 3 : 5)
                 .padding(.vertical, 2)
                 .background {
                     if filled {
                         RoundedRectangle(cornerRadius: 5).fill(Palette.analysis)
-                    } else if on {
+                    } else if cell.isCursor {
                         RoundedRectangle(cornerRadius: 5).stroke(mark, lineWidth: 1.2)
                     }
                 }
-                .overlay(alignment: .bottom) { slipMark(said.mark) }
+                .overlay(alignment: .bottom) { slipMark(cell.mark) }
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
             // Said the way somebody reading a game aloud says it. A bare "Nf6" out of VoiceOver
             // is a move with no place in the game, and place is the whole of what this strip is
             // for — and what it cost, and a mistake made from here, are worth saying out loud too.
-            .accessibilityLabel(said.spoken)
+            .accessibilityLabel(cell.spoken)
             .accessibilityHint(localized("record.jump"))
         }
         .id(cell.ply)
