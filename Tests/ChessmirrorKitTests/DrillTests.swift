@@ -44,6 +44,33 @@ private func engine(
     )
 }
 
+// ------------------------------------------------------------------- intake
+
+@MainActor
+@Test func takeHandsTheSessionTheGameItMade() throws {
+    let drill = try #require(Drill(position: afterNf3, engine: ScriptedEngine([]), log: temporaryLog()))
+    let move = try #require(drill.game.state.move(matching: "b8c6"))
+    let before = drill.game
+    guard case .judging(let played) = drill.take(move) else {
+        Issue.record("the first move of a drill is judged, not refused")
+        return
+    }
+    #expect(played != before)
+    #expect(drill.isJudging)
+}
+
+@MainActor
+@Test func takeRefusesASecondMoveWhileTheFirstIsBeingJudged() throws {
+    let drill = try #require(Drill(position: afterNf3, engine: ScriptedEngine([]), log: temporaryLog()))
+    let first = try #require(drill.game.state.move(matching: "b8c6"))
+    _ = drill.take(first)
+    let second = try #require(drill.game.state.move(matching: "d2d4"))
+    guard case .refused = drill.take(second) else {
+        Issue.record("a drill is one move; the session must not hand it a second")
+        return
+    }
+}
+
 // ------------------------------------------------------------------ the verdict
 
 @MainActor

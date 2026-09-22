@@ -191,20 +191,20 @@ import Testing
             return
         }
 
-        let before = doors.reading(plan, in: library, book: book, hasEngine: false)
+        let before = doors.reading(plan, in: library, wrongByGame: book.wrongByGame, hasEngine: false)
         #expect(before.summary == "2 局")
         #expect(before.tapHint.contains("sunfmin"))
         #expect(before.apply == "入库 2 局")
         #expect(before.applied == nil)
 
-        let row = doors.row(plan.chapters[0], in: library, book: book)
+        let row = doors.row(plan.chapters[0], in: library, wrongByGame: book.wrongByGame)
         #expect(row.side == .white)
         #expect(row.title == "DrNykterstein", "the opponent, from the account's side")
         #expect(row.verdict != nil)
         #expect(row.spoken.hasPrefix(PieceColour.white.label))
 
         session.apply(into: library, as: doors.account)
-        let after = doors.reading(plan, in: library, book: book, hasEngine: false)
+        let after = doors.reading(plan, in: library, wrongByGame: book.wrongByGame, hasEngine: false)
         #expect(after.apply == nil, "nothing left to add")
         #expect(after.applied == localized("import.done", plural: 2))
 
@@ -212,7 +212,7 @@ import Testing
         await doors.fetch()
         session.apply(into: library, as: doors.account)
         guard case .ready(let again) = session.phase else { return }
-        #expect(doors.reading(again, in: library, book: book, hasEngine: true).applied
+        #expect(doors.reading(again, in: library, wrongByGame: book.wrongByGame, hasEngine: true).applied
                 == localized("import.applied.none"))
     }
 }

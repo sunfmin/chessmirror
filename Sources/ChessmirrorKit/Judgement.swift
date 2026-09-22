@@ -50,6 +50,12 @@ public struct JudgementLines: Hashable, Sendable, Codable {
         )
     }
 
+    /// 把关 on at this 记录线, with the 入列线 lifted to stay at or above it (docs/adr/0046).
+    /// The one shape a caller needs to stop the player at a line of their choosing.
+    public static func noSlips(at record: Double, enqueue: Double) -> JudgementLines {
+        JudgementLines(noSlips: true, record: record, enqueue: max(enqueue, record))
+    }
+
     private enum CodingKeys: String, CodingKey { case noSlips, record, enqueue }
 
     /// The values either line is offered, because tenths of a percent are not a thing anybody

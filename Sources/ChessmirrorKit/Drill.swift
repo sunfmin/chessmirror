@@ -204,17 +204,35 @@ public struct DrillVerdict: Hashable, Sendable {
 
     // ------------------------------------------------------------------- playing
 
+    /// What a session must do with a move offered to this attempt.
+    enum Intake: Sendable {
+        /// Not this attempt's move — already settled, already judging, or it will not apply.
+        case refused
+        /// Landed and under 细判. Wait `settled()`, then read `ruling`.
+        case judging(game: Game)
+        /// Landed with nothing measurable. Put the game back and write nothing.
+        case unjudged(game: Game)
+    }
+
     /// The one move this drill is about. Everything after it is a settlement.
-    public func play(_ move: Move) {
-        guard verdict == nil, !isJudging else { return }
+    ///
+    /// Owns the whole intake — the guard, the apply, the wait flag, the game the move made — so
+    /// a session never has to know how an attempt decides a move is its own (docs/adr/0047).
+    func take(_ move: Move) -> Intake {
+        guard verdict == nil, !isJudging else { return .refused }
         couldNotJudge = false
         let before = game
         var after = game
-        guard after.apply(move), let played = after.plies.last else { return }
+        guard after.apply(move), let played = after.plies.last else { return .refused }
         seconds = max(0, clock().timeIntervalSince(startedAt))
         game = after
         isJudging = true
         judging = Task { await judge(move, san: played.san, before: before, after: after) }
+        return .judging(game: after)
+    }
+
+    public func play(_ move: Move) {
+        _ = take(move)
     }
 
     /// Waits until the attempt has been settled. What a screen moving on to the next question

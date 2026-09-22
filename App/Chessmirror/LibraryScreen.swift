@@ -507,7 +507,7 @@ struct LibraryScreen: View {
                     .padding(.vertical, 10)
             }
 
-            GameList(entries: played) { open($0) }
+            GameList(entries: played, wrongByGame: index.wrongByGame) { open($0) }
 
             if !practised.isEmpty {
                 practiceDrawer(practised)
@@ -547,7 +547,7 @@ struct LibraryScreen: View {
             .accessibilityValue("\(entries.count)")
 
             if isPracticeShowing {
-                GameList(entries: entries) { open($0) }
+                GameList(entries: entries, wrongByGame: index.wrongByGame) { open($0) }
             }
         }
     }
@@ -655,14 +655,15 @@ struct LibraryScreen: View {
 }
 
 /// A list of games, and everything that can be done to one: open it, name it, delete it.
+///
+/// Reads one face of the 错题本 — `wrongByGame` — and not the whole index: a row is labelled
+/// from a count and a review state, which is the same seam `PGNImport.Status` takes.
 struct GameList: View {
     let entries: [GameLibrary.Entry]
+    let wrongByGame: [URL: Int]
     let open: (GameLibrary.Entry) -> Void
 
     @Environment(GameLibrary.self) private var library
-    /// The 错题本, read for one fact: how much there is to practise in a game. A game that has
-    /// something waiting in it should say so on the row rather than only once it is opened.
-    @Environment(MistakeIndex.self) private var index
 
     @State private var renaming: GameLibrary.Entry?
     @State private var nameDraft = ""
@@ -723,13 +724,19 @@ struct GameList: View {
                         .font(.caption)
                         .foregroundStyle(Palette.inkSoft)
                     if entry.origin == .imported {
-                        Text(PGNImport.Status(entry, in: library, book: index).label)
+                        Text(
+                            PGNImport.Status(
+                                scoring: library.reviewing[entry.url],
+                                isReviewed: entry.pgn?.game.isReviewed == true,
+                                wrong: wrongByGame[entry.url] ?? 0
+                            ).label
+                        )
                             .font(.caption)
                             .foregroundStyle(Palette.inkSoft)
                     }
                 }
                 Spacer(minLength: 0)
-                if let wrong = index.wrongByGame[entry.url], wrong > 0 {
+                if let wrong = wrongByGame[entry.url], wrong > 0 {
                     Text(localized("library.wrong", wrong))
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(Palette.alarm)

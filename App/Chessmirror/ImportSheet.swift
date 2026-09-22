@@ -219,7 +219,9 @@ struct ImportSheet: View {
     /// it records their side's mistakes without asking. Through a link nobody is known, so a
     /// row is the chapter's own name and opening it asks whose mistakes to keep.
     private func ready(_ plan: PGNImport.ImportPlan) -> some View {
-        let reading = doors.reading(plan, in: library, book: index, hasEngine: engine != nil)
+        let reading = doors.reading(
+            plan, in: library, wrongByGame: index.wrongByGame, hasEngine: engine != nil
+        )
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -293,7 +295,7 @@ struct ImportSheet: View {
     /// from their side, and when. Without: the chapter's name. The 错题本's standing on the game
     /// trails either.
     private func row(_ chapter: PGNImport.ImportChapter) -> some View {
-        let row = doors.row(chapter, in: library, book: index)
+        let row = doors.row(chapter, in: library, wrongByGame: index.wrongByGame)
         let side = row.side
         return Button {
             if let side {

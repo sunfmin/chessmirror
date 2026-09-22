@@ -6,12 +6,19 @@ import Foundation
 /// comes from the PGN files and the practice log; it can be thrown away at any moment and rebuilt
 /// from those two, and nothing else in the app is allowed to depend on it having survived.
 ///
+/// **Faces, not a hub.** The index is one walk of the library and the log. What a screen takes
+/// from it is a face of that walk — `book` (错题本), `daily` (日课), `ladder` (连正榜),
+/// `wrongByGame` (how much each game holds), `log` (练习日志) — and a caller that needs one face
+/// takes that face, not the whole index. `PGNImport.Status` is the seam that already does: it
+/// reads a wrong-count and a review state and never the book.
+///
 /// What it saves is the walk: deriving a game's Encounters means replaying it move by move, which
 /// is a rules probe per ply (docs/adr/0003). A hundred games is a few thousand probes, and the
 /// book is asked for every time a screen opens. So each game's Encounters are kept under its file
 /// and its modification date, and a reload that changed one file re-walks one game.
 @Observable @MainActor public final class MistakeIndex {
-    /// The book as it stands. Rebuilt in place when the games change or a position is struck off.
+    /// The book face: 错题本 as it stands. Rebuilt in place when the games change or a position
+    /// is struck off. The list a 错题 screen reads; not the index's private assembly.
     public private(set) var book = MistakeBook(mistakes: [])
     /// A transient receipt for newly recorded occasions, never replayed on initial loading.
     public struct Recording: Equatable, Sendable {
@@ -25,12 +32,13 @@ import Foundation
     /// nothing, which is the whole point of the cache and the thing a test can hold it to.
     public private(set) var walkedLastTime = 0
 
-    /// The 连正榜 (docs/adr/0038). Derived from the same walk as the book, and cached with it:
-    /// a game's credits are read once, under its file and date, and summed on every rebuild.
+    /// The 连正榜 face (docs/adr/0038). Derived from the same walk as the book, and cached with
+    /// it: a game's credits are read once, under its file and date, and summed on every rebuild.
     public private(set) var ladder = Ladder(rows: [])
 
-    /// How many positions each game holds something wrong at, by the file it is in — the number
-    /// on a game's row in the library, and the number an imported chapter reports as ready.
+    /// The per-game face: how many positions each game holds something wrong at, by the file it
+    /// is in — the number on a game's row in the library, and the number an imported chapter
+    /// reports as ready. The one number `PGNImport.Status` takes from here.
     ///
     /// Counted by Ply and not by 遭遇: a position tried three times in one game is one place to
     /// stop at, which is the same rule the game's own list uses (docs/adr/0036). Read from the
@@ -38,12 +46,13 @@ import Foundation
     /// A game with nothing wrong in it is absent rather than zero.
     public private(set) var wrongByGame: [URL: Int] = [:]
 
-    /// Today's queue (docs/adr/0030). Derived like everything else here — from the book and the
+    /// The 日课 face (docs/adr/0030). Derived like everything else here — from the book and the
     /// practice log — and recomputed whenever either could have changed.
     public private(set) var daily = Daily(cards: [])
 
-    /// The practice log the book is read against, and the one a drill writes its attempts to:
-    /// one log, because a dismissal and an attempt are the same kind of thing (docs/adr/0029).
+    /// The 练习日志 face: the practice log the book is read against, and the one a drill writes
+    /// its attempts to — one log, because a dismissal and an attempt are the same kind of thing
+    /// (docs/adr/0029).
     public let log: PracticeLog
     private var lines: JudgementLines
     /// One game's findings, under the file it came from and the date it carried when they were

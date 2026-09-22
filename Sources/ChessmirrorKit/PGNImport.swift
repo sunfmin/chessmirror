@@ -29,20 +29,20 @@ public enum PGNImport {
             }
         }
 
-        /// Where an imported game stands: being scored, waiting for its Review, or ready — with
-        /// how many positions the 错题本 holds against it. The count is the book's own
+        /// Where an imported game stands, from the two facts a row is labelled with and nothing
+        /// else: the review state of the game, and how many positions the 错题本 holds against it
         /// (`MistakeIndex.wrongByGame`), so the number a chapter reports and the number on the
         /// game's row in the library are one number, under the player's lines, less what has been
         /// struck off. The library used to keep a second count of its own here, under the default
-        /// lines, and the two could disagree.
-        @MainActor
-        public init(_ entry: GameLibrary.Entry, in library: GameLibrary, book index: MistakeIndex) {
-            if let progress = library.reviewing[entry.url] {
-                self = .scoring(progress)
-            } else if entry.pgn?.game.isReviewed != true {
+        /// lines, and the two could disagree — and this used to take the whole book to read one
+        /// of those numbers.
+        public init(scoring: ImportReview.Progress? = nil, isReviewed: Bool, wrong: Int = 0) {
+            if let scoring {
+                self = .scoring(scoring)
+            } else if !isReviewed {
                 self = .awaitingReview
             } else {
-                self = .ready(index.wrongByGame[entry.url] ?? 0)
+                self = .ready(wrong)
             }
         }
     }
@@ -872,13 +872,17 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     }
 
     public func status(
-        of chapter: PGNImport.ImportChapter, in library: GameLibrary, book index: MistakeIndex
+        of chapter: PGNImport.ImportChapter, in library: GameLibrary, wrongByGame: [URL: Int]
     ) -> PGNImport.Status {
         guard let entry = library.entries.first(where: { entry in
             guard let pgn = entry.pgn else { return false }
             return PGNImport.identity(of: pgn, named: entry.name ?? entry.title) == chapter.identity
         }) else { return .notImported }
-        return PGNImport.Status(entry, in: library, book: index)
+        return PGNImport.Status(
+            scoring: library.reviewing[entry.url],
+            isReviewed: entry.pgn?.game.isReviewed == true,
+            wrong: wrongByGame[entry.url] ?? 0
+        )
     }
 
     /// Back to a blank slate, for the "再导入一个" that follows a done import.

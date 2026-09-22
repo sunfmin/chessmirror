@@ -199,9 +199,19 @@ public struct RecordReading: Sendable {
     public enum Mark: Hashable, Sendable {
         case written
         case owed
+
+        /// How hard the mark is pressed on the glass: what the 入列线 still owes is full weight,
+        /// what is only written down is held back (docs/adr/0027). The meaning of the mark, said
+        /// here once, so a screen does not re-derive which weight is which.
+        public var weight: Double {
+            self == .owed ? 1 : 0.5
+        }
     }
 
-    /// One place on the record, as the strip shows it and says it.
+    /// One place on the record, as the strip shows it and says it — **and draws it.** Everything
+    /// one cell of the strip needs is here: what it reads, its caption, its mark, the 分支 ticks
+    /// beside it (docs/adr/0043), how it is said out loud, and whether the eye is on it. The
+    /// screen paints this; it does not re-assemble what any of it means.
     public struct Cell: Hashable, Sendable {
         /// The cursor it takes the board to.
         public let ply: Int
@@ -213,8 +223,50 @@ public struct RecordReading: Sendable {
         /// The mark at its foot when the player went wrong *from* this position.
         public let mark: Mark?
         /// Said the way somebody reading a game aloud says it: where it is, what it cost, and that
-        /// a mistake was made from here.
+        /// a mistake was made from here. On a fork, which line it is of the ones played from here.
         public let spoken: String
+        /// Whether the eye is on this cell — the reading's own cursor, not a comparison the
+        /// screen makes.
+        public let isCursor: Bool
+        /// 树干 rather than a numbered 树枝 (docs/adr/0043). A cell nobody forked at is its own trunk.
+        public let isTrunk: Bool
+        /// This cell's number among the lines played from its position, 树干 first.
+        public let branchNumber: Int
+        /// How many lines were played from its position; one for a position nobody forked at.
+        public let siblingCount: Int
+
+        /// Whether the position this cell was played from has more than one line out of it —
+        /// the crease the strip draws as ticks (docs/adr/0043).
+        public var isFork: Bool { siblingCount > 1 }
+
+        /// Whether the cell is drawn filled. A cell on a fork is outlined instead when the eye is
+        /// on it, so the rail beside it reads as part of the same cell.
+        public var isFilled: Bool { isCursor && !isFork }
+    }
+
+    /// One scoresheet row as the strip draws it: the move number and its one or two halves, each
+    /// already a Cell. Gluing the halves under their number belongs here — the same walk that
+    /// knows which mark goes on which half also knows which two share a number.
+    public struct Row: Hashable, Sendable, Identifiable {
+        /// 「1」「2」 — the figure the card is ruled under.
+        public let number: Int
+        public let white: Cell?
+        public let black: Cell?
+
+        public var id: Int { number }
+    }
+
+    /// The strip, ready to draw: one row per move number, opening first (`opening`) and then
+    /// every half already carrying its caption, mark, 分支 ticks, spoken string and cursor.
+    /// The screen lays these out and nothing else.
+    public var rows: [Row] {
+        game.scoresheet.map { card in
+            Row(
+                number: card.number,
+                white: card.white.map { cell($0) },
+                black: card.black.map { cell($0) }
+            )
+        }
     }
 
     /// The position the game began in, at the head of its own record. One name for one place: it
@@ -223,13 +275,20 @@ public struct RecordReading: Sendable {
         cell(ply: 0, name: localized("record.opening"), said: localized("record.opening"))
     }
 
-    /// One half of a move on the record. The mark is the one whose *position* this cell is —
-    /// the position before the next move, not after this one (`slipByPosition`).
+    /// One half of a move on the record, ready to draw: the mark is the one whose *position* this
+    /// cell is — the position before the next move, not after this one (`slipByPosition`) — and
+    /// the 分支 ticks come with it (docs/adr/0043).
     public func cell(_ half: Game.Half) -> Cell {
-        cell(ply: half.ply, name: half.san, said: half.spoken)
+        cell(
+            ply: half.ply, name: half.san, said: half.spoken,
+            isTrunk: half.isTrunk, branchNumber: half.branchNumber, siblingCount: half.siblingCount
+        )
     }
 
-    private func cell(ply: Int, name: String, said: String) -> Cell {
+    private func cell(
+        ply: Int, name: String, said: String,
+        isTrunk: Bool = true, branchNumber: Int = 1, siblingCount: Int = 1
+    ) -> Cell {
         let caption = hasCosts && ply > 0 ? caption(atPly: ply) : nil
         let mark = slipByPosition[ply].map(mark(of:))
         var clauses = [said]
@@ -239,7 +298,9 @@ public struct RecordReading: Sendable {
         }
         return Cell(
             ply: ply, name: name, caption: caption, mark: mark,
-            spoken: clauses.joined(separator: localized("clause.separator"))
+            spoken: clauses.joined(separator: localized("clause.separator")),
+            isCursor: ply == cursor, isTrunk: isTrunk,
+            branchNumber: branchNumber, siblingCount: siblingCount
         )
     }
 

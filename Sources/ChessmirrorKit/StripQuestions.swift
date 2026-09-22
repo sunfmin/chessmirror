@@ -1,17 +1,87 @@
 /// The two questions the strip under the board can ask about one 试招: what the 应招 to it was,
 /// and what it is worth judged again, deeper.
 ///
-/// Each was a pair of properties on the session — the thing on screen, and the Task filling it
-/// in — which meant a search could outlive the reading it was answering, and the session had to
-/// remember to take both down in every place a position stops being the position. Pairing them
-/// makes that combination unrepresentable: putting the question away *is* stopping the search.
+/// The vocabulary lives here with the conversation, not on the session: a screen reads one face
+/// (`StripQuestions`), and the session only asks it to open, fill and put away. Each half pairs
+/// the thing on screen with the Task filling it in, so a search cannot outlive the reading it was
+/// answering — putting the question away *is* stopping the search.
 ///
-/// Neither owns an engine. The session runs the search, because the search is the one bounded
-/// budget every card shares, and hands the answer back.
+/// Neither half owns an engine. The session runs the search, because the search is the one
+/// bounded budget every card shares, and hands the answer back.
+
+/// A 应招 being read on the strip: which 试招, the line it makes, and how far the board can
+/// draw it (docs/adr/0034).
+public struct ReplyReading: Equatable, Sendable {
+    /// One numbered step of the line, as the chips under the board say it.
+    public typealias Step = LineStep
+
+    /// Which of `reading.wrongs` is open.
+    public let index: Int
+    public let move: RecordReading.WrongMove
+    /// The position the move was played in, which the arrows are walked from.
+    public let position: Game
+    /// The 试招 followed by its 应招. Empty until there is an answer: one arrow for a move
+    /// that was taken back is a picture of the mistake with the lesson left out.
+    public internal(set) var line: [String]
+    /// Whether the answer is still being asked for.
+    public internal(set) var isAsking: Bool
+
+    public init(
+        index: Int,
+        move: RecordReading.WrongMove,
+        position: Game,
+        line: [String],
+        isAsking: Bool
+    ) {
+        self.index = index
+        self.move = move
+        self.position = position
+        self.line = line
+        self.isAsking = isAsking
+    }
+
+    /// The line as numbered arrows from the position the move was refused in.
+    public var arrows: [MoveArrow] { Reply.arrows(in: position, playing: line) }
+
+    /// The arrows as chips, numbered the same way. Read off the arrows rather than off the
+    /// line, so the two cannot disagree about how far the walk got or whose move a step is.
+    public var steps: [Step] {
+        arrows.compactMap { arrow in
+            guard line.indices.contains(arrow.step - 1) else { return nil }
+            return Step(step: arrow.step, san: line[arrow.step - 1], isYours: arrow.isYours)
+        }
+    }
+}
+
+/// A 复判 under way: which 试招 on the strip is being judged again, and how deep both ends
+/// have got (CONTEXT.md, 复判; docs/adr/0041).
+public struct Rejudging: Equatable, Sendable {
+    /// Which of `reading.wrongs`.
+    public let index: Int
+    public let tried: Game.Ply.Tried
+    /// The shallower of the two ends so far — zero before either has said anything.
+    public internal(set) var depth: Int
+
+    public init(index: Int, tried: Game.Ply.Tried, depth: Int) {
+        self.index = index
+        self.tried = tried
+        self.depth = depth
+    }
+}
+
+/// What the strip may offer for one 试招.
+public enum RejudgeOffer: Equatable, Sendable {
+    /// Nothing: the move is already judged as deep as a 复判 goes, or there is no engine.
+    case none
+    /// The button, greyed: the engine is spoken for — a move being weighed or walked, the
+    /// position's own search still running, a 复判 already going, the engine paused.
+    case waiting
+    case ready
+}
 
 /// The 应招 open on the strip, and the search filling it in (docs/adr/0034).
 struct StripReply {
-    private(set) var reading: GameSession.ReplyReading?
+    private(set) var reading: ReplyReading?
     private var task: Task<Void, Never>?
 
     /// Whether this is the reading that is open — which is how a second tap on a chip knows it
@@ -22,7 +92,7 @@ struct StripReply {
     var pending: Task<Void, Never>? { task }
 
     /// Opens a reading. Whatever was open goes away first, question and all.
-    mutating func open(_ reading: GameSession.ReplyReading) {
+    mutating func open(_ reading: ReplyReading) {
         close()
         self.reading = reading
     }
@@ -41,7 +111,7 @@ struct StripReply {
     }
 
     /// A 复判 rewrote the move this reading is of, so the reading is of the rewritten move now.
-    mutating func rewrite(as reading: GameSession.ReplyReading) {
+    mutating func rewrite(as reading: ReplyReading) {
         self.reading = reading
     }
 
@@ -56,7 +126,7 @@ struct StripReply {
 
 /// A 复判 under way on the strip, and the deeper 细判 doing it (docs/adr/0041).
 struct StripRejudge {
-    private(set) var rejudging: GameSession.Rejudging?
+    private(set) var rejudging: Rejudging?
     private var task: Task<Void, Never>?
 
     /// Whether a 复判 is going, which is one of the reasons the strip may not offer another.
@@ -69,7 +139,7 @@ struct StripRejudge {
     /// The deeper 细判, for anyone waiting on everything to have spoken.
     var pending: Task<Void, Never>? { task }
 
-    mutating func begin(_ rejudging: GameSession.Rejudging) {
+    mutating func begin(_ rejudging: Rejudging) {
         self.rejudging = rejudging
     }
 
@@ -96,4 +166,52 @@ struct StripRejudge {
         task = nil
         rejudging = nil
     }
+}
+
+/// One conversation on the strip: at most one 应招 open, at most one 复判 going. The session
+/// holds this and asks it; the vocabulary above is what a screen reads.
+struct StripQuestions {
+    private var reply = StripReply()
+    private var rejudge = StripRejudge()
+
+    var replyReading: ReplyReading? { reply.reading }
+    var rejudging: Rejudging? { rejudge.rejudging }
+    var isRejudging: Bool { rejudge.isBusy }
+    var rejudgingTried: Game.Ply.Tried? { rejudge.tried }
+    var replyPending: Task<Void, Never>? { reply.pending }
+    var rejudgePending: Task<Void, Never>? { rejudge.pending }
+
+    /// Puts the whole conversation away: the board moved on, or the session is going.
+    mutating func close() {
+        reply.close()
+        rejudge.cancel()
+    }
+
+    // MARK: 应招
+
+    func isReplyOpen(at index: Int) -> Bool { reply.isOpen(at: index) }
+
+    mutating func openReply(_ reading: ReplyReading) { reply.open(reading) }
+
+    mutating func askReply(_ task: Task<Void, Never>) { reply.ask(task) }
+
+    mutating func fillReply(_ line: [String], of move: RecordReading.WrongMove, at index: Int) {
+        reply.fill(line, of: move, at: index)
+    }
+
+    mutating func rewriteReply(as reading: ReplyReading) { reply.rewrite(as: reading) }
+
+    mutating func closeReply() { reply.close() }
+
+    // MARK: 复判
+
+    mutating func beginRejudge(_ rejudging: Rejudging) { rejudge.begin(rejudging) }
+
+    mutating func askRejudge(_ task: Task<Void, Never>) { rejudge.ask(task) }
+
+    mutating func noteRejudge(depth: Int) { rejudge.note(depth: depth) }
+
+    mutating func finishRejudge() { rejudge.finish() }
+
+    mutating func cancelRejudge() { rejudge.cancel() }
 }
