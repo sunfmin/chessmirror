@@ -347,7 +347,7 @@ struct GameScreen: View {
     /// The 应招 the move earned: the same numbered chips the cards use, numbered against the
     /// arrows on the board. One move is the refused one and the rest are the answers to it, so
     /// the row begins with the move the player made and not with what happened to it.
-    @ViewBuilder private func replyRow(_ reading: GameSession.ReplyReading) -> some View {
+    @ViewBuilder private func replyRow(_ reading: ReplyReading) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text(localized("tried.reply")).font(.caption).foregroundStyle(Palette.inkSoft)
@@ -374,7 +374,7 @@ struct GameScreen: View {
     /// again, deeper. While that runs, the button's place shows the depth climbing; when the
     /// number lands, the chip and the line change together and the depth here says how deep.
     /// Greyed while the engine is spoken for, and gone once the move is judged at 28.
-    @ViewBuilder private func rejudgeControl(_ reading: GameSession.ReplyReading) -> some View {
+    @ViewBuilder private func rejudgeControl(_ reading: ReplyReading) -> some View {
         if let running = session.rejudging, running.index == reading.index {
             ProgressView().controlSize(.mini)
             Text(Depth.label(running.depth))

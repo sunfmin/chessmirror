@@ -201,8 +201,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     private func letGoOfThePosition() {
         opened = nil
         finder.forget()
-        replyOnStrip.close()
-        rejudgeOnStrip.cancel()
+        onStrip.close()
     }
 
     /// Whether a Tactic may be named on the latest position (docs/adr/0023).
@@ -1170,8 +1169,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func settled() async {
         if case .weighing(_, let task) = activity { await task.value }
         await measuring?.value
-        await rejudgeOnStrip.pending?.value
-        await replyOnStrip.pending?.value
+        await onStrip.rejudgePending?.value
+        await onStrip.replyPending?.value
         await punishment?.settled()
     }
     func waitForPreparedInterception() async { await searchTask?.value }
@@ -1301,44 +1300,9 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         return Array((result?.best?.san ?? []).prefix(Reply.limit))
     }
 
-    /// A 应招 being read on the strip: which 试招, the line it makes, and how far the board can
-    /// draw it (docs/adr/0034).
-    ///
-    /// The screen used to keep this as four pieces of view state — which chip is on, the answer,
-    /// whether it was still being asked for, and the task asking — and derive the line, the
-    /// arrows and the chips from them on every draw. A reading is one value: opened by a tap,
-    /// filled in when the answer arrives, and closed by the next tap or by the board moving on.
-    public struct ReplyReading: Equatable, Sendable {
-        /// One numbered step of the line, as the chips under the board say it.
-        public typealias Step = LineStep
-
-        /// Which of `reading.wrongs` is open.
-        public let index: Int
-        public let move: RecordReading.WrongMove
-        /// The position the move was played in, which the arrows are walked from.
-        public let position: Game
-        /// The 试招 followed by its 应招. Empty until there is an answer: one arrow for a move
-        /// that was taken back is a picture of the mistake with the lesson left out.
-        public internal(set) var line: [String]
-        /// Whether the answer is still being asked for.
-        public internal(set) var isAsking: Bool
-
-        /// The line as numbered arrows from the position the move was refused in.
-        public var arrows: [MoveArrow] { Reply.arrows(in: position, playing: line) }
-
-        /// The arrows as chips, numbered the same way. Read off the arrows rather than off the
-        /// line, so the two cannot disagree about how far the walk got or whose move a step is.
-        public var steps: [Step] {
-            arrows.compactMap { arrow in
-                guard line.indices.contains(arrow.step - 1) else { return nil }
-                return Step(step: arrow.step, san: line[arrow.step - 1], isYours: arrow.isYours)
-            }
-        }
-    }
-
-    private var replyOnStrip = StripReply()
+    private var onStrip = StripQuestions()
     /// The 应招 open on the strip, if one is (`readReply(at:)`).
-    public var replyReading: ReplyReading? { replyOnStrip.reading }
+    public var replyReading: ReplyReading? { onStrip.replyReading }
 
     /// Whether a wrong move on the strip may be asked about: not while a 惩罚 exercise has the
     /// board, which is the one thing in the strip asking something of the player (docs/adr/0031).
@@ -1351,8 +1315,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// 惩罚 exercise is open: that exercise is the same answer with the finding left to the
     /// player, and a reading that would hand it over is the exercise not being one.
     public func readReply(at index: Int) {
-        if replyOnStrip.isOpen(at: index) {
-            replyOnStrip.close()
+        if onStrip.isReplyOpen(at: index) {
+            onStrip.closeReply()
             return
         }
         let wrongs = reading.wrongs
@@ -1361,19 +1325,19 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         else { return }
         let wrong = wrongs[index]
         let hasAnswer = !wrong.line.isEmpty
-        replyOnStrip.open(
+        onStrip.openReply(
             ReplyReading(
                 index: index, move: wrong, position: position,
                 line: hasAnswer ? Reply.moves(of: wrong) : [], isAsking: !hasAnswer
             )
         )
         guard !hasAnswer else { return }
-        replyOnStrip.ask(
+        onStrip.askReply(
             Task { [weak self] in
                 guard let self else { return }
                 let answer = await self.reply(for: wrong)
                 guard !Task.isCancelled else { return }
-                replyOnStrip.fill(
+                onStrip.fillReply(
                     answer.isEmpty ? [] : Reply.moves(of: wrong, reply: answer),
                     of: wrong, at: index
                 )
@@ -1383,29 +1347,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     // ------------------------------------------------------------------ 复判
 
-    /// A 复判 under way: which 试招 on the strip is being judged again, and how deep both ends
-    /// have got (CONTEXT.md, 复判; docs/adr/0041).
-    public struct Rejudging: Equatable, Sendable {
-        /// Which of `reading.wrongs`.
-        public let index: Int
-        public let tried: Game.Ply.Tried
-        /// The shallower of the two ends so far — zero before either has said anything.
-        public internal(set) var depth: Int
-    }
-
-    private var rejudgeOnStrip = StripRejudge()
     /// The 复判 under way, if one is (`rejudge(at:)`).
-    public var rejudging: Rejudging? { rejudgeOnStrip.rejudging }
-
-    /// What the strip may offer for one 试招.
-    public enum RejudgeOffer: Equatable, Sendable {
-        /// Nothing: the move is already judged as deep as a 复判 goes, or there is no engine.
-        case none
-        /// The button, greyed: the engine is spoken for — a move being weighed or walked, the
-        /// position's own search still running, a 复判 already going, the engine paused.
-        case waiting
-        case ready
-    }
+    public var rejudging: Rejudging? { onStrip.rejudging }
 
     /// The 试招 at `index` of `reading.wrongs`, when that is what it is. A move that stood is
     /// judged by the game it stands in, and a 复判 is for a move that was taken back.
@@ -1420,7 +1363,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func rejudgeOffer(at index: Int) -> RejudgeOffer {
         guard let engine, let found = triedToRejudge(at: index) else { return .none }
         if (found.tried.depth ?? 0) >= PositionSearches.deeperDepth { return .none }
-        if rejudgeOnStrip.isBusy || isOccupied || isThinking || isSearching || engine.isPaused {
+        if onStrip.isRejudging || isOccupied || isThinking || isSearching || engine.isPaused {
             return .waiting
         }
         return .ready
@@ -1435,14 +1378,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
             let before = refusedPosition, let tried = triedToRejudge(at: index)?.tried
         else { return }
         guard let played = position(after: tried) else { return }
-        rejudgeOnStrip.begin(Rejudging(index: index, tried: tried, depth: 0))
-        rejudgeOnStrip.ask(
+        onStrip.beginRejudge(Rejudging(index: index, tried: tried, depth: 0))
+        onStrip.askRejudge(
             Task { [weak self] in
                 guard let self else { return }
                 // The same 细判 as the one that refused the move, at the deeper budget: one act,
                 // so the depth the number is worth and the 应招 beside it are read by one rule.
                 let weighed = await engine.weigh(played, from: before, budget: PositionSearches.deeper) {
-                    rejudgeOnStrip.note(depth: $0.depth)
+                    onStrip.noteRejudge(depth: $0.depth)
                 }
                 guard !Task.isCancelled else { return }
                 finishRejudge(
@@ -1459,8 +1402,8 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// carried it — and brings an open reading of it up to date. Nothing is written when the
     /// game has moved on from under it.
     private func finishRejudge(_ deeper: Game.Ply.Tried?, at index: Int) {
-        defer { rejudgeOnStrip.finish() }
-        guard let deeper, let was = rejudgeOnStrip.tried, let found = triedToRejudge(at: index),
+        defer { onStrip.finishRejudge() }
+        guard let deeper, let was = onStrip.rejudgingTried, let found = triedToRejudge(at: index),
             found.tried == was
         else { return }
         let at = found.at
@@ -1472,7 +1415,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         case .nothing: return
         }
         if let reading = replyReading, reading.index == index, reading.move == RecordReading.WrongMove(was, at: at) {
-            replyOnStrip.rewrite(
+            onStrip.rewriteReply(
                 as: ReplyReading(
                     index: index, move: RecordReading.WrongMove(deeper, at: at), position: reading.position,
                     line: Reply.moves(of: deeper), isAsking: false
@@ -1980,7 +1923,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     private func commit(_ move: Move, by mover: Mover) {
         guard !isWeighing else { return }
         // A move played is the game moving on: a 复判 of a 试招 here yields to it, unwritten.
-        rejudgeOnStrip.cancel()
+        onStrip.cancelRejudge()
         if let practice, !practice.isSettled {
             guard isAtLatest, game.state.fen == practice.game.state.fen else { return }
             stopSearching()
@@ -2452,8 +2395,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         stopSearching()
         // Not the finder: suspending is not the eye moving, and a shot named for the position
         // still on screen is still named for it.
-        replyOnStrip.close()
-        rejudgeOnStrip.cancel()
+        onStrip.close()
         // Whatever it was, it is over: the task is cancelled, the exercise skipped, the search
         // taken down. One assignment, because the activity owns what each of those kept.
         activity = .reading

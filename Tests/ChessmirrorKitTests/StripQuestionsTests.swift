@@ -18,8 +18,8 @@ import ChessmirrorKitTesting
 
     private func reading(
         _ move: RecordReading.WrongMove, at index: Int, in position: Game
-    ) -> GameSession.ReplyReading {
-        GameSession.ReplyReading(
+    ) -> ReplyReading {
+        ReplyReading(
             index: index, move: move, position: position, line: [], isAsking: true
         )
     }
@@ -95,7 +95,7 @@ import ChessmirrorKitTesting
         strip.open(reading(before, at: 0, in: try opening()))
         let after = RecordReading.WrongMove(tried("Qh5", depth: 20, line: ["g6"]), at: 0)
         strip.rewrite(
-            as: GameSession.ReplyReading(
+            as: ReplyReading(
                 index: 0, move: after, position: try opening(), line: ["Qh5", "g6"], isAsking: false
             )
         )
@@ -119,7 +119,7 @@ import ChessmirrorKitTesting
     func rejudgeReportsItsProgress() throws {
         var strip = StripRejudge()
         let move = tried("Qh5")
-        strip.begin(GameSession.Rejudging(index: 2, tried: move, depth: 0))
+        strip.begin(Rejudging(index: 2, tried: move, depth: 0))
         #expect(strip.isBusy)
         #expect(strip.tried == move)
         #expect(try #require(strip.rejudging).depth == 0)
@@ -131,7 +131,7 @@ import ChessmirrorKitTesting
     @Test("a 复判 that finished has nothing left going")
     func finishingClearsIt() {
         var strip = StripRejudge()
-        strip.begin(GameSession.Rejudging(index: 0, tried: tried("Qh5"), depth: 0))
+        strip.begin(Rejudging(index: 0, tried: tried("Qh5"), depth: 0))
         strip.finish()
         #expect(!strip.isBusy)
         #expect(strip.rejudging == nil)
@@ -141,7 +141,7 @@ import ChessmirrorKitTesting
     @Test("a 复判 that yields takes its deeper 细判 down with it")
     func cancellingStopsTheDeeperJudge() async throws {
         var strip = StripRejudge()
-        strip.begin(GameSession.Rejudging(index: 0, tried: tried("Qh5"), depth: 0))
+        strip.begin(Rejudging(index: 0, tried: tried("Qh5"), depth: 0))
         let started = Task<Void, Never> {
             try? await Task.sleep(for: .seconds(30))
         }
@@ -159,7 +159,7 @@ import ChessmirrorKitTesting
     @Test("noting a depth after the 复判 has gone writes nowhere")
     func notingAfterCancelIsIgnored() {
         var strip = StripRejudge()
-        strip.begin(GameSession.Rejudging(index: 0, tried: tried("Qh5"), depth: 0))
+        strip.begin(Rejudging(index: 0, tried: tried("Qh5"), depth: 0))
         strip.cancel()
         strip.note(depth: 20)
         #expect(strip.rejudging == nil)
