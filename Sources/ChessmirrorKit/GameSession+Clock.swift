@@ -291,25 +291,35 @@ extension GameSession {
             // live position search is, and a rung is the one dial on how well it plays.
             let strength = strength
             searchTask = Task { [weak self] in
-                var last: Analysis?
                 // At 满力 the engine's move is the shared bounded search every other reader of
-                // this position joins. At a rung it is a search of its own, bound to that rung and
-                // shared with nothing: a bound answer is the opponent's and must not become the
-                // number a hint or a judgement reads for this position (docs/adr/0038). One line
-                // either way: the engine is choosing a move, not advising, and each extra line
-                // roughly doubles the time to the same Depth — a weaker move on the same clock.
+                // this position joins, and it is the reader that plays a move out of it: a
+                // result already played once is searched again rather than replayed
+                // (docs/adr/0049). At a rung it is a search of its own: bound to that rung and
+                // shared with nothing, because a bound answer is the opponent's and must not
+                // become the number a hint or a judgement reads for this position
+                // (docs/adr/0038). One line either way: the engine is choosing a move, not
+                // advising, and each extra line roughly doubles the time to the same Depth — a
+                // weaker move on the same clock.
                 let search = strength == .full
-                    ? engine.analysePosition(position)
+                    ? engine.analysePosition(position, playing: true)
                     : engine.analyse(position, budget: PositionSearches.budget, lines: 1, strength: strength)
                 for await snapshot in search {
                     if Task.isCancelled { return }
                     if strength == .full { self?.record(snapshot) } else { self?.noteProgress(snapshot) }
-                    self?.thinkingBest = snapshot.bestMove
-                    last = snapshot
+                    self?.thinkingBest = self?.opponentMove(
+                        from: snapshot, at: strength, by: position.state.sideToMove
+                    )
                 }
                 guard let self, !Task.isCancelled else { return }
                 stopThinking()
-                if let uci = last?.bestMove, let move = position.state.move(matching: uci) {
+                // What it will play is `thinkingBest` and nothing else — the same fact 马上走
+                // plays, settled once as the snapshots land so the two can never name different
+                // moves (`opponentMove`). Taken and cleared before the move is played, because
+                // playing it is what starts the next move's search: the board opposite an engine
+                // is the engine's again the instant this one lands.
+                let uci = thinkingBest
+                thinkingBest = nil
+                if let uci, let move = position.state.move(matching: uci) {
                     playByEngine(move)
                 }
             }
@@ -362,6 +372,21 @@ extension GameSession {
         if searchTask != nil { return }
         stopSearching()
         advise(on: viewed, using: engine)
+    }
+
+    /// What the opponent plays out of one snapshot of its own search.
+    ///
+    /// At a rung the engine has already chosen: Stockfish picks among its top lines with a
+    /// seeded random and says which in `bestmove`, and `DepthGroup.choose` has put that move
+    /// first (docs/adr/0038). At 满力 nothing has chosen, and the same position would otherwise
+    /// give the same move for ever — so the toss picks between the moves this search cannot tell
+    /// apart (docs/adr/0049). A snapshot whose Scores are only bounds is not worth tossing on:
+    /// what looks level there may not be, and the next snapshot is along in a moment.
+    func opponentMove(from snapshot: Analysis, at strength: Strength, by mover: PieceColour)
+        -> String?
+    {
+        guard strength == .full, !snapshot.isPartial else { return snapshot.bestMove }
+        return toss.move(from: snapshot, by: mover)
     }
 
     /// Cuts the engine's thinking short and takes whatever it likes best right now.
