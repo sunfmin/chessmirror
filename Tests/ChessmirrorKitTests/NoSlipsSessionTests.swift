@@ -787,6 +787,65 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
     #expect(read.game.plies[1].judgement == judgement)
 }
 
+/// Contract: the engine's own move is judged even when the player answers it before its 细判 has
+/// finished. The judgement is a fact about that move, not about the position on screen, so the
+/// game moving on is no reason to drop it. It used to be dropped: the player's move stopped the
+/// badge's search and took the owed judgement with it, and an obvious recapture — played the
+/// moment the piece was offered — left the blunder that offered it with no 掉幅 on the record.
+@MainActor
+@Test func theEnginesMoveIsJudgedEvenWhenThePlayerAnswersFirst() async throws {
+    let start = try #require(Game(startFEN: PGN.standardStartFEN))
+    let afterE4 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4"]))
+    let afterE5 = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    let gate = AsyncStream<Analysis>.makeStream()
+    let requested = AsyncStream<Void>.makeStream()
+    let engine = ScriptedEngine([], byPosition: [
+        start.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(30), uciMoves: ["e2e4"], san: ["e4"]),
+        ]),
+        // The engine's first choice is c5; the 1400 rung plays e5, which has no line here and
+        // so is judged from a search of the position it made — the one the player's move needs.
+        afterE4.state.fen: Analysis(depth: 20, lines: [
+            .init(score: .centipawns(25), uciMoves: ["c7c5"], san: ["c5"]),
+        ]),
+        try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3"])).state.fen:
+            Analysis(depth: 20, lines: [.init(score: .centipawns(-400), uciMoves: [], san: [])]),
+    ], byRung: [
+        afterE4.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["e7e5"], san: ["e5"])]),
+    ], controlled: { game, _ in
+        guard game.state.fen == afterE5.state.fen else { return nil }
+        requested.continuation.yield(())
+        return gate.stream
+    })
+    let session = GameSession.fresh(
+        start, controllers: [.white: .hand, .black: .engine], engine: engine, strength: .elo(1400)
+    )
+    defer { gate.continuation.finish(); session.suspend() }
+
+    session.play(try #require(start.state.move(matching: "e2e4")))
+    await session.settled()
+    // The position the engine's reply made is being searched: the engine has answered.
+    var request = requested.stream.makeAsyncIterator()
+    _ = await request.next()
+    try #require(session.game.uciMoves == ["e2e4", "e7e5"], "the engine answered")
+    try #require(session.game.plies[1].judgement == nil, "its 细判 is still searching")
+
+    // The player answers before the engine's move has been judged.
+    session.play(try #require(session.game.state.move(matching: "g1f3")))
+    gate.continuation.yield(Analysis(depth: 20, lines: [
+        .init(score: .centipawns(400), uciMoves: ["g1f3"], san: ["Nf3"]),
+    ]))
+    gate.continuation.finish()
+    await session.settled()
+
+    try #require(session.game.uciMoves.prefix(2) == ["e2e4", "e7e5"])
+    let judgement = try #require(session.game.plies[1].judgement, "the engine's move has its 掉幅")
+    #expect(judgement.score == .centipawns(400))
+    #expect(judgement.drop > 10, "e5 gave the game away, and the record says by how much")
+    let read = try PGN(parsing: session.pgn.text)
+    #expect(read.game.plies[1].judgement == judgement, "and the file says so")
+}
+
 /// Contract: a move that was already in the file without a judgement gets the badge and the
 /// curve's last point from the badge's weighing, and nothing written onto it — filling old files
 /// in is the explicit migration, never something a screen starts.

@@ -1191,6 +1191,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     public func settled() async {
         if case .weighing(_, let task) = activity { await task.value }
         await measuring?.value
+        for owed in owedJudging.values { await owed.value }
         await onStrip.rejudgePending?.value
         await onStrip.replyPending?.value
         await punishment?.settled()
@@ -1461,10 +1462,14 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// The badge for the move just played (`LandedBadge`), while it is still that move.
     var badge: LandedBadge?
     /// The game as it stood when a move last landed through `commit` with no judgement on it —
-    /// the one move `measureLatestMoveChange` is owed a judgement for. A move that was already
+    /// the one move `judgeOwedMove` is owed a judgement for. A move that was already
     /// in the file when the game was opened keeps whatever it has: filling those in is the
     /// explicit migration (`fillMissingNoSlipsJudgements`), never something a screen starts.
-    var landedUnjudged: OfGame?
+    var landedUnjudged: Game?
+    /// The 细判 of each move owed a judgement, while it runs. Apart from `measuring` because it
+    /// outlives the position: the badge is about the board on screen and goes when the game moves
+    /// on, and a judgement is about one move and does not.
+    var owedJudging: [OfGame: Task<Void, Never>] = [:]
 
     /// Only a newly played move gets a change badge; navigating the record is not a move.
     public var moveChange: MoveChange? { barReading.change }
