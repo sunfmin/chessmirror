@@ -249,7 +249,10 @@ public struct PGN: Hashable, Sendable {
             + Self.tokens(
                 for: game.plies,
                 from: game.startingFullmoveNumber,
-                sideToMove: game.startingSideToMove
+                sideToMove: game.startingSideToMove,
+                // The scoresheet numbers these same plies. One function, so the movetext cannot
+                // count a move differently from the record.
+                numberOfPly: { game.moveNumber(ofPly: $0) }
             ) + pendingComments + [game.resultToken]
     }
 
@@ -272,21 +275,9 @@ public struct PGN: Hashable, Sendable {
         return ["{\(body)}"]
     }
 
-    /// One refused move, as a token — a 试招, or one at a position no move has carried yet, which
-    /// differs in the name and in carrying the position with it.
+    /// One refused move, as a token. The spelling lives with the reader (`Scanner.triedToken`).
     private static func attempt(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
-        var body = "\(attempt.san) \(percent(attempt.drop))"
-        if attempt.notFound { body += " notfound" }
-        // The Depth after the flag, so a reader that knows only the older forms still sees them
-        // as a prefix (docs/adr/0041). Absent when unknown, never written as a guess.
-        if let depth = attempt.depth { body += " \(depth)" }
-        // The 应招 follows a bar (docs/adr/0034). A bar and not a word, because what comes after it
-        // is a line of moves and a token of its own would need a second delimiter inside a comment
-        // that already ends at the first `]`.
-        if !attempt.line.isEmpty {
-            body += " | " + attempt.line.joined(separator: " ")
-        }
-        return "[%\(name) \(ply.map { "\($0) " } ?? "")\(body)]"
+        Scanner.triedToken(attempt, named: name, at: ply)
     }
 
     /// One line of moves, with its Variations in brackets after the moves they replace —
@@ -294,7 +285,8 @@ public struct PGN: Hashable, Sendable {
     /// else with its branches intact.
     private static func tokens(
         for plies: [Game.Ply], from moveNumber: Int, sideToMove: PieceColour,
-        afterTrunk: Bool = true, isVariation: Bool = false
+        afterTrunk: Bool = true, isVariation: Bool = false,
+        numberOfPly: ((Int) -> Int)? = nil
     ) -> [String] {
         var written: [String] = []
         var moveNumber = moveNumber
@@ -304,10 +296,11 @@ public struct PGN: Hashable, Sendable {
         var afterTrunk = afterTrunk
 
         for (index, ply) in plies.enumerated() {
+            let number = numberOfPly?(index + 1) ?? moveNumber
             if sideToMove == .white {
-                written.append("\(moveNumber).")
+                written.append("\(number).")
             } else if index == 0 {
-                written.append("\(moveNumber)...")
+                written.append("\(number)...")
             }
             written.append(ply.san)
             // One or the other, never both: which slot a file's Scores landed in was decided
@@ -315,12 +308,7 @@ public struct PGN: Hashable, Sendable {
             // the same tag is what makes the round trip exact.
             var comment: [String] = []
             if let judgement = ply.judgement {
-                // With the 拦截线 the move stood under after `under`, when it stood under one: a
-                // reader that knows only the three-part form reads the three parts it knows.
-                var judged = "[%judged \(judgement.depth) \(judgement.drop) \(judgement.score.pgnText)"
-                if let intercept = judgement.intercept { judged += " under \(intercept)" }
-                if judgement.best { judged += " best" }
-                comment.append(judged + "]")
+                comment.append(Scanner.judgementToken(judgement))
             }
             // The 棋力 the engine played this move at (docs/adr/0038). Only on the engine's own
             // moves, and 满力 written as `full` rather than left off: a hand move has no token.
@@ -848,6 +836,23 @@ private struct Scanner {
         }
     }
 
+    /// One refused move, as a token — a 试招, or one at a position no move has carried yet, which
+    /// differs in the name and in carrying the position with it. Read back by `attempts(of:)`.
+    static func triedToken(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
+        var body = "\(attempt.san) \(PGN.percent(attempt.drop))"
+        if attempt.notFound { body += " notfound" }
+        // The Depth after the flag, so a reader that knows only the older forms still sees them
+        // as a prefix (docs/adr/0041). Absent when unknown, never written as a guess.
+        if let depth = attempt.depth { body += " \(depth)" }
+        // The 应招 follows a bar (docs/adr/0034). A bar and not a word, because what comes after it
+        // is a line of moves and a token of its own would need a second delimiter inside a comment
+        // that already ends at the first `]`.
+        if !attempt.line.isEmpty {
+            body += " | " + attempt.line.joined(separator: " ")
+        }
+        return "[%\(name) \(ply.map { "\($0) " } ?? "")\(body)]"
+    }
+
     private static func attempts(
         of name: String, in comment: String, at hasPly: Bool = false
     ) -> [(ply: Int?, tried: Game.Ply.Tried)] {
@@ -894,6 +899,16 @@ private struct Scanner {
 
     /// `[%judged 20 3.2 +0.35]`, or the same with ` under 10.0` after it for a move that stood
     /// under 把关 at that 拦截线, and ` best` last for the engine's own first choice.
+    ///
+    /// Written here, beside the reader: a reader that knows only the three-part form still sees
+    /// the depth, the drop and the score as a prefix.
+    static func judgementToken(_ judgement: Game.Ply.Judgement) -> String {
+        var judged = "[%judged \(judgement.depth) \(judgement.drop) \(judgement.score.pgnText)"
+        if let intercept = judgement.intercept { judged += " under \(intercept)" }
+        if judgement.best { judged += " best" }
+        return judged + "]"
+    }
+
     private static func judgement(in comment: String) -> Game.Ply.Judgement? {
         guard let body = body(of: "judged", in: comment) else { return nil }
         var parts = body.split(separator: " ")

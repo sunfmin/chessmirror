@@ -275,6 +275,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     #expect(session.reviewRow == .offered(failed: true, canStart: true))
     let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
     #expect(!disk.game.isReviewed, "no partial Review is ever written")
+    #expect(disk.game.plies.allSatisfy { $0.line.isEmpty }, "an unfinished Review writes no line either")
 }
 
 @Test func importScoresPrioritizeButNeverExcludeLocalJudgements() async throws {
@@ -293,6 +294,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     let reopened = try PGN(parsing: judged.text)
     #expect(reopened.tag("ReviewSift") == "imported-eval-7-priority")
     #expect(reopened.game.drop(atPly: 3) == 0)
+    #expect(reopened.game.plies.allSatisfy { $0.line == ["e4"] }, "sift changes order, not what a search keeps")
 }
 
 @Test func importsWithoutCompleteScoresUseAFullLocalPass() async throws {
@@ -305,4 +307,74 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     #expect(engine.searchCount == 4)
     #expect(judged.tag("ReviewSift") == "full-local")
     #expect(judged.game.plies.allSatisfy { $0.evaluation != nil })
+}
+
+/// The review the library and the session start, with a continuation on every search that had one.
+@MainActor
+@Test func theReviewTheLibraryStartsKeepsTheLineItSearched() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let library = GameLibrary(folder: GameFolder(url: folder))
+    let played = try #require(Game(
+        startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "d1h5"]
+    ))
+    let positions = (0...played.plies.count).map { played.rewound(to: $0)!.state.fen }
+    func opinion(_ centipawns: Int, san: [String], uci: [String]) -> Analysis {
+        Analysis(depth: ImportReview.depth, lines: [
+            Line(score: .centipawns(centipawns), uciMoves: uci, san: san),
+        ])
+    }
+    let engine = ScriptedEngine([], byPosition: [
+        positions[0]: opinion(20, san: ["e4", "e5"], uci: ["e2e4", "e7e5"]),
+        positions[1]: opinion(30, san: ["e5", "Qh5"], uci: ["e7e5", "d1h5"]),
+        positions[2]: opinion(25, san: ["Nf3", "Nc6"], uci: ["g1f3", "b8c6"]),
+        positions[3]: opinion(-400, san: ["Nc6", "Bc4"], uci: ["b8c6", "f1c4"]),
+    ])
+    let chapter = PGNImport.ImportChapter(id: 9, name: "Kept lines", pgn: PGN(game: played))
+    let entry = try #require(ImportSession().open(chapter, into: library, tracking: .white))
+    let session = try #require(GameSession.opened(entry, engine: engine, library: library).session)
+    defer { session.suspend() }
+    session.review()
+    await library.waitForImportReviews()
+
+    let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
+    #expect(disk.tag("ReviewSift") == "full-local")
+    #expect(disk.game.reviewDepth == ImportReview.depth)
+    #expect(disk.game.plies[0].line == ["e5", "Qh5"])
+    #expect(disk.game.plies[1].line == ["Nf3", "Nc6"])
+    #expect(disk.game.plies[2].line == ["Nc6", "Bc4"])
+    #expect(disk.game.isBest(atPly: 2), "e5 is what the line after e4 named")
+    #expect(!disk.game.isBest(atPly: 3), "Qh5 where that line named Nf3")
+    #expect(!disk.game.isBest(atPly: 1), "nothing before the first move names it")
+
+    session.jump(toPly: 2)
+    let stood = try #require(session.reading.wrongs.first { $0.stood && $0.san == "Qh5" })
+    let asked = engine.positions.filter { $0 == positions[3] }.count
+    let reply = await session.reply(for: stood)
+    #expect(reply == ["Nc6", "Bc4"])
+    #expect(engine.positions.filter { $0 == positions[3] }.count == asked, "the stored line is not searched again")
+}
+
+@Test func aSettledPositionKeepsNoLineAndIsNotSearched() async throws {
+    let pgn = try PGN(parsing: "1. f3 e5 2. g4 Qh4# 0-1")
+    let engine = ScriptedEngine([Analysis(depth: ImportReview.depth, lines: [
+        Line(score: .centipawns(10), uciMoves: ["a2a3"], san: ["a3"]),
+    ])])
+    let judged = try await ImportReview.judge(pgn, using: engine)
+    #expect(engine.searchCount == 4, "the mated position is settled without a search")
+    #expect(judged.game.plies[3].evaluation == .mate(in: -1))
+    #expect(judged.game.plies[3].line.isEmpty)
+    #expect(judged.game.plies.dropLast().allSatisfy { $0.line == ["a3"] })
+}
+
+@Test func aSearchWithNoContinuationKeepsAnEmptyLine() async throws {
+    let pgn = try PGN(parsing: "1. e4 *")
+    let engine = ScriptedEngine([Analysis(depth: ImportReview.depth, lines: [
+        Line(score: .centipawns(20), uciMoves: ["e2e4"], san: []),
+    ])])
+    let judged = try await ImportReview.judge(pgn, using: engine)
+    #expect(judged.game.isReviewed)
+    #expect(judged.game.plies[0].evaluation == .centipawns(20))
+    #expect(judged.game.plies[0].line.isEmpty)
 }

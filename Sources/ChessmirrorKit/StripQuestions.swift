@@ -46,10 +46,7 @@ public struct ReplyReading: Equatable, Sendable {
     /// The arrows as chips, numbered the same way. Read off the arrows rather than off the
     /// line, so the two cannot disagree about how far the walk got or whose move a step is.
     public var steps: [Step] {
-        arrows.compactMap { arrow in
-            guard line.indices.contains(arrow.step - 1) else { return nil }
-            return Step(step: arrow.step, san: line[arrow.step - 1], isYours: arrow.isYours)
-        }
+        MoveArrow.chips(for: arrows, naming: line)
     }
 }
 
@@ -69,14 +66,22 @@ public struct Rejudging: Equatable, Sendable {
     }
 }
 
-/// What the strip may offer for one 试招.
+/// What the strip may offer for one 试招. The screen reads this and nothing else about a 复判:
+/// whether there is a button, whether it can be pressed, or the depth of the one already going.
 public enum RejudgeOffer: Equatable, Sendable {
-    /// Nothing: the move is already judged as deep as a 复判 goes, or there is no engine.
+    /// Nothing: the move is already judged as deep as a 复判 goes, or there is no engine,
+    /// or it is not a 试招.
     case none
     /// The button, greyed: the engine is spoken for — a move being weighed or walked, the
-    /// position's own search still running, a 复判 already going, the engine paused.
+    /// position's own search still running, another 复判 already going, the engine paused.
     case waiting
     case ready
+    /// This 试招 is the one being judged again. `depth` is how far the shallower end has got.
+    case running(depth: Int)
+
+    /// How deep a 复判 goes, and the depth past which the offer is `.none`. One number: the
+    /// button states it, and a 试招 already judged to it is not offered again.
+    public static var depth: Int { PositionSearches.deeperDepth }
 }
 
 /// The 应招 open on the strip, and the search filling it in (docs/adr/0034).

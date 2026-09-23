@@ -193,49 +193,6 @@ struct EngineTests {
     
         }}
 
-    @Test("a review scores every ply at one uniform depth")
-    func reviewScoresEveryPly() async throws {
-        try await Quietly.alone {
-        let service = try engine()
-        let game = try #require(
-            Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5", "g1f3", "b8c6"])
-        )
-
-        await service.clear()
-        let reviewed = await service.review(game, depth: 6)
-        #expect(reviewed.count == game.plies.count)
-        #expect(reviewed.allSatisfy { $0.score != nil })
-
-        // Four sensible opening moves; nobody is winning yet, and nobody is mated.
-        for score in reviewed.compactMap({ $0.score }) {
-            guard case .centipawns(let value) = score else {
-                Issue.record("an opening ply should not score as a mate")
-                continue
-            }
-            #expect(abs(value) < 150, "an opening ply scored \(value)")
-        }
-
-        // And the Line the search produced comes back with it, which is the whole point of
-        // asking a Review for one: nothing else in the app can afford to (docs/adr/0021).
-        #expect(reviewed.allSatisfy { !$0.line.isEmpty }, "a Review that kept no lines")
-        #expect(
-            reviewed.allSatisfy { $0.line.count <= Game.Ply.lineLimit },
-            "a line longer than the cap would be written to every file for ever"
-        )
-        // SAN, not UCI: what goes in the file is what a person can read.
-        #expect(reviewed.allSatisfy { $0.line.allSatisfy { !$0.isEmpty && $0.first!.isLetter || $0.first! == "O" } })
-    
-        }}
-
-    @Test("a review of a game with no moves is empty rather than nil-padded")
-    func reviewOfAnEmptyGameIsEmpty() async throws {
-        try await Quietly.alone {
-        let service = try engine()
-        let game = try #require(Game(startFEN: PGN.standardStartFEN))
-        #expect(await service.review(game, depth: 4).isEmpty)
-    
-        }}
-
     // ------------------------------------------------- the app coming and going
     //
     // What remains here is the half of the pause gate that no pure value can answer: what

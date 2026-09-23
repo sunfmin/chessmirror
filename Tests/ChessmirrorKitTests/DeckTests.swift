@@ -297,8 +297,8 @@ import Testing
     @Test("every chip of a long mate is coloured by who plays it")
     func everyChipOfALongMateIsSomebodys() throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
-        let uci = ["e2e4", "e7e5", "d1h5", "b8c6", "f1c4", "g8f6", "h5f7", "e8e7", "c4d5"]
-        let san = ["e4", "e5", "Qh5", "Nc6", "Bc4", "Nf6", "Qxf7+", "Ke7", "Bd5"]
+        let uci = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5", "d2d3", "d7d6", "b1c3"]
+        let san = ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "d3", "d6", "Nc3"]
         let analysis = Analysis(depth: 20, lines: [Line(score: .mate(in: 5), uciMoves: uci, san: san)])
         let news = try #require(MateNews.read(analysis, in: game, hands: [.white]))
         #expect(news.arrows.count == MateNews.arrowLimit)

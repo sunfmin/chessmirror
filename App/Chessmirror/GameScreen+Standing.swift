@@ -178,32 +178,37 @@ extension GameScreen {
     /// number lands, the chip and the line change together and the depth here says how deep.
     /// Greyed while the engine is spoken for, and gone once the move is judged at 28.
     @ViewBuilder func rejudgeControl(_ reading: ReplyReading) -> some View {
-        if let running = session.rejudging, running.index == reading.index {
+        switch session.rejudgeOffer(at: reading.index) {
+        case .running(let depth):
             ProgressView().controlSize(.mini)
-            Text(Depth.label(running.depth))
+            Text(Depth.label(depth))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(Palette.inkSoft)
-        } else {
+        case .none:
+            if let depth = reading.move.depth {
+                Text(localized("game.depth", depth))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Palette.inkSoft)
+            }
+        case .waiting, .ready:
             if let depth = reading.move.depth {
                 Text(localized("game.depth", depth))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(Palette.inkSoft)
             }
             let offer = session.rejudgeOffer(at: reading.index)
-            if offer != .none {
-                Button { session.rejudge(at: reading.index) } label: {
-                    Text(localized("tried.rejudge", PositionSearches.deeperDepth))
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(offer == .ready ? Palette.analysis : Palette.inkSoft.opacity(0.6))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Palette.chipRest, in: Capsule())
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .disabled(offer != .ready)
-                .accessibilityHint(localized("tried.rejudge.hint"))
+            Button { session.rejudge(at: reading.index) } label: {
+                Text(localized("tried.rejudge", RejudgeOffer.depth))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(offer == .ready ? Palette.analysis : Palette.inkSoft.opacity(0.6))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Palette.chipRest, in: Capsule())
+                    .contentShape(Capsule())
             }
+            .buttonStyle(.plain)
+            .disabled(offer != .ready)
+            .accessibilityHint(localized("tried.rejudge.hint"))
         }
     }
 
