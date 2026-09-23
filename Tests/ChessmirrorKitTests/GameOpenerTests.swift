@@ -57,6 +57,21 @@ import Testing
         #expect(session.lines == lines)
     }
 
+    /// A fresh phone's first game is against the bottom rung; the rung picked in a game is the one
+    /// the next game opens at, on this launch and the next (docs/adr/0038).
+    @Test("the first game is at the bottom rung, and the next one at the rung picked")
+    func theNextGameOpensAtTheRungPicked() {
+        let store = InMemorySettings()
+        let settings = PlayerSettings(store: store)
+        let first = GameOpener(engine: nil, library: nil, settings: settings).play(Self.start)
+        #expect(first.strength == .elo(1400))
+
+        first.setStrength(.elo(2000), in: settings)
+        #expect(GameOpener(engine: nil, library: nil, settings: settings).play(Self.start).strength == .elo(2000))
+        let relaunched = PlayerSettings(store: store)
+        #expect(GameOpener(engine: nil, library: nil, settings: relaunched).play(Self.start).strength == .elo(2000))
+    }
+
     /// A game on the shelf, asked for by its file: found, opened under the opener, and — when a
     /// ply is given — set to walk there rather than cut there.
     @Test("a game asked for by its file is found and walked to the move")

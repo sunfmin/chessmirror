@@ -237,7 +237,10 @@ func opponentWaitsForOneCompletedSearch(_ enabled: Bool, _ finalDepth: Int) asyn
         requested.continuation.finish()
         return gate.stream
     })
-    let session = GameSession.fresh(start, controllers: [.white: .hand, .black: .engine], engine: engine)
+    let session = GameSession.fresh(
+        start, controllers: [.white: .hand, .black: .engine], engine: engine,
+        strength: .full  // the reuse is 满力's: a bound opponent searches on its own
+    )
     session.setNoSlips(enabled)
     defer { gate.continuation.finish(); session.suspend() }
     session.play(try #require(start.state.move(matching: "e2e4")))

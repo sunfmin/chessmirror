@@ -120,7 +120,7 @@ import Observation
     // ------------------------------------------------------------------ 棋力
 
     /// The rung the next game starts at (docs/adr/0038). A game's own rung is written into the
-    /// game; this is which one to offer the next. 满力 until somebody picks one.
+    /// game; this is which one to offer the next. The bottom rung until somebody picks one.
     public var strength: Strength {
         didSet {
             guard strength != oldValue else { return }
@@ -181,7 +181,7 @@ import Observation
         self.store = store
         record = Self.double(Keys.record, in: store) ?? JudgementLines.standard.record
         enqueue = Self.double(Keys.enqueue, in: store) ?? JudgementLines.standard.enqueue
-        strength = Self.string(Keys.strength, in: store).flatMap(Strength.init(text:)) ?? .full
+        strength = Self.string(Keys.strength, in: store).flatMap(Strength.init(text:)) ?? .standard
         searchLimit = Self.string(Keys.search, in: store).flatMap(SearchLimit.init(text:)) ?? .standard
         language = Self.string(Keys.language, in: store).flatMap(Language.init(rawValue:))
         isSoundOn = store.object(forKey: Keys.sound) as? Bool ?? true

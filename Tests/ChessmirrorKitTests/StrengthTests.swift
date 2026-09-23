@@ -44,7 +44,7 @@ import ChessmirrorKitTesting
         ).strength == rung)
         #expect(GameSession.fresh(game, strength: rung).strength == rung)
         #expect(GameSession.playing(game, strength: rung).strength == rung)
-        #expect(GameSession.recognised(game).strength == .full, "and 满力 is still the default")
+        #expect(GameSession.recognised(game).strength == .elo(1400), "and the bottom rung is the default")
     }
 
     /// The engine's bar names the engine with the rung it is on, and the name alone at 满力.
@@ -262,11 +262,12 @@ import ChessmirrorKitTesting
         #expect(try #require(GameSession.opened(fresh, strength: .elo(1400)).session).strength == .elo(1400),
                 "with nothing in the game to say otherwise, the remembered rung")
         #expect(GameSession.playing(Self.start, strength: .elo(2200)).strength == .elo(2200))
-        #expect(GameSession.playing(Self.start).strength == .full, "满力 until somebody picks")
+        #expect(GameSession.playing(Self.start).strength == .elo(1400), "the bottom rung until somebody picks")
     }
 
     @Test func theLadderIsFixedAndARungReadsBackFromItsText() {
         #expect(Strength.ladder.last == .full)
+        #expect(Strength.standard == .elo(1400), "the default is the bottom rung")
         #expect(Strength.ladder.compactMap(\.elo) == [1400, 1600, 1800, 2000, 2200, 2500, 2800])
         for rung in Strength.ladder {
             #expect(Strength(text: rung.text) == rung)
