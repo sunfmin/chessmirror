@@ -303,6 +303,10 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// than a way of playing it, unlike a Controller: it is written onto every move the engine
     /// plays, and a reopened game comes back at the rung its last engine move was played at.
     public private(set) var strength: Strength
+    /// How the opponent picks between moves it cannot tell apart (docs/adr/0049). Not a setting
+    /// and not a fact about the game: the toss is how the app plays a 满力 opponent, and the only
+    /// caller that ever replaces it is a test that wants to know which move it will get.
+    @ObservationIgnored public var toss = Toss()
     private var tags: [PGN.Tag]
     var searchTask: Task<Void, Never>?
     /// The best move known to the search the engine was asked for — the arrow it started from, then

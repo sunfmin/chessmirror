@@ -26,6 +26,13 @@ elsewhere:
 - *A move every half-second is a wall of notation.* The engine's move is a full position search,
   which is never that fast; and 马上走 is still there for a move that is taking too long.
 
+> Amended in part by
+> [ADR 0049](0049-the-opponent-never-replays-a-game-it-has-already-played.md): a position search
+> already finished *is* that fast, because the store answers it out of a file. The opponent is now
+> the one reader a stored result may answer only once, and at 满力 it tosses between the moves its
+> search cannot tell apart — so two engines no longer play the same game at the speed of a disk
+> read. The budget, and everything else here, stands.
+
 ## Consequences
 
 - `ThinkingTime`, `MirroredTime`, `GameSession.thinkingTime` and `setThinkingTime` are deleted,

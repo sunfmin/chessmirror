@@ -42,6 +42,10 @@ public actor PositionSearches {
         var latest: Analysis?
         /// Whether a search of the position has run to its end, at any depth.
         var finished = false
+        /// Whether a move has already been played out of what this entry holds (docs/adr/0049).
+        /// A result restored from disk is spent from the moment it is read back: whatever game
+        /// it was searched for has been played.
+        var spent = false
         /// The search in flight, if one is.
         var running: SearchBudget?
         var search: Task<Void, Never>?
@@ -63,7 +67,7 @@ public actor PositionSearches {
         self.storage = storage
         if let storage, let data = try? Data(contentsOf: storage),
            let saved = try? JSONDecoder().decode([String: Analysis].self, from: data) {
-            entries = saved.mapValues { Entry(latest: $0, finished: true) }
+            entries = saved.mapValues { Entry(latest: $0, finished: true, spent: true) }
         }
     }
 
@@ -81,14 +85,26 @@ public actor PositionSearches {
     /// The position's analysis as it arrives, ending when a search of the position has: at the
     /// everyday `budget`, or — asked with `deeper` — not before the position is known at
     /// `deeperDepth` or a deeper search has run out of its minute.
+    ///
+    /// `playing` marks the one reader that plays a move out of what it reads: the opponent
+    /// (docs/adr/0049). **A stored result answers one such reader and no more.** For every other
+    /// reader a stored result is the position's answer for ever — that is what makes 细判, the
+    /// badge and a hint free — but an opponent answered that way twice is an opponent replaying a
+    /// game it has already played, move for move, at the speed of a disk read. So the first ask
+    /// is still free, which is what keeps 把关's own judgement of the move just played standing
+    /// in for the reply's search, and the second ask searches again.
     public nonisolated func analyse(
-        _ game: Game, using engine: any Engine, budget: SearchBudget = PositionSearches.budget
+        _ game: Game, using engine: any Engine, budget: SearchBudget = PositionSearches.budget,
+        playing: Bool = false
     ) -> AsyncStream<Analysis> {
         let id = UUID()
         let wantsDeeper = budget == Self.deeper
         return AsyncStream { continuation in
             let registration = Task {
-                await self.subscribe(game, engine: engine, id: id, wantsDeeper: wantsDeeper, continuation: continuation)
+                await self.subscribe(
+                    game, engine: engine, id: id, wantsDeeper: wantsDeeper, playing: playing,
+                    continuation: continuation
+                )
             }
             continuation.onTermination = { _ in
                 Task {
@@ -100,11 +116,18 @@ public actor PositionSearches {
     }
 
     private func subscribe(_ game: Game, engine: any Engine, id: UUID, wantsDeeper: Bool,
-                           continuation: AsyncStream<Analysis>.Continuation) {
+                           playing: Bool, continuation: AsyncStream<Analysis>.Continuation) {
         let key = Self.key(game)
         var entry = entries[key] ?? Entry()
-        if let latest = entry.latest { continuation.yield(latest) }
-        if wantsDeeper ? entry.isDeepEnough : entry.finished {
+        // A result that has already had a move played out of it is spent for that purpose: what
+        // it holds is not handed to a second opponent and cannot end that stream, so the search
+        // runs again. Reading it costs the spend either way — the search this starts is the one
+        // the move will be played out of.
+        let spent = playing && entry.spent
+        if playing { entry.spent = true }
+        if let latest = entry.latest, !spent { continuation.yield(latest) }
+        if !spent, wantsDeeper ? entry.isDeepEnough : entry.finished {
+            entries[key] = entry
             continuation.finish()
             return
         }
@@ -113,8 +136,13 @@ public actor PositionSearches {
         guard entry.running == nil else { return }
         // The everyday search first, always: a position nobody has looked at is answered at the
         // depth every other live answer is worth before anyone goes deeper, so a reader that
-        // wants only that is not made to wait a minute for it.
-        start(key, game: game, engine: engine, budget: entry.finished ? Self.deeper : Self.budget)
+        // wants only that is not made to wait a minute for it. A spent position searched again
+        // asks for that same everyday search, never for the deeper one: the opponent wants the
+        // budget its move is played on, not a minute of it.
+        start(
+            key, game: game, engine: engine,
+            budget: entry.finished && !spent ? Self.deeper : Self.budget
+        )
     }
 
     private func start(_ key: String, game: Game, engine: any Engine, budget: SearchBudget) {
@@ -136,9 +164,13 @@ public actor PositionSearches {
                 if Task.isCancelled { break }
                 guard !snapshot.isPartial, snapshot.best != nil else { continue }
                 reached = snapshot
-                // An everyday search commits as it climbs, as it always has. A deeper one commits
-                // only when it finishes: cancelled, it leaves the entry as it was.
-                if budget != Self.deeper { entries[key]?.latest = snapshot }
+                // An everyday search commits as it climbs, as it always has, but never downwards:
+                // a fresh search of a position a 复判 already answered deeper would otherwise put
+                // the shallower answer back (docs/adr/0041). A deeper search commits only when it
+                // finishes: cancelled, it leaves the entry as it was.
+                if budget != Self.deeper, snapshot.depth >= (entries[key]?.latest?.depth ?? 0) {
+                    entries[key]?.latest = snapshot
+                }
                 for listener in entries[key]?.listeners.values ?? [:].values {
                     listener.continuation.yield(snapshot)
                 }
@@ -222,9 +254,9 @@ public actor PositionSearches {
 
 extension Engine {
     public func analysePosition(
-        _ game: Game, budget: SearchBudget = PositionSearches.budget
+        _ game: Game, budget: SearchBudget = PositionSearches.budget, playing: Bool = false
     ) -> AsyncStream<Analysis> {
-        positionSearches.analyse(game, using: self, budget: budget)
+        positionSearches.analyse(game, using: self, budget: budget, playing: playing)
     }
 
     public func positionResult(

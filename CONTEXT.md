@@ -203,6 +203,14 @@ It shapes the opponent and nothing else: 细判 weighs every move at full streng
 棋力, so a 掉幅 means the same thing at every rung.
 _Avoid_: 难度, 级别, 等级, 档位
 
+**掷子 (Toss)**:
+How a 满力 opponent picks between moves its own search cannot tell apart: at random, among the
+lines scored within fifteen centipawns of the first, from its own side. A mate is never tossed
+for. It moves a piece and not a number — 最佳 is still the first line and 细判 still weighs every
+move against it — and it exists because a deterministic engine played the same game every time
+(docs/adr/0049). At a 棋力 there is no 掷子: Stockfish has already picked (docs/adr/0038).
+_Avoid_: 随机, 开局库, 让子
+
 **正着数 (Distance)**: _retired._ It counted every move that stood while 把关 was on, which
 with 把关 on was the length of the game — a number the record already shows. Only 连正 is read.
 
