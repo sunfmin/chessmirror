@@ -64,6 +64,7 @@ extension GameSession {
     /// time it retunes, so a move that landed by any door — a hand, the engine, a held button —
     /// gets its number without a screen having to remember to ask for it.
     func measureLatestMove() {
+        judgeOwedMove()
         guard !isWeighing, !game.plies.isEmpty, engine != nil, !isLatestMoveMeasured else { return }
         measuring = Task { [weak self] in await self?.measureLatestMoveChange() }
     }
@@ -91,16 +92,53 @@ extension GameSession {
         let weighed = await engine.weigh(after, from: before)
         guard !Task.isCancelled, !isWeighing, let weighed,
               game.uciMoves == after.uciMoves, game.startFEN == after.startFEN else { return }
-        if game.plies[last].judgement == nil, let landed = landedUnjudged,
-           landed.matches(after) {
-            game.setJudgement(weighed.judgement, atPly: last)
-            landedUnjudged = nil
-            save()
-        }
+        if let owed = landedUnjudged, OfGame(owed) == OfGame(after) { write(weighed, owedTo: owed) }
         badge = LandedBadge(
             after,
             change: MoveChange(before: weighed.scoreBefore, after: weighed.after, isBest: weighed.isBest)
         )
+    }
+
+    /// Weighs the move that landed with nothing written on it (`landedUnjudged`), on a task of its
+    /// own rather than the badge's, and writes the answer onto that move.
+    ///
+    /// **Not stopped by the game moving on.** The badge's search is `stopSearching`'s to end, and
+    /// the next move played ends it — which used to end the judgement with it. The engine's move
+    /// is 细判'd from the position it made, and that search runs to the 搜索预算; a player who
+    /// answered a blunder at once (a free piece is taken without a second thought) left the
+    /// blunder with no 掉幅 on the record, ever. The searches this waits on are the shared ones,
+    /// and the position the engine's move made is the one the player's reply is weighed from, so
+    /// letting it finish costs the engine nothing it was not already doing.
+    func judgeOwedMove() {
+        guard let owed = landedUnjudged, let engine, owedJudging[OfGame(owed)] == nil,
+              let last = owed.plies.indices.last, let before = owed.rewound(to: last) else { return }
+        let key = OfGame(owed)
+        owedJudging[key] = Task { [weak self] in
+            let weighed = await engine.weigh(owed, from: before)
+            guard let self else { return }
+            defer { owedJudging[key] = nil }
+            // Nil is nobody looked — a pause, a suspend. The move is still owed, and the next
+            // retune asks again.
+            guard !Task.isCancelled, let weighed else { return }
+            // A move being weighed meanwhile lands a game made from the one it was played in,
+            // which does not have this judgement yet: written now, it would be written over.
+            while case .weighing(_, let running) = activity { await running.value }
+            guard !Task.isCancelled else { return }
+            write(weighed, owedTo: owed)
+        }
+    }
+
+    /// Writes a judgement onto the move it was owed to, wherever the game has got to since —
+    /// as long as the game still passes through that move. A move that has already been written,
+    /// or a game that was taken down another line, is left as it is.
+    private func write(_ weighed: Weighing, owedTo owed: Game) {
+        let last = owed.plies.count - 1
+        guard game.startFEN == owed.startFEN, game.plies.count > last,
+              game.uciMoves.prefix(owed.plies.count).elementsEqual(owed.uciMoves),
+              game.plies[last].judgement == nil else { return }
+        game.setJudgement(weighed.judgement, atPly: last)
+        if let landed = landedUnjudged, OfGame(landed) == OfGame(owed) { landedUnjudged = nil }
+        save()
     }
 
     /// Explicit legacy migration only; never started automatically by the game screen.
@@ -296,7 +334,7 @@ extension GameSession {
     /// badge reads. `owedJudgement` is for the move that landed with nothing written on it yet.
     private func stoodOnBoard(change: MoveChange?, owedJudgement: Bool) {
         if let change { badge = LandedBadge(game, change: change) }
-        if owedJudgement { landedUnjudged = OfGame(game) }
+        if owedJudgement { landedUnjudged = game }
         // The Analysis that described the position before this move is stale.
         analysis = nil
         // The refusals made where it was played from ride onto it as its 试招 (docs/adr/0037).

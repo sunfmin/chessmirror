@@ -48,17 +48,21 @@ public final class ScriptedEngine: Engine {
     /// has to get three answers.
     private let byPosition: [String: Analysis]
     private let byBudget: [SearchBudget: [Analysis]]
+    /// What a search bound to a rung answers, keyed by FEN: the opponent's own choice, which is
+    /// a search of its own and need not be the move the shared search likes best (docs/adr/0038).
+    private let byRung: [String: Analysis]
     private let controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)?
 
     public init(
         _ snapshots: [Analysis], isEndless: Bool = false, byPosition: [String: Analysis] = [:],
-        byBudget: [SearchBudget: [Analysis]] = [:],
+        byBudget: [SearchBudget: [Analysis]] = [:], byRung: [String: Analysis] = [:],
         controlled: (@Sendable (Game, SearchBudget) -> AsyncStream<Analysis>?)? = nil
     ) {
         self.snapshots = snapshots
         self.isEndless = isEndless
         self.byPosition = byPosition
         self.byBudget = byBudget
+        self.byRung = byRung
         self.controlled = controlled
     }
 
@@ -73,6 +77,12 @@ public final class ScriptedEngine: Engine {
         askedLines.withLock { $0.append(lines) }
         askedStrengths.withLock { $0.append(strength) }
         askedPositions.withLock { $0.append(game.state.fen) }
+        if strength != .full, let answer = byRung[game.state.fen] {
+            return AsyncStream { continuation in
+                continuation.yield(answer)
+                continuation.finish()
+            }
+        }
         if let stream = controlled?(game, budget) { return stream }
         let scripted = byBudget[budget] ?? byPosition[game.state.fen].map { [$0] } ?? snapshots
         let reachedDepth: Bool

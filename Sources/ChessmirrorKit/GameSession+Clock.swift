@@ -412,6 +412,9 @@ extension GameSession {
             }
         }
         stopSearching()
+        // A judgement still owed is asked for again when the screen comes back (`retune`).
+        for owed in owedJudging.values { owed.cancel() }
+        owedJudging = [:]
         // Not the finder: suspending is not the eye moving, and a shot named for the position
         // still on screen is still named for it.
         onStrip.close()
