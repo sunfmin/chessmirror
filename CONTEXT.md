@@ -199,6 +199,7 @@ it without a rung on the screen.
 
 **棋力 (Strength)**:
 The Elo the engine is bound to for its own moves, picked from a fixed ladder; 满力 is unbound.
+The bottom rung until the player picks one, and the last one picked after that.
 It shapes the opponent and nothing else: 细判 weighs every move at full strength whatever the
 棋力, so a 掉幅 means the same thing at every rung.
 _Avoid_: 难度, 级别, 等级, 档位

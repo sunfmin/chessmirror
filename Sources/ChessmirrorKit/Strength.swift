@@ -5,8 +5,8 @@ import Foundation
 ///
 /// It shapes the opponent and nothing else: 细判 weighs every move at full strength whatever the
 /// 棋力, and so do hints, cards and the finder, so a 掉幅 means the same thing at every rung. 满力
-/// is unbound — ADR 0009's opponent, as strong as the clock lets it be — and is the default until
-/// the player first picks a rung.
+/// is unbound — ADR 0009's opponent, as strong as the clock lets it be. The bottom rung is the
+/// default until the player first picks one.
 ///
 /// Elo rather than depth, because Elo is the number players already talk in, and an engine bound
 /// this way errs the way a weaker human does where a depth-limited one is sharp tactically and
@@ -29,6 +29,10 @@ public enum Strength: Hashable, Sendable {
     public static let ladder: [Strength] = [
         .elo(1400), .elo(1600), .elo(1800), .elo(2000), .elo(2200), .elo(2500), .elo(2800), .full,
     ]
+
+    /// The rung a game starts at until the player picks one: the bottom of the ladder, so a first
+    /// game is one a newcomer can play rather than a wall (docs/adr/0038).
+    public static let standard = ladder[0]
 
     /// What Stockfish 18 accepts for `UCI_Elo`.
     public static let eloRange = 1320...3190

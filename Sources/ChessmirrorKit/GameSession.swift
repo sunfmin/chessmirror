@@ -344,7 +344,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         /// Which ply to open on. The latest by default, which is where a game being played is.
         viewing: Int? = nil,
         /// The 棋力 to play at when the game itself does not say: what the player last picked.
-        strength: Strength = .full,
+        strength: Strength = .standard,
         /// The lines to judge by. Whether 把关 is on is the file's word (`Intercept`) when it has one.
         lines: JudgementLines = .standard
     ) {
@@ -385,7 +385,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         shaky: Set<Square> = [],
         engine: (any Engine)? = nil,
         library: GameLibrary? = nil,
-        strength: Strength = .full,
+        strength: Strength = .standard,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
@@ -403,7 +403,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         controllers: [PieceColour: Controller] = [.white: .hand, .black: .hand],
         engine: (any Engine)? = nil,
         library: GameLibrary? = nil,
-        strength: Strength = .full,
+        strength: Strength = .standard,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
@@ -419,7 +419,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         _ game: Game,
         engine: (any Engine)? = nil,
         library: GameLibrary? = nil,
-        strength: Strength = .full,
+        strength: Strength = .standard,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = fresh(game, engine: engine, library: library, strength: strength, lines: lines)
@@ -584,7 +584,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         _ entry: GameLibrary.Entry,
         engine: (any Engine)? = nil,
         library: GameLibrary? = nil,
-        strength: Strength = .full,
+        strength: Strength = .standard,
         /// The player's lines as they are now. The file says whether 把关 is on; where it stops
         /// the player is the 记录线 handed in here (docs/adr/0046).
         lines: JudgementLines = .standard
@@ -607,7 +607,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         shaky: Set<Square>,
         engine: (any Engine)?,
         library: GameLibrary?,
-        strength: Strength = .full,
+        strength: Strength = .standard,
         lines: JudgementLines = .standard
     ) -> GameSession {
         let session = GameSession(
@@ -627,7 +627,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// Reopens a saved game, at the position it began in, facing the person holding the phone
     /// when the file says who that is, and the side about to move otherwise.
     private convenience init(
-        entry: GameLibrary.Entry, library: GameLibrary? = nil, strength: Strength = .full,
+        entry: GameLibrary.Entry, library: GameLibrary? = nil, strength: Strength = .standard,
         lines: JudgementLines = .standard
     ) {
         let pgn = entry.pgn

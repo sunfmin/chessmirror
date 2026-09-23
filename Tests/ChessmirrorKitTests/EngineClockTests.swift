@@ -13,7 +13,7 @@ struct EngineClock {
             start.state.fen: Analysis(depth: 20, lines: [.init(score: .centipawns(0), uciMoves: ["e2e4"], san: ["e4"])]),
             after.state.fen: Analysis(depth: 12, lines: [.init(score: .centipawns(0), uciMoves: ["e7e5"], san: ["e5"])])
         ])
-        let session = GameSession.fresh(start, engine: engine)
+        let session = GameSession.fresh(start, engine: engine, strength: .full)  // the reuse is 满力's: a bound opponent searches on its own
         defer { session.suspend() }
         session.retune()
         await session.waitForPreparedInterception()

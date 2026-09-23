@@ -16,7 +16,7 @@ import Testing
     func aFreshPhoneGetsTheStandards() {
         let settings = PlayerSettings(store: InMemorySettings())
         #expect(settings.lines == JudgementLines(noSlips: false, record: 10, enqueue: 10))
-        #expect(settings.strength == .full)
+        #expect(settings.strength == .elo(1400), "the bottom rung")
         #expect(settings.searchLimit == .standard)
         #expect(settings.language == nil, "follow the phone")
         #expect(settings.isSoundOn)
@@ -107,14 +107,16 @@ import Testing
     }
 
     /// The rung picked is the one the next game starts at, on this phone and on the next one.
-    @Test("the rung picked is remembered, and a fresh phone starts at 满力")
+    @Test("the rung picked is remembered, and a fresh phone starts at the bottom rung")
     func theRungIsRemembered() {
         let store = InMemorySettings()
         let settings = PlayerSettings(store: store)
-        #expect(settings.strength == .full, "nothing picked yet")
+        #expect(settings.strength == Strength.ladder.first, "nothing picked yet")
         settings.strength = .elo(2200)
         #expect(PlayerSettings(store: store).strength == .elo(2200))
-        #expect(PlayerSettings(store: InMemorySettings()).strength == .full)
+        #expect(PlayerSettings(store: InMemorySettings()).strength == .elo(1400))
+        settings.strength = .full
+        #expect(PlayerSettings(store: store).strength == .full, "满力 picked is 满力 kept, not the default")
     }
 
     /// An account is kept once it has fetched, newest first, four to a site, spelt as it was

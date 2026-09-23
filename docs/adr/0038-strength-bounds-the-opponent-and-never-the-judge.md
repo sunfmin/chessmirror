@@ -17,6 +17,10 @@ weaker human does, while a depth-limited one is sharp tactically and blind to th
 "depth 8" tells a player nothing. The clock is untouched: Mirrored Time and a named number of
 seconds are the courtesy they always were, not a level.
 
+> The default has since moved to the bottom rung, 1400: 满力 as the first opponent was a wall a
+> newcomer met before they had picked anything. What the player picks is still remembered and
+> still wins over the default.
+
 > The clock was already disconnected when this was written, and it has since been deleted
 > ([ADR 0039](0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md)): the
 > opponent's move runs on the shared position budget, and 棋力 is the one dial on it.

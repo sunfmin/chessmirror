@@ -16,7 +16,7 @@ import Foundation
 
     public init(
         engine: (any Engine)?, library: GameLibrary?,
-        strength: Strength = .full, lines: JudgementLines = .standard
+        strength: Strength = .standard, lines: JudgementLines = .standard
     ) {
         self.engine = engine
         self.library = library
