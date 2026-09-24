@@ -10,7 +10,8 @@ through your own iCloud Drive.
 - Camera, photo library, screenshots, image files, FEN, and shared board intake.
 - Confirm and correct pieces, side to move, and castling rights before playing.
 - Per-game controllers and engine 棋力. Mate and tactics findings appear only when
-  available; tap a row to expand its answer. The board keeps the full screen width.
+  available; tap a row to expand its answer. On a phone the board keeps the full screen width;
+  on a wide iPad window (landscape, Split View, Stage Manager) the record and cards stand beside it.
 - **错题本:** one position across many games, with encounter history and manual dismissal. A game
   contributes both the moves it recorded and the refusals 耕棋 took back — including the ones no
   move ever absorbed, which is how a session that ends on a refused move gets written down. Rows

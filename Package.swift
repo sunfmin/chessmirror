@@ -1,17 +1,16 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// The define set the Stockfish Makefile uses for ARCH=apple-silicon. It is 64-bit ARM
-// only, which is every device this app can be installed on and the machine it is built
-// on; an Intel Mac would need its own set, and does not get one.
+// The define set the Stockfish Makefile uses for ARCH=armv8, which is 64-bit ARM with NEON and
+// nothing newer: every device this app can be installed on and the machine it is built on. An
+// Intel Mac would need its own set, and does not get one.
 //
-// The dotprod flag is worth its awkwardness: measured on this Mac it takes the start
-// position from 11.0M to 12.5M nodes per second, about 14%, and it is the NNUE evaluation
-// — the app's whole reason for a move — that gets faster. SwiftPM classes -march as an
-// unsafe flag, so this package can never be a versioned dependency of another; it is the
-// root package and a local one, which is the case where that restriction costs nothing.
-// Should some future Xcode refuse it anyway, dropping these two lines gives back a
-// working build at the older speed.
+// Not ARCH=apple-silicon. That set adds the dotprod instructions, which took the start position
+// from 11.0M to 12.5M nodes per second on this Mac — and which an A12 does not have. iPadOS 26
+// still runs on A12 iPads (the first iPad Pro 11-inch among them), and there the first NNUE
+// evaluation is an illegal instruction: the app dies the moment the engine looks at a board.
+// No App Store device requirement can exclude an A12, so the build stops asking for the
+// instruction instead, and every device pays the 14%.
 let stockfishDefines: [CXXSetting] = [
     .define("NDEBUG"),
     // Pinned rather than inherited, because what Xcode hands a package target is the app's
@@ -28,8 +27,6 @@ let stockfishDefines: [CXXSetting] = [
     .define("USE_POPCNT"),
     .define("USE_PTHREADS"),
     .define("USE_NEON", to: "8"),
-    .define("USE_NEON_DOTPROD"),
-    .unsafeFlags(["-march=armv8.2-a+dotprod"]),
     // The NNUE networks ship as bundle resources and are loaded by path, so incbin's
     // assembly embedding never has to work under Xcode.
     .define("NNUE_EMBEDDING_OFF"),

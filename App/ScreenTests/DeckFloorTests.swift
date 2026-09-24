@@ -6,20 +6,28 @@ import UIKit
 @testable import Chessmirror
 import ChessmirrorKitTesting
 
-/// Contract: the board keeps the entire viewport width regardless of height or text size.
+/// Contract: on a phone the board keeps the entire viewport width regardless of height or text size.
 /// Settings start closed; bottom analysis tabs remain reachable without shrinking the board.
 @MainActor
 @Suite(.serialized, .drawing(in: .chinese))
 struct DeckFloor {
+    /// A phone is one column with the board at the full width, whatever its height or text size.
+    /// A window wider than it is tall — a landscape iPad, a Stage Manager window — keeps the whole
+    /// board on screen and puts the record beside it.
     @Test func boardAlwaysUsesTheFullWidth() {
-        #expect(GameScreen.boardSide(in: .zero) == 0)
+        #expect(GameScreen.Arrangement(in: .zero).side == 0)
         for size in [
-            CGSize(width: 375, height: 667), CGSize(width: 402, height: 874),
-            CGSize(width: 440, height: 956), CGSize(width: 744, height: 1133),
-            CGSize(width: 1376, height: 1032),
+            CGSize(width: 320, height: 524), CGSize(width: 375, height: 667),
+            CGSize(width: 402, height: 874), CGSize(width: 440, height: 956),
+            CGSize(width: 744, height: 1133),
         ] {
-            #expect(GameScreen.boardSide(in: size) == size.width)
+            let arrangement = GameScreen.Arrangement(in: size)
+            #expect(arrangement.side == size.width)
+            #expect(!arrangement.isBeside)
         }
+        let landscape = GameScreen.Arrangement(in: CGSize(width: 1376, height: 1032))
+        #expect(landscape.isBeside)
+        #expect(landscape.side == 1032 - GameScreen.Arrangement.chrome)
     }
 
     @Test(arguments: [false, true])

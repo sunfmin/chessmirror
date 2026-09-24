@@ -121,7 +121,7 @@ extension View {
     /// Not a quiet override of the reader's setting: the card is what the app is for, and its
     /// sentences are the only text on this screen anybody has to *read*. The rows above it are
     /// status, and they are also the only rows whose growth is not paid for by anything — the board
-    /// is sized from a budget (`GameScreen.boardSide`) and the deck takes what is left. At the
+    /// is sized from the window (`GameScreen.Arrangement`) and the deck takes what is left. At the
     /// largest size those four rows took a hundred points off the deck to say 「黑方 引擎 跟着我」
     /// at 40pt, and left the card 42pt tall. Capped, they still grow by a fifth and the card keeps
     /// the room it was designed with.
@@ -384,5 +384,14 @@ struct ScoreCell: View {
         Text(score?.displayText ?? "—")
             .clockFont(prominent ? 15 : 14, weight: prominent ? .semibold : .regular)
             .foregroundStyle(prominent ? Palette.analysis : Palette.inkSoft)
+    }
+}
+
+extension View {
+    /// A page of rows stops widening at a reading width and stands in the middle of anything wider.
+    /// On a phone it changes nothing; on an iPad held sideways it is the difference between a list
+    /// and a set of 1300-point bars with a word at each end.
+    func readableColumn(_ width: CGFloat = 680) -> some View {
+        frame(maxWidth: width).frame(maxWidth: .infinity)
     }
 }

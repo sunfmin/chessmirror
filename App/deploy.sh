@@ -26,8 +26,13 @@ fi
 stamp=$(date +%Y%m%d%H%M)
 
 echo "==> building for $udid (build $stamp)"
+# Built for this device rather than any iOS device, and allowed to touch provisioning: a phone or
+# iPad the account has not seen before is registered and written into the profile here. Built
+# generically, the profile was whatever it last was, and a new device refused the install with
+# "This provisioning profile cannot be installed on this device".
 xcodebuild -project Chessmirror.xcodeproj -scheme Chessmirror -configuration Release \
-  -destination 'generic/platform=iOS' -derivedDataPath /tmp/dd \
+  -destination "id=$udid" -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+  -derivedDataPath /tmp/dd \
   CURRENT_PROJECT_VERSION="$stamp" build
 
 echo "==> installing"
