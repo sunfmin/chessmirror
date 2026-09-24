@@ -59,33 +59,35 @@ struct GameScreen: View {
         GeometryReader { proxy in
             // The reader goes to the glass so the card can. The board is still sized for the
             // safe area — extra height at the bottom is the deck's, not a larger board.
-            let side = Self.boardSide(in: proxy.size)
-            VStack(spacing: 0) {
-              ScrollView {
-              VStack(spacing: 0) {
-                playerBar(topColour).chromeType()
-                board.frame(width: side, height: side)
-                standing.padding(.horizontal, 12).frame(width: side).padding(.vertical, 6).chromeType()
-                playerBar(bottomColour).chromeType()
-                if let practice = session.practice {
-                    DrillVerdictRow(drill: practice, next: practiceNext, leave: { path.removeAll() })
-                        .chromeType()
+            let arrangement = Arrangement(in: proxy.size)
+            let side = arrangement.side
+            if arrangement.isBeside {
+                // The board with its own two bars on one side, everything about the game on the
+                // other. Each scrolls on its own: a side's controls unfolding pushes its bar down
+                // and not the record out of reach.
+                HStack(spacing: 0) {
+                    ScrollView {
+                        boardColumn(side: side)
+                            .frame(minHeight: proxy.size.height, alignment: .center)
+                    }
+                    .frame(width: side)
+                    .scrollBounceBehavior(.basedOnSize)
+                    Rectangle().fill(Palette.hairline).frame(width: 0.5)
+                    ScrollView {
+                        gameColumn
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                VStack(spacing: 0) {
-                    record
-                    reviewRow
-                    wrongMoves
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        boardColumn(side: side)
+                        gameColumn
+                    }
+                    .frame(width: side)
+                    .frame(width: proxy.size.width)
                 }
-                .chromeType()
-
-                if session.dealsCards {
-                    DeckView(session: session, selected: $selected)
-                }
-              }
-              .frame(width: proxy.size.width)
-              }
             }
-            .frame(maxWidth: .infinity)
         }
         .background(Palette.parchment)
         // A game opened from the 错题本 is opened *at* a mistake, and the arriving is the point:
@@ -210,6 +212,40 @@ struct GameScreen: View {
         }
     }
 
+
+    // ------------------------------------------------------------------ the two columns
+
+    /// The board and what belongs to its two edges: each side's bar, and the standing line.
+    func boardColumn(side: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            playerBar(topColour).chromeType()
+            board.frame(width: side, height: side)
+            standing.padding(.horizontal, 12).frame(width: side).padding(.vertical, 6).chromeType()
+            playerBar(bottomColour).chromeType()
+        }
+        .frame(width: side)
+    }
+
+    /// Everything about the game that is not the board: the drill's verdict, the record and what
+    /// hangs off it, and the deck. Under the board on a phone, beside it on a wide window.
+    var gameColumn: some View {
+        VStack(spacing: 0) {
+            if let practice = session.practice {
+                DrillVerdictRow(drill: practice, next: practiceNext, leave: { path.removeAll() })
+                    .chromeType()
+            }
+            VStack(spacing: 0) {
+                record
+                reviewRow
+                wrongMoves
+            }
+            .chromeType()
+
+            if session.dealsCards {
+                DeckView(session: session, selected: $selected)
+            }
+        }
+    }
 
     // ------------------------------------------------------------------ the deck
 

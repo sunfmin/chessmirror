@@ -28,15 +28,42 @@ extension GameScreen {
 
     // ------------------------------------------------------------------ the board
 
-    /// How big the board is, and it depends on the screen and nothing else: the full width.
+    /// Where the board goes and how big it is. It depends on the window and nothing else, so it
+    /// never changes size because the engine found a third line to show — the one thing on this
+    /// screen that must never move.
     ///
-    /// It used to take whatever height was left over, which meant the board changed size when the
-    /// engine found a third line to show — the one thing on this screen that must never move. It
-    /// then went through a height budget against the deck (docs/adr/0025), and that budget is gone
-    /// with the deck's fixed floor: the board is full bleed at every size and every text size, and
-    /// the deck is the one flexible child under it.
-    static func boardSide(in size: CGSize) -> CGFloat {
-        max(0, size.width)
+    /// On a phone the answer is always the same: full width, one column, and the page scrolls for
+    /// the rest (docs/adr/0025). An iPad is a window of any shape, and the phone's answer is wrong
+    /// for most of them — a board as wide as a landscape screen is taller than the screen, and the
+    /// part under the fold is half the game. So the board is held to the height left once its two
+    /// player bars and the standing line are counted, and a window wide enough to spare a column
+    /// beside that puts the record and the cards in it.
+    struct Arrangement: Equatable {
+        /// The board's side, in points.
+        let side: CGFloat
+        /// Whether the record and the cards stand beside the board rather than under it.
+        let isBeside: Bool
+
+        /// What the two player bars and the standing line take, above and below the board, at the
+        /// text sizes the chrome is capped to.
+        static let chrome: CGFloat = 150
+        /// The narrowest the column beside the board may be: a record strip and a card's sentence.
+        static let column: CGFloat = 320
+
+        init(in size: CGSize) {
+            let tallest = max(0, size.height - Self.chrome)
+            if size.width > size.height, size.width >= 2 * Self.column {
+                // Wider than tall: the board as tall as the window allows, and where that would
+                // not leave a column beside it, the board gives way to the column.
+                side = min(tallest, size.width - Self.column)
+                isBeside = true
+            } else {
+                // A phone, a portrait iPad or a narrow Split View window: one column, the board
+                // as wide as it can be without pushing its own bars off the screen.
+                side = max(0, min(size.width, max(tallest, size.width * 0.5)))
+                isBeside = false
+            }
+        }
     }
 
     var board: some View {

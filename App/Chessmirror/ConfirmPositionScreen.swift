@@ -124,6 +124,7 @@ struct ConfirmPositionScreen: View {
             if isAdvancedShowing { advanced }
             done
         }
+        .readableColumn()
         .background(Palette.parchment)
         .navigationTitle(localized("edit.title"))
         .navigationBarTitleDisplayMode(.inline)
@@ -234,6 +235,11 @@ struct ConfirmPositionScreen: View {
             onTap: paint,
             backdrop: backdrop
         )
+        // Squared and centred by an empty layer, because `BoardView` takes whatever it is offered
+        // and draws in its top-left corner: on a window wider than the board is tall — an iPad on
+        // its side — that was a board against the left edge and a gap to the right of it.
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
     }
 

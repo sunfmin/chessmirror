@@ -34,6 +34,7 @@ struct BookScreen: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
+            .readableColumn()
         }
         .background(Palette.parchment)
         .navigationTitle(localized("book"))
@@ -160,6 +161,7 @@ struct BookEntryScreen: View {
                 .padding(.horizontal, 16)
             }
             .padding(.bottom, 24)
+            .readableColumn()
         }
         .background(Palette.parchment)
         .navigationTitle(localized("book"))

@@ -69,6 +69,7 @@ struct LibraryScreen: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 24)
+                .readableColumn()
             }
             .background(Palette.parchment)
             .navigationTitle("")

@@ -77,7 +77,7 @@ struct DeckGallery {
         #expect(rendered.says(localized("noSlips.name")))
         #expect(rendered.says(localized("game.depth", 20)))
         #expect(rendered.says(localized("standing.bar")))
-        #expect(GameScreen.boardSide(in: CGSize(width: width, height: 600)) == CGFloat(width))
+        #expect(GameScreen.Arrangement(in: CGSize(width: width, height: 600)).side == CGFloat(width))
     }
     @Test func standingNoSlipsLabelTogglesWithoutOpeningSettings() async throws {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -151,7 +151,7 @@ struct DeckGallery {
         }
         #expect(rendered.says(localized("punish.toggle")))
         #expect(rendered.says(localized("game.settings.collapse", PieceColour.black.label)))
-        #expect(GameScreen.boardSide(in: CGSize(width: 440, height: 600)) == 440)
+        #expect(GameScreen.Arrangement(in: CGSize(width: 440, height: 600)).side == 440)
     }
 
     @Test func noSlipsShowsOnlyCompactReturnedAttempts() async throws {
