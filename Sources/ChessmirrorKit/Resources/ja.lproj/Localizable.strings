@@ -479,3 +479,29 @@
 "search.explained" = "エンジンが各局面をどれだけの時間、どれだけの深さまで読むか。判定、エンジン自身の一手、ヒントはすべてこの一回の探索なので、損失はどこで測っても同じ意味になります。再判定はこれより8深く、時間は6倍まで使います。";
 "import.unreadableArchives.title" = "%2$@ の対局一覧を読めない";
 "import.unreadableArchives.message" = "%1$@ は応答しましたが、%2$@ の対局一覧ではありませんでした。しばらくしてからもう一度お試しください。";
+
+/* 收藏集 (docs/adr/0051) */
+"collections" = "コレクション";
+"collection.favourites" = "お気に入り";
+"collection.items" = "%d 局面";
+"collection.favouritesEmpty" = "どの局面でも ♡ をタップするとここに入ります";
+"collection.empty" = "まだ局面がありません";
+"collection.yours" = "あなたのチャンス";
+"collection.theirs" = "相手のチャンス";
+"collection.whiteToMove" = "白番";
+"collection.blackToMove" = "黒番";
+"collection.from" = "%@ の %d 手目";
+"collection.openGame" = "元の対局を開く";
+"collection.takeOut" = "外す";
+"collection.remove" = "コレクションから外す";
+"collection.rename" = "名前を変更";
+"collection.delete" = "削除";
+"collection.deleteConfirm" = "「%@」を削除しますか？";
+"collection.deleteExplained" = "局面はこのコレクションから外れます。対局とミスはそのままです。";
+"collection.new" = "新しいコレクション…";
+"collection.name" = "名前";
+"collection.kept" = "「%@」に保存しました";
+"collection.change" = "変更";
+"collection.choose" = "保存先";
+"collection.heart" = "この局面を保存";
+"collection.nameUnusable" = "この名前は使えません";

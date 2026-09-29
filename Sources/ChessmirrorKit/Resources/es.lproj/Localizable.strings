@@ -508,3 +508,30 @@
 "search.explained" = "Cuánto tiempo y a qué profundidad mira el motor cada posición. Juzgar una jugada, la jugada del propio motor y una pista son esta misma búsqueda, así que un coste significa lo mismo donde sea que se mida. Un nuevo juicio va 8 niveles más hondo y admite 6 veces el tiempo.";
 "import.unreadableArchives.title" = "No se puede leer la lista de partidas de %2$@";
 "import.unreadableArchives.message" = "%1$@ respondió, pero no con una lista de partidas de %2$@. Vuelve a intentarlo en un momento.";
+
+/* 收藏集 (docs/adr/0051) */
+"collections" = "Colecciones";
+"collection.favourites" = "Favoritas";
+"collection.items" = "%d posiciones";
+"collection.favouritesEmpty" = "Toca ♡ en cualquier posición para guardarla aquí";
+"collection.empty" = "Aún no hay posiciones";
+"collection.yours" = "Tu oportunidad";
+"collection.theirs" = "Oportunidad del rival";
+"collection.whiteToMove" = "Juegan blancas";
+"collection.blackToMove" = "Juegan negras";
+"collection.from" = "De %@, jugada %d";
+"collection.openGame" = "Abrir la partida";
+"collection.takeOut" = "Quitar";
+"collection.remove" = "Quitar de la colección";
+"collection.rename" = "Renombrar";
+"collection.delete" = "Eliminar";
+"collection.deleteConfirm" = "¿Eliminar «%@»?";
+"collection.deleteExplained" = "Sus posiciones salen de esta colección; las partidas y tus errores se quedan.";
+"collection.new" = "Nueva colección…";
+"collection.name" = "Nombre";
+"collection.kept" = "Guardada en «%@»";
+"collection.change" = "Cambiar";
+"collection.choose" = "Guardar en";
+"collection.heart" = "Guardar esta posición";
+"collection.nameUnusable" = "Ese nombre no sirve";
+"collection.items.one" = "%d posición";

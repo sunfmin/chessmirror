@@ -49,7 +49,7 @@ struct IPadLayout {
         let rendered = await ScreenImage.write("ipad-game-\(window.name)", size: window.size) {
             NavigationStack { GameScreen(session: session, path: .constant([])) }
                 .environment(EngineHost(engine))
-                .environment(GameLibrary())
+                .environment(GameLibrary()).environment(CollectionShelf(library: GameLibrary()))
         }
 
         let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
@@ -89,7 +89,7 @@ struct IPadLayout {
         let home = await ScreenImage.write("ipad-library-\(window.name)", size: window.size) {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
         #expect(home.says("拍棋盘"))
@@ -97,7 +97,7 @@ struct IPadLayout {
 
         let book = await ScreenImage.write("ipad-book-\(window.name)", size: window.size) {
             NavigationStack { BookScreen(path: .constant([])) }
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
                 .environment(EngineHost(ScriptedEngine([])))
         }
@@ -106,7 +106,7 @@ struct IPadLayout {
         let about = await ScreenImage.write("ipad-about-\(window.name)", size: window.size) {
             AboutScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
         }
         #expect(about.says("判决线"))
     }
@@ -124,10 +124,10 @@ struct IPadLayout {
         let drill = try #require(Drill(position: position, engine: engine, log: log))
         let rendered = await ScreenImage.write("ipad-drill-\(window.name)", size: window.size) {
             NavigationStack {
-                DrillScreen(drill: drill, mistake: Mistake(position: position, encounters: []), path: .constant([]))
+                DrillScreen(drill: drill, position: position, path: .constant([]))
             }
             .environment(EngineHost(engine))
-            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
+            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))).environment(CollectionShelf(library: GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))))
             .environment(MistakeIndex(log: log))
         }
         let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
@@ -144,7 +144,7 @@ struct IPadLayout {
                 ConfirmPositionScreen(proposal: PositionProposal(draft: draft), path: .constant([]))
             }
             .environment(EngineHost(ScriptedEngine([])))
-            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
+            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))).environment(CollectionShelf(library: GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))))
         }
         let pixels = try #require(ScreenImage.Pixels(of: rendered.url))
         let board = try #require(boardBox(in: pixels), "no board drawn at \(window.name)")

@@ -17,9 +17,23 @@ enum Step: Hashable {
     /// One 错题, carried by value: it is a position and the occasions hanging off it, and both
     /// were computed before this screen was pushed.
     case mistake(Mistake)
-    /// The same 错题, being practised. Separate from looking at it, because a drill is a question
-    /// and the history is the answer to a different one (docs/adr/0029).
-    case drill(Mistake, Drill.Source)
+    /// A position being practised — a 错题 or a 藏局 — and the queue it came from, which decides
+    /// both what 下一道 is and whether the go moves a schedule (docs/adr/0032, docs/adr/0051).
+    /// Separate from looking at a 错题, because a drill is a question and the history is the
+    /// answer to a different one (docs/adr/0029).
+    case drill(PositionKey, DrillQueue)
+    /// One 收藏集 opened (docs/adr/0051).
+    case collection(CollectionKind)
+}
+
+/// Where a drill was handed out from. Only the 日课 moves anything's schedule; a pick off the
+/// book or off a 收藏集 is 计划外 (docs/adr/0032).
+enum DrillQueue: Hashable {
+    case daily
+    case book
+    case collection(CollectionKind)
+
+    var source: Drill.Source { self == .daily ? .daily : .picked }
 }
 
 /// A typed name, or nil for one that was only spaces — which is how a name is taken back off.
@@ -32,6 +46,7 @@ struct LibraryScreen: View {
     @Environment(EngineHost.self) private var engine
     @Environment(GameLibrary.self) private var library
     @Environment(MistakeIndex.self) private var index
+    @Environment(CollectionShelf.self) private var shelf
     private let settings = PlayerSettings.shared
 
     @State private var path: [Step] = []
@@ -63,6 +78,7 @@ struct LibraryScreen: View {
                     doors
                     intake
                     bookDoor.clipShape(RoundedRectangle(cornerRadius: 14))
+                    CollectionRows(path: $path)
                     ladderBoard
                     games
                 }
@@ -94,19 +110,22 @@ struct LibraryScreen: View {
                     BookScreen(path: $path)
                 case .mistake(let mistake):
                     BookEntryScreen(mistake: mistake, path: $path)
-                case .drill(let mistake, let source):
+                case .drill(let position, let queue):
                     DrillHost(
-                        mistake: mistake,
+                        position: position,
                         index: index,
                         engine: engine.service,
-                        source: source,
+                        queue: queue,
                         path: $path
                     )
-                    // 下一题 swaps the top of the path for the next 错题, and a destination view
-                    // keeps its `@State` when only the value under it changes: the new question
-                    // arrived and the old `Drill` went on being the one on the screen, so the
-                    // button did nothing. The position is the question, so it is the identity.
-                    .id(mistake.position)
+                    // 下一题 swaps the top of the path for the next question, and a destination
+                    // view keeps its `@State` when only the value under it changes: the new
+                    // question arrived and the old `Drill` went on being the one on the screen,
+                    // so the button did nothing. The position is the question, so it is the
+                    // identity.
+                    .id(position)
+                case .collection(let kind):
+                    CollectionScreen(kind: kind, path: $path)
                 }
             }
             .overlay {
@@ -194,6 +213,10 @@ struct LibraryScreen: View {
         // is new (docs/adr/0028). Asked for here because this is where the app starts, not
         // because the book is this screen's — freshness is the index's own (`MistakeIndex.follow`).
         .task { index.follow(library, settings: settings) }
+        // The 自建集 live in a folder inside the library's, which moves when the library moves
+        // into iCloud; and another device may have changed one while this one was away.
+        .task(id: library.directory) { shelf.reload() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { shelf.reload() } }
     }
 
     // ------------------------------------------------------------------ parts
@@ -384,7 +407,7 @@ struct LibraryScreen: View {
         let door = index.practiceDay.door
         Button {
             guard let next = index.daily.next else { return }
-            path.append(.drill(next.mistake, .daily))
+            path.append(.drill(next.position, .daily))
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "sun.max.fill").font(.title3)

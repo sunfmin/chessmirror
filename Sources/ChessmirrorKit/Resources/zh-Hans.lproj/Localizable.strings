@@ -524,3 +524,29 @@
 "search.explained" = "引擎看每个局面用多久、看多深。细判、引擎自己走子、提示，全都是这一次搜索，所以掉幅在哪里都是同一个意思。复判在此之上再深 8 层、时间放宽到 6 倍。";
 "import.unreadableArchives.title" = "读不到 %2$@ 的对局列表";
 "import.unreadableArchives.message" = "%1$@ 回了东西，但不是 %2$@ 的对局列表。稍后再试一次。";
+
+/* 收藏集 (docs/adr/0051) */
+"collections" = "收藏集";
+"collection.favourites" = "喜爱";
+"collection.items" = "%d 个局面";
+"collection.favouritesEmpty" = "在任何局面上点 ♡ 收进来";
+"collection.empty" = "这里还没有局面";
+"collection.yours" = "你的机会";
+"collection.theirs" = "对方的机会";
+"collection.whiteToMove" = "白先";
+"collection.blackToMove" = "黑先";
+"collection.from" = "出自 %@，第 %d 手";
+"collection.openGame" = "看原局";
+"collection.takeOut" = "移出";
+"collection.remove" = "从集合拿掉";
+"collection.rename" = "改名";
+"collection.delete" = "删除";
+"collection.deleteConfirm" = "删除「%@」？";
+"collection.deleteExplained" = "集合里的局面会从这个集合拿掉，棋局和错题不受影响。";
+"collection.new" = "新建集合…";
+"collection.name" = "名字";
+"collection.kept" = "已收藏到「%@」";
+"collection.change" = "换一个";
+"collection.choose" = "收进哪些集合";
+"collection.heart" = "收藏这个局面";
+"collection.nameUnusable" = "这个名字不能用";

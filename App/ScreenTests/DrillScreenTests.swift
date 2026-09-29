@@ -35,10 +35,10 @@ struct DrillScreenshots {
             #expect(drill.hintsOpened == 1)
         }) {
             NavigationStack {
-                DrillScreen(drill: drill, mistake: Mistake(position: position, encounters: []), path: .constant([]))
+                DrillScreen(drill: drill, position: position, path: .constant([]))
             }
             .environment(EngineHost(engine))
-            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
+            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))).environment(CollectionShelf(library: GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))))
             .environment(index(log))
         }
         #expect(rendered.says("Rd8#"))
@@ -116,10 +116,10 @@ struct DrillScreenshots {
             #expect(ScreenImage.activate(localized("game.settings.collapse", PieceColour.white.label), in: window))
         }) {
             NavigationStack {
-                DrillScreen(drill: drill, mistake: mistake(), path: .constant([]))
+                DrillScreen(drill: drill, position: mistake().position, path: .constant([]))
             }
             .environment(EngineHost(ScriptedEngine([])))
-            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
+            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))).environment(CollectionShelf(library: GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))))
             .environment(index(log))
         }
 
@@ -152,7 +152,7 @@ struct DrillScreenshots {
                 GameScreen(session: session, path: .constant([]))
             }
             .environment(EngineHost(engine))
-            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
+            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))).environment(CollectionShelf(library: GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))))
             .environment(index(log))
         }
 
@@ -194,7 +194,7 @@ struct DrillScreenshots {
                 GameScreen(session: session, path: .constant([]))
             }
             .environment(EngineHost(engine))
-            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory()))))
+            .environment(GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))).environment(CollectionShelf(library: GameLibrary(folder: GameFolder(url: URL(filePath: NSTemporaryDirectory())))))
             .environment(index(log))
         }
 

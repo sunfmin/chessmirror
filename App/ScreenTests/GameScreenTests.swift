@@ -1064,7 +1064,7 @@ struct GameScreenScreenshots {
             GameScreen(session: session, path: .constant([]))
         }
         .environment(EngineHost(engine))
-        .environment(library ?? GameLibrary())
+        .environment(library ?? GameLibrary()).environment(CollectionShelf(library: (library ?? GameLibrary())))
     }
 
     // ------------------------------------------------------- the Review an import is owed
@@ -1267,7 +1267,7 @@ struct BoardStandsStill {
                 GameScreen(session: session, path: .constant([]))
             }
             .environment(EngineHost(ScriptedEngine(Self.searching, isEndless: true)))
-            .environment(GameLibrary())
+            .environment(GameLibrary()).environment(CollectionShelf(library: GameLibrary()))
         }
     }
 

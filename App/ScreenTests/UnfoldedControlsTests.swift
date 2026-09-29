@@ -79,7 +79,7 @@ struct UnfoldedControls {
     private func screen(_ session: GameSession, engine: any Engine) -> some View {
         NavigationStack { GameScreen(session: session, path: .constant([])) }
             .environment(EngineHost(engine))
-            .environment(GameLibrary())
+            .environment(GameLibrary()).environment(CollectionShelf(library: GameLibrary()))
     }
 
     /// The picture's width, and the longest run of board-coloured pixels across its middle.

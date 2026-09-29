@@ -10,7 +10,9 @@ struct ChessmirrorApp: App {
         else { return nil }
         return EngineHost.Nets(big: big, small: small)
     })
-    @State private var library = GameLibrary()
+    @State private var library: GameLibrary
+    /// The 自建集, in a folder inside the library's (docs/adr/0051).
+    @State private var shelf: CollectionShelf
     /// The 错题本, kept beside the library rather than inside it: it is derived from the games
     /// and from the practice log, and it is a cache that can be thrown away at any moment
     /// (docs/adr/0028, docs/adr/0029).
@@ -21,12 +23,19 @@ struct ChessmirrorApp: App {
     @State private var settings = PlayerSettings.shared
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        let library = GameLibrary()
+        _library = State(initialValue: library)
+        _shelf = State(initialValue: CollectionShelf(library: library))
+    }
+
     var body: some Scene {
         WindowGroup {
             LibraryScreen()
                 .environment(engine)
                 .environment(library)
                 .environment(book)
+                .environment(shelf)
                 // The one thing in the app that rebuilds every screen: the words on all of them
                 // change at once, and there is no other way to tell SwiftUI that a plain function
                 // call started answering differently. Changing language is a deliberate, rare act

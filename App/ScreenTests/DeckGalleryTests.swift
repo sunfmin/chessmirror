@@ -443,7 +443,7 @@ struct DeckGallery {
             GameScreen(session: session, path: .constant([]))
         }
         .environment(EngineHost(engine))
-        .environment(GameLibrary())
+        .environment(GameLibrary()).environment(CollectionShelf(library: GameLibrary()))
     }
 
     // ------------------------------------------------------------------ 1 · 杀招

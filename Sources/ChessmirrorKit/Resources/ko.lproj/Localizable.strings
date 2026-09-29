@@ -479,3 +479,29 @@
 "search.explained" = "엔진이 각 국면을 얼마나 오래, 얼마나 깊이 보는지. 판정, 엔진 자신의 수, 힌트가 모두 이 한 번의 탐색이므로 손실은 어디서 재든 같은 뜻입니다. 재판정은 이보다 8 깊게, 시간은 6배까지 씁니다.";
 "import.unreadableArchives.title" = "%2$@의 대국 목록을 읽을 수 없다";
 "import.unreadableArchives.message" = "%1$@가 응답했지만 %2$@의 대국 목록이 아닙니다. 잠시 후 다시 시도하세요.";
+
+/* 收藏集 (docs/adr/0051) */
+"collections" = "컬렉션";
+"collection.favourites" = "즐겨찾기";
+"collection.items" = "국면 %d개";
+"collection.favouritesEmpty" = "어떤 국면에서든 ♡를 누르면 여기에 담깁니다";
+"collection.empty" = "아직 국면이 없습니다";
+"collection.yours" = "내 기회";
+"collection.theirs" = "상대의 기회";
+"collection.whiteToMove" = "백 차례";
+"collection.blackToMove" = "흑 차례";
+"collection.from" = "%@, %d수째";
+"collection.openGame" = "원래 대국 열기";
+"collection.takeOut" = "빼기";
+"collection.remove" = "컬렉션에서 빼기";
+"collection.rename" = "이름 바꾸기";
+"collection.delete" = "삭제";
+"collection.deleteConfirm" = "「%@」을(를) 삭제할까요?";
+"collection.deleteExplained" = "국면은 이 컬렉션에서 빠지고, 대국과 실수는 그대로 남습니다.";
+"collection.new" = "새 컬렉션…";
+"collection.name" = "이름";
+"collection.kept" = "「%@」에 담았습니다";
+"collection.change" = "바꾸기";
+"collection.choose" = "담을 곳";
+"collection.heart" = "이 국면 담기";
+"collection.nameUnusable" = "쓸 수 없는 이름입니다";

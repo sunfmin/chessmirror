@@ -29,6 +29,11 @@ struct GameScreen: View {
     /// the eye just was. Every other way the cursor moves still centres.
     @State var isTappingStrip = false
     @State var promotion: PromotionRequest?
+    /// The 收藏集 the heart just put the position in, for the line at the foot of the screen.
+    @State var keptNotice: String?
+    /// Whether the sets are open over the board — a long press on the heart, or a tap on a full
+    /// one.
+    @State var isChoosingSet = false
     /// Which side's own controls are open. Nobody's, unless somebody said otherwise — and then
     /// their answer stands for as long as the screen does. Never derived from the game: an unfold
     /// that answers to the moves is an unfold that opens and shuts under your thumb, and the board
@@ -114,6 +119,7 @@ struct GameScreen: View {
                 }
                 .accessibilityLabel(localized("library.games"))
                 Spacer(minLength: 0)
+                HeartButton(session: session, notice: $keptNotice, isChoosing: $isChoosingSet)
                 Button { session.isFaceToFace.toggle() } label: {
                     Image(systemName: "person.2.fill")
                         .foregroundStyle(session.isFaceToFace ? Palette.analysis : Palette.inkSoft)
@@ -184,6 +190,20 @@ struct GameScreen: View {
             .frame(height: 44)
             .background(Palette.parchment)
         }
+        .sheet(isPresented: $isChoosingSet) {
+            CollectionChooser(session: session)
+                .presentationDetents([.medium, .large])
+        }
+        .overlay(alignment: .bottom) {
+            if let kept = keptNotice {
+                keptLine(kept)
+            }
+        }
+        .task(id: keptNotice) {
+            guard keptNotice != nil else { return }
+            do { try await Task.sleep(for: .seconds(4)) } catch { return }
+            keptNotice = nil
+        }
         .onAppear {
             // From here the session follows the engine host itself — the engine arriving, the app
             // leaving and coming back — and this screen wires nothing. The deck deals itself when
@@ -212,6 +232,27 @@ struct GameScreen: View {
         }
     }
 
+
+    /// 「已收藏到「喜爱」 · 换一个」: what the heart did, and the way to put it somewhere else.
+    private func keptLine(_ name: String) -> some View {
+        HStack(spacing: 10) {
+            Label(localized("collection.kept", name), systemImage: "heart.fill")
+                .font(.caption)
+                .foregroundStyle(Palette.ink)
+            Spacer(minLength: 0)
+            Button(localized("collection.change")) {
+                keptNotice = nil
+                isChoosingSet = true
+            }
+            .font(.caption.weight(.medium))
+            .foregroundStyle(Palette.analysis)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+    }
 
     // ------------------------------------------------------------------ the two columns
 

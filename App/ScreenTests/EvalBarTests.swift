@@ -67,7 +67,7 @@ struct EvalBarSides {
                 GameScreen(session: session, path: .constant([]))
             }
             .environment(EngineHost(ScriptedEngine([], isEndless: true)))
-            .environment(GameLibrary())
+            .environment(GameLibrary()).environment(CollectionShelf(library: GameLibrary()))
         }
         return ends(of: rendered.url, size: CGSize(width: 402, height: 874))
     }

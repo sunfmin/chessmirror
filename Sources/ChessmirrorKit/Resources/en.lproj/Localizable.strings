@@ -553,3 +553,30 @@
 "search.explained" = "How long and how deep the engine looks at each position. Judging a move, the engine's own move and a hint are all this one search, so a cost means the same thing wherever it was measured. A re-judge goes 8 deeper and allows 6 times the time.";
 "import.unreadableArchives.title" = "Cannot read %2$@'s game list";
 "import.unreadableArchives.message" = "%1$@ answered, but not with a list of %2$@'s games. Try again in a moment.";
+
+/* 收藏集 (docs/adr/0051) */
+"collections" = "Collections";
+"collection.favourites" = "Favourites";
+"collection.items" = "%d positions";
+"collection.favouritesEmpty" = "Tap ♡ on any position to keep it here";
+"collection.empty" = "No positions here yet";
+"collection.yours" = "Your chance";
+"collection.theirs" = "Their chance";
+"collection.whiteToMove" = "White to move";
+"collection.blackToMove" = "Black to move";
+"collection.from" = "From %@, move %d";
+"collection.openGame" = "Open the game";
+"collection.takeOut" = "Take out";
+"collection.remove" = "Remove from set";
+"collection.rename" = "Rename";
+"collection.delete" = "Delete";
+"collection.deleteConfirm" = "Delete “%@”?";
+"collection.deleteExplained" = "Its positions leave this set; the games and your mistakes stay.";
+"collection.new" = "New set…";
+"collection.name" = "Name";
+"collection.kept" = "Kept in “%@”";
+"collection.change" = "Change";
+"collection.choose" = "Keep it in";
+"collection.heart" = "Keep this position";
+"collection.nameUnusable" = "That name can’t be used";
+"collection.items.one" = "%d position";
