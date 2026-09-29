@@ -535,3 +535,17 @@
 "collection.heart" = "Guardar esta posição";
 "collection.nameUnusable" = "Esse nome não serve";
 "collection.items.one" = "%d posição";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "A trazer partidas novas…";
+"autoFetch.noAccount" = "Traz a tua própria conta uma vez em Importar partidas e as novas chegam todos os dias";
+"autoFetch.pulledAt" = "Trazidas %@";
+"autoFetch.nothingNew" = "nada de novo";
+"autoFetch.added" = "%d partidas novas";
+"autoFetch.added.one" = "%d partida nova";
+"autoFetch.today" = "hoje %@";
+"autoFetch.yesterday" = "ontem %@";
+"autoFetch.onDay" = "%2$d/%1$d %3$@";
+"autoFetch.refresh" = "Trazer partidas novas";
+"library.allGames" = "As %d partidas";
+"library.allGames.one" = "A %d partida";

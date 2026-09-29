@@ -25,7 +25,9 @@ public enum FetchPlan: Equatable, Sendable {
     case recentLichess(URL)
     /// A player's monthly archives on chess.com: fetch the list, then walk the newest months
     /// back until there are enough games or the months run out.
-    case recentChessCom(archives: URL, many: Int)
+    /// With `since`, the walk stops at the month it falls in, and a player with nothing newer is
+    /// not a failure: nothing new is the answer 自动拉局 asks for most days.
+    case recentChessCom(archives: URL, many: Int, since: Date? = nil)
 }
 
 extension PGNImport.Site {
@@ -144,7 +146,7 @@ extension FetchPlan {
             throw lastError
         case .recentLichess(let url):
             return try await fetching.fetch(url)
-        case .recentChessCom(let archives, let many):
+        case .recentChessCom(let archives, let many, let since):
             let name = asked ?? ""
             let list = try await fetching.fetch(archives)
             // A JSON list that will not parse is the site handing back something we cannot read
@@ -153,19 +155,26 @@ extension FetchPlan {
             guard let months = PGNImport.chessComArchives(in: list) else {
                 throw PGNImport.Error.unreadableArchives(.chessCom, name)
             }
-            guard !months.isEmpty else { throw PGNImport.Error.noGames(.chessCom, name) }
+            guard !months.isEmpty else {
+                if since != nil { return "" }
+                throw PGNImport.Error.noGames(.chessCom, name)
+            }
             // Newest month first, and each month's games newest first: chess.com lists a month
             // oldest-game-first, and "the last ten" are the ten at its end.
             var text = ""
             var gathered = 0
             for month in months.prefix(PGNImport.chessComMonthsBack) {
+                if let since, !PGNImport.chessComMonth(month, reaches: since) { break }
                 let pgn = try await fetching.fetch(PGNImport.chessComMonthURL(archive: month))
                 let blocks = PGN.split(pgn).reversed()
                 text += blocks.joined(separator: "\n\n") + "\n\n"
                 gathered += blocks.count
                 if gathered >= many { break }
             }
-            guard gathered > 0 else { throw PGNImport.Error.noGames(.chessCom, name) }
+            guard gathered > 0 else {
+                if since != nil { return "" }
+                throw PGNImport.Error.noGames(.chessCom, name)
+            }
             return PGN.split(text).prefix(many).joined(separator: "\n\n")
         }
     }

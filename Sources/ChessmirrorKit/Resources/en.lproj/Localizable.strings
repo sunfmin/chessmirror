@@ -580,3 +580,17 @@
 "collection.heart" = "Keep this position";
 "collection.nameUnusable" = "That name can’t be used";
 "collection.items.one" = "%d position";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "Fetching new games…";
+"autoFetch.noAccount" = "Fetch your own account once in Import games, and new games come in every day";
+"autoFetch.pulledAt" = "Fetched %@";
+"autoFetch.nothingNew" = "nothing new";
+"autoFetch.added" = "%d new games";
+"autoFetch.added.one" = "%d new game";
+"autoFetch.today" = "today %@";
+"autoFetch.yesterday" = "yesterday %@";
+"autoFetch.onDay" = "%2$d/%1$d %3$@";
+"autoFetch.refresh" = "Fetch new games";
+"library.allGames" = "All %d games";
+"library.allGames.one" = "All %d game";

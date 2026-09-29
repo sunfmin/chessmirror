@@ -224,6 +224,8 @@ import Observation
         static let importNames = "chessmirror.import.names"
         static let importCount = "chessmirror.import.count"
         static let importDoor = "chessmirror.import.door"
+        static let importReached = "chessmirror.import.reached"
+        static let importLastPull = "chessmirror.import.lastPull"
     }
 
     fileprivate static func double(_ key: String, in store: any SettingsStore) -> Double? {
@@ -269,9 +271,25 @@ import Observation
     /// that has to wrap is a chip row nobody reads.
     public static let keeps = 4
 
+    /// Per 本人账号, the start time of the newest game 自动拉局 has seen from it — where the next
+    /// pull carries on from. Kept, and synced, beside the names rather than read off the library,
+    /// so a game once pulled and then deleted is not pulled again (docs/adr/0045).
+    public private(set) var reached: [String: Date]
+
+    /// When 自动拉局 last finished without a failure, on any device.
+    public private(set) var lastPull: Date? {
+        didSet {
+            guard lastPull != oldValue else { return }
+            store.set(lastPull?.timeIntervalSince1970, forKey: PlayerSettings.Keys.importLastPull)
+        }
+    }
+
     init(store: any SettingsStore) {
         self.store = store
         names = Self.names(in: store)
+        reached = Self.reached(in: store)
+        lastPull = (store.object(forKey: PlayerSettings.Keys.importLastPull) as? Double)
+            .map(Date.init(timeIntervalSince1970:))
         count = store.object(forKey: PlayerSettings.Keys.importCount) as? Int ?? PGNImport.recentGames
         door = PlayerSettings.string(PlayerSettings.Keys.importDoor, in: store) ?? ""
     }
@@ -298,8 +316,40 @@ import Observation
         rememberNames()
     }
 
+    /// Where the last pull from an account reached, nil before its first.
+    public func reached(_ name: String, on site: PGNImport.Site) -> Date? {
+        reached[Self.key(name, on: site)]
+    }
+
+    /// A pull from an account has seen games up to this start time. Never moves back.
+    public func reach(_ date: Date, for name: String, on site: PGNImport.Site) {
+        let key = Self.key(name, on: site)
+        guard date > reached[key] ?? .distantPast else { return }
+        reached[key] = date
+        let raw = reached.mapValues(\.timeIntervalSince1970)
+        guard let data = try? JSONEncoder().encode(raw) else { return }
+        store.set(data, forKey: PlayerSettings.Keys.importReached)
+    }
+
+    /// 自动拉局 finished without a failure.
+    public func pulled(at date: Date) { lastPull = date }
+
+    private static func key(_ name: String, on site: PGNImport.Site) -> String {
+        "\(site.rawValue):\(name.lowercased())"
+    }
+
+    private static func reached(in store: any SettingsStore) -> [String: Date] {
+        guard let data = store.object(forKey: PlayerSettings.Keys.importReached) as? Data,
+              let raw = try? JSONDecoder().decode([String: Double].self, from: data)
+        else { return [:] }
+        return raw.mapValues(Date.init(timeIntervalSince1970:))
+    }
+
     fileprivate func arrived() {
         names = Self.names(in: store)
+        reached = Self.reached(in: store)
+        lastPull = (store.object(forKey: PlayerSettings.Keys.importLastPull) as? Double)
+            .map(Date.init(timeIntervalSince1970:)) ?? lastPull
         count = store.object(forKey: PlayerSettings.Keys.importCount) as? Int ?? count
         door = PlayerSettings.string(PlayerSettings.Keys.importDoor, in: store) ?? door
     }

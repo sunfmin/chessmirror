@@ -505,3 +505,15 @@
 "collection.choose" = "담을 곳";
 "collection.heart" = "이 국면 담기";
 "collection.nameUnusable" = "쓸 수 없는 이름입니다";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "새 대국을 가져오는 중…";
+"autoFetch.noAccount" = "「기보 가져오기」에서 내 계정을 한 번 가져오면 매일 새 대국이 들어온다";
+"autoFetch.pulledAt" = "%@ 가져옴";
+"autoFetch.nothingNew" = "새 대국 없음";
+"autoFetch.added" = "새 대국 %d판";
+"autoFetch.today" = "오늘 %@";
+"autoFetch.yesterday" = "어제 %@";
+"autoFetch.onDay" = "%d월 %d일 %@";
+"autoFetch.refresh" = "새 대국 가져오기";
+"library.allGames" = "전체 %d판";

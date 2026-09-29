@@ -505,3 +505,15 @@
 "collection.choose" = "保存先";
 "collection.heart" = "この局面を保存";
 "collection.nameUnusable" = "この名前は使えません";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "新しい対局を取得中…";
+"autoFetch.noAccount" = "「棋譜を取り込む」で自分のアカウントを一度取り込むと、毎日新しい対局が届く";
+"autoFetch.pulledAt" = "%@ に取得";
+"autoFetch.nothingNew" = "新しい対局なし";
+"autoFetch.added" = "%d 局追加";
+"autoFetch.today" = "今日 %@";
+"autoFetch.yesterday" = "昨日 %@";
+"autoFetch.onDay" = "%d月%d日 %@";
+"autoFetch.refresh" = "新しい対局を取得";
+"library.allGames" = "全 %d 局";
