@@ -302,13 +302,48 @@ public enum PGNImport {
     ///
     /// The count is clamped rather than refused: a number nobody would type on purpose is a
     /// slip, and the useful answer to a slip is the nearest thing that works.
-    public static func recentGamesURL(user: String, count: Int) -> URL? {
+    ///
+    /// With `since`, only the games begun after it — what 自动拉局 carries on from. lichess counts
+    /// `since` in milliseconds and includes a game begun on it, so the ask starts a second later.
+    public static func recentGamesURL(user: String, count: Int, since: Date? = nil) -> URL? {
         guard let name = username(user, on: .lichess) else { return nil }
         let many = min(max(count, 1), maxRecentGames)
-        return URL(
-            string: "https://lichess.org/api/games/user/\(name)?max=\(many)"
-                + "&evals=true&clocks=false&sort=dateDesc"
-        )
+        var query = "max=\(many)&evals=true&clocks=false&sort=dateDesc"
+        if let since {
+            query += "&since=\(Int64((since.timeIntervalSince1970 + 1) * 1000))"
+        }
+        return URL(string: "https://lichess.org/api/games/user/\(name)?\(query)")
+    }
+
+    /// When a game began, as the site wrote it — `UTCDate` and `UTCTime`, which lichess and
+    /// chess.com both give — nil for a file that does not say.
+    public static func startedAt(_ pgn: PGN) -> Date? {
+        guard let date = pgn.tag(PGN.Tags.utcDate), let time = pgn.tag(PGN.Tags.utcTime) else {
+            return nil
+        }
+        return startFormatter.date(from: "\(date) \(time)")
+    }
+
+    nonisolated(unsafe) private static let startFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy.MM.dd HH:mm:ss"
+        return formatter
+    }()
+
+    /// Whether a chess.com monthly archive — `…/games/2026/09` — holds any day on or after
+    /// `since`. An archive URL that does not end in a year and month is kept: better one request
+    /// too many than a month of games skipped.
+    public static func chessComMonth(_ archive: URL, reaches since: Date) -> Bool {
+        let parts = archive.pathComponents
+        guard parts.count >= 2, let year = Int(parts[parts.count - 2]),
+            let month = Int(parts[parts.count - 1])
+        else { return true }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let reached = utc.dateComponents([.year, .month], from: since)
+        return (year, month) >= (reached.year ?? 0, reached.month ?? 0)
     }
 
     /// The list of a chess.com player's monthly archives — nil for anything that is not a
@@ -779,37 +814,7 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         reviewingWith engine: (any Engine)? = nil
     ) -> PGNImport.ImportOutcome? {
         guard case let .ready(plan) = phase else { return nil }
-        // What is already there, by the same identity the incoming games are compared by: a
-        // lichess game the library holds is that game whatever it has since been renamed to.
-        let existing = Set(
-            library.entries.compactMap { entry -> String? in
-                guard let pgn = entry.pgn else { return nil }
-                return PGNImport.identity(of: pgn, named: entry.name ?? entry.title)
-            }
-        )
-        let (chapters, skipped) = PGNImport.toWrite(plan.chapters, avoiding: existing)
-        var imported = 0
-        for chapter in chapters {
-            var pgn = chapter.pgn
-            pgn.setTag(GameLibrary.nameTag, to: chapter.name)
-            pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
-            if let account, let side = PGNImport.side(of: account, in: pgn) { pgn.track(side) }
-            // A fresh name per chapter, asked right before the write so two chapters
-            // landing in one second cannot collide (`GameLibrary.newURL` logic).
-            let url = library.newURL()
-            guard library.write(pgn, to: url) else { continue }
-            imported += 1
-            // The entry as just written rather than looked up: an iCloud write lands in the
-            // list a hop later, and the review chain waits for the write itself.
-            if let engine {
-                library.reviewImported(
-                    GameLibrary.Entry(url: url, pgn: pgn, modified: Date()), using: engine
-                )
-            }
-        }
-        let outcome = PGNImport.ImportOutcome(
-            imported: imported, skipped: skipped, unreadable: plan.unreadable
-        )
+        let outcome = PGNImport.write(plan, into: library, as: account, reviewingWith: engine)
         applied = outcome
         return outcome
     }
@@ -855,4 +860,49 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         phase = .idle
         applied = nil
     }
+}
+
+extension PGNImport {
+    /// Writes a plan's chapters into the library, one file per game, in the plan's order — the one
+    /// write behind 入库 and 自动拉局 alike. Skips what the library already holds; with an account,
+    /// tracks that account's side; with an engine, puts every game written in the review chain.
+    @MainActor @discardableResult
+    public static func write(
+        _ plan: ImportPlan, into library: GameLibrary, as account: String? = nil,
+        reviewingWith engine: (any Engine)? = nil
+    ) -> ImportOutcome {
+        // What is already there, by the same identity the incoming games are compared by: a
+        // lichess game the library holds is that game whatever it has since been renamed to.
+        let existing = Set(
+            library.entries.compactMap { entry -> String? in
+                guard let pgn = entry.pgn else { return nil }
+                return identity(of: pgn, named: entry.name ?? entry.title)
+            }
+        )
+        let (chapters, skipped) = toWrite(plan.chapters, avoiding: existing)
+        var imported = 0
+        for chapter in chapters {
+            var pgn = chapter.pgn
+            pgn.setTag(GameLibrary.nameTag, to: chapter.name)
+            pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
+            if let account, let side = Self.side(of: account, in: pgn) { pgn.track(side) }
+            // A fresh name per chapter, asked right before the write so two chapters
+            // landing in one second cannot collide (`GameLibrary.newURL` logic).
+            let url = library.newURL()
+            guard library.write(pgn, to: url) else { continue }
+            imported += 1
+            // The entry as just written rather than looked up: an iCloud write lands in the
+            // list a hop later, and the review chain waits for the write itself.
+            if let engine {
+                library.reviewImported(
+                    GameLibrary.Entry(url: url, pgn: pgn, modified: Date()), using: engine
+                )
+            }
+        }
+        let outcome = ImportOutcome(
+            imported: imported, skipped: skipped, unreadable: plan.unreadable
+        )
+        return outcome
+    }
+
 }

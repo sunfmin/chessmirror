@@ -172,7 +172,6 @@
 "library.fromFiles" = "De archivos";
 "library.fromStart" = "Empezar desde la inicial";
 "library.games" = "Partidas";
-"library.practice" = "Práctica";
 "library.empty" = "Haz una jugada y la partida quedará anotada aquí.";
 "library.recognising" = "Leyendo el tablero";
 "library.noPicture" = "No se ha podido obtener la imagen";
@@ -535,3 +534,17 @@
 "collection.heart" = "Guardar esta posición";
 "collection.nameUnusable" = "Ese nombre no sirve";
 "collection.items.one" = "%d posición";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "Trayendo partidas nuevas…";
+"autoFetch.noAccount" = "Trae tu propia cuenta una vez en Importar partidas y las nuevas llegarán cada día";
+"autoFetch.pulledAt" = "Traídas %@";
+"autoFetch.nothingNew" = "nada nuevo";
+"autoFetch.added" = "%d partidas nuevas";
+"autoFetch.added.one" = "%d partida nueva";
+"autoFetch.today" = "hoy %@";
+"autoFetch.yesterday" = "ayer %@";
+"autoFetch.onDay" = "%2$d/%1$d %3$@";
+"autoFetch.refresh" = "Traer partidas nuevas";
+"library.allGames" = "Las %d partidas";
+"library.allGames.one" = "La %d partida";

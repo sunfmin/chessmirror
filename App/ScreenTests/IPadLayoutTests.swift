@@ -87,7 +87,7 @@ struct IPadLayout {
         index.update(from: library.entries)
 
         let home = await ScreenImage.write("ipad-library-\(window.name)", size: window.size) {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)

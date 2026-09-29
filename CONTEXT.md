@@ -120,7 +120,7 @@ and both are right.
 ### 日课 — the day's practice
 
 **练习 (Practice)**:
-Working through 日课 or revisiting a 错题, **played under 把关**: the wrong answer comes back off
+The act, never a place or a list of games. Working through 日课 or revisiting a 错题, **played under 把关**: the wrong answer comes back off
 the board and is written down where it happened (docs/adr/0047). It arrives with the switch on,
 and the player can still switch it off — the answer is then judged and left standing
 (docs/adr/0048). Not the opposite of 把关, and
@@ -274,6 +274,19 @@ or any other link to a PGN. Four doors, one pipeline behind them. The sheet open
 used last, with the account that fetched last already in the field, and a failure about a name
 says the site and the name as typed (docs/adr/0045).
 _Avoid_: 来源, 平台, mode
+
+**本人账号 (Own account)**:
+Per site — lichess, chess.com — the account that last fetched games through its 门. The one
+whose games 自动拉局 pulls, and whose side's mistakes are kept from them. Not chosen apart from
+the 门: the name used last *is* the player's.
+_Avoid_: 我的账号, 主账号, 绑定账号
+
+**自动拉局 (Auto fetch)**:
+Pulling the 本人账号's new games into the library without being asked: once a day, the first
+time the app comes forward on that day, and again whenever the player presses for it. It
+carries on from where the last pull reached, so a game once pulled and then deleted is not
+pulled again; and what it pulls is judged at once, as 入库 is.
+_Avoid_: 同步, 自动导入 (导入 is the whole sheet and every 门)
 
 **粗筛 (Sift)**:
 Using evaluations that came with an imported game to decide which moves are worth looking at

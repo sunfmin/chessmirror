@@ -172,7 +172,6 @@
 "library.fromFiles" = "Aus Dateien";
 "library.fromStart" = "Von der Grundstellung";
 "library.games" = "Partien";
-"library.practice" = "Übung";
 "library.empty" = "Mach einen Zug, dann steht die Partie hier.";
 "library.recognising" = "Brett wird gelesen";
 "library.noPicture" = "Bild nicht bekommen";
@@ -534,3 +533,17 @@
 "collection.heart" = "Diese Stellung aufheben";
 "collection.nameUnusable" = "Dieser Name geht nicht";
 "collection.items.one" = "%d Stellung";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "Neue Partien werden geholt…";
+"autoFetch.noAccount" = "Hol dein eigenes Konto einmal unter Partien importieren, dann kommen neue Partien jeden Tag";
+"autoFetch.pulledAt" = "Geholt %@";
+"autoFetch.nothingNew" = "nichts Neues";
+"autoFetch.added" = "%d neue Partien";
+"autoFetch.added.one" = "%d neue Partie";
+"autoFetch.today" = "heute %@";
+"autoFetch.yesterday" = "gestern %@";
+"autoFetch.onDay" = "%2$d.%1$d. %3$@";
+"autoFetch.refresh" = "Neue Partien holen";
+"library.allGames" = "Alle %d Partien";
+"library.allGames.one" = "Alle %d Partie";

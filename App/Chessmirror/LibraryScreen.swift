@@ -24,6 +24,8 @@ enum Step: Hashable {
     case drill(PositionKey, DrillQueue)
     /// One 收藏集 opened (docs/adr/0051).
     case collection(CollectionKind)
+    /// Every game, where the first screen shows only the newest few.
+    case allGames
 }
 
 /// Where a drill was handed out from. Only the 日课 moves anything's schedule; a pick off the
@@ -54,18 +56,27 @@ struct LibraryScreen: View {
     @State private var isPhotoPickerOpen = false
     @State private var isFileImporterOpen = false
     @State private var isAboutShowing = false
-    /// Whether what practice left behind is open. Shut on every arrival: it is a drawer, not a
-    /// place the app remembers you were standing in.
-    @State private var isPracticeShowing = false
     @State private var photoItem: PhotosPickerItem?
     @State private var isRecognising = false
     @State private var failure: (title: String, message: String)?
     @State private var isImporting = false
+    /// The door the import sheet opens on, when something here knows better than the one used
+    /// last: a failed 自动拉局 opens the door of the site it failed at.
+    @State private var importDoor: ImportDoors.Door?
+    /// 自动拉局: the 本人账号's new games, once a day and on the ↻ (docs/adr/0045).
+    @State private var autoFetch: AutoFetch
     /// One import, kept across openings of the sheet: what was fetched is still there when the
     /// sheet is opened again, so a list pulled once is not pulled again to look at it twice.
     @State private var importSession = ImportSession()
     @State private var recording: MistakeIndex.Recording?
     @Environment(\.scenePhase) private var scenePhase
+
+    /// How many games the first screen shows. The rest are one row away (`Step.allGames`).
+    static let newest = 5
+
+    init(autoFetch: AutoFetch = AutoFetch(memory: PlayerSettings.shared.imports)) {
+        _autoFetch = State(initialValue: autoFetch)
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -98,7 +109,10 @@ struct LibraryScreen: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isAboutShowing) { AboutScreen() }
             .sheet(isPresented: $isImporting) {
-                ImportSheet(session: importSession, engine: engine.service, onOpen: open)
+                ImportSheet(
+                    session: importSession, engine: engine.service, initialDoor: importDoor,
+                    onOpen: open
+                )
             }
             .navigationDestination(for: Step.self) { step in
                 switch step {
@@ -126,6 +140,8 @@ struct LibraryScreen: View {
                     .id(position)
                 case .collection(let kind):
                     CollectionScreen(kind: kind, path: $path)
+                case .allGames:
+                    AllGamesScreen(path: $path)
                 }
             }
             .overlay {
@@ -217,6 +233,13 @@ struct LibraryScreen: View {
         // into iCloud; and another device may have changed one while this one was away.
         .task(id: library.directory) { shelf.reload() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { shelf.reload() } }
+        // Today's 自动拉局, the first time the app comes forward on a day. It waits for the
+        // engine to have settled one way or the other, so what comes down is judged at once
+        // rather than left for a press nobody knows to make.
+        .task(id: scenePhase == .active && (engine.isReady || engine.unavailableReason != nil)) {
+            guard scenePhase == .active, engine.isReady || engine.unavailableReason != nil else { return }
+            await autoFetch.pullIfDue(into: library, reviewingWith: engine.service)
+        }
     }
 
     // ------------------------------------------------------------------ parts
@@ -510,24 +533,49 @@ struct LibraryScreen: View {
         .accessibilityLabel("\(title) \(best.value)")
     }
 
-    /// The games, as one flat list, with what practice left behind folded away under it.
+    /// The newest games, as one flat list, with the ↻ that pulls the 本人账号's new ones.
     ///
     /// Flat, and that is the change: a game used to be a work that got curated into a collection,
     /// and it is raw material now — nobody curates the source of their own mistakes (docs/adr/0028).
     /// What a person looks for here is the game they just played, so the order is the order they
-    /// arrived in and there is nothing to open first.
+    /// arrived in, and only the newest few are here: the first screen is the last few games and a
+    /// way to the rest, not the archive.
     ///
-    /// **Except the drills.** Every 错题 answered leaves a file — a move and the engine's reply for
-    /// an answer that held, a bare position and a 试招 for one that did not (docs/adr/0047) — and
-    /// ten of those a day is the list a person came here to read, buried under the day's homework.
-    /// They are games all the same, so they are here, behind one row that says how many.
+    /// **Not the drills.** Every 错题 answered leaves a file (docs/adr/0047), and they are games
+    /// all the same — but not ones the player sat down to play. A drill answered wrong is found
+    /// from its 错题's 遭遇, where it belongs; one answered right is in the 练习日志.
     private var games: some View {
-        let practised = library.entries.filter { $0.origin == .practised }
         let played = library.entries.filter { $0.origin != .practised }
         return VStack(alignment: .leading, spacing: 8) {
-            Text(localized("library.games")).eyebrow().padding(.top, 6)
+            HStack(spacing: 8) {
+                Text(localized("library.games")).eyebrow()
+                Spacer(minLength: 0)
+                refresh
+            }
+            .padding(.top, 6)
 
-            if library.entries.isEmpty {
+            if let reading = autoFetch.reading {
+                Button {
+                    // A failure opens the door it failed at; with no account yet, the sheet is
+                    // where one is given.
+                    if case .failed(let site, _) = autoFetch.phase {
+                        importDoor = ImportDoors.Door(rawValue: site.rawValue)
+                        isImporting = true
+                    } else if autoFetch.accounts.isEmpty {
+                        importDoor = nil
+                        isImporting = true
+                    }
+                } label: {
+                    Text(reading.text)
+                        .font(.caption)
+                        .foregroundStyle(reading.isAlarm ? Palette.alarm : Palette.inkSoft)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .multilineTextAlignment(.leading)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if played.isEmpty {
                 Text(localized("library.empty"))
                     .font(.footnote)
                     .foregroundStyle(Palette.inkSoft)
@@ -535,49 +583,62 @@ struct LibraryScreen: View {
                     .padding(.vertical, 10)
             }
 
-            GameList(entries: played, wrongByGame: index.wrongByGame) { open($0) }
+            GameList(entries: Array(played.prefix(Self.newest)), wrongByGame: index.wrongByGame) {
+                open($0)
+            }
 
-            if !practised.isEmpty {
-                practiceDrawer(practised)
+            if played.count > Self.newest {
+                Button {
+                    path.append(.allGames)
+                } label: {
+                    HStack(spacing: 10) {
+                        Text(localized("library.allGames", plural: played.count))
+                            .font(.subheadline.weight(.medium))
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(Palette.inkSoft)
+                    }
+                    .foregroundStyle(Palette.ink)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
             }
         }
     }
 
-    /// What practice left behind: one row saying how many, and the games themselves when it is
-    /// opened. Shut to begin with, because a drill is a thing the player did rather than a game
-    /// they want to find again — and open it is the same list, with the position each one asked
-    /// about drawn on its row.
-    private func practiceDrawer(_ entries: [GameLibrary.Entry]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                withAnimation(.snappy(duration: 0.22)) { isPracticeShowing.toggle() }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: GameOrigin.practised.symbol).font(.footnote)
-                    Text(localized("library.practice")).font(.subheadline.weight(.medium))
-                    Spacer(minLength: 0)
-                    Text("\(entries.count)")
-                        .font(.caption.weight(.medium).monospacedDigit())
-                        .foregroundStyle(Palette.inkSoft)
-                    Image(systemName: isPracticeShowing ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
+    /// ↻: 自动拉局 now, whatever the day. With no 本人账号 yet, the import sheet, where one is
+    /// given by fetching it once.
+    private var refresh: some View {
+        Button {
+            guard !autoFetch.accounts.isEmpty else {
+                importDoor = nil
+                isImporting = true
+                return
+            }
+            Task { await autoFetch.pull(into: library, reviewingWith: engine.service) }
+        } label: {
+            Group {
+                if autoFetch.phase == .pulling {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(Palette.inkSoft)
                 }
-                .foregroundStyle(Palette.ink)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 14))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(localized("library.practice"))
-            .accessibilityValue("\(entries.count)")
-
-            if isPracticeShowing {
-                GameList(entries: entries, wrongByGame: index.wrongByGame) { open($0) }
-            }
+            .frame(width: 44, height: 32)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .disabled(autoFetch.phase == .pulling)
+        .accessibilityLabel(localized("autoFetch.refresh"))
+        // The tap target hangs off the right edge, so the glyph sits on the margin the rows end at.
+        .padding(.trailing, -12)
     }
 
     private func note(_ text: String, symbol: String) -> some View {
@@ -794,5 +855,38 @@ struct GameList: View {
                 Label(localized("delete"), systemImage: "trash")
             }
         }
+    }
+}
+
+/// Every game, newest first, where the first screen shows only the newest few. The drills are not
+/// here either: they are found from their 错题 (docs/adr/0047).
+struct AllGamesScreen: View {
+    @Binding var path: [Step]
+
+    @Environment(GameLibrary.self) private var library
+    @Environment(MistakeIndex.self) private var index
+    @Environment(EngineHost.self) private var engine
+
+    var body: some View {
+        ScrollView {
+            GameList(
+                entries: library.entries.filter { $0.origin != .practised },
+                wrongByGame: index.wrongByGame
+            ) { entry in
+                let opener = GameOpener(engine: engine.service, library: library, settings: .shared)
+                guard let session = opener.open(entry).session else { return }
+                path.append(.game(session))
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+            .readableColumn()
+        }
+        .background(Palette.parchment)
+        .navigationTitle(localized("library.games"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Palette.parchment, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.visible, for: .navigationBar)
     }
 }

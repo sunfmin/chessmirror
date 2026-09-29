@@ -195,7 +195,6 @@
 "library.fromFiles" = "从文件选";
 "library.fromStart" = "从开局摆起";
 "library.games" = "对局记录";
-"library.practice" = "练习";
 "library.empty" = "走出第一步，这局就会记在这里。";
 "library.recognising" = "在认棋盘";
 "library.noPicture" = "没能拿到图片";
@@ -550,3 +549,15 @@
 "collection.choose" = "收进哪些集合";
 "collection.heart" = "收藏这个局面";
 "collection.nameUnusable" = "这个名字不能用";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "正在拉新棋…";
+"autoFetch.noAccount" = "在「导入棋局」里拉一次自己的账号，之后每天自动拉新棋";
+"autoFetch.pulledAt" = "%@ 拉过";
+"autoFetch.nothingNew" = "没有新棋";
+"autoFetch.added" = "新增 %d 局";
+"autoFetch.today" = "今天 %@";
+"autoFetch.yesterday" = "昨天 %@";
+"autoFetch.onDay" = "%d月%d日 %@";
+"autoFetch.refresh" = "拉新棋";
+"library.allGames" = "全部 %d 局";

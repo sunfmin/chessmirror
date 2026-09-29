@@ -57,3 +57,22 @@ coming back finds it still going. Opening a row is still opening one game to rea
 
 The fetch is kept across openings of the sheet (`LibraryScreen` owns the `ImportSession`), so a
 list pulled once can be looked at twice.
+
+## Postscript: the 本人账号 is pulled every day, without a press
+
+A player who has to open the sheet to get their own games in has games that are not in. So the
+account that fetched last through each site's door is the player's own (本人账号), and 自动拉局
+pulls its new games once a day — the first time the app comes forward on a local calendar day —
+and again whenever the ↻ beside the list is pressed. The 本人账号 is the name used last, not a
+second choice made somewhere else; striking it off the chips is how the pulling is stopped, and
+there is no switch for it.
+
+It carries on from a point, not a count: each account keeps where its last pull reached, stored
+with the names and synced as they are, and a pull asks only for what came after it, at most fifty
+games (the first pull, with no point yet, takes the count the sheet remembers). Carrying on from
+a stored point rather than from the newest game in the library is what keeps a deleted game
+deleted; a fetch by hand in the sheet still lists it, because that is somebody looking.
+
+**And what it pulls is judged at once.** 入库 was the one place a Review started without its own
+press; it is now one of two, for the same reason — the player has already asked for the lot,
+and a game pulled but not judged puts nothing in the 日课.

@@ -32,71 +32,162 @@ struct LibraryScreenScreenshots {
             #expect(index.book.mistakes.count == 1)
             #expect(ScreenImage.words(in: window).contains { $0.contains(message) })
         }) {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
         #expect(rendered.says(message))
     }
-    /// What practice leaves behind is a game, and there are ten of them a day: they go in a drawer
-    /// of their own so the list a person came here to read is still the one on top (docs/adr/0047).
-    @Test("the games a drill left behind are folded away behind one row")
-    func practiceGamesAreFoldedAway() async throws {
+    /// The first screen is the newest games and a way to the rest; what practice leaves behind is
+    /// a game too, but not one anybody sat down to play, and it is on neither list — a drill
+    /// answered wrong is found from its 错题 (docs/adr/0047).
+    @Test("the first screen shows the newest five, the drills nowhere, and 全部 opens every game")
+    func theNewestFiveAndAWayToTheRest() async throws {
         let directory = tempDir()
         defer { try? FileManager.default.removeItem(at: directory) }
         let library = library(in: directory)
         let index = MistakeIndex(log: PracticeLog(url: directory.appending(path: "p.jsonl")))
 
         let played = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
-        #expect(library.write(
-            PGN(
-                game: played, seats: [.white: .hand, .black: .engine], origin: .fresh,
-                lines: JudgementLines(noSlips: true),
-                carrying: [PGN.Tag(GameLibrary.nameTag, "周二那盘")]
-            ),
-            to: directory.appending(path: "played.pgn")
-        ))
-        for (number, name) in ["练习甲", "练习乙", "练习丙"].enumerated() {
-            var position = try #require(Game(
+        for number in 1...7 {
+            #expect(library.write(
+                PGN(
+                    game: played, seats: [.white: .hand, .black: .engine], origin: .fresh,
+                    lines: JudgementLines(noSlips: true),
+                    carrying: [PGN.Tag(GameLibrary.nameTag, "第\(number)盘")]
+                ),
+                to: directory.appending(path: "played-\(number).pgn")
+            ))
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        for number in 1...2 {
+            let position = try #require(Game(
                 startFEN: "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 1"
             ))
-            // The first one is a question answered wrong and walked away from: no move in the
-            // file at all, and a 试招 on the position it asked about (docs/adr/0047).
-            if number == 0 {
-                position.recordTried(Game.Ply.Tried(san: "Qh4", drop: 12.4, depth: 20), atPly: 0)
-            }
             #expect(library.write(
                 PGN(
                     game: position, seats: [.black: .hand, .white: .engine],
                     origin: .practised, lines: JudgementLines(noSlips: true),
-                    carrying: [PGN.Tag(GameLibrary.nameTag, name)]
+                    carrying: [PGN.Tag(GameLibrary.nameTag, "练习\(number)")]
                 ),
                 to: directory.appending(path: "drill-\(number).pgn")
             ))
         }
+        library.reload()
 
-        let rendered = await ScreenImage.write("library-practice-drawer", interact: { window in
-            let shut = ScreenImage.words(in: window)
-            #expect(shut.contains { $0.contains("周二那盘") }, "the game they played is on the list")
-            #expect(!shut.contains { $0.contains("练习甲") }, "and the day's drills are not")
-            #expect(ScreenImage.activate(localized("library.practice"), in: window))
-            await ScreenImage.settle()
-            let open = ScreenImage.words(in: window)
-            #expect(open.contains { $0.contains("练习甲") })
-            #expect(
-                open.contains { $0.contains("Qh4") },
-                "and the one with no move in it says what was taken back"
-            )
-        }) {
-            LibraryScreen()
+        let rendered = await ScreenImage.write(
+            "library-newest-five", size: CGSize(width: 390, height: 2600), interact: { window in
+                let first = ScreenImage.words(in: window)
+                for number in 3...7 {
+                    #expect(first.contains { $0.contains("第\(number)盘") }, "the newest five are here")
+                }
+                #expect(!first.contains { $0.contains("第1盘") }, "the oldest is one row away")
+                #expect(!first.contains { $0.contains("练习") && !$0.contains("进练习") }, "no drills")
+                #expect(!first.contains(localized("origin.practised")))
+                #expect(ScreenImage.activate(localized("library.allGames", plural: 7), in: window))
+                await ScreenImage.settle()
+                let all = ScreenImage.words(in: window)
+                #expect(all.contains { $0.contains("第1盘") }, "every game is on the page of them all")
+                #expect(!all.contains { $0.contains("练习1") }, "and the drills are not there either")
+            }
+        ) {
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
+        #expect(rendered.says("第1盘"))
+    }
 
-        #expect(rendered.says(localized("library.practice")))
-        #expect(rendered.says("周二那盘"))
+    /// One lichess game as the user endpoint writes it.
+    private func lichessGame(_ id: String, against rival: String, at time: String) -> String {
+        """
+        [Event "Rated Blitz game"]
+        [Site "https://lichess.org/\(id)"]
+        [White "sunfmin"]
+        [Black "\(rival)"]
+        [Result "1-0"]
+        [UTCDate "2026.09.28"]
+        [UTCTime "\(time)"]
+
+        1. e4 e5 2. Nf3 Nc6 1-0
+        """
+    }
+
+    /// The day's pull happens on its own the first time the screen comes forward; the ↻ asks
+    /// again whenever it is pressed, and the line under the title says what each did.
+    @Test("自动拉局 pulls on arrival and again on the ↻, and says what it did")
+    func autoFetchPullsAndSays() async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let index = MistakeIndex(log: PracticeLog(url: directory.appending(path: "p.jsonl")))
+        let memory = PlayerSettings(store: InMemorySettings()).imports
+        memory.remember("sunfmin", on: .lichess)
+        let first = try #require(PGNImport.recentGamesURL(user: "sunfmin", count: memory.count))
+        let second = try #require(PGNImport.recentGamesURL(
+            user: "sunfmin", count: AutoFetch.cap,
+            since: AutoFetchClock.utc("2026.09.28 09:00:00")
+        ))
+        let fetcher = ScriptedFetcher([
+            first.absoluteString: .success(lichessGame("morning1", against: "晨间对手", at: "09:00:00")),
+            second.absoluteString: .success(lichessGame("evening1", against: "晚间对手", at: "20:00:00")),
+        ])
+        let pull = AutoFetch(memory: memory, fetcher: fetcher)
+
+        let rendered = await ScreenImage.write(
+            "library-auto-fetch", size: CGSize(width: 390, height: 2600), interact: { window in
+                // Arrival: the scene is active and the engine settled, so today's pull runs.
+                if pull.phase == .idle {
+                    await pull.pullIfDue(into: library, reviewingWith: nil)
+                }
+                for _ in 0..<20 where memory.lastPull == nil { await ScreenImage.settle() }
+                await ScreenImage.settle()
+                var words = ScreenImage.words(in: window)
+                #expect(words.contains { $0.contains("晨间对手") }, "the day's pull came in")
+                #expect(words.contains { $0.contains("新增 1 局") })
+                #expect(!pull.isDue)
+
+                #expect(ScreenImage.activate(localized("autoFetch.refresh"), in: window))
+                for _ in 0..<20 where fetcher.askedURLs.count < 2 { await ScreenImage.settle() }
+                await ScreenImage.settle()
+                words = ScreenImage.words(in: window)
+                #expect(fetcher.askedURLs.last == second, "carried on from the morning game")
+                #expect(words.contains { $0.contains("晚间对手") }, "the ↻ pulled the evening's")
+            }
+        ) {
+            LibraryScreen(autoFetch: pull)
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library).environment(CollectionShelf(library: library))
+                .environment(index)
+        }
+        #expect(rendered.says("今天"))
+        #expect(rendered.says("晚间对手"))
+    }
+
+    /// A pull that failed says why, in the alarm colour, under the title.
+    @Test("a failed 自动拉局 says the site and the name under the title")
+    func aFailedPullSaysWhy() async throws {
+        let directory = tempDir()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = library(in: directory)
+        let memory = PlayerSettings(store: InMemorySettings()).imports
+        memory.remember("SunFmn", on: .lichess)
+        let url = try #require(PGNImport.recentGamesURL(user: "SunFmn", count: memory.count))
+        let pull = AutoFetch(
+            memory: memory,
+            fetcher: ScriptedFetcher([url.absoluteString: .failure(.unknownPlayer(.lichess, "sunfmn"))])
+        )
+        await pull.pull(into: library, reviewingWith: nil)
+
+        let rendered = await ScreenImage.write("library-auto-fetch-failed") {
+            LibraryScreen(autoFetch: pull)
+                .environment(EngineHost(ScriptedEngine([])))
+                .environment(library).environment(CollectionShelf(library: library))
+                .environment(MistakeIndex(log: PracticeLog(url: directory.appending(path: "p.jsonl"))))
+        }
+        #expect(rendered.says("lichess 上没有 SunFmn"))
     }
 
     /// A library in a fresh temporary folder, so nothing here touches the real Games folder.
@@ -119,7 +210,7 @@ struct LibraryScreenScreenshots {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let rendered = await ScreenImage.write("library-empty") {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir)))
                 .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
@@ -140,7 +231,7 @@ struct LibraryScreenScreenshots {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let rendered = await ScreenImage.write("library-leads") {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir)))
                 .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
@@ -168,7 +259,7 @@ struct LibraryScreenScreenshots {
         #expect(index.daily.remaining == 1)
 
         let rendered = await ScreenImage.write("library-daily-due") {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
@@ -203,7 +294,7 @@ struct LibraryScreenScreenshots {
         #expect(!index.book.isEmpty)
 
         let rendered = await ScreenImage.write("library-daily-done") {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
@@ -228,7 +319,7 @@ struct LibraryScreenScreenshots {
             "library-small-\(type == .large ? "type" : "biggest")",
             size: CGSize(width: 320, height: 568)
         ) {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
@@ -290,7 +381,7 @@ struct LibraryScreenScreenshots {
         #expect(index.ladder.rows.map(\.strength) == [.elo(1400), .elo(1800), .full])
 
         let rendered = await ScreenImage.write("library-ladder") {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
@@ -336,7 +427,7 @@ struct LibraryScreenScreenshots {
             #expect(words.contains { $0.contains("Stockfish 18 · 2200") }, "the game, at its rung")
             #expect(words.contains { $0.contains("连正 3") }, "with its run of three")
         }) {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
@@ -361,7 +452,7 @@ struct LibraryScreenScreenshots {
         index.update(from: library.entries)
 
         let rendered = await ScreenImage.write("library-no-ladder") {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
@@ -550,3 +641,21 @@ struct BookScreenshots {
     }
 }
 
+
+/// Times written the way the sites write them, read in UTC.
+enum AutoFetchClock {
+    static func utc(_ text: String) -> Date {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy.MM.dd HH:mm:ss"
+        return formatter.date(from: text)!
+    }
+}
+
+extension AutoFetch {
+    /// A 自动拉局 with no 本人账号 and nothing to fetch, so a screen test never reaches the network.
+    @MainActor static var quiet: AutoFetch {
+        AutoFetch(memory: PlayerSettings(store: InMemorySettings()).imports, fetcher: ScriptedFetcher())
+    }
+}

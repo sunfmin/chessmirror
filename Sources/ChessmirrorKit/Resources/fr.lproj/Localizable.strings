@@ -172,7 +172,6 @@
 "library.fromFiles" = "Depuis les fichiers";
 "library.fromStart" = "Partir de la position initiale";
 "library.games" = "Parties";
-"library.practice" = "Entraînement";
 "library.empty" = "Jouez un coup et la partie s'inscrira ici.";
 "library.recognising" = "Lecture de l'échiquier";
 "library.noPicture" = "Image inaccessible";
@@ -535,3 +534,17 @@
 "collection.heart" = "Garder cette position";
 "collection.nameUnusable" = "Ce nom ne convient pas";
 "collection.items.one" = "%d position";
+
+/* 自动拉局 */
+"autoFetch.pulling" = "Récupération des nouvelles parties…";
+"autoFetch.noAccount" = "Récupère ton propre compte une fois dans Importer des parties, et les nouvelles arrivent chaque jour";
+"autoFetch.pulledAt" = "Récupérées %@";
+"autoFetch.nothingNew" = "rien de nouveau";
+"autoFetch.added" = "%d nouvelles parties";
+"autoFetch.added.one" = "%d nouvelle partie";
+"autoFetch.today" = "aujourd’hui %@";
+"autoFetch.yesterday" = "hier %@";
+"autoFetch.onDay" = "%2$d/%1$d %3$@";
+"autoFetch.refresh" = "Récupérer les nouvelles parties";
+"library.allGames" = "Les %d parties";
+"library.allGames.one" = "La %d partie";

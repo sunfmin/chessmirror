@@ -62,7 +62,7 @@ import Testing
     /// many games are wanted — not a URL to one download.
     @Test func chessComSaysItWalksMonthsBack() throws {
         let plan = try #require(try PGNImport.Site.chessCom.fetchPlan(for: "sunfmin", count: 10).get())
-        guard case .recentChessCom(let archives, let many) = plan else {
+        guard case .recentChessCom(let archives, let many, _) = plan else {
             Issue.record("chess.com is a month walk, got \(plan)")
             return
         }
