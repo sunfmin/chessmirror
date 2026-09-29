@@ -46,7 +46,7 @@ struct DailyScreenshots {
     private func screen(_ library: GameLibrary, _ index: MistakeIndex) -> some View {
         LibraryScreen()
             .environment(EngineHost(ScriptedEngine([])))
-            .environment(library)
+            .environment(library).environment(CollectionShelf(library: library))
             .environment(index)
     }
 
@@ -96,7 +96,7 @@ struct DailyScreenshots {
         let home = await ScreenImage.write("library-no-picker") { screen(library, index) }
         let book = await ScreenImage.write("book-no-picker") {
             NavigationStack { BookScreen(path: .constant([])) }
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
                 .environment(EngineHost(ScriptedEngine([])))
         }

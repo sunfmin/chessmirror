@@ -507,3 +507,30 @@
 "search.explained" = "Wie lange und wie tief die Engine jede Stellung ansieht. Die Bewertung eines Zugs, der Zug der Engine und ein Hinweis sind ein und dieselbe Suche, damit ein Verlust überall dasselbe bedeutet. Eine Neubewertung geht 8 tiefer und darf 6-mal so lange dauern.";
 "import.unreadableArchives.title" = "%2$@s Partieliste kann nicht gelesen werden";
 "import.unreadableArchives.message" = "%1$@ hat geantwortet, aber nicht mit einer Liste von %2$@s Partien. Versuchen Sie es gleich noch einmal.";
+
+/* 收藏集 (docs/adr/0051) */
+"collections" = "Sammlungen";
+"collection.favourites" = "Favoriten";
+"collection.items" = "%d Stellungen";
+"collection.favouritesEmpty" = "Tippe bei einer Stellung auf ♡, um sie hier aufzuheben";
+"collection.empty" = "Noch keine Stellungen";
+"collection.yours" = "Deine Chance";
+"collection.theirs" = "Chance des Gegners";
+"collection.whiteToMove" = "Weiß am Zug";
+"collection.blackToMove" = "Schwarz am Zug";
+"collection.from" = "Aus %@, Zug %d";
+"collection.openGame" = "Partie öffnen";
+"collection.takeOut" = "Herausnehmen";
+"collection.remove" = "Aus der Sammlung nehmen";
+"collection.rename" = "Umbenennen";
+"collection.delete" = "Löschen";
+"collection.deleteConfirm" = "„%@“ löschen?";
+"collection.deleteExplained" = "Die Stellungen verlassen diese Sammlung; Partien und Fehler bleiben.";
+"collection.new" = "Neue Sammlung…";
+"collection.name" = "Name";
+"collection.kept" = "In „%@“ aufgehoben";
+"collection.change" = "Ändern";
+"collection.choose" = "Aufheben in";
+"collection.heart" = "Diese Stellung aufheben";
+"collection.nameUnusable" = "Dieser Name geht nicht";
+"collection.items.one" = "%d Stellung";

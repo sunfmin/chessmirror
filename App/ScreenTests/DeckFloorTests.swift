@@ -44,7 +44,7 @@ struct DeckFloor {
                 GameScreen(session: session, path: .constant([]))
             }
             .environment(EngineHost(engine))
-            .environment(GameLibrary())
+            .environment(GameLibrary()).environment(CollectionShelf(library: GameLibrary()))
             .dynamicTypeSize(largeText ? .accessibility5 : .large)
         }
         #expect(!rendered.says(localized("discovery.mateFound")))

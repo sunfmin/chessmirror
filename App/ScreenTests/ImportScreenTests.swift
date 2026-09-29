@@ -35,7 +35,7 @@ struct ImportScreenScreenshots {
             #expect(ScreenImage.activate("\(side.label) · \(player)", in: window))
             await ScreenImage.settle()
         }) {
-            ImportSheet(session: session, memory: memory(), initialDoor: .link, onOpen: { opened = $0 }).environment(library).environment(book(in: directory))
+            ImportSheet(session: session, memory: memory(), initialDoor: .link, onOpen: { opened = $0 }).environment(library).environment(CollectionShelf(library: library)).environment(book(in: directory))
         }
         let entry = try #require(opened)
         let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
@@ -103,7 +103,7 @@ struct ImportScreenScreenshots {
 
         let rendered = await ScreenImage.write("import-sheet-idle") {
             ImportSheet(memory: memory(), initialDoor: .link)
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir))).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("导入棋局"))
@@ -132,7 +132,7 @@ struct ImportScreenScreenshots {
         await session.run("https://lichess.org/study/HgiqcIqW.pgn")
 
         let rendered = await ScreenImage.write("import-sheet-ready") {
-            ImportSheet(session: session, memory: memory(), initialDoor: .link).environment(library(in: tempDir)).environment(book(in: tempDir))
+            ImportSheet(session: session, memory: memory(), initialDoor: .link).environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir))).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("2 局"))
@@ -161,7 +161,7 @@ struct ImportScreenScreenshots {
         _ = session.apply(into: library)
 
         let rendered = await ScreenImage.write("import-sheet-done") {
-            ImportSheet(session: session, memory: memory(), initialDoor: .link).environment(library).environment(book(in: tempDir))
+            ImportSheet(session: session, memory: memory(), initialDoor: .link).environment(library).environment(CollectionShelf(library: library)).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("导入了 2 局"), "no engine yet, so written and not analysed")
@@ -219,7 +219,7 @@ struct ImportScreenScreenshots {
 
         let rendered = await ScreenImage.write("import-sheet-recent") {
             ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), initialDoor: .lichess)
-                .environment(library(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir)))
                 .environment(book(in: tempDir))
         }
 
@@ -253,7 +253,7 @@ struct ImportScreenScreenshots {
             #expect(!ScreenImage.words(in: window).contains(localized("import.trackSide")), "nothing to ask")
         }) {
             ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), initialDoor: .lichess, onOpen: { opened = $0 })
-                .environment(library).environment(book(in: directory))
+                .environment(library).environment(CollectionShelf(library: library)).environment(book(in: directory))
         }
         let entry = try #require(opened)
         let pgn = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
@@ -305,7 +305,7 @@ struct ImportScreenScreenshots {
             await ScreenImage.settle()
         }) {
             ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), engine: engine)
-                .environment(library).environment(book)
+                .environment(library).environment(CollectionShelf(library: library)).environment(book)
         }
         #expect(running.says("入库了 2 局，正在逐局分析。"))
         #expect(running.says("分析中 1/4"), "the first game, one position settled of four")
@@ -322,7 +322,7 @@ struct ImportScreenScreenshots {
 
         let landed = await ScreenImage.write("import-list-analysed") {
             ImportSheet(session: session, memory: memory(remembering: ["sunfmin"]), engine: engine)
-                .environment(library).environment(book)
+                .environment(library).environment(CollectionShelf(library: library)).environment(book)
         }
         #expect(landed.says("入库了 2 局，都分析完了。"), "and the report says so, not that it is still running")
         #expect(landed.says("已入库 1 道题"), "White's Nf3 cost, and White is sunfmin")
@@ -354,7 +354,7 @@ struct ImportScreenScreenshots {
 
         let rendered = await ScreenImage.write("import-door-lichess-remembered") {
             ImportSheet(memory: memory)
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir))).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("sunfmin"), "the account that fetched last, already in the field")
@@ -384,7 +384,7 @@ struct ImportScreenScreenshots {
             await ScreenImage.settle()
         }) {
             ImportSheet(session: session, memory: memory)
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir))).environment(book(in: tempDir))
         }
 
         #expect(memory.names[.lichess] == ["sunfmin", "DrNykterstein"], "the one that fetched, first")
@@ -410,7 +410,7 @@ struct ImportScreenScreenshots {
 
         let rendered = await ScreenImage.write("import-door-chesscom-unknown") {
             ImportSheet(session: session, memory: memory, initialDoor: .chessCom)
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir))).environment(book(in: tempDir))
         }
 
         #expect(rendered.says("chess.com 上没有 SunFmn"), "the site and the name, as typed")
@@ -429,7 +429,7 @@ struct ImportScreenScreenshots {
 
         let idle = await ScreenImage.write("import-door-chessease") {
             ImportSheet(session: session, memory: memory(), initialDoor: .chessease)
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir))).environment(book(in: tempDir))
         }
         #expect(idle.says("国象联盟分享链接"))
         #expect(idle.says("点「分享」"), "how to get one, before one is asked for")
@@ -445,7 +445,7 @@ struct ImportScreenScreenshots {
         defer { try? FileManager.default.removeItem(at: tempDir) }
         let rendered = await ScreenImage.write("import-doors-small-phone", size: CGSize(width: 375, height: 667)) {
             ImportSheet(memory: memory(remembering: ["sunfmin"]), initialDoor: .chessCom)
-                .environment(library(in: tempDir)).environment(book(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir))).environment(book(in: tempDir))
         }
         #expect(rendered.says("lichess") && rendered.says("chess.com") && rendered.says("国象联盟") && rendered.says("链接"))
     }

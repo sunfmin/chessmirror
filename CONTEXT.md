@@ -128,8 +128,10 @@ never was — and not a synonym for hiding the engine's answer either: 杀 and �
 the way they are in an ordinary game, and opening one is counted as help rather than refused.
 
 **日课 (Daily)**:
-The 错题 due today, as one queue, in one order. **It cannot be filtered, sorted or split** —
-a queue the player carves up is a queue that has stopped working.
+The 错题 and the 自动集's 藏局 due today, as one queue, in one order, the two shuffled together so
+nothing says which kind the next one is. **It cannot be filtered, sorted or split** — a queue the
+player carves up is a queue that has stopped working (docs/adr/0051). A position that is a 错题
+is scheduled as one, whatever 收藏集 it is also in.
 _Avoid_: 今日队列, 复习列表, 任务
 
 **掌握 (Mastered)**:
@@ -138,14 +140,52 @@ practice is, never a state the player or the app sets.
 _Avoid_: 毕业, 完成, 已学会
 
 **计划外练习 (Unscheduled practice)**:
-Practising a 错题 the player picked themselves rather than one the 日课 handed them. It is
-recorded, and it does not move anything's schedule.
+Practising a 错题 or a 藏局 the player picked themselves rather than one the 日课 handed them.
+It is recorded, and it does not move anything's schedule. Every practice from a 自建集 is this.
 
 **练习日志 (Practice log)**:
 What the player has actually done — which 错题, when, how long it took, whether it passed,
 how much help was asked for. Facts only: it records what happened and never what should
 happen next.
 _Avoid_: 进度, 统计, 状态
+
+### 收藏集 — positions kept
+
+**收藏集 (Collection)**:
+A named set of positions, kept to be looked at and practised. **The position is the identity**,
+as for a 错题: one position is one 藏局 in a 收藏集 however many games reached it. Two kinds, and
+they are named apart: 自动集 and 自建集.
+_Avoid_: 作品集, 收藏 as the name of the set, 文件夹, 标签
+
+**藏局 (Holding)**:
+One position in a 收藏集, with the games it was reached in. Opened, it is seen from the side to
+move and played under 把关 like any 练习; the way back to the game it came from is always there.
+_Avoid_: 收藏项, 条目
+
+**自动集 (Found collection)**:
+杀招 and 战术, one 收藏集 each, derived from the games the app has judged: a position where the
+side to move — the player or the opponent — has a shot is in one of them, and a position with a
+mate is in 杀招 only. A shot that is only taking a loose piece, or that gains too little 胜率, is
+not kept. The player can take a 藏局 out (移出) and cannot put one in; its 藏局 enter the 日课.
+_Avoid_: 战术库, 题库, puzzle
+
+**自建集 (Player collection)**:
+A 收藏集 the player made, named, and fills by hand. A position can be in several. They are never
+scheduled — practising one is 计划外练习 — because what a player picks to repeat, FSRS would
+read as what they know best (docs/adr/0032).
+_Avoid_: 文件夹, 分组
+
+**喜爱 (Favourites)**:
+The 自建集 that is always there, cannot be renamed or deleted, and is where the heart puts a
+position unless the player picks another.
+_Avoid_: 收藏 (that is the set of all of them), 书签
+
+**移出 (Take out)**:
+Taking a 藏局 out of a 自动集 for good. Remembered as the player's decision; the position's games
+and any 错题 it is are untouched.
+
+**作品集 (Collection of games)**: _retired._ The word named a set of whole games filed by hand,
+removed in #24. Do not reuse it: a 收藏集 holds positions, not games.
 
 ### 把关 — the game that will not let you slip
 

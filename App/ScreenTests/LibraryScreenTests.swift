@@ -34,7 +34,7 @@ struct LibraryScreenScreenshots {
         }) {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
         #expect(rendered.says(message))
@@ -91,7 +91,7 @@ struct LibraryScreenScreenshots {
         }) {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
 
@@ -121,7 +121,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("library-empty") {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir)))
                 .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
         }
 
@@ -142,7 +142,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("library-leads") {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir)))
                 .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
         }
 
@@ -170,7 +170,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("library-daily-due") {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
 
@@ -205,7 +205,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("library-daily-done") {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
 
@@ -230,7 +230,7 @@ struct LibraryScreenScreenshots {
         ) {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
                 .dynamicTypeSize(type)
         }
@@ -254,6 +254,10 @@ struct LibraryScreenScreenshots {
         let index = MistakeIndex(log: log ?? PracticeLog(url: tempDir.appending(path: "p.jsonl")))
         index.update(from: library.entries)
         #expect(index.book.mistakes.count == 1)
+        // The −4 that makes 1. e4 a 错题 also hands Black a 战术 (docs/adr/0051), which would be a
+        // second question today. A book of one is a day of one: the shot is taken out.
+        for holding in index.found.flatMap(\.holdings) { index.takeOut(holding.position) }
+        #expect(index.daily.cards.allSatisfy { $0.mistake != nil })
         return index
     }
 
@@ -288,7 +292,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("library-ladder") {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
 
@@ -334,7 +338,7 @@ struct LibraryScreenScreenshots {
         }) {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
         #expect(rendered.says("Bc4"), "the record of the game that was opened")
@@ -359,7 +363,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("library-no-ladder") {
             LibraryScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library)
+                .environment(library).environment(CollectionShelf(library: library))
                 .environment(index)
         }
         #expect(index.ladder.isEmpty)
@@ -380,7 +384,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("about-lines") {
             AboutScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir)))
         }
 
         #expect(rendered.says("判决线"))
@@ -402,7 +406,7 @@ struct LibraryScreenScreenshots {
         let rendered = await ScreenImage.write("about-search") {
             AboutScreen()
                 .environment(EngineHost(ScriptedEngine([])))
-                .environment(library(in: tempDir))
+                .environment(library(in: tempDir)).environment(CollectionShelf(library: library(in: tempDir)))
         }
 
         #expect(rendered.says("引擎搜索"))
@@ -488,7 +492,7 @@ struct BookScreenshots {
             NavigationStack {
                 BookScreen(path: .constant([]))
             }
-            .environment(library)
+            .environment(library).environment(CollectionShelf(library: library))
             .environment(index)
             .environment(EngineHost(ScriptedEngine([])))
         }
@@ -514,7 +518,7 @@ struct BookScreenshots {
             NavigationStack {
                 BookEntryScreen(mistake: mistake, path: .constant([]))
             }
-            .environment(library)
+            .environment(library).environment(CollectionShelf(library: library))
             .environment(index)
             .environment(EngineHost(ScriptedEngine([])))
         }
@@ -537,7 +541,7 @@ struct BookScreenshots {
             NavigationStack {
                 BookScreen(path: .constant([]))
             }
-            .environment(GameLibrary(folder: GameFolder(url: tempDir)))
+            .environment(GameLibrary(folder: GameFolder(url: tempDir))).environment(CollectionShelf(library: GameLibrary(folder: GameFolder(url: tempDir))))
             .environment(MistakeIndex(log: PracticeLog(url: tempDir.appending(path: "p.jsonl"))))
             .environment(EngineHost(ScriptedEngine([])))
         }

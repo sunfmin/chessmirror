@@ -50,6 +50,11 @@ import Foundation
     /// practice log — and recomputed whenever either could have changed.
     public private(set) var daily = Daily(cards: [])
 
+    /// The 自动集 face: 杀招 and 战术, from the same walk as the book, with what the player has
+    /// taken out left out (docs/adr/0051). Both are always here; an empty one is the screen's to
+    /// hide.
+    public private(set) var found: [PositionCollection] = FoundShots.collections(of: [])
+
     /// The 练习日志 face: the practice log the book is read against, and the one a drill writes
     /// its attempts to — one log, because a dismissal and an attempt are the same kind of thing
     /// (docs/adr/0029).
@@ -65,6 +70,7 @@ import Foundation
         let modified: Date
         let found: [(PositionKey, Encounter)]
         let credits: [Ladder.Credit]
+        let shots: [(card: Deck.Card, position: PositionKey, sighting: Sighting)]
     }
 
     public init(log: PracticeLog = .standard, lines: JudgementLines = .standard) {
@@ -139,11 +145,26 @@ import Foundation
         drill(mistake, engine: engine, source: .picked)
     }
 
+    /// A drill of any position — a 错题, a 藏局 — handed over by 日课 (`.daily`) or picked by the
+    /// player (`.picked`, 计划外). The same two verbs as above, for a position that need not be
+    /// a 错题 (docs/adr/0051).
+    public func practise(
+        _ position: PositionKey, engine: (any Engine)?, source: Drill.Source
+    ) -> Drill? {
+        drill(position, engine: engine, source: source)
+    }
+
     private func drill(
         _ mistake: Mistake, engine: (any Engine)?, source: Drill.Source
     ) -> Drill? {
+        drill(mistake.position, engine: engine, source: source)
+    }
+
+    private func drill(
+        _ position: PositionKey, engine: (any Engine)?, source: Drill.Source
+    ) -> Drill? {
         guard let drill = Drill(
-            position: mistake.position, engine: engine, log: log, lines: lines, source: source
+            position: position, engine: engine, log: log, lines: lines, source: source
         ) else { return nil }
         refresh(whenSettled: drill)
         return drill
@@ -193,7 +214,8 @@ import Foundation
             fresh[entry.url] = Walked(
                 modified: entry.modified,
                 found: MistakeBook.encounters(in: entry, lines: self.lines),
-                credits: Ladder.credits(in: entry)
+                credits: Ladder.credits(in: entry),
+                shots: FoundShots.sightings(in: entry)
             )
         }
         cached = fresh
@@ -214,6 +236,13 @@ import Foundation
         rebuild()
     }
 
+    /// Takes a 藏局 out of the 自动集 for good (docs/adr/0051). An append to the log, like
+    /// striking off a 错题; the games and any 错题 the position is are untouched.
+    public func takeOut(_ position: PositionKey) {
+        log.append(.takenOut(position))
+        rebuild()
+    }
+
     /// Puts one back.
     public func restore(_ position: PositionKey) {
         log.append(.restored(position))
@@ -224,7 +253,7 @@ import Foundation
     /// line in the log and the schedule is a function of the log (docs/adr/0029).
     public func refresh(now: Date = Date()) {
         daily = Daily.forToday(
-            book: book, attempts: log.attempts(), lines: lines, now: now
+            book: book, attempts: log.attempts(), lines: lines, found: foundHoldings, now: now
         )
     }
 
@@ -246,8 +275,19 @@ import Foundation
         }
         wrongByGame = plies.mapValues(\.count)
         ladder = Ladder.sum(cached.map { (game: $0.key, credits: $0.value.credits) })
-        daily = Daily.forToday(
-            book: book, attempts: PracticeLog.attempts(in: entries), lines: lines, now: now
+        found = FoundShots.collections(
+            of: cached.values.flatMap(\.shots), takenOut: PracticeLog.takenOut(in: entries)
         )
+        daily = Daily.forToday(
+            book: book, attempts: PracticeLog.attempts(in: entries), lines: lines,
+            found: foundHoldings, now: now
+        )
+    }
+
+    /// Every 藏局 of the 自动集, once each: a position in both would be one card, and a mate
+    /// outranks a shot so it is in one of them at most anyway.
+    private var foundHoldings: [Holding] {
+        var seen: Set<PositionKey> = []
+        return found.flatMap(\.holdings).filter { seen.insert($0.position).inserted }
     }
 }
