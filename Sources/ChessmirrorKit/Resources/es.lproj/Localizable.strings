@@ -172,7 +172,6 @@
 "library.fromFiles" = "De archivos";
 "library.fromStart" = "Empezar desde la inicial";
 "library.games" = "Partidas";
-"library.practice" = "Práctica";
 "library.empty" = "Haz una jugada y la partida quedará anotada aquí.";
 "library.recognising" = "Leyendo el tablero";
 "library.noPicture" = "No se ha podido obtener la imagen";

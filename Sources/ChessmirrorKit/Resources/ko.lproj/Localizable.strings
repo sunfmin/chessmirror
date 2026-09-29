@@ -166,7 +166,6 @@
 "library.fromFiles" = "파일에서 고르기";
 "library.fromStart" = "초기 국면부터";
 "library.games" = "대국 기록";
-"library.practice" = "연습";
 "library.empty" = "한 수 두면 이 대국이 여기에 남는다.";
 "library.recognising" = "판을 읽는 중";
 "library.noPicture" = "사진을 가져오지 못함";

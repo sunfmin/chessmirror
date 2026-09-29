@@ -201,7 +201,6 @@
 "library.fromFiles" = "From files";
 "library.fromStart" = "Start from the opening";
 "library.games" = "Games";
-"library.practice" = "Practice";
 "library.empty" = "Play a move and the game will be filed here.";
 "library.recognising" = "Reading the board";
 "library.noPicture" = "Could not get the picture";

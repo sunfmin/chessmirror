@@ -172,7 +172,6 @@
 "library.fromFiles" = "Dos ficheiros";
 "library.fromStart" = "Começar da posição inicial";
 "library.games" = "Partidas";
-"library.practice" = "Prática";
 "library.empty" = "Joga um lance e a partida fica registada aqui.";
 "library.recognising" = "A ler o tabuleiro";
 "library.noPicture" = "Não foi possível obter a imagem";

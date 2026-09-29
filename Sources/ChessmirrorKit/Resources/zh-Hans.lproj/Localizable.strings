@@ -195,7 +195,6 @@
 "library.fromFiles" = "从文件选";
 "library.fromStart" = "从开局摆起";
 "library.games" = "对局记录";
-"library.practice" = "练习";
 "library.empty" = "走出第一步，这局就会记在这里。";
 "library.recognising" = "在认棋盘";
 "library.noPicture" = "没能拿到图片";

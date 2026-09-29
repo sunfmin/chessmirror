@@ -44,7 +44,7 @@ struct DailyScreenshots {
     }
 
     private func screen(_ library: GameLibrary, _ index: MistakeIndex) -> some View {
-        LibraryScreen()
+        LibraryScreen(autoFetch: .quiet)
             .environment(EngineHost(ScriptedEngine([])))
             .environment(library).environment(CollectionShelf(library: library))
             .environment(index)

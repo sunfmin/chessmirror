@@ -166,7 +166,6 @@
 "library.fromFiles" = "ファイルから選ぶ";
 "library.fromStart" = "初期局面から";
 "library.games" = "対局の記録";
-"library.practice" = "練習";
 "library.empty" = "一手指せば、この対局はここに残る。";
 "library.recognising" = "盤を読んでいる";
 "library.noPicture" = "画像を取得できなかった";

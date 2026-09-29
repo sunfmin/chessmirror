@@ -51,7 +51,7 @@ struct CollectionScreenshots {
         let shelf = CollectionShelf(library: library)
 
         let rendered = await ScreenImage.write("collections-first-screen") {
-            LibraryScreen()
+            LibraryScreen(autoFetch: .quiet)
                 .environment(EngineHost(ScriptedEngine([])))
                 .environment(library)
                 .environment(shelf)
