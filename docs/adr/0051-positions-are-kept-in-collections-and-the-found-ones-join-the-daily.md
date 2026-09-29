@@ -29,7 +29,13 @@ player picks to repeat are the ones FSRS would come to believe they know best.
 
 - The 日课 is no longer 「the 错题 due today」 but 「the 错题 and found 藏局 due today」; the
   one-queue rule is untouched.
-- Found sets cost engine time: each judged position is also asked whether the side to move has a
-  shot.
-- 自建集 and the 移出 list are the player's decisions and are stored, each as a PGN file in the
-  library folder (docs/adr/0010, docs/adr/0012), one position per entry with a `[FEN]`.
+- Found sets cost no engine time. They are read off the Scores the app already wrote — a Review's,
+  or the 细判 that weighed each move as it landed — so a position nobody has scored is in neither
+  set, the same refusal the book makes about an unreviewed game (docs/adr/0044). A 战术 is a move
+  that handed over at least the 记录线's ten points, leaving the side to move at 60% or better with
+  no capture that simply wins material by exchange; a 杀招 is a mate in five or fewer that was not
+  there before the move. Over forty of the player's own games that kept eleven and three.
+- 自建集 are the player's decisions and are stored, each as a PGN file in a 收藏集 folder inside
+  the library's (docs/adr/0010, docs/adr/0012), one moveless game per position with a `[FEN]`.
+- 移出 is written to the practice log beside a 错题's striking-off (docs/adr/0029): it is the same
+  kind of fact, a decision about the player's own time, and the log is where those live.

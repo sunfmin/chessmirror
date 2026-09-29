@@ -26,6 +26,10 @@ public struct PracticeLog: Sendable {
         case restored(PositionKey)
         /// The player practised a position and the app judged the move.
         case drilled(Attempt)
+        /// The player took a 藏局 out of a 自动集 (docs/adr/0051). A decision about their own
+        /// time, like striking a 错题 off, and kept for the same reason: the set is derived from
+        /// the games, and this is the one thing about it that is not.
+        case takenOut(PositionKey)
     }
 
     /// One go at one position (docs/adr/0029).
@@ -132,10 +136,19 @@ public struct PracticeLog: Sendable {
             switch entry.fact {
             case .dismissed(let key): standing[key] = true
             case .restored(let key): standing[key] = false
-            case .drilled: continue
+            case .drilled, .takenOut: continue
             }
         }
         return Set(standing.filter(\.value).keys)
+    }
+
+    /// The positions the player has taken out of a 自动集. There is no putting one back: the
+    /// heart is the way to keep a position the player wants, in a set of their own.
+    public static func takenOut(in entries: [Entry]) -> Set<PositionKey> {
+        Set(entries.compactMap { entry in
+            guard case .takenOut(let key) = entry.fact else { return nil }
+            return key
+        })
     }
 
     /// Every go at every position, oldest first.

@@ -456,8 +456,10 @@ func theNextQuestion() throws {
 
     let cards = index.daily.cards
     #expect(cards.count == 3)
-    #expect(index.next(after: cards[0].mistake, source: .daily) == cards[1].mistake)
-    #expect(index.next(after: cards[1].mistake, source: .daily) == cards[0].mistake,
+    let first = try #require(cards[0].mistake)
+    let second = try #require(cards[1].mistake)
+    #expect(index.next(after: first, source: .daily) == second)
+    #expect(index.next(after: second, source: .daily) == first,
             "the first card still standing that is not this one")
 
     let one = MistakeIndex(log: temporaryLog())
@@ -504,7 +506,8 @@ func aSettledAttemptMovesTheDay() async throws {
         Analysis(depth: Drill.depth, lines: [Line(score: .centipawns(0), uciMoves: [], san: [])])
     ])
 
-    let drill = try #require(index.practise(card.mistake, engine: engine))
+    let mistake = try #require(card.mistake)
+    let drill = try #require(index.practise(mistake, engine: engine))
     #expect(drill.lines.noSlips, "under 把关, as every 练习 is")
     drill.play(try #require(drill.game.state.legalMoves.first))
     await drill.settled()

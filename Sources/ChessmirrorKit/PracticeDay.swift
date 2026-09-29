@@ -28,7 +28,8 @@ public struct PracticeDay: Sendable {
     public func next(after mistake: Mistake, source: Drill.Source) -> Mistake? {
         switch source {
         case .daily:
-            return daily.cards.first { $0.position != mistake.position }?.mistake
+            return daily.cards.first { $0.position != mistake.position && $0.mistake != nil }?
+                .mistake
         case .picked:
             let mistakes = book.mistakes
             guard let here = mistakes.firstIndex(where: { $0.position == mistake.position }),
@@ -36,6 +37,12 @@ public struct PracticeDay: Sendable {
             else { return nil }
             return mistakes[(here + 1) % mistakes.count]
         }
+    }
+
+    /// The position after this one in today's queue, whichever kind it is (docs/adr/0051). Nil at
+    /// the end of the queue.
+    public func next(after position: PositionKey) -> PositionKey? {
+        daily.cards.first { $0.position != position }?.position
     }
 
     /// What the 日课 door is: how much of the day is left, and what it reads.
@@ -66,5 +73,10 @@ public struct PracticeDay: Sendable {
         }
     }
 
-    public var door: Door { Door(left: daily.remaining, bookIsEmpty: book.isEmpty) }
+    public var door: Door {
+        Door(
+            left: daily.remaining,
+            bookIsEmpty: book.isEmpty && !daily.all.contains { $0.holding != nil }
+        )
+    }
 }

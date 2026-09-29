@@ -12,9 +12,15 @@ import Foundation
 /// Computed from the practice log every time, never stored (docs/adr/0029). Delete every derived
 /// thing in the app and the same day comes back.
 public struct Daily: Hashable, Sendable {
-    /// One position in today's queue, with what FSRS makes of its history.
+    /// One position in today's queue, with what FSRS makes of its history: a 错题, or a 藏局 of
+    /// a 自动集 (docs/adr/0051). The two share one queue and one schedule, and nothing on the
+    /// card a screen shows says which it is before the position is on the board.
     public struct Card: Hashable, Sendable, Identifiable {
-        public let mistake: Mistake
+        public let position: PositionKey
+        /// The 错题, when this is one.
+        public let mistake: Mistake?
+        /// The 藏局, when this is one found in the games rather than got wrong in them.
+        public let holding: Holding?
         /// What the schedule knows about it — nil for a position nobody has practised yet.
         public let memory: FSRS.Memory?
         /// When it came due. Nil for a new one, which is due the day it is let in.
@@ -38,8 +44,7 @@ public struct Daily: Hashable, Sendable {
             }
         }
 
-        public var id: String { mistake.id }
-        public var position: PositionKey { mistake.position }
+        public var id: String { position.text }
         public var isNew: Bool { memory == nil }
 
         /// 掌握: the app does not expect to need this one for a long time — its next go is half
@@ -60,7 +65,21 @@ public struct Daily: Hashable, Sendable {
         public init(
             mistake: Mistake, memory: FSRS.Memory?, dueAt: Date?, lapses: Int, last: Go? = nil
         ) {
+            self.position = mistake.position
             self.mistake = mistake
+            self.holding = nil
+            self.memory = memory
+            self.dueAt = dueAt
+            self.lapses = lapses
+            self.last = last
+        }
+
+        public init(
+            holding: Holding, memory: FSRS.Memory?, dueAt: Date?, lapses: Int, last: Go? = nil
+        ) {
+            self.position = holding.position
+            self.mistake = nil
+            self.holding = holding
             self.memory = memory
             self.dueAt = dueAt
             self.lapses = lapses
@@ -87,6 +106,11 @@ public struct Daily: Hashable, Sendable {
     /// `Mistake.isMorePressing` puts them in — 复发 before cost (docs/adr/0028).
     public static let newPerDay = 10
 
+    /// How many 藏局 of the 自动集 a day may let in for the first time, counted apart from the
+    /// 错题 so that shots found in the games never crowd out the moves the player got wrong
+    /// (docs/adr/0051). What does not fit waits, the most recently found first.
+    public static let foundPerDay = 5
+
     /// How far off a next go has to be for the position to read as 掌握: half a year, in days
     /// (`Card.isSettled`).
     public static let settledInterval = 180.0
@@ -98,11 +122,16 @@ public struct Daily: Hashable, Sendable {
     /// Only positions over the 入列线 are eligible at all: a move between the 记录线 and the
     /// 入列线 is worth writing down and looking at, and is not worth anybody's practice time
     /// (docs/adr/0027). The rest of the book stays readable and simply never knocks.
+    ///
+    /// The 自动集's 藏局 come in beside them (`found`), shuffled in rather than queued after: a
+    /// position that is already an owed 错题 is scheduled as that and only once (docs/adr/0051).
     public static func forToday(
         book: MistakeBook,
         attempts: [(at: Date, attempt: PracticeLog.Attempt)],
         lines: JudgementLines = .standard,
+        found: [Holding] = [],
         newPerDay: Int = Daily.newPerDay,
+        foundPerDay: Int = Daily.foundPerDay,
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> Daily {
@@ -124,8 +153,10 @@ public struct Daily: Hashable, Sendable {
         }
 
         let eligible = book.mistakes.filter { Enrolment(mistake: $0, lines: lines).isOwed }
-        let all = eligible.map { mistake -> Card in
-            let gone = history[mistake.position] ?? []
+        let owed = Set(eligible.map(\.position))
+        let kept = found.filter { !owed.contains($0.position) }
+        func schedule(_ position: PositionKey) -> (FSRS.Memory?, Date?, Int, Card.Go?) {
+            let gone = history[position] ?? []
             var memory: FSRS.Memory?
             var last: Date?
             var lapses = 0
@@ -139,14 +170,22 @@ public struct Daily: Hashable, Sendable {
                 if !go.passed { lapses += 1 }
                 last = go.at
             }
-            return Card(
-                mistake: mistake,
-                memory: memory,
-                dueAt: memory.flatMap { standing in last.map { fsrs.due(standing, after: $0) } },
-                lapses: lapses,
-                last: gone.last
+            return (
+                memory,
+                memory.flatMap { standing in last.map { fsrs.due(standing, after: $0) } },
+                lapses,
+                gone.last
             )
         }
+        let mistakes = eligible.map { mistake -> Card in
+            let (memory, dueAt, lapses, last) = schedule(mistake.position)
+            return Card(mistake: mistake, memory: memory, dueAt: dueAt, lapses: lapses, last: last)
+        }
+        let holdings = kept.map { holding -> Card in
+            let (memory, dueAt, lapses, last) = schedule(holding.position)
+            return Card(holding: holding, memory: memory, dueAt: dueAt, lapses: lapses, last: last)
+        }
+        let all = mistakes + holdings
 
         // The whole of today is available from the moment it starts, the way every spaced
         // repetition app does it: a schedule that dribbled cards out by the hour would mean
@@ -165,17 +204,41 @@ public struct Daily: Hashable, Sendable {
         // How many have already been let in today, so that a day's intake is a day's intake
         // however many times the app is opened.
         let today = calendar.startOfDay(for: now)
-        let admitted = history.count { _, gone in (gone.first?.at ?? .distantPast) >= today }
-        let room = max(0, newPerDay - admitted)
-        let fresh = all
+        let foundKeys = Set(kept.map(\.position))
+        let firstToday = history.filter { _, gone in (gone.first?.at ?? .distantPast) >= today }
+        let admittedFound = firstToday.keys.count { foundKeys.contains($0) }
+        let admitted = firstToday.count - admittedFound
+        let fresh = mistakes
             .filter(\.isNew)
-            .sorted { $0.mistake.isMorePressing(than: $1.mistake) }
-            .prefix(room)
+            .sorted { one, other in
+                guard let one = one.mistake, let other = other.mistake else { return false }
+                return one.isMorePressing(than: other)
+            }
+            .prefix(max(0, newPerDay - admitted))
+        let freshFound = holdings
+            .filter(\.isNew)
+            .sorted { one, other in
+                let a = one.holding?.added ?? .distantPast
+                let b = other.holding?.added ?? .distantPast
+                return a == b ? one.position.text < other.position.text : a > b
+            }
+            .prefix(max(0, foundPerDay - admittedFound))
 
         // Due before new, and a card just failed sorts to the back of the due ones on its own:
         // its next go is hours away where an overdue one's was days ago. Within the day this is
-        // the order ARTS replaces (docs/adr/0030).
-        return Daily(cards: due + fresh, all: all)
+        // the order ARTS replaces (docs/adr/0030). The new ones of the two kinds take turns, so
+        // the queue never runs a block of one kind that would say what the next answer is.
+        return Daily(cards: due + Self.alternate(Array(fresh), Array(freshFound)), all: all)
+    }
+
+    /// One of each in turn, then whatever is left of the longer.
+    static func alternate(_ one: [Card], _ other: [Card]) -> [Card] {
+        var mixed: [Card] = []
+        for index in 0..<max(one.count, other.count) {
+            if index < one.count { mixed.append(one[index]) }
+            if index < other.count { mixed.append(other[index]) }
+        }
+        return mixed
     }
 
     public init(cards: [Card], all: [Card] = []) {
