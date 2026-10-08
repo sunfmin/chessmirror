@@ -12,3 +12,6 @@ App/out/
 
 # The codegraph index, rebuilt from the source it describes.
 .codegraph/
+
+# Written by every fastlane run: what the last lane did, not something to keep.
+fastlane/report.xml
