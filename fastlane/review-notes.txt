@@ -1,9 +1,24 @@
-No account or sign-in is needed; every feature is available on first launch.
+1. SCREEN RECORDING
+Attached to our reply in App Store Connect: recorded on a physical iPhone, starting from launching the app. The app has no accounts, no user-generated content shared between users, and no paid content.
 
-To try it quickly:
-1. On the first screen tap "Start from the opening" to play against the built-in Stockfish engine. Turn "No Slips" on under the board and play a poor move: the app hands it back and records the position.
-2. "Photograph a board" reads a chess position from the camera, a photo or a screenshot (the arrow beside it lists the other sources). Recognition runs on the device.
-3. "Import games" fetches public games by username from lichess.org or chess.com through those sites' public APIs. Any public username works, for example "DrNykterstein" on lichess. This is the only time the app uses the network.
-4. Games are saved as PGN files in the app's iCloud Drive folder (Files > iCloud Drive).
+2. PURPOSE AND AUDIENCE
+Chessmirror is a training tool for chess players who want to stop repeating their own mistakes. Players usually review a lost game once and then meet the same position again weeks later and go wrong the same way. Chessmirror records each costly move a player makes — in games played in the app against the built-in engine, or in their own games imported from a chess site — as a position in a personal "mistake book", and schedules those positions for practice with spaced repetition. It is for club and online players of any age who already know the rules.
 
-The app contains the Stockfish chess engine and is itself released under the GPLv3; the complete source is at https://github.com/sunfmin/chessmirror.
+3. HOW TO USE IT
+No account or sign-in exists; every feature works on first launch.
+- First screen > "Start from the opening": play against the built-in engine. Turn "No Slips" on under the board and play a poor move (for example 1. f3 followed by 2. g4): the app hands the move back and records the position.
+- "Photograph a board" reads a chess position from the camera; the arrow beside it offers "From albums", "Paste a screenshot" and "From files" instead. Any picture of a chess diagram works. Confirm the position and it opens as a game.
+- "Import games": type any public username from lichess.org (for example DrNykterstein) or chess.com (for example Hikaru) and pick a game; or paste a link to a game or a lichess study. The app then scores every move on the device.
+- "Mistakes" lists the recorded positions; "Today" is the daily practice queue built from them.
+- Games are saved as PGN files in the app's iCloud Drive folder (Files > iCloud Drive).
+
+4. EXTERNAL SERVICES
+- The public, unauthenticated game-export APIs of lichess.org and chess.com, used only when the user asks to import games by username, and once a day afterwards to check that same account for new games. No credentials are sent. When the user pastes a link to a game instead, the app downloads that one address.
+- Apple iCloud Drive, for storing the user's own game files.
+There is no server of our own, no authentication service, no payment processor, no analytics or advertising SDK, and no AI service. Board recognition (our own code, with Apple's Vision and Core Image frameworks) and chess analysis (the Stockfish engine, built into the app) run entirely on the device.
+
+5. REGIONAL DIFFERENCES
+None. The app behaves the same in every region. It is localised into eight languages.
+
+6. REGULATED CONTENT AND THIRD-PARTY MATERIAL
+The app is not in a regulated industry. It includes the open-source Stockfish chess engine, licensed under the GNU GPL v3; Chessmirror is released under the same licence and its complete source code is public at https://github.com/sunfmin/chessmirror. Games imported from lichess.org or chess.com are the user's own choice of public game records, fetched through those sites' public APIs, or from a link the user pastes.
