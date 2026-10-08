@@ -1,0 +1,25 @@
+Chessmirror turns the moves you got wrong into the positions you practise, so the same mistake does not stand in your next game.
+
+PHOTOGRAPH A BOARD
+Point the camera at a real board, a book diagram or a screenshot. Chessmirror reads the position on the device, lets you correct any piece, the side to move and castling rights, and opens it as a game.
+
+PLAY WITH NO SLIPS
+Play against Stockfish 18, built into the app, at a strength you choose. With No Slips on, a move that gives away too much is handed back to you before it is played — and written down, so you meet that position again.
+
+A MISTAKE BOOK THAT WRITES ITSELF
+Every costly move becomes an entry: one position, however many games it turned up in, with what you played and what it cost in winning chances. Import your games from lichess or Chess.com by username, or paste a PGN or FEN, and have every move scored locally.
+
+A DAILY THAT KNOWS WHAT IS DUE
+Practice is scheduled by spaced repetition (FSRS). Each day's queue holds the positions that are due and a few new ones. Play the move, get a plain verdict — passed or not — and play on if you want to.
+
+FOUND FOR YOU
+Mates and tactics the engine found in your own games are collected into sets. Tap the heart on any position to keep it in your favourites.
+
+PRIVATE BY DESIGN
+• Recognition and analysis run on your device. No account, no ads, no tracking.
+• Games are plain PGN files in your own iCloud Drive, visible in the Files app.
+• The network is used only when you ask to import games from a chess site.
+
+Also: a face-to-face mode for over-the-board play on one phone, an advantage bar, dark mode, iPad layouts, and eight languages — English, Simplified Chinese, Japanese, Korean, French, German, Spanish and Portuguese.
+
+Chessmirror is free software under the GPLv3. Source code: https://github.com/sunfmin/chessmirror

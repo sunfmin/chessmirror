@@ -1,0 +1,9 @@
+No account or sign-in is needed; every feature is available on first launch.
+
+To try it quickly:
+1. On the first screen tap "Start from the opening" to play against the built-in Stockfish engine. Turn "No Slips" on under the board and play a poor move: the app hands it back and records the position.
+2. "Photograph a board" reads a chess position from the camera, a photo or a screenshot (the arrow beside it lists the other sources). Recognition runs on the device.
+3. "Import games" fetches public games by username from lichess.org or chess.com through those sites' public APIs. Any public username works, for example "DrNykterstein" on lichess. This is the only time the app uses the network.
+4. Games are saved as PGN files in the app's iCloud Drive folder (Files > iCloud Drive).
+
+The app contains the Stockfish chess engine and is itself released under the GPLv3; the complete source is at https://github.com/sunfmin/chessmirror.

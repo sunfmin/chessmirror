@@ -1,0 +1,1 @@
+chess,blunder,mistake,tactics,analysis,pgn,fen,scanner,board,puzzle,drill,review,engine,training
