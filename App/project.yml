@@ -141,6 +141,10 @@ targets:
       path: ShareExtension/Info.plist
       properties:
         CFBundleDisplayName: 棋镜
+        # The app's own two, for the app's own reason — and because the store warns about an
+        # extension whose build number is not its app's.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController

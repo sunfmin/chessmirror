@@ -1,0 +1,57 @@
+# The App Store page and the trip through review. The build itself is App/appstore.sh; the order
+# to run things in, and what was done once by hand, is docs/appstore.md.
+#
+#   (eval "$(mytokens env calcgrid)"; eval "$(mytokens env chessmirror)"; fastlane store_page)
+#   (eval "$(mytokens env calcgrid)"; fastlane submit build:202610080922)
+#
+# Signs in with FASTLANE_USER and FASTLANE_SESSION — the `fastlane spaceauth` session kept in the
+# `calcgrid` profile, which is the developer account's rather than that app's. It lasts about a month.
+
+skip_docs
+
+BUNDLE_ID = "com.sunfmin.chessmirror"
+# The words are the files under fastlane/metadata, in the layout deliver reads; edit them there.
+METADATA = File.expand_path("metadata", __dir__)
+
+desc "Send the store page: the words in fastlane/metadata, the age rating, the privacy answers, the pictures,"
+desc "and who the reviewer can ring — that last from the `chessmirror` profile, a phone number being no thing to commit."
+desc "Draw the pictures first (docs/appstore.md). Everything here replaces what the store has, so it can be run again."
+lane :store_page do
+  # With a session there is no password to give, but fastlane asks at the terminal for one it does not have.
+  ENV["FASTLANE_PASSWORD"] ||= "unused-with-session"
+  shots = Dir[File.expand_path("../App/out/store-*.png", __dir__)].sort
+  UI.user_error!("no pictures in App/out: run StoreScreenshotTests on both simulators first") if shots.empty?
+  Dir.mktmpdir do |screenshots|
+    # store-<language>-<device>-<n>-<what>.png; deliver wants a folder per language and tells the
+    # devices apart by the size of the picture.
+    shots.each do |shot|
+      language = File.basename(shot)[/\Astore-(.+?)-(?:iphone|ipad)-/, 1] or UI.user_error!("not a store picture's name: #{shot}")
+      FileUtils.mkdir_p(File.join(screenshots, language))
+      FileUtils.cp(shot, File.join(screenshots, language))
+    end
+    deliver(app_identifier: BUNDLE_ID, platform: "ios", metadata_path: METADATA,
+            screenshots_path: screenshots, overwrite_screenshots: true,
+            app_rating_config_path: File.expand_path("age-rating.json", __dir__),
+            # Not optional on a first version: with none on record deliver goes on to read it and
+            # stops at "No data".
+            app_review_information: {
+              first_name: ENV.fetch("APP_REVIEW_FIRST_NAME"), last_name: ENV.fetch("APP_REVIEW_LAST_NAME"),
+              phone_number: ENV.fetch("APP_REVIEW_PHONE"), email_address: ENV.fetch("APP_REVIEW_EMAIL"),
+              notes: File.read(File.expand_path("review-notes.txt", __dir__))
+            },
+            skip_binary_upload: true, force: true, run_precheck_before_submit: false)
+  end
+  # "Data Not Collected", for the reasons docs/privacy.md gives.
+  upload_app_privacy_details_to_app_store(app_identifier: BUNDLE_ID, json_path: File.expand_path("app-privacy.json", __dir__))
+end
+
+desc "Put a processed build up for review: fastlane submit build:<the number appstore.sh printed>"
+desc "Once approved it goes on sale by itself. What is submitted is the page as store_page last left it."
+lane :submit do |options|
+  ENV["FASTLANE_PASSWORD"] ||= "unused-with-session"
+  build = options[:build] or UI.user_error!("say which build: build:<number>")
+  deliver(app_identifier: BUNDLE_ID, platform: "ios", build_number: build.to_s, skip_binary_upload: true, skip_screenshots: true, skip_metadata: true,
+          submit_for_review: true, automatic_release: true,
+          submission_information: { add_id_info_uses_idfa: false, content_rights_contains_third_party_content: false },
+          force: true, run_precheck_before_submit: false)
+end
