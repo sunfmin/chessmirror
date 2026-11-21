@@ -8,8 +8,9 @@ among them), and there the first NNUE evaluation is an illegal instruction — t
 moment the engine looks at a board. No App Store device requirement can exclude an A12, so the
 build stopped asking for the instruction, and every device paid the 14% so that one could run.
 
-That reasoning was right about the A12 and wrong about the cost. Nothing forces one build on
-every device: the choice can be made on the device, at run time, by the one thing that knows.
+That reasoning was right about the A12 and wrong that one build had to serve every device.
+Nothing forces one build on every device: the choice can be made on the device, at run time,
+by the one thing that knows.
 
 ## Two builds of one engine, linked side by side
 
@@ -41,6 +42,16 @@ answer cannot.
 
 The two builds walk the same tree: one thread to a fixed depth searches the same number of nodes
 in both, which a test holds. Dotprod changes how the NNUE layers multiply, not what they answer.
+
+## What it buys: about 2.5%, not 14%
+
+Measured on the development Mac on 2026-11-21 (chessmirror#4 has the runs): from the start
+position to depth 25 on one thread, 1280k nodes per second before and 1313k after, +2.6%; +2.4%
+on eight threads. The 14% did not reproduce. The reason is where sf_18 spends its time. Dotprod
+speeds up only the small affine layers after the feature transformer, and a profile of the armv8
+build puts those at about a tenth of the search. The accumulator updates that dominate are int16
+NEON in both builds. The gain is small, but it is free: same engine, same tree, about 640 KB more
+binary (the CLI went from 4.73 MB to 5.38 MB), and nothing to decide again.
 
 ## A check, so a build setting cannot bring it back
 
