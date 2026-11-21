@@ -2,11 +2,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues at `sunfmin/chessmirror`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical triage roles, each label string equal to its name. See `docs/agents/triage-labels.md`.
+Issues live in factorium's local tracker (checkout `chessmirror`), via `factorium issue`. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 

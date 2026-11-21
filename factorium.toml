@@ -1,0 +1,11 @@
+# How factorium gates chessmirror (factorium SPEC.md §5). An App Store app, not a Homebrew
+# formula: no [cut].
+#
+# Both gates are ./gate.sh: the package's tests, release and serial. Measured 2026-11-21 at
+# load ~28 on 18 cores under nice 19: 210s from a cold build (87s build, 785 tests in 121s).
+
+[gate]
+fast = "./gate.sh"
+fast_limit = 900
+slow = "./gate.sh"
+slow_limit = 900
