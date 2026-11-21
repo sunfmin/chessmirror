@@ -2,20 +2,20 @@
   "suites": {
     "swift": {
       "prod_lines": 12772,
-      "test_lines": 13897,
+      "test_lines": 13898,
       "tests": 791,
       "failures": 0,
       "test_seconds": 265.348,
-      "covered_lines": 9498,
-      "uncovered_lines": 725
+      "covered_lines": 9501,
+      "uncovered_lines": 722
     }
   },
   "loosened": [],
   "kept": [],
   "measured": {
     "swift": {
-      "uncovered_lines": 725,
-      "test_seconds": 265.348
+      "uncovered_lines": 722,
+      "test_seconds": 286.33
     }
   }
 }
