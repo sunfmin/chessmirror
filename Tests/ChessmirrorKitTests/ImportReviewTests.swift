@@ -18,8 +18,9 @@ import ChessmirrorKitTesting
     session.setFindingTactics(true)
     #expect(session.isFindingTactics)
     #expect(session.thinking == .own, "enabling discovery must leave the current move running")
-    var deadline = ContinuousClock.now + .seconds(5)
-    while session.game.plies.isEmpty, ContinuousClock.now < deadline { await Task.yield() }
+    // The engine's move is bounded by Depth, not by a clock: wait for its search, not for a
+    // wall-clock deadline a loaded machine misses (19s on the idle run, against 7–11s alone).
+    await session.waitForPreparedInterception()
     try #require(session.game.plies.count == 1, "the engine must actually commit its move")
     let reply = try #require(session.viewed.state.legalMoves.first)
     session.play(reply)
@@ -28,8 +29,7 @@ import ChessmirrorKitTesting
     await session.settled()
     #expect(session.game.plies.count == 2)
     #expect(session.thinking == .own, "an already-enabled finder must not precede the next engine turn")
-    deadline = ContinuousClock.now + .seconds(5)
-    while session.game.plies.count == 2, ContinuousClock.now < deadline { await Task.yield() }
+    await session.waitForPreparedInterception()
     #expect(session.game.plies.count == 3)
 
         }}
