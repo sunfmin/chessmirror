@@ -75,4 +75,93 @@ import Testing
         #expect(library.entries.filter { $0.url == url }.count == 1,
                 "the file saved and the file listed are one row, not two keys for one game")
     }
+
+    // ---------------------------------------------------------------- connecting
+
+    /// An iCloud account that can be signed into mid-test.
+    private final class Account: @unchecked Sendable {
+        private let lock = NSLock()
+        private var _container: URL?
+        var container: URL? {
+            get { lock.withLock { _container } }
+            set { lock.withLock { _container = newValue } }
+        }
+    }
+
+    @Test("with no iCloud, connecting leaves the library where it was")
+    func noAccountStaysLocal() async throws {
+        let local = try directory()
+        defer { try? FileManager.default.removeItem(at: local) }
+        try Data("game".utf8).write(to: local.appending(path: "a.pgn"))
+        let folder = GameFolder(url: local, container: { nil })
+
+        #expect(await folder.connect() == false)
+        #expect(folder.url == local)
+        #expect(!folder.isCloud)
+        #expect(FileManager.default.fileExists(atPath: local.appending(path: "a.pgn").path))
+    }
+
+    @Test("connecting moves every local file into iCloud's Documents, overwriting nothing")
+    func connectMovesTheGamesUp() async throws {
+        let local = try directory()
+        let container = try directory()
+        defer {
+            try? FileManager.default.removeItem(at: local)
+            try? FileManager.default.removeItem(at: container)
+        }
+        let documents = container.appending(path: "Documents")
+        try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
+        // The same game already up there from another device, and one taken twice over.
+        try Data("theirs".utf8).write(to: documents.appending(path: "a.pgn"))
+        try Data("theirs".utf8).write(to: documents.appending(path: "b.pgn"))
+        try Data("theirs too".utf8).write(to: documents.appending(path: "b-2.pgn"))
+        try Data("mine a".utf8).write(to: local.appending(path: "a.pgn"))
+        try Data("photo".utf8).write(to: local.appending(path: "a.jpg"))
+        try Data("mine b".utf8).write(to: local.appending(path: "b.pgn"))
+        try Data("new".utf8).write(to: local.appending(path: "c.pgn"))
+
+        let folder = GameFolder(url: local, container: { container })
+        #expect(await folder.connect())
+        #expect(folder.url.standardizedFileURL == documents.standardizedFileURL)
+        #expect(folder.isCloud)
+
+        func text(_ name: String) -> String? {
+            try? String(contentsOf: documents.appending(path: name), encoding: .utf8)
+        }
+        #expect(text("a.pgn") == "theirs", "a name taken in iCloud is not overwritten")
+        #expect(text("a-2.pgn") == "mine a", "the local copy lands beside it")
+        #expect(text("a.jpg") == "photo", "the photograph goes up with its game")
+        #expect(text("b.pgn") == "theirs")
+        #expect(text("b-2.pgn") == "theirs too")
+        #expect(text("b-3.pgn") == "mine b", "the suffix counts past every name taken")
+        #expect(text("c.pgn") == "new")
+        let left = try FileManager.default.contentsOfDirectory(atPath: local.path)
+        #expect(left.isEmpty, "nothing is left behind locally")
+
+        #expect(await folder.connect() == false, "a second call on the same folder changes nothing")
+        #expect(text("a-3.pgn") == nil, "and moves nothing again")
+    }
+
+    @Test("signing into iCloud after launch switches the folder over")
+    func signingInLaterConnects() async throws {
+        let local = try directory()
+        let container = try directory()
+        defer {
+            try? FileManager.default.removeItem(at: local)
+            try? FileManager.default.removeItem(at: container)
+        }
+        let account = Account()
+        let folder = GameFolder(url: local, container: { account.container })
+        #expect(await folder.connect() == false)
+
+        account.container = container
+        NotificationCenter.default.post(name: .NSUbiquityIdentityDidChange, object: nil)
+        // Yielding, not sleeping: the reconnect is a main-queue observer and a detached task,
+        // done in a few milliseconds; the deadline is only there so a regression fails.
+        let deadline = ContinuousClock.now + .seconds(5)
+        while !folder.isCloud, ContinuousClock.now < deadline { await Task.yield() }
+
+        #expect(folder.isCloud, "the account notification is what notices the sign-in")
+        #expect(folder.url.lastPathComponent == "Documents")
+    }
 }
