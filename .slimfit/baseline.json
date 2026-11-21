@@ -5,17 +5,17 @@
       "test_lines": 13794,
       "tests": 785,
       "failures": 0,
-      "test_seconds": 493.083,
-      "covered_lines": 9406,
-      "uncovered_lines": 788
+      "test_seconds": 357.553,
+      "covered_lines": 9408,
+      "uncovered_lines": 786
     }
   },
   "loosened": [],
   "kept": [],
   "measured": {
     "swift": {
-      "uncovered_lines": 788,
-      "test_seconds": 493.083
+      "uncovered_lines": 786,
+      "test_seconds": 357.553
     }
   }
 }

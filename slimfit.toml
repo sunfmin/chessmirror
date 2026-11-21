@@ -5,9 +5,13 @@
 # place of --parallel --num-workers 1, which runs Swift Testing's suites side by side (seen
 # here: suites started interleaved). The tests are all Swift Testing, which writes
 # xunit-swift-testing.xml without --parallel too.
+#
+# The build is `swift test` running no test: `swift build -c release --build-tests` cannot build
+# the @testable imports (`swift test` turns testability on, `swift build` has no flag for it),
+# and `-Xswiftc -enable-testing` builds what `swift test` then builds again (79s, measured here).
 [[suite]]
 name = "swift"
 preset = "swift"
 root = "."
-build_command = "swift build -c release --build-tests --enable-code-coverage"
+build_command = 'swift test -c release --no-parallel --enable-code-coverage --filter slimfit-builds-only-no-test-has-this-name'
 test_command = '''swift test -c release --no-parallel --enable-code-coverage --xunit-output "$SLIMFIT_OUT/xunit.xml"; rc=$?; bin=$(find .build/release/ -maxdepth 1 -name '*.xctest' | head -1); xcrun llvm-cov export -format=lcov -instr-profile=.build/release/codecov/default.profdata "$bin/Contents/MacOS/$(basename "$bin" .xctest)" > "$SLIMFIT_OUT/lcov.info"; exit $rc'''
