@@ -79,6 +79,14 @@ nil where nobody has scored it, drawn under the record strip once two positions 
 and never off the live search. One Score is a number, not a shape.
 _Avoid_: 走势, 评估曲线
 
+**分析行 (Review row)**:
+What an imported game says of its Review, and the one thing a caller reads of it (`ReviewRow`):
+offered (and whether it can start, and whether the last try failed), running (how far it has
+got), or done (how many 错招 it found). Nil for every game played here. Whether the game awaits
+a Review, can start one or has one running are what the row is made of, not questions beside it
+(docs/adr/0016, 0044); pressing the row is `review()`.
+_Avoid_: 复盘状态, review status
+
 **遭遇 (Occurrence)**:
 One time the player fell for a 错题 — when, in which game, which move they played, what it
 cost, where it came from. A 错题 owns a list of them. A 试招 refused while practising is one of
