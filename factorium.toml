@@ -1,11 +1,34 @@
 # How factorium gates chessmirror (factorium SPEC.md §5). An App Store app, not a Homebrew
 # formula: no [cut].
 #
-# Both gates are ./gate.sh: the package's tests, release and serial. Measured 2026-11-21 at
-# load ~28 on 18 cores under nice 19: 210s from a cold build (87s build, 785 tests in 121s).
+# Both gates are ./gate.sh: the package's tests, once, through `slimfit check` (slimfit.toml:
+# release and serial, as README.md's "Build and test" says). Measured 2026-11-21 under
+# `factorium worker exclusive` on 18 cores (chessmirror#2): before, `swift test` alone, 221s
+# at load 44-29 (785 tests in 147s); after, `slimfit check` 206s warm at load 40-35, 289s from
+# a cold build (`slimfit init`, at load 24-36).
 
 [gate]
 fast = "./gate.sh"
 fast_limit = 900
 slow = "./gate.sh"
 slow_limit = 900
+
+# Idle work (factorium SPEC §1.16): slimfit's tasks, then truefit's (truefit.toml), filed as
+# issues while the host is idle. The version lines come first, as on sesame: factorium reads the
+# answers as JSON, each starting a line with `{`, so both answers follow the versions. `truefit
+# next --all` took 0.06s here (chessmirror#3): it runs no case, only reads the promise sources.
+# Measured in a fresh clone at background priority (chessmirror#2): `slimfit next --all`
+# 1226s wall, 768s user CPU, at load 23-38 on 18 cores (a cold release build and one
+# instrumented test run). Once a day; the hour is about 3x that run.
+#
+# No mutants anywhere, and no `--sample` on this line: the Swift preset's mutation tool, muter,
+# cannot list a change's mutants from a diff or run one by name, so slimfit refuses to run its
+# mutants (`slimfit next --all --sample 5` exits 2 in under a second, measured here). Do not
+# add muter to a gate or to [idle]: it would mutate the whole codebase. A change that adds
+# source lines records why it has no mutant: `slimfit ratchet --no-mutants "<why>"`. Add
+# `--sample 5` here once the suite has a tool that takes `mutants_diff_flag` and
+# `mutants_pick_flag` (slimfit.toml).
+[idle]
+tasks = "slimfit --version && truefit --version && slimfit next --all && truefit next --all"
+every = 86400
+limit = 3600

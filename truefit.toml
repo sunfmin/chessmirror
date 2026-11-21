@@ -1,0 +1,16 @@
+# chessmirror's ties to the real thing (`truefit --help`). Its tasks are filed as issues while
+# the host is idle (factorium.toml's [idle]); registering each promise, contracts, a simulation
+# or a model are those tasks, not this file's first version (chessmirror#3).
+
+# Where chessmirror makes its promises: the README, the domain language, the decisions.
+[promises]
+sources = ["README.md", "CONTEXT.md", "docs/adr/*.md"]
+
+# No [contract] standins: chessmirror runs no program from a command line, so it has no stand-in
+# truefit can hold to a real one. The fakes in Sources/ChessmirrorKitTesting are not:
+# - ScriptedEngine stands in for the `Engine` protocol, the in-process search the app drives
+#   through Stockfish's engine class, never UCI text over a pipe (docs/adr/0002). Its real side is
+#   a Swift call, not a command line.
+# - Speaking is a swift-testing trait that sets the language a test's words are in
+#   (docs/adr/0019): it stands in for nothing.
+# Declare `standins` once the app drives a real program through a command line.
