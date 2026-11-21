@@ -93,7 +93,10 @@ import Testing
         let local = try directory()
         defer { try? FileManager.default.removeItem(at: local) }
         try Data("game".utf8).write(to: local.appending(path: "a.pgn"))
-        let folder = GameFolder(url: local, container: { nil })
+        // The real lookup, not a stand-in: a test process carries no iCloud entitlement, so it
+        // has no container whatever account the machine is signed into.
+        try #require(GameFolder.ubiquityContainer() == nil, "a test must never reach a real iCloud")
+        let folder = GameFolder(url: local)
 
         #expect(await folder.connect() == false)
         #expect(folder.url == local)
