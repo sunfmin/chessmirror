@@ -24,10 +24,13 @@ struct OpponentMove {
         ])
     }
 
+    /// At 满力, said rather than left to the default: the rule is 满力's (a rung is Stockfish's own
+    /// choice, ADR 0038), and a game's default rung is the bottom one since db75b12.
     private func engineToMove(_ engine: ScriptedEngine, toss: Toss) throws -> GameSession {
         let game = try #require(Game(startFEN: Self.start))
         let session = GameSession.fresh(
-            game, controllers: [.white: .engine, .black: .hand], engine: engine
+            game, controllers: [.white: .engine, .black: .hand], engine: engine,
+            strength: .full
         )
         session.toss = toss
         return session
@@ -117,7 +120,7 @@ struct OpponentMove {
     func theFirstAskIsStillFree() async throws {
         let game = try #require(Game(startFEN: Self.start))
         let engine = ScriptedEngine([], byPosition: [Self.start: Self.twoWays()])
-        let session = GameSession.fresh(game, engine: engine)
+        let session = GameSession.fresh(game, engine: engine, strength: .full)
         // The point here is how many searches it took, not which move came out, so the toss is
         // held still: left to itself it would play either of these two openings.
         session.toss = .strongest
