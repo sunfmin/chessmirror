@@ -161,7 +161,11 @@ public actor PositionSearches {
             var reached: Analysis?
             // Two lines cover tactics too; never launch a wider second pass.
             for await snapshot in engine.analyse(game, budget: budget, lines: 2) {
-                if Task.isCancelled { break }
+                // Cancelled, the loop runs out through the stream, never `break`s out of it: the
+                // next `next()` is what tells the engine to stop. Breaking leaves the stream
+                // unfinished, and an engine whose stream is held elsewhere searches on
+                // (chessmirror#10).
+                guard !Task.isCancelled else { continue }
                 guard !snapshot.isPartial, snapshot.best != nil else { continue }
                 reached = snapshot
                 // An everyday search commits as it climbs, as it always has, but never downwards:
