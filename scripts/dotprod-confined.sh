@@ -12,6 +12,10 @@
 # a check.
 set -eu
 binary="$1"
+if [ ! -f "$binary" ]; then
+    echo "dotprod-confined: $binary does not exist — nothing was checked" >&2
+    exit 1
+fi
 
 found=$(objdump -d --no-show-raw-insn "$binary" \
     | awk '/^[0-9a-f]+ <.*>:$/ { fn = $2; next } /\t(sdot|udot)[.\t ]/ { n[fn]++ } END { for (f in n) print f }' \
