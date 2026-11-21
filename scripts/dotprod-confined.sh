@@ -26,9 +26,20 @@ if [ -z "$found" ]; then
     exit 1
 fi
 stray=$(printf '%s\n' "$found" | grep -v 'StockfishDotprod::' || true)
+
+# A coverage build (slimfit's) also links LLVM's profile runtime, which Apple builds for M1-class
+# Macs and which uses udot. It is never in an app binary and never on an A12, so its functions,
+# and only those, as the toolchain's own archive names them, are not the engine's business.
+if [ -n "$stray" ] && nm "$binary" 2>/dev/null | grep -q ' ___llvm_profile_runtime$'; then
+    runtime="$(xcrun clang -print-resource-dir)/lib/darwin/libclang_rt.profile_osx.a"
+    names=$(mktemp)
+    nm "$runtime" | awk '$2 ~ /^[Tt]$/ { print "<" $3 ">:" }' > "$names"
+    stray=$(printf '%s\n' "$stray" | grep -vxF -f "$names" || true)
+    rm -f "$names"
+fi
 if [ -n "$stray" ]; then
     echo "dotprod-confined: sdot/udot outside the dotprod build in $binary:" >&2
     printf '%s\n' "$stray" >&2
     exit 1
 fi
-echo "dotprod-confined: $(printf '%s\n' "$found" | wc -l | tr -d ' ') functions use dotprod, all in StockfishDotprod"
+echo "dotprod-confined: $(printf '%s\n' "$found" | grep -c 'StockfishDotprod::') engine functions use dotprod, all in StockfishDotprod"
