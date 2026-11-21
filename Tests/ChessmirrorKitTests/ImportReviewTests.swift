@@ -18,8 +18,9 @@ import ChessmirrorKitTesting
     session.setFindingTactics(true)
     #expect(session.isFindingTactics)
     #expect(session.thinking == .own, "enabling discovery must leave the current move running")
-    var deadline = ContinuousClock.now + .seconds(5)
-    while session.game.plies.isEmpty, ContinuousClock.now < deadline { await Task.yield() }
+    // The engine's move is bounded by Depth, not by a clock: wait for its search, not for a
+    // wall-clock deadline a loaded machine misses (19s on the idle run, against 7–11s alone).
+    await session.waitForPreparedInterception()
     try #require(session.game.plies.count == 1, "the engine must actually commit its move")
     let reply = try #require(session.viewed.state.legalMoves.first)
     session.play(reply)
@@ -28,8 +29,7 @@ import ChessmirrorKitTesting
     await session.settled()
     #expect(session.game.plies.count == 2)
     #expect(session.thinking == .own, "an already-enabled finder must not precede the next engine turn")
-    deadline = ContinuousClock.now + .seconds(5)
-    while session.game.plies.count == 2, ContinuousClock.now < deadline { await Task.yield() }
+    await session.waitForPreparedInterception()
     #expect(session.game.plies.count == 3)
 
         }}
@@ -191,22 +191,18 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     ).session)
     defer { session.suspend() }
     // Opening the game starts nothing: the Review is offered, and the player asks for it.
-    #expect(session.awaitsReview)
     #expect(library.reviewingURLs.isEmpty)
-    #expect(session.reviewProgress == nil)
-    #expect(session.reviewRow == .offered(failed: false, canStart: !engineArrivesLate))
+    #expect(session.reviewRow == .offered(failed: false, canStart: !engineArrivesLate),
+        "no engine yet, so the offer cannot be taken up")
     if engineArrivesLate {
-        #expect(!session.canReview, "no engine yet, so the offer cannot be taken up")
         session.review()
         #expect(library.reviewingURLs.isEmpty, "asking without an engine starts nothing")
         session.attach(engine: engine, library: library)
     }
-    #expect(session.canReview)
+    #expect(session.reviewRow == .offered(failed: false, canStart: true))
     session.review()
-    #expect(session.isReviewing)
-    #expect(!session.canReview, "a Review already running cannot be asked for again")
     guard case .running = session.reviewRow else {
-        Issue.record("expected the row to be counting, got \(String(describing: session.reviewRow))")
+        Issue.record("expected the row to be counting, not offering again, got \(String(describing: session.reviewRow))")
         return
     }
     // Asking again, or reappearing, while it runs must not queue another copy.
@@ -219,10 +215,7 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     }
     await library.waitForImportReviews()
     #expect(library.reviewingURLs.isEmpty)
-    #expect(session.reviewProgress == nil)
-    #expect(session.reviewNews == .done(slips: 0))
     #expect(session.reviewRow == .done(slips: 0))
-    #expect(!session.awaitsReview)
     #expect(session.game.reviewDepth == 16)
     // The review's own searches, apart from the live position searches the opened game starts.
     #expect(engine.budgets.filter { $0 != PositionSearches.budget }.count == 3)
@@ -267,12 +260,13 @@ func selectingOneImportWritesOnlyThatGameAndTheReviewWaitsToBeAsked(engineArrive
     let session = try #require(GameSession.opened(entry, engine: shallow, library: library).session)
     defer { session.suspend() }
     session.review()
-    #expect(session.isReviewing)
+    guard case .running = session.reviewRow else {
+        Issue.record("expected the row to be counting, got \(String(describing: session.reviewRow))")
+        return
+    }
     await library.waitForImportReviews()
-    #expect(session.reviewNews == .failed)
-    #expect(session.awaitsReview)
-    #expect(session.canReview, "nothing running, so it can be asked again")
-    #expect(session.reviewRow == .offered(failed: true, canStart: true))
+    #expect(session.reviewRow == .offered(failed: true, canStart: true),
+        "nothing running, so it can be asked again")
     let disk = try PGN(parsing: String(contentsOf: entry.url, encoding: .utf8))
     #expect(!disk.game.isReviewed, "no partial Review is ever written")
     #expect(disk.game.plies.allSatisfy { $0.line.isEmpty }, "an unfinished Review writes no line either")

@@ -1114,9 +1114,7 @@ struct GameScreenScreenshots {
             screen(session, engine: engine, library: library)
         }
 
-        #expect(session.awaitsReview)
-        #expect(session.canReview)
-        #expect(!session.isReviewing, "nothing started on its own")
+        #expect(session.reviewRow == .offered(failed: false, canStart: true), "nothing started on its own")
         #expect(library.reviewingURLs.isEmpty)
         #expect(rendered.says(localized("review.offer")))
         #expect(rendered.says(localized("review.start")))
@@ -1143,15 +1141,14 @@ struct GameScreenScreenshots {
         defer { session.suspend() }
         session.review()
         var deadline = ContinuousClock.now + .seconds(5)
-        while session.reviewProgress?.judged != 1, ContinuousClock.now < deadline { await Task.yield() }
-        #expect(session.reviewProgress == ImportReview.Progress(judged: 1, total: 5))
+        while session.reviewRow != .running(ImportReview.Progress(judged: 1, total: 5)),
+            ContinuousClock.now < deadline { await Task.yield() }
+        #expect(session.reviewRow == .running(ImportReview.Progress(judged: 1, total: 5)))
 
         let rendered = await ScreenImage.write("game-import-reviewing") {
             screen(session, engine: engine, library: library)
         }
 
-        #expect(session.isReviewing)
-        #expect(!session.canReview)
         #expect(rendered.says(localized("review.progress", 1, 5)))
         #expect(!rendered.says(localized("review.start")), "no second press while one is running")
 
@@ -1159,9 +1156,9 @@ struct GameScreenScreenshots {
         gate.continuation.yield(try #require(byPosition[held]))
         gate.continuation.finish()
         deadline = ContinuousClock.now + .seconds(5)
-        while session.isReviewing, ContinuousClock.now < deadline { await Task.yield() }
+        while session.reviewRow != .done(slips: 1), ContinuousClock.now < deadline { await Task.yield() }
         #expect(session.game.isReviewed)
-        #expect(session.reviewNews == .done(slips: 1))
+        #expect(session.reviewRow == .done(slips: 1))
     }
 
     /// When the Review lands the row says what it found and that the book has it; the 错招 row
@@ -1177,15 +1174,14 @@ struct GameScreenScreenshots {
         defer { session.suspend() }
         session.review()
         let deadline = ContinuousClock.now + .seconds(5)
-        while session.isReviewing, ContinuousClock.now < deadline { await Task.yield() }
+        while session.reviewRow != .done(slips: 1), ContinuousClock.now < deadline { await Task.yield() }
         try #require(session.game.isReviewed)
 
         let rendered = await ScreenImage.write("game-import-reviewed") {
             screen(session, engine: engine, library: library)
         }
 
-        #expect(session.reviewNews == .done(slips: 1))
-        #expect(!session.awaitsReview)
+        #expect(session.reviewRow == .done(slips: 1))
         #expect(rendered.says(localized("review.done", 1)))
         #expect(!rendered.says(localized("review.start")))
         #expect(rendered.says(localized("slips.here", 1)), "the game's own 错招 row appears from the same game")
