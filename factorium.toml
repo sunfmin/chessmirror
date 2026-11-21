@@ -13,7 +13,10 @@ fast_limit = 900
 slow = "./gate.sh"
 slow_limit = 900
 
-# Idle work (factorium SPEC §1.16): slimfit's tasks, filed as issues while the host is idle.
+# Idle work (factorium SPEC §1.16): slimfit's tasks, then truefit's (truefit.toml), filed as
+# issues while the host is idle. The version lines come first, as on sesame: factorium reads the
+# answers as JSON, each starting a line with `{`, so both answers follow the versions. `truefit
+# next --all` took 0.06s here (chessmirror#3): it runs no case, only reads the promise sources.
 # Measured in a fresh clone at background priority (chessmirror#2): `slimfit next --all`
 # 1226s wall, 768s user CPU, at load 23-38 on 18 cores (a cold release build and one
 # instrumented test run). Once a day; the hour is about 3x that run.
@@ -26,6 +29,6 @@ slow_limit = 900
 # `--sample 5` here once the suite has a tool that takes `mutants_diff_flag` and
 # `mutants_pick_flag` (slimfit.toml).
 [idle]
-tasks = "slimfit --version && slimfit next --all"
+tasks = "slimfit --version && truefit --version && slimfit next --all && truefit next --all"
 every = 86400
 limit = 3600
