@@ -12,6 +12,7 @@ for net in Resources/Nets/*.nnue; do
     fi
 done
 
-# Release and one test at a time, as README.md's "Build and test" says: the recognition memory
-# checks measure the test process's footprint, so tests running beside them would be counted.
-swift test -c release --no-parallel
+# The tests, once, through slimfit (slimfit.toml): release and one test at a time, as README.md's
+# "Build and test" says (the recognition memory checks measure the test process's footprint, so
+# tests running beside them would be counted), measured against .slimfit/baseline.json.
+slimfit check

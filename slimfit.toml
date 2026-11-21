@@ -1,0 +1,13 @@
+# The package's tests run as ./gate.sh always ran them: release, and one test at a time
+# (README.md, "Build and test": the recognition memory checks measure the test process, so
+# tests running beside them would be counted). The Swift preset's commands, changed in two
+# places: -c release (and .build/release) in place of the debug build, and --no-parallel in
+# place of --parallel --num-workers 1, which runs Swift Testing's suites side by side (seen
+# here: suites started interleaved). The tests are all Swift Testing, which writes
+# xunit-swift-testing.xml without --parallel too.
+[[suite]]
+name = "swift"
+preset = "swift"
+root = "."
+build_command = "swift build -c release --build-tests --enable-code-coverage"
+test_command = '''swift test -c release --no-parallel --enable-code-coverage --xunit-output "$SLIMFIT_OUT/xunit.xml"; rc=$?; bin=$(find .build/release/ -maxdepth 1 -name '*.xctest' | head -1); xcrun llvm-cov export -format=lcov -instr-profile=.build/release/codecov/default.profdata "$bin/Contents/MacOS/$(basename "$bin" .xctest)" > "$SLIMFIT_OUT/lcov.info"; exit $rc'''
