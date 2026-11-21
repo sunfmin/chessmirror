@@ -1,0 +1,1598 @@
+{
+  "000649897d58": {
+    "mark": "not",
+    "sentence": "ADR 0015 put the engine's opinion off at the start of every Game and behind one deliberate press; ADR 0020 brought that press down onto the strip under the board.",
+    "source": "docs/adr/0040-the-engines-opinion-has-no-switch.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "009677dced25": {
+    "mark": "promise",
+    "sentence": "An entry that has had a move played out of it is **spent**, and a spent entry never stands in for a second opponent: the search runs again, at the everyday 搜索预算.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:24"
+  },
+  "017c310deb5a": {
+    "mark": "promise",
+    "sentence": "It carries on from a point, not a count: each account keeps where its last pull reached, stored with the names and synced as they are, and a pull asks only for what came after it, at most fifty games (the first pull, with no point yet, takes the count the sheet remembers). Carrying on from a stored point rather than from the newest game in the library is what keeps a deleted game deleted; a fetch by hand in the sheet still lists it, because that is somebody looking.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:70"
+  },
+  "01acb11b8f74": {
+    "mark": "not",
+    "sentence": "This is only true because the log has no state to disagree about.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:34",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "020b448d329b": {
+    "mark": "promise",
+    "sentence": "`DeckFloor` still holds every phone to a full-width board in one column.",
+    "source": "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:40"
+  },
+  "0294b852a631": {
+    "mark": "not",
+    "sentence": "What the measurement cost was a state in which the room had not been reported yet, and the deck's answer to that state was `opacity(0)`: no card, no names, and every action that lives on a card, gone, with nothing on screen to say so.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:24",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "031e0a3b93f3": {
+    "mark": "not",
+    "sentence": "One of the reasons written down there was that the shared search is never fast — «a move every half-second is a wall of notation.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:5",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "04a98646f3bc": {
+    "mark": "not",
+    "sentence": "The recognised Position opens as a playable board, and the screen that ADR-0008 made mandatory has become the Piece Editor — one tap away from the Game, entered only when something in the picture came out wrong.",
+    "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "05d96637da05": {
+    "mark": "not",
+    "sentence": "自建集 are never scheduled.**",
+    "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:23",
+    "why": "the same promise as own-collections-are-never-scheduled, registered from CONTEXT.md:173"
+  },
+  "0759e1cc1fdb": {
+    "mark": "not",
+    "sentence": "What happens next is what always happened, only now it is in a file.**",
+    "source": "docs/adr/0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md:42",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "0801467ca138": {
+    "mark": "not",
+    "sentence": "Stepping into a 分支 promotes it to the line on the board and puts the other where it came from; the tree never loses a line.",
+    "source": "docs/adr/0043-a-game-branches-where-a-move-is-played-over-another.md:19",
+    "why": "the same promise as playing-over-a-move-never-writes-it-out, registered from CONTEXT.md:213"
+  },
+  "0971bf32de4c": {
+    "mark": "promise",
+    "sentence": "自动集 (Found collection)**: 杀招 and 战术, one 收藏集 each, derived from the games the app has judged: a position where the side to move — the player or the opponent — has a shot is in one of them, and a position with a mate is in 杀招 only.",
+    "source": "CONTEXT.md:165"
+  },
+  "09c3b2ba7049": {
+    "mark": "not",
+    "sentence": "The player makes them, names them, fills them with the heart (喜爱 by default, always there, never renamed), and a position may be in several.",
+    "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:23",
+    "why": "the same promise as favourites-always-there, registered from CONTEXT.md:178"
+  },
+  "09fa0af49d53": {
+    "mark": "not",
+    "sentence": "A 复判's depth-28 analysis replaces the depth-20 entry for that position, and every later reader — the badge, the finder, the next 细判 there — gets the deeper answer without searching.",
+    "source": "docs/adr/0041-a-tried-move-can-be-judged-again-deeper.md:21",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "0c92313336ec": {
+    "mark": "promise",
+    "sentence": "`EngineClockTests` holds every live search to `PositionSearches.budget`, which is the test that would have caught a clock quietly coming back.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:49"
+  },
+  "0e221cc188a2": {
+    "mark": "promise",
+    "sentence": "With one engine (ADR 0009) that means the limit is set for the opponent's move searches and cleared for every other search, the way MultiPV is already varied per search on the serial actor.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:31"
+  },
+  "0fdbf8178a44": {
+    "mark": "promise",
+    "sentence": "A position that is a 错题 is scheduled as a 错题 and only once.",
+    "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:21"
+  },
+  "10285ba1c7de": {
+    "mark": "promise",
+    "sentence": "The bridge that answers Rules Queries is **stateless**: every call takes `(startFEN, moves)` and rebuilds a `Position` by replaying the moves.",
+    "source": "docs/adr/0003-borrow-stockfish-for-rules-queries-behind-a-stateless-bridge.md:8"
+  },
+  "10ccead86a5e": {
+    "mark": "not",
+    "sentence": "A picture stored before this — a whole frame, and so almost never square — is detectable by that and still opens in the sheet, where coordinates do not matter.",
+    "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:62",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "114c11290de7": {
+    "mark": "promise",
+    "sentence": "Asked for by the player, one move at a time, never run on its own.",
+    "source": "CONTEXT.md:317"
+  },
+  "1158ea372f69": {
+    "mark": "not",
+    "sentence": "A flipped board is now photographed, in both orientations, and held to the bar's two end colours by pixels (`EvalBarTests`). It is the first screen state in the suite where colour rather than words is the assertion, and it is the first picture of a flipped board at all — the whole state was unreachable by every test in the suite before this.",
+    "source": "docs/adr/0026-the-advantage-bar-turns-with-the-board.md:25",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "14e527d97ebc": {
+    "mark": "promise",
+    "sentence": "Switched off, a wrong answer is still a wrong answer: the verdict fails, the log records the go and the book counts the 遭遇; the move is only left on the board.",
+    "source": "docs/adr/0048-the-no-slips-switch-always-moves.md:30"
+  },
+  "156e23ccc25b": {
+    "mark": "not",
+    "sentence": "No screen called the three methods or read the rung count; the only callers were three kit tests.",
+    "source": "docs/adr/0042-the-hint-ladder-has-no-rung-to-press.md:11",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "15a56cbf30fc": {
+    "mark": "not",
+    "sentence": "A mandatory screen shows the recognised Position beside the source image, highlights Shaky Squares, lets any square be edited, lets the Orientation be flipped, and exposes every Unknowable Field — side to move, castling rights, en passant square, halfmove clock.",
+    "source": "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md:8",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "15b53466c0ab": {
+    "mark": "not",
+    "sentence": "They don't, because every symbol Stockfish defines is inside `namespace Stockfish`, and the dotprod target defines `Stockfish=StockfishDotprod`: the preprocessor moves the whole second copy into a namespace of its own.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:22",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "17a619debb50": {
+    "mark": "promise",
+    "sentence": "复发 is the only thing allowed to jump the enrolment queue, whatever it cost.",
+    "source": "docs/adr/0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md:28"
+  },
+  "17f567f6c1e6": {
+    "mark": "not",
+    "sentence": "Every game after it — this run, or any run, the file being on disk — is played *at the > speed of a disk read*, move for move identical to the first, because Stockfish at 满力 is > deterministic and each position's answer was already written down.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:16",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "1836520810f4": {
+    "mark": "not",
+    "sentence": "What it draws has had no descent run on it, and the photograph is searched from scratch at full size afterwards — so a frame where the box never appeared can still be photographed and still be read, and a box that sat slightly off the board costs nothing.",
+    "source": "docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md:39",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "188ecaf60823": {
+    "mark": "not",
+    "sentence": "A 错题 is a position, shared by every game that reached it; a 错招 is one move in one game.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:52",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "1a5d8b691523": {
+    "mark": "not",
+    "sentence": "The engine's move is a full position search, which is never that fast; and 马上走 is still there for a move that is taking too long.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:26",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "1a89e34ded80": {
+    "mark": "not",
+    "sentence": "It never happened in the game, and it is exactly what the 错题 is made of.",
+    "source": "CONTEXT.md:208",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "1aa82bf96e99": {
+    "mark": "promise",
+    "sentence": "The 试招 goes into the 错题本 through the door every other 试招 uses, so the position's 复发 counts it and 「你栽过 4 次」 includes the times you fell for it while practising.",
+    "source": "docs/adr/0047-practice-is-played-under-no-slips.md:30"
+  },
+  "1ca3d0bc2dc6": {
+    "mark": "not",
+    "sentence": "The verdict is the engine's, and it comes with a second measure a flashcard has never had: **how long the player took.**",
+    "source": "docs/adr/0030-fsrs-decides-the-day-and-arts-decides-the-order.md:6",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "1ca86c7673c2": {
+    "mark": "not",
+    "sentence": "`GameSession.review()` does, and only under `canReview`; `awaitsReview`, `reviewProgress` and `reviewNews` are what the screen reads.",
+    "source": "docs/adr/0044-an-imported-games-review-is-asked-for-and-says-how-far-it-has-got.md:35",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "1cdb15bf6a02": {
+    "mark": "not",
+    "sentence": "A Game names a position by its Ply count because in a line that is all a position is, and the reader needs the name: the player is free to play from anywhere in the game, not only from the end of it.",
+    "source": "docs/adr/0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md:28",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "1f91a75a8db6": {
+    "mark": "not",
+    "sentence": "The Game is the only truth and it lives in Swift.",
+    "source": "docs/adr/0003-borrow-stockfish-for-rules-queries-behind-a-stateless-bridge.md:9",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2064aff8221e": {
+    "mark": "promise",
+    "sentence": "Nothing it depends on changes during a game, so the board still never moves because the engine found another line.",
+    "source": "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:13"
+  },
+  "20d0392c3a71": {
+    "mark": "not",
+    "sentence": "漏着, 说不清, \"e4 is not a square a bishop can reach\", \"王旁边有王\" — these are `MoveQuality`, `Intent`, `FENIssue` values, and a `FENIssue` that could not say what it was in the reader's language would push that job onto every screen that shows one.",
+    "source": "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:12",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "225133c0ea92": {
+    "mark": "not",
+    "sentence": "The opponent is now > the one reader a stored result may answer only once, and at 满力 it tosses between the moves its > search cannot tell apart — so two engines no longer play the same game at the speed of a disk > read.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:31",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "244cbe01997b": {
+    "mark": "not",
+    "sentence": "细判 weighs every move at full strength at every 棋力, and so do hints, cards and the 战术发现器: a 掉幅 has to mean the same thing in every game or the 错题本 cannot add games up (ADR 0016, 0027), and a gentler 正着 is already a higher 拦截线.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:28",
+    "why": "the same promise as strength-never-shapes-what-a-move-costs, registered from CONTEXT.md:103"
+  },
+  "247181a49d35": {
+    "mark": "not",
+    "sentence": "A board that cannot be played on takes no taps of its own (`BoardView.isInteractive`): these small ones sit inside buttons, and a gesture on the board is one the button never sees — pressing the position was dead while pressing the figures beside it worked, which is the opposite of what a tile named by its picture promises.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:76",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "24f9d8a91ad7": {
+    "mark": "not",
+    "sentence": "It was a rounded card inset from the page, which made it a different kind of thing from every row around it; the words 「本局 N 处错题」 and 「已退回」 went with it, to VoiceOver.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:64",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2582442c1dbb": {
+    "mark": "not",
+    "sentence": "The board has since gone full width at every size and every text size (`GameScreen.boardSide` is the width and nothing else), and the deck is the one flexible child under it.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:105",
+    "why": "the same promise as every-phone-gets-a-full-width-board, registered from docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:40"
+  },
+  "2662ee152dbb": {
+    "mark": "promise",
+    "sentence": "Both sides' shots are kept — the opponent's is the same question with the board turned — so opening one always shows the side to move at the bottom.",
+    "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:10"
+  },
+  "2687d54be77d": {
+    "mark": "promise",
+    "sentence": "Every way into a session — new, reopened, photographed, corrected — is handed the player's lines for this reason; a reopened game used to be judged by the standard pair whatever 关于 said, which did not matter while 把关 brought its own number and matters now.",
+    "source": "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md:38"
+  },
+  "26f5d13c3ece": {
+    "mark": "not",
+    "sentence": "The pipeline was built for the rare case first (docs/adr/0007, docs/adr/0013) and gave every picture the same preparation.",
+    "source": "docs/adr/0033-the-pixels-decide-whether-a-picture-was-drawn-or-photographed.md:6",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "27fbebc38f55": {
+    "mark": "promise",
+    "sentence": "喜爱 (Favourites)**: The 自建集 that is always there, cannot be renamed or deleted, and is where the heart puts a position unless the player picks another.",
+    "source": "CONTEXT.md:178"
+  },
+  "2bc1aab1649e": {
+    "mark": "not",
+    "sentence": "Together they made the one mode switch on the page a switch that was grey every time a move went down, and for the rest of any game that began as a 错题 — 「不管在什么情况下，把关都可以打开或者关闭」.",
+    "source": "docs/adr/0048-the-no-slips-switch-always-moves.md:15",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2cb90bed1117": {
+    "mark": "not",
+    "sentence": "`MoveQuality` named a move by centipawns — 300 a 失误, 150 an 错着, 50 an 不准 — and [ADR 0017](0017-criticality-is-a-rank-within-a-game-not-a-number-of-centipawns.md) then declined to use those numbers at all, asking instead about the worst three Ply of each Game by rank.",
+    "source": "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2cf6ab7dd074": {
+    "mark": "not",
+    "sentence": "Re-deriving the book from a hundred PGN files on every screen open is already too slow and gets worse under a threshold.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:38",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2d178f9e54bb": {
+    "mark": "not",
+    "sentence": "That reasoning was right about the A12 and wrong that one build had to serve every device.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:11",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2d6bf832e636": {
+    "mark": "not",
+    "sentence": "It was already documented as provisional and destined to be overwritten (docs/adr/0009 said it must never feed a Review's curve); it is now simply not recorded.",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:28",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2dd8a24eaad6": {
+    "mark": "not",
+    "sentence": "A reply is annotation on the move that stands, like the refusals it rides with ([ADR 0028](0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md)). Nothing derives from it, and the 错题 book reads the same two fields it always did.",
+    "source": "docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md:61",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2e09f7cb390b": {
+    "mark": "not",
+    "sentence": "docs/adr/0025 kept the iPad's four orientations on the grounds that \"1032pt of height is room for all of it\". That was true of the height budget it was written against, and stopped being true when the budget went: the board became full bleed at every size, and on an iPad held sideways full bleed is a board 1376pt wide in a window 1032pt tall.",
+    "source": "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2f1aa6025378": {
+    "mark": "promise",
+    "sentence": "The reply is not a recommendation and the app must not treat it as one: it is what the move cost, made concrete, and it appears when and only when somebody presses the chip.",
+    "source": "docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md:32"
+  },
+  "2f29f32b8387": {
+    "mark": "not",
+    "sentence": "Dotprod speeds up only the small affine layers after the feature transformer, and a profile of the armv8 build puts those at about a tenth of the search.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:50",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "2f65448b0552": {
+    "mark": "not",
+    "sentence": "`PositionSearches` keeps every finished result, and on device writes them to a file that survives relaunch (ADR 0041 made it keep the deepest one it knows). A reader of a position that has already been searched is answered out of that store inside a frame — which is the whole point for 细判, the badge, a card and a hint, and which for the opponent meant this:",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:9",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "302d60cba5aa": {
+    "mark": "not",
+    "sentence": "Every practice from a 自建集 is this.",
+    "source": "CONTEXT.md:144",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "3084b74faae6": {
+    "mark": "not",
+    "sentence": "Every tile carries a number, the last one included: the 错招 at the position a game stops on is at the Ply one past the last move (ADR 0037), which is the Ply a move played there would take, and a word in the middle of a row of figures was a tile of a different kind.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:69",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "30a3ead0dea5": {
+    "mark": "not",
+    "sentence": "Naming a move was always a separate job from deciding what to ask about, and it is the half 0017 got right.",
+    "source": "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md:44",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "30c8a6a66457": {
+    "mark": "promise",
+    "sentence": "Replies within two percentage points of the shared bounded evaluation pass; retry, Reveal, and Skip leave the real game intact.",
+    "source": "README.md:52"
+  },
+  "31f151d92afd": {
+    "mark": "promise",
+    "sentence": "Search uses at most two threads by default, and opening the game never launches an automatic historical scoring pass.",
+    "source": "README.md:37"
+  },
+  "32e75b60bb95": {
+    "mark": "not",
+    "sentence": "A board is small and gets looked at from twenty centimetres, which is inside the wide lens's minimum focus distance; the lens then hunts, and an automatic shutter waits for a steadiness that a hunting lens never reaches.",
+    "source": "docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md:15",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "3468fcca3799": {
+    "mark": "not",
+    "sentence": "_Avoid_: 同步, 自动导入 (导入 is the whole sheet and every 门)",
+    "source": "CONTEXT.md:289",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "34e54ffd0ecc": {
+    "mark": "not",
+    "sentence": "Never decides whether something is a 错题.",
+    "source": "CONTEXT.md:293",
+    "why": "the same promise as only-the-judge-names-a-mistake, registered from CONTEXT.md:296"
+  },
+  "372cd82eb717": {
+    "mark": "promise",
+    "sentence": "Every answered 错题 now leaves a file in the library — a move and the engine's reply for a pass, a bare position and a 试招 for a failure.",
+    "source": "docs/adr/0047-practice-is-played-under-no-slips.md:52"
+  },
+  "387021289edc": {
+    "mark": "promise",
+    "sentence": "What the sheet remembers (`ImportMemory`, both stores like the lines): per site, the names that have fetched games, newest first, at most four; the count; the door.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:19"
+  },
+  "3a2e27a8b01b": {
+    "mark": "not",
+    "sentence": "It is the only store in the app that is not a game.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:11",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "3b573e54f06a": {
+    "mark": "not",
+    "sentence": "The reasoning was that the only two things ever writing a branch were a Drill's answer and a 五步计划, both gone, and that taking a move back and playing another is one game, not two.",
+    "source": "docs/adr/0043-a-game-branches-where-a-move-is-played-over-another.md:4",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "3bc624099c09": {
+    "mark": "not",
+    "sentence": "The import sheet's waiting state stopped saying 「打开重试」 — opening never retried anything a person could see — and says to open the game and analyse it.",
+    "source": "docs/adr/0044-an-imported-games-review-is-asked-for-and-says-how-far-it-has-got.md:38",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "3c55eece251e": {
+    "mark": "not",
+    "sentence": "The reason is that the two lines were never two questions.",
+    "source": "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md:10",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "3c84b1bc5161": {
+    "mark": "not",
+    "sentence": "The list was, at first, only a list of games to open one at a time: opening a row wrote that one game and closed the sheet, and the other nine stayed on the site until the sheet was opened and the account pulled again.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:45",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "3eba06b1189a": {
+    "mark": "promise",
+    "sentence": "正着数, 连正 and the 正着榜 are readings of the games and are never stored on their own; the library derives and caches them the way it derives the 错题本.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:65"
+  },
+  "3f7123ffc1aa": {
+    "mark": "not",
+    "sentence": "No `UCI_LimitStrength`, no `UCI_Elo`, no `Skill Level` — there is no difficulty setting in this app, only a clock.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:23",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "413bc12c5f91": {
+    "mark": "not",
+    "sentence": "The game that prompted this was a 错题 practice at `r2qk2r/ppp2ppp/2npbn2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQR1K1 w kq - 0 1`: the player had already played `Bxe6` there (0.09%, passed, in the practice log), reopened the game — cursor on the opening — and played `Qd2`. `[Intercept \"5.0\"]` was in the file, the toggle read 开, and the move stood with no `[%judged]` and no `[%tried]`: it was never weighed.",
+    "source": "docs/adr/0035-tilling-weighs-a-move-wherever-it-is-played.md:18",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "41f018380daf": {
+    "mark": "not",
+    "sentence": "A 耕棋 game played last week has a dozen wrong moves in it, and every one of them is already in the file: the 试招 耕棋 took back are `[%tried]`, and the moves that stood with a measured cost are `[%judged]`. What the game could not do was **say where they are**. The record strip draws the moves one per half-move in one line, and a move that cost twenty points looks exactly like a move that cost nothing until the eye is on it.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "420908cebea5": {
+    "mark": "not",
+    "sentence": "The settlement row was only reachable with the flag off, so it had already been off every phone since the press went.",
+    "source": "docs/adr/0040-the-engines-opinion-has-no-switch.md:33",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "425230f3a712": {
+    "mark": "not",
+    "sentence": "The editor keeps only what the Game screen cannot express: which piece stands on which Square, plus castling rights and the en passant Square behind an advanced toggle.",
+    "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:45",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "43f4c335f8c2": {
+    "mark": "not",
+    "sentence": "Everything > below about *what can go wrong* and about validating a Position before Stockfish sees it > still holds — 0011 only moves where the screen sits in the flow.",
+    "source": "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md:4",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "48b882d203c1": {
+    "mark": "not",
+    "sentence": "Every evaluation feeding a comparison must still come from one depth ([ADR 0016](0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md)). A threshold is more exposed to mixed provenance than a rank was, not less.",
+    "source": "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md:49",
+    "why": "the same promise as only-a-review-writes-ply-evaluation, registered from docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:26"
+  },
+  "491d566b1b67": {
+    "mark": "not",
+    "sentence": "The bar reads the badge's number first, and falls back to whatever Analysis a card has asked for — the bar was always allowed to show the assessment; what is gone is the strip *saying* it.",
+    "source": "docs/adr/0040-the-engines-opinion-has-no-switch.md:30",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "49336a14ae48": {
+    "mark": "not",
+    "sentence": "So each domain type owns its `.label` (`Vocabulary.swift`), the kit's tests can assert against it, and the app target holds only the eight `InfoPlist.strings` iOS reads before the app has run: the name under the icon and the two permission sentences.",
+    "source": "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:15",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "4a0ed8805d0d": {
+    "mark": "promise",
+    "sentence": "They are never scheduled — practising one is 计划外练习 — because what a player picks to repeat, FSRS would read as what they know best (docs/adr/0032). _Avoid_: 文件夹, 分组",
+    "source": "CONTEXT.md:173"
+  },
+  "4b48ad3b6c6b": {
+    "mark": "not",
+    "sentence": "[ADR 0010](0010-pgn-files-are-the-storage-format.md) put everything the app knows in the PGN, and ADR 0018 went further: a Drill is derived from those files and there is never a second store.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "4b6a8340f851": {
+    "mark": "not",
+    "sentence": "On-device only — Vision ships with the OS, so \"fully local\" survives.",
+    "source": "docs/adr/0007-perspective-correction-is-a-pre-stage-the-checker-score-judges.md:38",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "4b93d527037f": {
+    "mark": "promise",
+    "sentence": "The book compares a move's cost with the cost of moves in other games, so every score in it has to come from one uniform pass (ADR 0016), and a move that stood enters it only from a Review.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:43"
+  },
+  "4d1911e1dd53": {
+    "mark": "promise",
+    "sentence": "**The only thing allowed to call something a 错题.**",
+    "source": "CONTEXT.md:296"
+  },
+  "4d283c82e06c": {
+    "mark": "not",
+    "sentence": "Everything else in it stands: one engine, unbounded advice for the ten seconds of a Stint (ADR 0020), full strength for every search that is not the opponent's own move.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:42",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "4d4b23220149": {
+    "mark": "not",
+    "sentence": "Search is **unbounded** when advising: iterative deepening runs for as long as the player leaves it, and the UI re-renders every `info` update, so the recommended move and score visibly change as depth climbs.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:9",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "4ecad2037bed": {
+    "mark": "promise",
+    "sentence": "The finder is refused while the app is away, with every other search.",
+    "source": "docs/adr/0023-a-tactics-finder-can-speak-during-a-game.md:25"
+  },
+  "50296e57e914": {
+    "mark": "promise",
+    "sentence": "That rule is the whole value of the decision and it is worth being awkward about: **the scheduler's output must never be written down**, because the moment it is, changing the scheduler means migrating every row, and the app stops being able to change its mind.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:15"
+  },
+  "50d953eb24d1": {
+    "mark": "not",
+    "sentence": "**in a 练习, for the whole game** — a drill is played under 把关 ([ADR 0047](0047-practice-is-played-under-no-slips.md)), and the session kept the drill's value for as long as it lived, so a game played on from a 错题 could never be switched off;",
+    "source": "docs/adr/0048-the-no-slips-switch-always-moves.md:9",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "51d90b30bb5f": {
+    "mark": "not",
+    "sentence": "The reason is that a centipawn is worth a different amount in every position.",
+    "source": "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md:12",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "52e719134bcc": {
+    "mark": "not",
+    "sentence": "**while a move was being weighed or an exercise had the board** — nothing may change the game's lines under a judgement, and every move played by hand with an engine attached is weighed, 把关 on or off, for up to ten seconds;",
+    "source": "docs/adr/0048-the-no-slips-switch-always-moves.md:6",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "532bf18ddd62": {
+    "mark": "not",
+    "sentence": "Every stage built for the photograph is, on a screenshot, either wasted time or a way to be wrong.",
+    "source": "docs/adr/0033-the-pixels-decide-whether-a-picture-was-drawn-or-photographed.md:12",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "53e7421cfc6e": {
+    "mark": "not",
+    "sentence": "The app never once took an answer back: the only place a drill was made handed it `JudgementSetting.lines`, which is the player's two numbers **with 把关 off**, because the switch is a thing a game is played under and a setting has no business holding one ([ADR 0046](0046-no-slips-stops-the-player-at-the-record-line.md)). So the refusal branch was written, tested and unreachable, and a 日课 answer that gave away twelve points stood on the board, the engine replied to it, and the player carried on from the worse position they had just been told about — 「下着下着就从错题里下出一盘新棋」.",
+    "source": "docs/adr/0047-practice-is-played-under-no-slips.md:6",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "54d62a65036b": {
+    "mark": "not",
+    "sentence": "The player's own thinking time was still measured after every hand move, and nothing read it.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:13",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "558a94ab4126": {
+    "mark": "not",
+    "sentence": "0 : 1)` made it invisible — no card, no names, and every action that lives on a card gone.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:8",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "56d53dcf04b6": {
+    "mark": "not",
+    "sentence": "Each column scrolls on its own, so a side's controls unfolding pushes its own bar down and never the record out of reach.",
+    "source": "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:26",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "57727b479552": {
+    "mark": "not",
+    "sentence": "One adapter is a hypothetical seam: a flag with one live value is not a mode, it is a constant with a name, and every branch under its other value is a screen nobody can see.",
+    "source": "docs/adr/0040-the-engines-opinion-has-no-switch.md:19",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "595c9f37df16": {
+    "mark": "not",
+    "sentence": "*A move every half-second is a wall of notation.*",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:26",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "5add63733a14": {
+    "mark": "promise",
+    "sentence": "The switch always moves — mid-move, under an exercise, in a 练习, with no engine yet — and a move being weighed is ruled under what it says when the weighing ends (docs/adr/0048). The switch and the door are named for what the app does — somebody is at the gate — because 正着, the word for the move, read as nonsense on a switch: 「正着 开」.",
+    "source": "CONTEXT.md:194"
+  },
+  "5b774a32812e": {
+    "mark": "promise",
+    "sentence": "Playing over a move never writes it out: what followed moves in beside the new move, whole, and the record can switch between them (docs/adr/0043). A game is a tree of lines with one 树干 — the line it arrived as, imported or played out — and every other line a 树枝, inked in its own colour.",
+    "source": "CONTEXT.md:213"
+  },
+  "5d887c47d6d5": {
+    "mark": "not",
+    "sentence": "Every file written before this would have been re-read one Ply out.",
+    "source": "docs/adr/0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md:35",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "5e3e917e6787": {
+    "mark": "not",
+    "sentence": "Nothing forces one build on every device: the choice can be made on the device, at run time, by the one thing that knows.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:12",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "5e7509e3725e": {
+    "mark": "not",
+    "sentence": "Step one is the move that was wrong and every step after it is the move that answers it, counted from whoever played the 试招.",
+    "source": "docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md:37",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "5e8748a729ff": {
+    "mark": "not",
+    "sentence": "ADR 0039 put the opponent's own move on the shared position search: at 满力 the move the engine plays *is* the one bounded search of that position every other reader joins, and nothing else bounds it.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "5e999865ce3f": {
+    "mark": "not",
+    "sentence": "SwiftData was the alternative, rejected because it would make PGN a second format reachable only through a conversion layer, and two representations of one Game drift.",
+    "source": "docs/adr/0010-pgn-files-are-the-storage-format.md:9",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "5f6556ab5dd3": {
+    "mark": "not",
+    "sentence": "Mirrored Time, the named three-second clock > and the choice between them are gone; the engine's move runs on the same bounded position > search every other live reader joins, and 棋力 is the one dial on the opponent.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:33",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "6028092cf146": {
+    "mark": "not",
+    "sentence": "> Amended by [ADR 0048](0048-the-no-slips-switch-always-moves.md): a drill still arrives under > 把关, but the player's switch can take it out — it writes into the drill, and a wrong answer > is then judged and left standing.",
+    "source": "docs/adr/0047-practice-is-played-under-no-slips.md:19",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "602fd9d2a7d8": {
+    "mark": "not",
+    "sentence": "The switch used to be pressable only some of the time.",
+    "source": "docs/adr/0048-the-no-slips-switch-always-moves.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "60446397eded": {
+    "mark": "not",
+    "sentence": "Worked out by the search that refused the move, kept beside it, and shown only when the 试招 is pressed.",
+    "source": "CONTEXT.md:229",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "612b72180e91": {
+    "mark": "not",
+    "sentence": "The 错题本 is a cache under file dates ([ADR 0029](0029-the-practice-log-records-what-happened-never-what-is-due.md)), so a rewritten game is re-walked on its own; a 遭遇 whose deeper 掉幅 falls under the 记录线 leaves the book by the filter that already exists.",
+    "source": "docs/adr/0041-a-tried-move-can-be-judged-again-deeper.md:34",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "61a9bd5bad16": {
+    "mark": "not",
+    "sentence": "Both were typed fresh every time the sheet opened, and a name the site did not know came back as 「没有这个用户」— true, and no help, because the one thing worth checking is the spelling and the message did not show it.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "642647666d04": {
+    "mark": "not",
+    "sentence": "It appeared — the library counts a game's positions through the book — and the walk is now shared: `Game.stops(by:)` lays out every position the player moved at once, and each reader keeps its own gate over it.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:58",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "6500c6e2c85d": {
+    "mark": "not",
+    "sentence": "On a phone that limit is never reached, so the phone's layout is unchanged.",
+    "source": "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:19",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "6514e250230d": {
+    "mark": "not",
+    "sentence": "The engine's move is a full position search, which is never that fast.»",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:6",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "65844ca9b1a9": {
+    "mark": "promise",
+    "sentence": "`+3.00` means White is three pawns up whichever way the board is turned: that is what a Score is in every book, every engine readout and every PGN comment, and a number that changed its owner with the view would be a number nobody could compare with anything.",
+    "source": "docs/adr/0026-the-advantage-bar-turns-with-the-board.md:16"
+  },
+  "67633daaaee0": {
+    "mark": "not",
+    "sentence": "Twelve percent three times says the player has no concept here; forty percent once may only say they were tired.",
+    "source": "docs/adr/0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md:28",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "67b76aa86880": {
+    "mark": "not",
+    "sentence": "The file now says which is which, and says it only where the default is wrong — `[%trunk]` on the head of a bracketed line that is the 树干, `[%branch]` on the move where the written line leaves it — so a file with no markers reads the way every other program writes one: the mainline is the game and the brackets are asides.",
+    "source": "docs/adr/0043-a-game-branches-where-a-move-is-played-over-another.md:26",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "6d668d3d81a8": {
+    "mark": "promise",
+    "sentence": "Never below the 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be worth remembering without being worth drilling.",
+    "source": "CONTEXT.md:112"
+  },
+  "6e367088847a": {
+    "mark": "not",
+    "sentence": "Every other > search stays at full strength, and everything else here stands.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:28",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "6ed34c313be8": {
+    "mark": "promise",
+    "sentence": "Rules Queries never touch the searching `Engine` instance, so there is no race with the search threads — the bridge owns no shared mutable state at all.",
+    "source": "docs/adr/0003-borrow-stockfish-for-rules-queries-behind-a-stateless-bridge.md:17"
+  },
+  "6ed6ea5d3b22": {
+    "mark": "not",
+    "sentence": "Working through 日课 or revisiting a 错题, **played under 把关**: the wrong answer comes back off the board and is written down where it happened (docs/adr/0047). It arrives with the switch on, and the player can still switch it off — the answer is then judged and left standing (docs/adr/0048). Not the opposite of 把关, and never was — and not a synonym for hiding the engine's answer either: 杀 and 战术 are dealt here the way they are in an ordinary game, and opening one is counted as help rather than refused.",
+    "source": "CONTEXT.md:123",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7167e2a6aca2": {
+    "mark": "promise",
+    "sentence": "A name is kept only after it has fetched something — a misspelling that failed is not an account, and offering it back as a chip would be offering the mistake back.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:20"
+  },
+  "7181c20abdfd": {
+    "mark": "not",
+    "sentence": "`cardFloor` (120pt) is what the board's reserve is aimed at and what the tests hold every screen to; it is not a clamp in the layout.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:30",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "75940077ec6a": {
+    "mark": "promise",
+    "sentence": "The finder talks only about the **latest** position of a Game in progress.",
+    "source": "docs/adr/0023-a-tactics-finder-can-speak-during-a-game.md:9"
+  },
+  "7754dc3e308d": {
+    "mark": "promise",
+    "sentence": "They are treated as unreviewed — absent a `ReviewDepth`, the numbers are read for display and never for ranking.",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:58"
+  },
+  "79390d8c0464": {
+    "mark": "not",
+    "sentence": "The switch always moves.**",
+    "source": "docs/adr/0048-the-no-slips-switch-always-moves.md:19",
+    "why": "the same promise as no-slips-switch-always-moves, registered from CONTEXT.md:194"
+  },
+  "797430bf2d7c": {
+    "mark": "promise",
+    "sentence": "A mate is never tossed for.",
+    "source": "CONTEXT.md:249"
+  },
+  "79b2622adadc": {
+    "mark": "not",
+    "sentence": "Refusing it as \"no board in this picture\" was a real regression against 0008's promise — the recogniser may be wrong, but never *quietly* wrong, and never wrong in a way that throws away sixty-three correct squares.",
+    "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:40",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7a67707fc448": {
+    "mark": "not",
+    "sentence": "ADR 0039's \"the engine's move is a full position search, which is never that fast\" is amended: it is a full position search *the first time*, and from then on it is one whenever the opponent is the one asking.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:54",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7a67c1e66241": {
+    "mark": "not",
+    "sentence": "In the CLI a glance at the FEN caught this; inside a game it would silently poison every move that follows.",
+    "source": "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md:17",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7abea3466f0e": {
+    "mark": "not",
+    "sentence": "That was survivable while the field only drove a curve and a label.",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:15",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7b5eb0f026fe": {
+    "mark": "not",
+    "sentence": "The verdict is one row: 过了 or 没过 in the colour it means, the explanation only when the move failed, and one full-width button — 下一题, or 退出 at the end of the queue.",
+    "source": "README.md:23",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7bf66a1b151e": {
+    "mark": "not",
+    "sentence": "It also does not fit the solved problem exactly, and the mismatch is worth being deliberate about: every published scheduler grades a card from **what the learner says about themselves** — again, hard, good, easy — and this app never has to ask.",
+    "source": "docs/adr/0030-fsrs-decides-the-day-and-arts-decides-the-order.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7c84f2616e28": {
+    "mark": "not",
+    "sentence": "That is not a new limitation, only an admitted one.",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:53",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7d9d432d1b5c": {
+    "mark": "not",
+    "sentence": "Opened, it is seen from the side to move and played under 把关 like any 练习; the way back to the game it came from is always there.",
+    "source": "CONTEXT.md:161",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7fdc037c9d47": {
+    "mark": "promise",
+    "sentence": "分数曲线 (Score curve)**: The record's Scores as one shape: a level per position of a game, high where White is doing well, nil where nobody has scored it, drawn under the record strip once two positions are known (`ScoreCurve`). It is read off the record — the 细判 written on each move first, then the Review — and never off the live search.",
+    "source": "CONTEXT.md:75"
+  },
+  "7ffef5870948": {
+    "mark": "promise",
+    "sentence": "Every live human move waits for the resulting position's evaluation before the opponent starts.",
+    "source": "README.md:34"
+  },
+  "80cc04bb3e4d": {
+    "mark": "not",
+    "sentence": "Everything else in it stands: one engine, unbounded advice, Mirrored Time, and full strength for every search that is not the opponent's move.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:56",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "813b356636c9": {
+    "mark": "not",
+    "sentence": "That state is not hypothetical — a layout pass that settles in one go never reports a geometry *change* at all, which is what an off-screen render does and what the first frame of a screen may do.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:26",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "8168d7a1c6d2": {
+    "mark": "not",
+    "sentence": "A 试招 without one falls back to the shared bounded position search — ten seconds or depth twenty, the same budget every other position gets — which normally answers out of the cache the refusal itself wrote, and on device across a relaunch.",
+    "source": "docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md:54",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "82d5bd331bfc": {
+    "mark": "not",
+    "sentence": "Every way a search ends now goes through one place, because a Stint's clock outliving the search it was wound for would stop the search that replaced it — the timer belonging to the advice a thumb interrupted would take that thumb's own move down with it.",
+    "source": "docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md:50",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "841c00843089": {
+    "mark": "not",
+    "sentence": "Facts only: it records what happened and never what should happen next.",
+    "source": "CONTEXT.md:148",
+    "why": "the same promise as scheduler-output-never-written, registered from docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:15"
+  },
+  "84875472a326": {
+    "mark": "not",
+    "sentence": "That keeps the book derivable from the games ([ADR 0029](0029-the-practice-log-records-what-happened-never-what-is-due.md)) without bringing back variation trees to hold a flat list.",
+    "source": "docs/adr/0031-the-player-no-longer-declares-a-reason.md:36",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "84af3f4c4227": {
+    "mark": "promise",
+    "sentence": "A judgement keeps the line it stood under (`under N` on the move), so a move that stood under five still says five, and the 连正榜 reads it as it always did.",
+    "source": "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md:32"
+  },
+  "85e1d1b95436": {
+    "mark": "not",
+    "sentence": "Only the engine is worth the second copy.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:27",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "86bdeafd6a0f": {
+    "mark": "not",
+    "sentence": "Derived from the games the app has judged, the way the 错题本 is: a position where the side to move has a mate goes in 杀招, one where it has a winning shot goes in 战术, and a mate outranks a shot so each position is in one of them at most.",
+    "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:8",
+    "why": "the same promise as a-mate-position-is-in-mates-only, registered from CONTEXT.md:165"
+  },
+  "879a4e1abfc3": {
+    "mark": "not",
+    "sentence": "Mate and tactics findings appear only when available; tap a row to expand its answer.",
+    "source": "README.md:12",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "88038a5d7907": {
+    "mark": "not",
+    "sentence": "It is felt as heat and paid for in battery, and neither buys anything: past about ten seconds on a phone another ply almost never changes which move is recommended, and on the positions where it does, the player is the one who knows — so they are the one who asks.",
+    "source": "docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md:11",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "883f899c3bae": {
+    "mark": "not",
+    "sentence": "\"This is due today\" is computed from the log every time it is asked.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:15",
+    "why": "the same promise as scheduler-output-never-written, registered from docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:15"
+  },
+  "890d689696c4": {
+    "mark": "not",
+    "sentence": "**The 拦截线 is 耕棋's only difficulty dial, and the engine's strength is never one.**",
+    "source": "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md:39",
+    "why": "the same promise as strength-never-shapes-what-a-move-costs, registered from CONTEXT.md:103"
+  },
+  "8aa90c9559f0": {
+    "mark": "promise",
+    "sentence": "Only a 试招 ends a run; switching 把关 off pauses it.",
+    "source": "CONTEXT.md:260"
+  },
+  "8c4b09afad46": {
+    "mark": "promise",
+    "sentence": "Every engine move records the Elo it was made at**, as an annotation on that move — the way a judgement is (ADR 0027) and a refusal is written where it happened (ADR 0037). A 棋力 can change mid-game the way a Controller can, so a game is a sequence of stretches, and the 正着榜 credits each stretch to the rung it was played at; a stretch against a human is credited to no rung.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:35"
+  },
+  "8d81cfb3916c": {
+    "mark": "not",
+    "sentence": "And the line 把关 reads is still the only dial it has on the judgement of a move: the engine's 棋力 shapes the opponent and never what a move costs ([ADR 0038](0038-strength-bounds-the-opponent-and-never-the-judge.md), [ADR 0009](0009-one-engine-unbounded-analysis-mirrored-opponent-time.md)).",
+    "source": "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md:20",
+    "why": "the same promise as strength-never-shapes-what-a-move-costs, registered from CONTEXT.md:103"
+  },
+  "8da2bb5d48f1": {
+    "mark": "not",
+    "sentence": "牌堆 (Deck)**: The findings under the record: 杀招 and 战术, two cards in one order that never changes, each shut until it is pressed (docs/adr/0025). A card with nothing behind it takes up no room, and none of them are dealt in a 把关 game — a card is an opinion about what to play.",
+    "source": "CONTEXT.md:45",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "8fa97306ef6d": {
+    "mark": "not",
+    "sentence": "An imported game with no 错招 row read as a clean game, which is the one thing an unreviewed game must never read as — it is a game nobody has judged, not a game with nothing wrong in it.",
+    "source": "docs/adr/0044-an-imported-games-review-is-asked-for-and-says-how-far-it-has-got.md:7",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "900cc0a5a4fe": {
+    "mark": "promise",
+    "sentence": "There is now a second store, and it is an append-only log of facts.**",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:9"
+  },
+  "901e683b8015": {
+    "mark": "not",
+    "sentence": "The probe is one bounded search (`depth 10`, two Lines) and runs **before** the engine's own move or a Stint of advice, because there is still only one engine (docs/adr/0009). It does not `clear()`: the engine may be about to move, and the table should still be warm.",
+    "source": "docs/adr/0023-a-tactics-finder-can-speak-during-a-game.md:22",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "908a096fdee1": {
+    "mark": "promise",
+    "sentence": "**An imported `[%eval]` is kept, labelled, and never trusted.**",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:33"
+  },
+  "91c6ded39df1": {
+    "mark": "promise",
+    "sentence": "The refusal itself is never rewritten: the move was taken back, and that stays written where it happened ([ADR 0037](0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md)). Only the number changes.",
+    "source": "docs/adr/0041-a-tried-move-can-be-judged-again-deeper.md:12"
+  },
+  "920f74996217": {
+    "mark": "not",
+    "sentence": "耕棋 measured a hand move only when the eye was on the last Ply of the game:",
+    "source": "docs/adr/0035-tilling-weighs-a-move-wherever-it-is-played.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "922a17671083": {
+    "mark": "not",
+    "sentence": "But a saved game reopens at its *first* position** — \"the beginning rather than the end, because opening a game that is over is reading it\" — so the one move a person is most likely to play is the one move 耕棋 never looked at.",
+    "source": "docs/adr/0035-tilling-weighs-a-move-wherever-it-is-played.md:16",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "93179513cae0": {
+    "mark": "not",
+    "sentence": "When the engine controls a colour it plays at **full strength**, limited only by **Thinking Time**: by default **Mirrored Time**, about as long as the player took over their last move — and, when there is no player to mirror or somebody would rather name a number, a fixed number of seconds a move.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:20",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9338635a94f1": {
+    "mark": "not",
+    "sentence": "A 错题 drill has always been able to take a wrong answer back.",
+    "source": "docs/adr/0047-practice-is-played-under-no-slips.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9446635478a9": {
+    "mark": "not",
+    "sentence": "A rung the player measures themself against has to be the same rung tomorrow, and only a bound the engine itself enforces gives that.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:9",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9689614a18df": {
+    "mark": "not",
+    "sentence": "Two devices moving in the same game within the same seconds is the only way to lose a move, and conflict versions plus a UI to reconcile them is a great deal of machinery for one person drilling puzzles.",
+    "source": "docs/adr/0012-the-library-is-a-folder-in-icloud-drive.md:18",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9733a887548a": {
+    "mark": "not",
+    "sentence": "**The five names are an index and are the only capped words in the app.**",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:62",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "983d0eb59752": {
+    "mark": "not",
+    "sentence": "It moves a piece and not a number — 最佳 is still the first line and 细判 still weighs every move against it — and it exists because a deterministic engine played the same game every time (docs/adr/0049). At a 棋力 there is no 掷子: Stockfish has already picked (docs/adr/0038). _Avoid_: 随机, 开局库, 让子",
+    "source": "CONTEXT.md:250",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "989f78965d7f": {
+    "mark": "not",
+    "sentence": "**Taller than wide, or narrower than two columns** (every phone, a portrait iPad, a third or half of Split View): one column, as before.",
+    "source": "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:16",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "99c465bd96a3": {
+    "mark": "not",
+    "sentence": "It says how fluent the player was, and fluency is only a question once correctness is settled.",
+    "source": "docs/adr/0030-fsrs-decides-the-day-and-arts-decides-the-order.md:23",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9a98afe9691d": {
+    "mark": "promise",
+    "sentence": "Only a Position Stockfish accepts can start a Game.",
+    "source": "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md:11"
+  },
+  "9b0a8148a199": {
+    "mark": "not",
+    "sentence": "It lived only in `ReviewRun.baseline`, in memory, which meant the first move's quality could not be recomputed from a saved file at all — and everything about a Drill is derived from the saved files (docs/adr/0018).",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:46",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9bdf7b5a12aa": {
+    "mark": "not",
+    "sentence": "The existing exhaustive search runs on the original pixels; if its checker score clears the threshold — every screenshot will — the image is used as is.",
+    "source": "docs/adr/0007-perspective-correction-is-a-pre-stage-the-checker-score-judges.md:9",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9c41510e35c0": {
+    "mark": "not",
+    "sentence": "The three never overlap in time anyway: the engine is not the opponent while it is advising the player.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:6",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9c5972f663a7": {
+    "mark": "not",
+    "sentence": "A move that **passes** lands from that position, and what followed it is replaced — exactly what playing from an earlier Ply did before, and the only shape this app has for it (no variations, ADR 0028).",
+    "source": "docs/adr/0035-tilling-weighs-a-move-wherever-it-is-played.md:28",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "9cb8af643850": {
+    "mark": "not",
+    "sentence": "At a rung this never happened — Stockfish's `Skill` picks among its top lines with a clock-seeded random (ADR 0038) — and 满力 now has the same idea, explicit and bounded: 掷子 (`Toss`) picks at random among the lines the search scores within fifteen centipawns of its first, from the mover's side.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:39",
+    "why": "the same promise as toss-within-fifteen-centipawns, registered from CONTEXT.md:247"
+  },
+  "a07265e8a7db": {
+    "mark": "promise",
+    "sentence": "A 门 is only *how the text is got*. Behind every door the same thing happens to the text: split it into games, name each one, write one file per game.",
+    "source": "docs/adr/0014-the-import-sheet-has-four-doors-and-one-pipeline-behind-them.md:25"
+  },
+  "a07510e4c527": {
+    "mark": "not",
+    "sentence": "It is the player's *behaviour* that is new, and it is the only thing the log holds.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:31",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a08e1aef1ca6": {
+    "mark": "promise",
+    "sentence": "That is the trade the mode asks for: 耕棋 on means every move is weighed, and a mode that weighs *most* moves is a mode nobody can trust.",
+    "source": "docs/adr/0035-tilling-weighs-a-move-wherever-it-is-played.md:39"
+  },
+  "a136034050bb": {
+    "mark": "not",
+    "sentence": "Until now CStockfish was built with the define set the Stockfish Makefile uses for `ARCH=armv8` and never with `ARCH=apple-silicon`'s, and Package.swift said why: the dotprod instructions that set adds took the start position from 11.0M to 12.5M nodes per second on the development Mac, and an A12 does not have them.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a2f20521acb8": {
+    "mark": "not",
+    "sentence": "The whole game, not only the position the move was played from: a move played from an earlier position must not swallow the line being read.",
+    "source": "CONTEXT.md:223",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a445ac4ab058": {
+    "mark": "not",
+    "sentence": "The clock is untouched: Mirrored Time and a named number of seconds are the courtesy they always were, not a level.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:17",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a4760bfb5db3": {
+    "mark": "not",
+    "sentence": "This keeps the spirit of [ADR 0009](0009-one-engine-unbounded-analysis-mirrored-opponent-time.md) — time remains the only thing said to the engine — while giving the coaching side its own number.",
+    "source": "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md:41",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a4c508979597": {
+    "mark": "not",
+    "sentence": "Each door carries its own facts — URL grammar, status meaning, dedup identity, naming rules — behind one place per door (`FetchPlan`, and the members of `PGNImport.Site` / `ImportDoors.Door`). A door says what it needs; the session only fetches.",
+    "source": "docs/adr/0014-the-import-sheet-has-four-doors-and-one-pipeline-behind-them.md:29",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a755c0f6ab98": {
+    "mark": "promise",
+    "sentence": "The alternative — a practice-only kind of 试招 the book skips — was considered and refused: it would have made the book's sentence depend on where you were sitting, and it would have needed the one thing this repo does not have, a second place where a mistake is true ([ADR 0029](0029-the-practice-log-records-what-happened-never-what-is-due.md)). The practice log still records the attempt exactly once, and FSRS still schedules off the log alone ([ADR 0030](0030-fsrs-decides-the-day-and-arts-decides-the-order.md)), so the two accounts do not feed each other: the book counts occasions, the log counts goes.",
+    "source": "docs/adr/0047-practice-is-played-under-no-slips.md:32"
+  },
+  "a75a75261417": {
+    "mark": "promise",
+    "sentence": "战术发现器 is a second switch, off at the start of every Game, never written to PGN.**",
+    "source": "docs/adr/0023-a-tactics-finder-can-speak-during-a-game.md:7"
+  },
+  "a7ce01b0aa09": {
+    "mark": "not",
+    "sentence": "A game's own list compares nothing across games: every judgement in it came from the same bounded search of the same position, which is the app's own engine at the depth it reached (`[%judged]`). Reading a game's own history is a question about that game.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:45",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a85f5f0df330": {
+    "mark": "not",
+    "sentence": "Through a player's door every game that comes down is that account's game, so a row is told from their side — a swatch for the colour they had, the opponent, 胜 / 负 / 和, when — and opening it records their side without the 「记录哪一方的错题？」 question, whose answer is already the name in the field.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:33",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a8a3b24deaea": {
+    "mark": "promise",
+    "sentence": "\"Fully local\" is about the networks never being fetched, not about them living inside the executable.",
+    "source": "docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md:19"
+  },
+  "a997886aec92": {
+    "mark": "not",
+    "sentence": "The choice between the mirror and a named clock is offered whenever the engine holds either Controller, because time is the only dial this app has — somebody asking for a stronger opponent is asking for a longer clock, and there is nothing else to give them.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:54",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "aaf0c105b803": {
+    "mark": "not",
+    "sentence": "The first design gave every 收藏集 a queue of its own, 「练这一组」, and that is exactly the practice docs/adr/0032 refuses: a block of 杀招 tells the player the answer is a mate before they look, which trains Einstellung and flatters the one who does it.",
+    "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:16",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "abd9d383328e": {
+    "mark": "not",
+    "sentence": "CloudKit was the alternative, rejected because it would make records a second representation of a Game reachable only through a conversion layer — the same reason SwiftData was rejected in 0010 — and because nothing about it is readable from the Files app.",
+    "source": "docs/adr/0012-the-library-is-a-folder-in-icloud-drive.md:13",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ad8f23885bcb": {
+    "mark": "not",
+    "sentence": "正着数 (Distance)**: _retired._ It counted every move that stood while 把关 was on, which with 把关 on was the length of the game — a number the record already shows.",
+    "source": "CONTEXT.md:255",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "adcf43f48fab": {
+    "mark": "not",
+    "sentence": "`Toss.strongest` never tosses, and is what a test that expects a particular move asks for; `OpponentMoveTests` is where the rule is held, including the second game that used to be a replay.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:61",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ae2957062bb7": {
+    "mark": "not",
+    "sentence": "The payoff is a sentence no other identity can produce: **「这个局面你栽过 4 次，三次走 Nf3，一次 走 Bd3，最近一次是 3 天前」**. 复发 — falling for the same position again — turns out to be the most useful thing the app knows about a player, more useful than how badly any single move scored, and it only exists if the four times are one thing.",
+    "source": "docs/adr/0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md:14",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "b178bf203a85": {
+    "mark": "not",
+    "sentence": "The Xcode project holds only SwiftUI views and the NNUE resource.",
+    "source": "docs/adr/0006-the-swift-code-is-a-multiplatform-package-with-a-thin-app-shell.md:5",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "b2afbbc869a1": {
+    "mark": "not",
+    "sentence": "The session carried all of it — `requestHint`, `relaxIntercept`, `revealTillingMove`, a rung count and a relaxed line restored per position on every retune — and `Standpoint`, `Ruling` and `Game.letStand` each took the rungs and the relaxed line as parameters so a move that stood could be written with them.",
+    "source": "docs/adr/0042-the-hint-ladder-has-no-rung-to-press.md:5",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "b4d0f074ac4d": {
+    "mark": "not",
+    "sentence": "The promise 0008 was defending — the recogniser may be wrong, never *quietly* wrong — is kept by showing the doubt where the user is actually looking, rather than by holding a screen in front of them first.",
+    "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:18",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "b5eedf001c0f": {
+    "mark": "not",
+    "sentence": "Owning the validator turns out to be the better design anyway: it reports a structured issue with the squares to highlight — \"black has two kings, here and here\" — where a string from the engine could only be printed.",
+    "source": "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md:35",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "b72e22d47535": {
+    "mark": "not",
+    "sentence": "An unbounded one never had to: the number moved, so the engine was alive.",
+    "source": "docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md:25",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "b82265b48306": {
+    "mark": "not",
+    "sentence": "The first cut left that out, which was only right for a refusal at the end of the game: playing a wrong move from an earlier position and walking away wrote the refusals as if they had happened where the game stopped, and read back they were nothing at all.",
+    "source": "docs/adr/0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md:26",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "b99ca1fae6a0": {
+    "mark": "not",
+    "sentence": "A reading of how far off its next practice is, never a state the player or the app sets.",
+    "source": "CONTEXT.md:138",
+    "why": "the same promise as scheduler-output-never-written, registered from docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:15"
+  },
+  "ba4b348c654e": {
+    "mark": "not",
+    "sentence": "The strongest signal the app has, and the only one allowed to jump the queue.",
+    "source": "CONTEXT.md:90",
+    "why": "the same promise as recurrence-alone-jumps-the-queue, registered from docs/adr/0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md:28"
+  },
+  "ba85b145c114": {
+    "mark": "not",
+    "sentence": "**The fade was unconditional and painted on the scroll view**, so it never moved.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:57",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "bace7ff3cfc9": {
+    "mark": "not",
+    "sentence": "The deeper level is therefore relative rather than fixed — eight plies deeper and six times as long, stopped the same way — which at the standard budget is exactly the depth 28 within a minute above.",
+    "source": "docs/adr/0041-a-tried-move-can-be-judged-again-deeper.md:49",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "bada919d39d0": {
+    "mark": "not",
+    "sentence": "It was drawn with White always growing from the left and Black always filling what was left, whatever way up the board was: with Black at the bottom the bar said the exact opposite of the number printed beside it, to the only person who could see either.",
+    "source": "docs/adr/0026-the-advantage-bar-turns-with-the-board.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "bbfa902f4fb9": {
+    "mark": "promise",
+    "sentence": "A shot that is only taking a loose piece, or that gains too little 胜率, is not kept.",
+    "source": "CONTEXT.md:168"
+  },
+  "bc648bf95cbb": {
+    "mark": "not",
+    "sentence": "Only sound moves stand.",
+    "source": "CONTEXT.md:194",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "be3598d6c09b": {
+    "mark": "promise",
+    "sentence": "Every drill says what the move cost and what the better move was doing, whether or not it passed, and `IntentReading` is what lets that be a sentence — 「Qxd5 吃 d5 上没人 守的车」 — rather than a line of notation, which to a 1200 is a second puzzle and not an answer.",
+    "source": "docs/adr/0031-the-player-no-longer-declares-a-reason.md:26"
+  },
+  "be91a12ae1a1": {
+    "mark": "not",
+    "sentence": "Recognition never flows straight into a Game.",
+    "source": "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md:8",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "bf7c338889a6": {
+    "mark": "not",
+    "sentence": "The rung *is* a fact about the game and is written into it; what is remembered is only which rung to offer next.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:59",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "bf989f00ed96": {
+    "mark": "promise",
+    "sentence": "Reads and writes go through `NSFileCoordinator` when the folder is iCloud's, so that a file being written by the sync daemon is never read halfway through.",
+    "source": "docs/adr/0012-the-library-is-a-folder-in-icloud-drive.md:29"
+  },
+  "c0c447d5790a": {
+    "mark": "promise",
+    "sentence": "`PositionSearches` never commits a shallower result over a deeper one, which a re-search of a position a 复判 had answered would otherwise have done (ADR 0041).",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:59"
+  },
+  "c52fd52cb7dc": {
+    "mark": "not",
+    "sentence": "The opponent gets what every live position search gets, and the screen says so where the clock used to be named — 「10 秒 / 20 层」 on the engine's bar.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:16",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "c59074e531ce": {
+    "mark": "not",
+    "sentence": "It shapes the opponent and nothing else: 细判 weighs every move at full strength whatever the 棋力, so a 掉幅 means the same thing at every rung.",
+    "source": "CONTEXT.md:243",
+    "why": "the same promise as strength-never-shapes-what-a-move-costs, registered from CONTEXT.md:103"
+  },
+  "c5b4a650ba88": {
+    "mark": "promise",
+    "sentence": "A 复判 goes past it by a fixed rule, never by a second budget.",
+    "source": "CONTEXT.md:305"
+  },
+  "c86e0f4c6b26": {
+    "mark": "not",
+    "sentence": "The first cut named each entry after the move that cost the most there and showed that name in a chip — and a move is the wrong thing to name a position by, because a position takes N wrong moves: three 试招 and then a fourth move, or the same 试招 twice (which is what the phone did). Half of those names are moves that were never played.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:13",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "c88660182093": {
+    "mark": "promise",
+    "sentence": "Never positive: the best move costs nothing, and every other move costs something.",
+    "source": "CONTEXT.md:21"
+  },
+  "c9b74ce4b34d": {
+    "mark": "promise",
+    "sentence": "**Only a Review writes `Ply.evaluation`.** One engine, one uniform Depth, one pass over the whole Game.",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:26"
+  },
+  "ca8a45dedd2a": {
+    "mark": "promise",
+    "sentence": "掷子 (Toss)**: How a 满力 opponent picks between moves its own search cannot tell apart: at random, among the lines scored within fifteen centipawns of the first, from its own side.",
+    "source": "CONTEXT.md:247"
+  },
+  "cb8e31222094": {
+    "mark": "not",
+    "sentence": "A coordinated read of a file that has not arrived blocks until it does, so a read is only ever attempted on a file this device already has.",
+    "source": "docs/adr/0012-the-library-is-a-folder-in-icloud-drive.md:30",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "cbff17ae5df8": {
+    "mark": "not",
+    "sentence": "The 惩罚 exercise is the last register — the only thing in the row that asks something of the player — because a row that says what happened and then offers the next thing to do is one subject, not three.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:82",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ccc45a70f6cc": {
+    "mark": "not",
+    "sentence": "`DeckFloor` reads the card and the column back off the picture and holds them to the arithmetic on a 375-wide screen — the two together are what says the constants are not fiction — and holds the arithmetic itself to every screen the app runs on, including a phone on its side, where the answer has to be \"no room\", because that is the fact the next decision is made of.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:37",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "cceaabebb120": {
+    "mark": "not",
+    "sentence": "The list is walked lazily and cached against the game and the two lines, because the record strip asks for it on every draw and walking it is a rules probe per Ply.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:61",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "d0ea0ab1ffac": {
+    "mark": "promise",
+    "sentence": "Editing is allowed only while the Game has no moves.",
+    "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:65"
+  },
+  "d130ef6c7b7a": {
+    "mark": "not",
+    "sentence": "This app's standing rule is that it may be wrong but never *quietly* wrong.",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:20",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "d1d43de1abd2": {
+    "mark": "not",
+    "sentence": "No App Store device requirement can exclude an A12, so the build stopped asking for the instruction, and every device paid the 14% so that one could run.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:8",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "d3ffd86cd50d": {
+    "mark": "not",
+    "sentence": "Spending it, rather than simply never reading it, is what keeps the common case free.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:28",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "d55eadab765c": {
+    "mark": "not",
+    "sentence": "The word for the move, never for the mode; it survives in 连正, a run of them.",
+    "source": "CONTEXT.md:203",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "d58f93195e4b": {
+    "mark": "not",
+    "sentence": "> Superseded in part by [ADR 0038](0038-strength-bounds-the-opponent-and-never-the-judge.md): > the opponent's own moves may be bound to a 棋力, an Elo from a fixed ladder, because a number > the player measures themself against has to mean the same thing on every phone.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:26",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "d941320c90da": {
+    "mark": "not",
+    "sentence": "> Amended in part by > [ADR 0049](0049-the-opponent-never-replays-a-game-it-has-already-played.md): a position search > already finished *is* that fast, because the store answers it out of a file.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:29",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "dab2682cd171": {
+    "mark": "not",
+    "sentence": "That is the shape ADR 0040 deleted `isPractising` over: a flag with one live value is not a mode, it is a constant with a name, and every branch under its other value is a screen nobody can see.",
+    "source": "docs/adr/0042-the-hint-ladder-has-no-rung-to-press.md:12",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "db325cf2f36d": {
+    "mark": "not",
+    "sentence": "Rule 1 of 0007 said this already, as a threshold that \"every screenshot will\" clear; it is said as a fact about the picture now, which is both stricter and legible in the result.",
+    "source": "docs/adr/0033-the-pixels-decide-whether-a-picture-was-drawn-or-photographed.md:27",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "dd84e1fa87a7": {
+    "mark": "not",
+    "sentence": "The colours on this screen are the pieces' colours and never \"the left one and the right one\" — the arrows, the rings and the key squares are all drawn that way (docs/adr/0018, 0021) — and the bar is the one place where a colour *is* the whole of the statement rather than a decoration on top of one.",
+    "source": "docs/adr/0026-the-advantage-bar-turns-with-the-board.md:11",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e028be45efd7": {
+    "mark": "not",
+    "sentence": "The one place it has to be handed over by hand is `Task.detached`, which starts outside every task-local.",
+    "source": "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:40",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e23f06fa1ad1": {
+    "mark": "promise",
+    "sentence": "An index is needed — and it is a cache, rebuilt from the files and the log, never a third place where something is true.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:39"
+  },
+  "e24e1e40a30a": {
+    "mark": "not",
+    "sentence": "ADR 0009 said there is no difficulty setting in this app, only a clock: the engine plays at full strength, and a player asking for a weaker opponent is asking for a shorter clock.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:3",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e2eeeb3d08f9": {
+    "mark": "not",
+    "sentence": "Both are pure functions of the practice log ([ADR 0029](0029-the-practice-log-records-what-happened-never-what-is-due.md)). Refitting FSRS's parameters to this player, or replacing the scheduler outright, reschedules the whole history on the next launch and migrates nothing.",
+    "source": "docs/adr/0030-fsrs-decides-the-day-and-arts-decides-the-order.md:33",
+    "why": "the same promise as scheduler-output-never-written, registered from docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:15"
+  },
+  "e6598669122f": {
+    "mark": "not",
+    "sentence": "Feedback remains visible while off; answers are explicit multi-move reveals, never a single recommendation arrow or a separate practice/analysis eye switch.",
+    "source": "README.md:31",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e65b74fb6242": {
+    "mark": "promise",
+    "sentence": "The engine only plays from the **latest** position, so browsing back is where a self-playing game pauses and 回到最新 is where it carries on.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:62"
+  },
+  "e6916961ac10": {
+    "mark": "not",
+    "sentence": "A schema committed now would freeze a design that has never run.",
+    "source": "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:23",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e7855d95010b": {
+    "mark": "not",
+    "sentence": "And the rows above the board stop growing at the first accessibility size** (`chromeType`). Not a quiet override of the reader's setting: the card is what the app is for, and its sentences are the only text on this screen anybody has to *read*. Everything else — whose move it is, the clock, the record's chips, the five names — is status, and those rows are also the only ones whose growth is not paid for: the board is sized from a budget and the deck takes the rest.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:75",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e7cdb8d77873": {
+    "mark": "not",
+    "sentence": "That strip is now the whole of what the engine has to say, and the switch deciding whether it says anything came down from the navigation bar to join it (docs/adr/0015 is unchanged: the opinion is still off at the start of every Game and still turned on by one deliberate press). Four things that are one thought — whether it is talking, who is ahead, by how much, and how far it has got working it out — and the merge is what makes the last one affordable, because the bar the search produced is also the button that buys it more time.",
+    "source": "docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md:31",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e7e3667de725": {
+    "mark": "promise",
+    "sentence": "It opens on the ultra-wide lens, autofocus is configured for a subject close by and can be aimed by tapping, the shutter fires only when a thumb presses it, and a box is drawn live around the board it can see.",
+    "source": "docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md:4"
+  },
+  "e91670488db7": {
+    "mark": "not",
+    "sentence": "The append-only practice log is separate; schedules and the mistake index are derived.",
+    "source": "README.md:135",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "e9d9b1f6d77f": {
+    "mark": "not",
+    "sentence": "`PGNImport.Site` names the three; the kit fetches a chess.com player's newest games by walking back from the newest monthly archive until there are enough or three months have been asked (`chessComMonthsBack`), and reads a 国象联盟 link with no network at all (`chesseaseGame`). Every door feeds one pipeline: text, split, plan, files.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:14",
+    "why": "the same promise as one-pipeline-behind-every-door, registered from docs/adr/0014-the-import-sheet-has-four-doors-and-one-pipeline-behind-them.md:25"
+  },
+  "eba0ff555a0a": {
+    "mark": "not",
+    "sentence": "Stroke width and line joins must be honoured, not just fills: the Python Templates are rasterised with strokes included, and a fill-only silhouette is measurably thinner.",
+    "source": "docs/adr/0004-piece-paths-are-copied-into-swift-verbatim.md:19",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ec0083092347": {
+    "mark": "not",
+    "sentence": "That is the 棋力 now (ADR 0038): a rung the engine itself enforces means the same thing on every phone, where a longer clock meant a stronger engine on a newer phone and a weaker one on a hot one.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:21",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ec9645fe2fa9": {
+    "mark": "not",
+    "sentence": "Recognition already straightens the board and knows its rect in the picture it read, so the picture cut to that rect is square and in board coordinates: laid under an eight-by-eight board, every square of the photograph lands on the square it was read from, and a piece read wrong is two different things in one square with no eye travel between two grids.",
+    "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:49",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ee423176579b": {
+    "mark": "not",
+    "sentence": "Beside the board those figures made every tile half as wide again as the thing worth looking at; under it a tile is its board, and the row holds nearly twice as many of them before anybody has to scroll.",
+    "source": "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:73",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ef51f938dc61": {
+    "mark": "not",
+    "sentence": "The 入列线 still moves on its own and still never sits below the 记录线, because \"worth remembering\" and \"worth drilling\" really are two questions.",
+    "source": "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md:18",
+    "why": "the same promise as queue-line-never-below-record-line, registered from CONTEXT.md:112"
+  },
+  "ef650a4555e4": {
+    "mark": "promise",
+    "sentence": "Chinese is the language the app was written in and the one every other falls back to, key by key: a sentence that has not been translated yet comes out in Chinese rather than as a key, and a screen is never half in symbols.",
+    "source": "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:3"
+  },
+  "ef71f2114a77": {
+    "mark": "not",
+    "sentence": "Settings offers 跟随系统 plus the eight, each written in its own language, and the choice travels in the iCloud key-value store like every other setting.",
+    "source": "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:35",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "f112c9b82644": {
+    "mark": "promise",
+    "sentence": "The switch is forced on where the drill is made, so every door into one — the 日课 queue, 错题本's 练习 button, a screen test — gets the same game.",
+    "source": "docs/adr/0047-practice-is-played-under-no-slips.md:16"
+  },
+  "f13c66fdc91d": {
+    "mark": "not",
+    "sentence": "ADR 0015's file is not in this repository; where it is cited, \"the opinion is off at the start of every Game and turned on by one deliberate press\" is read as: off, and there is no press.",
+    "source": "docs/adr/0040-the-engines-opinion-has-no-switch.md:36",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "f2fd6d6741d1": {
+    "mark": "promise",
+    "sentence": "马上走 plays what the toss picked, not the first line: both read `thinkingBest`, which is settled once per snapshot by `opponentMove`, so the two can never name different moves.",
+    "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:64"
+  },
+  "f393a7f154b5": {
+    "mark": "not",
+    "sentence": "Everything else in the app was already a portrait screen — a board above a deck — and landscape was reachable only by accident of a plist.",
+    "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:91",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "f49983f65c4e": {
+    "mark": "not",
+    "sentence": "The pipeline is testable through any door with a scripted fetcher (`PGNFetching`), because the only thing that varies is how the text arrives.",
+    "source": "docs/adr/0014-the-import-sheet-has-four-doors-and-one-pipeline-behind-them.md:43",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "f4a43f9890d0": {
+    "mark": "not",
+    "sentence": "Import a selected game and score every move locally at depth 16, asynchronously.",
+    "source": "README.md:54",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "f58dd8a5e56a": {
+    "mark": "not",
+    "sentence": "[Practice facts](docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md)",
+    "source": "README.md:151",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "f5ce45bd7228": {
+    "mark": "promise",
+    "sentence": "Pressing it writes every game not already in the library and **puts each one in the library's review chain at once** — this is the one place a Review starts without its own press (docs/adr/0044): the player pressed for the lot, and a batch pulled before a flight should be judged by the time the plane is up.",
+    "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:50"
+  },
+  "f79f4658211e": {
+    "mark": "promise",
+    "sentence": "Options are set on the serial actor between searches, never during one.",
+    "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:61"
+  },
+  "f862caa62379": {
+    "mark": "not",
+    "sentence": "A Review needs one uniform Depth across every move to make Scores comparable; during a game the per-move scores are whatever depth happened to be reached, so they are drawn as provisional (hollow, depth-labelled) and never fed into the Review's curve.",
+    "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:46",
+    "why": "the same promise as only-a-review-writes-ply-evaluation, registered from docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:26"
+  },
+  "f9549f47677b": {
+    "mark": "not",
+    "sentence": "Then every live search in the app was made one search (commit 43191ca): the position in front of the player is searched once, for ten seconds or to depth twenty, and 细判, the hint ladder, the cards, an asked move and the opponent's own move all read that one result.",
+    "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:4",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "fa3ed970ded3": {
+    "mark": "not",
+    "sentence": "The one place a positive number is honest, and it is settled only after the move is played.",
+    "source": "CONTEXT.md:32",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "fb10698b3173": {
+    "mark": "not",
+    "sentence": "A shot that only takes a loose piece, or that gains too little 胜率, is not kept: a set that fills with 「吃掉白送的后」 is a set nobody opens.",
+    "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:12",
+    "why": "the same promise as a-free-piece-is-not-a-kept-shot, registered from CONTEXT.md:168"
+  },
+  "fb59eedc48fc": {
+    "mark": "not",
+    "sentence": "The search is still asked for `.untilStopped` and stopped by cancelling it, which is how every search in this app ends, a thumb coming off 让引擎走 included.",
+    "source": "docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md:16",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "fbe9599eadb3": {
+    "mark": "not",
+    "sentence": "Only 连正 is read.",
+    "source": "CONTEXT.md:256",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "fc1e6be07c1e": {
+    "mark": "not",
+    "sentence": "It stops being survivable now that **which moves come back as a Drill is decided by ranking the differences between consecutive evaluations** (docs/adr/0017). A move whose \"before\" came from a Depth-10 live search and whose \"after\" came from lichess's Depth-30 cloud eval reads as an enormous swing that never happened: mixed provenance does not merely blur the ranking, it manufactures mistakes and hides real ones.",
+    "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:15",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "fd17ec50c72c": {
+    "mark": "not",
+    "sentence": "Vision is a *proposal* mechanism, never an authority; the accept/reject gate stays the same measure the original algorithm used, which is what makes the extension safe.",
+    "source": "docs/adr/0007-perspective-correction-is-a-pre-stage-the-checker-score-judges.md:30",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "fd2f9b81534e": {
+    "mark": "promise",
+    "sentence": "A fact about which move it was, read off that search, never a 掉幅 that rounded to zero — two equally good moves are both 0.0%, and only one of them is 最佳.",
+    "source": "CONTEXT.md:26"
+  },
+  "fdd1fcff8bce": {
+    "mark": "promise",
+    "sentence": "The device's name is never consulted.",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:40"
+  },
+  "fe3f3e9418be": {
+    "mark": "promise",
+    "sentence": "Imported evaluations prioritize suspected mistakes but never exclude moves from the local pass.",
+    "source": "README.md:54"
+  },
+  "ff3d9a919fa3": {
+    "mark": "promise",
+    "sentence": "**Time only separates answers that were right.**",
+    "source": "docs/adr/0030-fsrs-decides-the-day-and-arts-decides-the-order.md:23"
+  },
+  "ff45c1a87605": {
+    "mark": "not",
+    "sentence": "练习 (Practice)**: The act, never a place or a list of games.",
+    "source": "CONTEXT.md:122",
+    "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "ffb514f84882": {
+    "mark": "promise",
+    "sentence": "The only dial 把关 has on the judgement of a move — the engine's 棋力 shapes the opponent it plays, never what a move costs.",
+    "source": "CONTEXT.md:103"
+  }
+}
