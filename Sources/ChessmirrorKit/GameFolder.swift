@@ -24,10 +24,24 @@ import Foundation
 
     /// Open on a folder, iCloud's by default. The arguments are a seam rather than a
     /// feature: the real folder is found by `connect()`, but a test hands over a
-    /// temporary directory and never touches the real Documents.
-    public init(url: URL = GameFolder.local, isCloud: Bool = false) {
+    /// temporary directory and a container of its own, and never touches the real Documents
+    /// or the real iCloud.
+    public init(
+        url: URL = GameFolder.local,
+        isCloud: Bool = false,
+        container: @escaping @Sendable () -> URL? = GameFolder.ubiquityContainer
+    ) {
         self.url = url
         self.isCloud = isCloud
+        self.local = url
+        self.container = container
+    }
+
+    /// The app's iCloud container, or nil when there is no account. Nil rather than the
+    /// identifier: it means "the first container this app is entitled to", so the
+    /// entitlement stays the one place the container is named.
+    public nonisolated static let ubiquityContainer: @Sendable () -> URL? = {
+        FileManager.default.url(forUbiquityContainerIdentifier: nil)
     }
 
     /// The folder the app has always used, and the one it falls back to. Kept even after the
@@ -38,6 +52,9 @@ import Foundation
         return games
     }()
 
+    /// The folder the games were kept in before iCloud, which `connect()` moves up.
+    private let local: URL
+    private let container: @Sendable () -> URL?
     private var query: NSMetadataQuery?
     private var changed: (() -> Void)?
     private var isWatchingAccount = false
@@ -51,7 +68,10 @@ import Foundation
     /// and the second call is what notices.
     @discardableResult
     public func connect() async -> Bool {
-        let opened = await Task.detached(priority: .utility) { Self.openCloudFolder() }.value
+        let (local, container) = (local, container)
+        let opened = await Task.detached(priority: .utility) {
+            Self.openCloudFolder(container(), movingFrom: local)
+        }.value
         watchAccount()
         guard let opened, opened != url else { return false }
         url = opened
@@ -62,11 +82,9 @@ import Foundation
 
     /// Resolving the container, making the folder and moving the old games up, all off the main
     /// thread — every line of it can block on the account, the disk or both.
-    private nonisolated static func openCloudFolder() -> URL? {
+    private nonisolated static func openCloudFolder(_ container: URL?, movingFrom local: URL) -> URL? {
         let manager = FileManager.default
-        // Nil rather than the identifier: it means "the first container this app is entitled
-        // to", so the entitlement stays the one place the container is named.
-        guard let container = manager.url(forUbiquityContainerIdentifier: nil) else { return nil }
+        guard let container else { return nil }
         // `Documents` and not the container root, because that is the folder iOS publishes to
         // the Files app; anything beside it is the app's own business and stays hidden.
         let documents = container.appending(path: "Documents", directoryHint: .isDirectory)
@@ -75,7 +93,7 @@ import Foundation
         } catch {
             return nil
         }
-        moveLocalGames(into: documents, using: manager)
+        moveLocalGames(from: local, into: documents, using: manager)
         return documents
     }
 
@@ -89,9 +107,11 @@ import Foundation
     /// from another device, most likely — makes the local copy land beside it under a new name
     /// rather than on top of it. Two copies of one game is a thing a person can sort out; the
     /// game they lost is not.
-    private nonisolated static func moveLocalGames(into cloud: URL, using manager: FileManager) {
+    private nonisolated static func moveLocalGames(
+        from folder: URL, into cloud: URL, using manager: FileManager
+    ) {
         let local = (try? manager.contentsOfDirectory(
-            at: Self.local,
+            at: folder,
             includingPropertiesForKeys: nil,
             options: [.skipsHiddenFiles]
         )) ?? []
