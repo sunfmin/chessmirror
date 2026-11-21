@@ -83,7 +83,7 @@ case "exchange":
 
 case "analyse":
     guard arguments.count >= 2 else {
-        fail("usage: chessmirror-cli analyse <fen> [depth] [--threads N] [--multipv N]")
+        fail("usage: chessmirror-cli analyse <fen> [depth] [--threads N] [--multipv N] [--no-dotprod]")
     }
     guard let game = Game(startFEN: arguments[1]) else { fail("not a position I can play from") }
     let depth = arguments.count >= 3 ? Int(arguments[2]) ?? 20 : 20
@@ -108,11 +108,14 @@ case "analyse":
         service = try EngineService(
             bigNetURL: nets.appending(path: "nn-c288c895ea92.nnue"),
             smallNetURL: nets.appending(path: "nn-37f18f62d772.nnue"),
-            configuration: .init(threads: flagValue("--threads"))
+            configuration: .init(threads: flagValue("--threads")),
+            // `--no-dotprod` runs the build an A12 gets, on a machine that could do better.
+            cpu: arguments.contains("--no-dotprod") ? CPUFeatures(hasDotProd: false) : .current
         )
     } catch {
         fail("\(error) — looked in \(nets.path); set CHESSMIRROR_NETS to point elsewhere")
     }
+    print("build \(service.build.rawValue)")
 
     for await analysis in service.analyse(
         game, budget: .depth(depth), lines: flagValue("--multipv") ?? 3

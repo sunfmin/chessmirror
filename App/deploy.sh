@@ -35,6 +35,10 @@ xcodebuild -project Chessmirror.xcodeproj -scheme Chessmirror -configuration Rel
   -derivedDataPath /tmp/dd \
   CURRENT_PROJECT_VERSION="$stamp" build
 
+# The binary going to the device, checked the way the gate checks the test binary: an iPad
+# without dotprod must never be handed an armv8 engine that uses it (docs/adr/0052).
+../scripts/dotprod-confined.sh /tmp/dd/Build/Products/Release-iphoneos/Chessmirror.app/Chessmirror
+
 echo "==> installing"
 xcrun devicectl device install app --device "$udid" \
   /tmp/dd/Build/Products/Release-iphoneos/Chessmirror.app

@@ -15,3 +15,7 @@ done
 # Release and one test at a time, as README.md's "Build and test" says: the recognition memory
 # checks measure the test process's footprint, so tests running beside them would be counted.
 swift test -c release --no-parallel
+
+# The armv8 engine is what an A12 runs: no dotprod instruction may reach it (docs/adr/0052).
+scripts/dotprod-confined.sh \
+    "$(swift build -c release --show-bin-path)/chessmirrorPackageTests.xctest/Contents/MacOS/chessmirrorPackageTests"

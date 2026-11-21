@@ -118,8 +118,14 @@ public final class EngineService: @unchecked Sendable {
     /// again before every search that is not the opponent's own move (docs/adr/0038).
     private var bound: Strength = .full
 
+    /// The Stockfish build this engine was started on, as the bridge reports it.
+    public let build: EngineBuild
+
+    /// `cpu` is whose instructions the engine may use; the build is chosen from it, once,
+    /// here (docs/adr/0052).
     public init(
-        bigNetURL: URL, smallNetURL: URL, configuration: Configuration = Configuration()
+        bigNetURL: URL, smallNetURL: URL, configuration: Configuration = Configuration(),
+        cpu: CPUFeatures = .current
     ) throws {
         #if os(iOS) && !targetEnvironment(simulator)
         positionSearches = PositionSearches(storage: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -131,11 +137,12 @@ public final class EngineService: @unchecked Sendable {
         var status = CF_ENGINE_OK
         let created = bigNetURL.withUnsafeFileSystemRepresentation { big in
             smallNetURL.withUnsafeFileSystemRepresentation { small in
-                cf_engine_create(big, small, &status)
+                cf_engine_create(EngineBuild(for: cpu).bridged, big, small, &status)
             }
         }
         guard let created else { throw StartupFailure(status) }
         handle = EngineHandle(pointer: created)
+        build = EngineBuild(cf_engine_build(created))
         // Changing these takes effect on the next search; Stockfish rebuilds its thread pool
         // and table as the options are set, so they are set here and nowhere else.
         multiPV = max(1, configuration.multiPV)

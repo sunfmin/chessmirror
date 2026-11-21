@@ -1,16 +1,13 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// The define set the Stockfish Makefile uses for ARCH=armv8, which is 64-bit ARM with NEON and
-// nothing newer: every device this app can be installed on and the machine it is built on. An
-// Intel Mac would need its own set, and does not get one.
+// The define set the Stockfish Makefile uses for ARCH=armv8: 64-bit ARM with NEON and nothing
+// newer, which every device this app can be installed on has. An Intel Mac would need its own
+// set, and does not get one.
 //
-// Not ARCH=apple-silicon. That set adds the dotprod instructions, which took the start position
-// from 11.0M to 12.5M nodes per second on this Mac — and which an A12 does not have. iPadOS 26
-// still runs on A12 iPads (the first iPad Pro 11-inch among them), and there the first NNUE
-// evaluation is an illegal instruction: the app dies the moment the engine looks at a board.
-// No App Store device requirement can exclude an A12, so the build stops asking for the
-// instruction instead, and every device pays the 14%.
+// The engine is built twice from the one vendored tree: with this set in CStockfish, and with
+// ARCH=apple-silicon's dotprod added in CStockfishDotprod. Each engine is started on the build
+// its CPU can run, and why is docs/adr/0052.
 let stockfishDefines: [CXXSetting] = [
     .define("NDEBUG"),
     // Pinned rather than inherited, because what Xcode hands a package target is the app's
@@ -32,6 +29,16 @@ let stockfishDefines: [CXXSetting] = [
     .define("NNUE_EMBEDDING_OFF"),
 ]
 
+// What ARCH=apple-silicon adds to ARCH=armv8, and the rename that lets both builds be linked
+// into one binary: every Stockfish symbol is in `namespace Stockfish`, so defining the name
+// moves the whole second copy aside without touching a vendored line (docs/adr/0052).
+let dotprodDefines: [CXXSetting] = stockfishDefines + [
+    .define("USE_NEON_DOTPROD"),
+    .unsafeFlags(["-march=armv8.2-a+dotprod"]),
+    .define("Stockfish", to: "StockfishDotprod"),
+    .headerSearchPath("../CStockfish/include"),
+]
+
 let package = Package(
     name: "chessmirror",
     // The language the words were written in first. Every other one falls back to it, and a
@@ -48,12 +55,25 @@ let package = Package(
     targets: [
         .target(
             name: "CStockfish",
+            dependencies: ["CStockfishDotprod"],
             exclude: [
                 "stockfish/VENDORED.txt",
                 "stockfish/incbin/UNLICENCE",
             ],
             publicHeadersPath: "include",
             cxxSettings: stockfishDefines
+        ),
+        // CStockfish's stockfish/ and engine/ again, by symlink, built with dotprod. Nothing
+        // but bridge.cpp calls into it.
+        .target(
+            name: "CStockfishDotprod",
+            exclude: [
+                "stockfish/VENDORED.txt",
+                "stockfish/incbin/UNLICENCE",
+            ],
+            // No header of its own is anyone's business; engine_build.h is the one bridge.cpp reads.
+            publicHeadersPath: "engine",
+            cxxSettings: dotprodDefines
         ),
         .target(
             name: "ChessmirrorKit",
