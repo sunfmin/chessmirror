@@ -14,3 +14,499 @@ sources = ["README.md", "CONTEXT.md", "docs/adr/*.md"]
 # - Speaking is a swift-testing trait that sets the language a test's words are in
 #   (docs/adr/0019): it stands in for nothing.
 # Declare `standins` once the app drives a real program through a command line.
+
+# The promises chessmirror makes (chessmirror#9). `check = ["test"]` names the rung; the comment
+# above each says which tests hold it. `kept` is one no test was found holding, or one the
+# code no longer keeps as written.
+
+# held by: NoSlipsSessionTests.realPreparedMoveWaitsForThePlayedPositionBeforeTheOpponentSearch
+[[promise]]
+name = "every-human-move-waits-for-its-evaluation"
+says = "Every live human move waits for the resulting position's evaluation before the opponent starts."
+source = "README.md:34"
+check = ["test"]
+
+[[promise]]
+name = "search-uses-at-most-two-threads"
+says = "Search uses at most two threads by default, and opening the game never launches an automatic historical scoring pass."
+source = "README.md:37"
+kept = "no test found holding the two-thread default or that opening a game starts no historical scoring pass"
+
+# held by: DrillTests "a move that is not the engine's first choice passes, so long as it costs little"
+[[promise]]
+name = "a-drill-reply-within-two-points-passes"
+says = "Replies within two percentage points of the shared bounded evaluation pass; retry, Reveal, and Skip leave the real game intact."
+source = "README.md:52"
+check = ["test"]
+why = "the verdict is a pure reading of one finished search, and retry, Reveal and Skip are taps the player orders; nothing in it runs at once or in an order the app does not choose"
+
+# held by: ImportReviewTests.importScoresPrioritizeButNeverExcludeLocalJudgements
+[[promise]]
+name = "imported-scores-never-exclude-local-judgements"
+says = "Imported evaluations prioritize suspected mistakes but never exclude moves from the local pass."
+source = "README.md:54"
+check = ["test"]
+
+[[promise]]
+name = "a-drop-is-never-positive"
+says = "Never positive: the best move costs nothing, and every other move costs something."
+source = "CONTEXT.md:21"
+kept = "no test found holding a 掉幅 to never above zero"
+
+[[promise]]
+name = "best-is-the-searchs-first-line"
+says = "A fact about which move it was, read off that search, never a 掉幅 that rounded to zero — two equally good moves are both 0.0%, and only one of them is 最佳."
+source = "CONTEXT.md:26"
+kept = "no test found that holds 最佳 to the first line against a tie at 0.0%"
+
+# held by: StandingTests.theCurveReadsTheJudgementBeforeTheReview
+[[promise]]
+name = "score-curve-never-off-the-live-search"
+says = "分数曲线 (Score curve)**: The record's Scores as one shape: a level per position of a game, high where White is doing well, nil where nobody has scored it, drawn under the record strip once two positions are known (`ScoreCurve`). It is read off the record — the 细判 written on each move first, then the Review — and never off the live search."
+source = "CONTEXT.md:75"
+check = ["test"]
+
+# held by: StrengthTests.judgementsAreAtFullStrengthWhateverTheRung
+[[promise]]
+name = "strength-never-shapes-what-a-move-costs"
+says = "The only dial 把关 has on the judgement of a move — the engine's 棋力 shapes the opponent it plays, never what a move costs."
+source = "CONTEXT.md:103"
+check = ["test"]
+
+# held by: JudgementTests "the 入列线 never sits below the 记录线, however the pair is made"
+[[promise]]
+name = "queue-line-never-below-record-line"
+says = "Never below the 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be worth remembering without being worth drilling."
+source = "CONTEXT.md:112"
+check = ["test"]
+why = "two settings and the clamp between them; nothing runs at once or out of order"
+
+[[promise]]
+name = "a-mate-position-is-in-mates-only"
+says = "自动集 (Found collection)**: 杀招 and 战术, one 收藏集 each, derived from the games the app has judged: a position where the side to move — the player or the opponent — has a shot is in one of them, and a position with a mate is in 杀招 only."
+source = "CONTEXT.md:165"
+kept = "no test found holding that a position with a mate is never also in 战术"
+
+# held by: CollectionsTests "a gift that leaves the side to move well placed is a 战术 — unless it is just a free piece"
+[[promise]]
+name = "a-free-piece-is-not-a-kept-shot"
+says = "A shot that is only taking a loose piece, or that gains too little 胜率, is not kept."
+source = "CONTEXT.md:168"
+check = ["test"]
+
+[[promise]]
+name = "own-collections-are-never-scheduled"
+says = "They are never scheduled — practising one is 计划外练习 — because what a player picks to repeat, FSRS would read as what they know best (docs/adr/0032). _Avoid_: 文件夹, 分组"
+source = "CONTEXT.md:173"
+kept = "no test found holding that a 自建集 position is never scheduled"
+
+# held by: CollectionsTests "喜爱 is always there and cannot be renamed or deleted; other sets can"
+[[promise]]
+name = "favourites-always-there"
+says = "喜爱 (Favourites)**: The 自建集 that is always there, cannot be renamed or deleted, and is where the heart puts a position unless the player picks another."
+source = "CONTEXT.md:178"
+check = ["test"]
+
+# held by: GameOffersTests "the 把关 switch always moves"
+[[promise]]
+name = "no-slips-switch-always-moves"
+says = "The switch always moves — mid-move, under an exercise, in a 练习, with no engine yet — and a move being weighed is ruled under what it says when the weighing ends (docs/adr/0048). The switch and the door are named for what the app does — somebody is at the gate — because 正着, the word for the move, read as nonsense on a switch: 「正着 开」."
+source = "CONTEXT.md:194"
+check = ["test"]
+
+# held by: VariationTests "branching twice from one ply keeps both lines"
+[[promise]]
+name = "playing-over-a-move-never-writes-it-out"
+says = "Playing over a move never writes it out: what followed moves in beside the new move, whole, and the record can switch between them (docs/adr/0043). A game is a tree of lines with one 树干 — the line it arrived as, imported or played out — and every other line a 树枝, inked in its own colour."
+source = "CONTEXT.md:213"
+check = ["test"]
+
+# held by: OpponentMoveTests "the toss picks only between moves the search scores within a pawn's fifteenth"
+[[promise]]
+name = "toss-within-fifteen-centipawns"
+says = "掷子 (Toss)**: How a 满力 opponent picks between moves its own search cannot tell apart: at random, among the lines scored within fifteen centipawns of the first, from its own side."
+source = "CONTEXT.md:247"
+check = ["test"]
+
+# held by: OpponentMoveTests "a mate is never tossed for"
+[[promise]]
+name = "a-mate-is-never-tossed-for"
+says = "A mate is never tossed for."
+source = "CONTEXT.md:249"
+check = ["test"]
+
+# held by: NoSlipsTests.aRefusalWaitingAtTheEndZeroesTheRun, NoSlipsTests.switchingNoSlipsOffPausesTheRunRatherThanResettingIt
+[[promise]]
+name = "only-a-tried-move-ends-a-run"
+says = "Only a 试招 ends a run; switching 把关 off pauses it."
+source = "CONTEXT.md:260"
+check = ["test"]
+
+# held by: ImportReviewTests.realImportedScoresCannotHideLocalMistakes, ReviewProvenanceTests "an imported game's Scores are kept as somebody else's, and judged by nothing"
+[[promise]]
+name = "only-the-judge-names-a-mistake"
+says = "**The only thing allowed to call something a 错题.**"
+source = "CONTEXT.md:296"
+check = ["test"]
+
+# held by: SearchLimitTests "the standard budget is ten seconds or depth twenty, and 复判 is depth 28 within a minute"
+[[promise]]
+name = "rejudge-goes-deeper-by-a-fixed-rule"
+says = "A 复判 goes past it by a fixed rule, never by a second budget."
+source = "CONTEXT.md:305"
+check = ["test"]
+
+[[promise]]
+name = "rejudge-only-on-request"
+says = "Asked for by the player, one move at a time, never run on its own."
+source = "CONTEXT.md:317"
+kept = "no test found holding that no 复判 starts unasked"
+
+[[promise]]
+name = "networks-never-fetched"
+says = "\"Fully local\" is about the networks never being fetched, not about them living inside the executable."
+source = "docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md:19"
+kept = "nothing at run time reaches for the network weights; held by the build bundling the NNUE resource, not by a test"
+
+# held by: RulesTests (every query is a FEN and its moves), ControlTests "control follows the moves, not just the starting FEN"
+[[promise]]
+name = "rules-bridge-is-stateless"
+says = "The bridge that answers Rules Queries is **stateless**: every call takes `(startFEN, moves)` and rebuilds a `Position` by replaying the moves."
+source = "docs/adr/0003-borrow-stockfish-for-rules-queries-behind-a-stateless-bridge.md:8"
+check = ["test"]
+
+[[promise]]
+name = "rules-queries-never-touch-the-search-engine"
+says = "Rules Queries never touch the searching `Engine` instance, so there is no race with the search threads — the bridge owns no shared mutable state at all."
+source = "docs/adr/0003-borrow-stockfish-for-rules-queries-behind-a-stateless-bridge.md:17"
+kept = "held by construction: the rules bridge builds its own Position per call and never takes the Engine instance, so no interleaving can reach the search threads; no simulation or model exists to break it"
+
+# held by: BoardIntakeTests "a legal reading opens as a game", FENValidationTests
+[[promise]]
+name = "only-a-legal-position-starts-a-game"
+says = "Only a Position Stockfish accepts can start a Game."
+source = "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md:11"
+check = ["test"]
+
+# held by: VariationTests "browsing onto the opponent's turn plays nothing"
+[[promise]]
+name = "engine-plays-only-from-the-latest-position"
+says = "The engine only plays from the **latest** position, so browsing back is where a self-playing game pauses and 回到最新 is where it carries on."
+source = "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:62"
+check = ["test"]
+
+[[promise]]
+name = "editing-only-before-the-first-move"
+says = "Editing is allowed only while the Game has no moves."
+source = "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:65"
+kept = "no test found holding the Piece Editor shut once a game has a move"
+
+# held by: GameFolderTests "a coordinated write lands, reads back and is removable"
+[[promise]]
+name = "icloud-reads-are-coordinated"
+says = "Reads and writes go through `NSFileCoordinator` when the folder is iCloud's, so that a file being written by the sync daemon is never read halfway through."
+source = "docs/adr/0012-the-library-is-a-folder-in-icloud-drive.md:29"
+check = ["test"]
+
+[[promise]]
+name = "shutter-fires-only-on-a-press"
+says = "It opens on the ultra-wide lens, autofocus is configured for a subject close by and can be aimed by tapping, the shutter fires only when a thumb presses it, and a box is drawn live around the board it can see."
+source = "docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md:4"
+kept = "camera hardware; no test drives the viewfinder's shutter"
+
+# held by: DoorwayTests.theLinkDoorHandsAShareLinkToTheSameSniff, PGNImportTests
+[[promise]]
+name = "one-pipeline-behind-every-door"
+says = "A 门 is only *how the text is got*. Behind every door the same thing happens to the text: split it into games, name each one, write one file per game."
+source = "docs/adr/0014-the-import-sheet-has-four-doors-and-one-pipeline-behind-them.md:25"
+check = ["test"]
+
+# held by: ReviewProvenanceTests "a move played after a Review is not a mistake, it is unscored"
+[[promise]]
+name = "only-a-review-writes-ply-evaluation"
+says = "**Only a Review writes `Ply.evaluation`.** One engine, one uniform Depth, one pass over the whole Game."
+source = "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:26"
+check = ["test"]
+
+# held by: PGNImportTests "evaluations that came with a game stay the other site's numbers", ReviewProvenanceTests
+[[promise]]
+name = "imported-eval-never-trusted"
+says = "**An imported `[%eval]` is kept, labelled, and never trusted.**"
+source = "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:33"
+check = ["test"]
+
+# held by: JudgementTests "evaluations nobody stated a depth for judge nothing at all"
+[[promise]]
+name = "unreviewed-numbers-never-ranked"
+says = "They are treated as unreviewed — absent a `ReviewDepth`, the numbers are read for display and never for ranking."
+source = "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:58"
+check = ["test"]
+
+# held by: LocalizationTests.everyLanguageSaysEverything
+[[promise]]
+name = "untranslated-falls-back-to-chinese"
+says = "Chinese is the language the app was written in and the one every other falls back to, key by key: a sentence that has not been translated yet comes out in Chinese rather than as a key, and a screen is never half in symbols."
+source = "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:3"
+check = ["test"]
+
+[[promise]]
+name = "tactics-finder-off-at-start-never-in-pgn"
+says = "战术发现器 is a second switch, off at the start of every Game, never written to PGN.**"
+source = "docs/adr/0023-a-tactics-finder-can-speak-during-a-game.md:7"
+kept = "no test found holding the finder off in a new game or out of the written PGN"
+
+[[promise]]
+name = "tactics-finder-only-at-the-latest-position"
+says = "The finder talks only about the **latest** position of a Game in progress."
+source = "docs/adr/0023-a-tactics-finder-can-speak-during-a-game.md:9"
+kept = "not kept as written: TacticsTests \"browsing back and asking again probes the position being looked at\" holds the opposite; the ADR sentence is stale"
+
+# held by: EngineClockTests.pausedScreensDoNotStartOrQueueLiveWork
+[[promise]]
+name = "tactics-finder-refused-while-away"
+says = "The finder is refused while the app is away, with every other search."
+source = "docs/adr/0023-a-tactics-finder-can-speak-during-a-game.md:25"
+check = ["test"]
+
+# held by: EvalBarTests "the bar's ends wear the colours of the board's own sides"
+[[promise]]
+name = "a-score-is-whites-whatever-the-orientation"
+says = "`+3.00` means White is three pawns up whichever way the board is turned: that is what a Score is in every book, every engine readout and every PGN comment, and a number that changed its owner with the view would be a number nobody could compare with anything."
+source = "docs/adr/0026-the-advantage-bar-turns-with-the-board.md:16"
+check = ["test"]
+
+# held by: MistakeBookTests "recurrence jumps the queue, whatever any single occasion cost", DailyTests "recurrence jumps the queue whatever any one go cost"
+[[promise]]
+name = "recurrence-alone-jumps-the-queue"
+says = "复发 is the only thing allowed to jump the enrolment queue, whatever it cost."
+source = "docs/adr/0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md:28"
+check = ["test"]
+why = "the enrolment order is a pure function of the files and the log, read when asked; nothing runs at once or in an order the app does not choose"
+
+# held by: MistakeIndexTests "the log is append-only, and the standing answer is computed from it"
+[[promise]]
+name = "practice-log-is-append-only"
+says = "There is now a second store, and it is an append-only log of facts.**"
+source = "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:9"
+check = ["test"]
+
+# held by: DrillTests "the log holds nothing a scheduler would have to be migrated out of", DailyTests "the day is a pure function of the log, so a rebuilt index schedules the same day"
+[[promise]]
+name = "scheduler-output-never-written"
+says = "That rule is the whole value of the decision and it is worth being awkward about: **the scheduler's output must never be written down**, because the moment it is, changing the scheduler means migrating every row, and the app stops being able to change its mind."
+source = "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:15"
+check = ["test"]
+
+# held by: MistakeIndexTests "throwing the index away and building it again schedules the very same day", MistakeIndexTests.theIndexAgreesWithADerivedBook
+[[promise]]
+name = "mistake-index-is-only-a-cache"
+says = "An index is needed — and it is a cache, rebuilt from the files and the log, never a third place where something is true."
+source = "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md:39"
+check = ["test"]
+
+# held by: ARTSTests "a miss jumps the queue, a slow right answer waits, a fast one waits longest"
+[[promise]]
+name = "time-only-separates-right-answers"
+says = "**Time only separates answers that were right.**"
+source = "docs/adr/0030-fsrs-decides-the-day-and-arts-decides-the-order.md:23"
+check = ["test"]
+
+[[promise]]
+name = "every-drill-says-what-the-move-cost"
+says = "Every drill says what the move cost and what the better move was doing, whether or not it passed, and `IntentReading` is what lets that be a sentence — 「Qxd5 吃 d5 上没人 守的车」 — rather than a line of notation, which to a 1200 is a second puzzle and not an answer."
+source = "docs/adr/0031-the-player-no-longer-declares-a-reason.md:26"
+kept = "not kept as written: DrillTests \"both a pass and a fail say why, and only the fail names the engine's move\" — a pass does not say what the better move was doing"
+
+[[promise]]
+name = "reply-shown-only-when-the-chip-is-pressed"
+says = "The reply is not a recommendation and the app must not treat it as one: it is what the move cost, made concrete, and it appears when and only when somebody presses the chip."
+source = "docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md:32"
+kept = "no test found holding the 应招 hidden until the chip is pressed"
+
+# held by: NoSlipsSessionTests.aMovePlayedFromAnEarlierPositionIsStillWeighed
+[[promise]]
+name = "no-slips-weighs-every-move"
+says = "That is the trade the mode asks for: 耕棋 on means every move is weighed, and a mode that weighs *most* moves is a mode nobody can trust."
+source = "docs/adr/0035-tilling-weighs-a-move-wherever-it-is-played.md:39"
+check = ["test"]
+
+# held by: GateTests.theBookAdmitsAStoodMoveOnlyWhenAReviewMeasuredIt
+[[promise]]
+name = "book-admits-a-stood-move-only-from-a-review"
+says = "The book compares a move's cost with the cost of moves in other games, so every score in it has to come from one uniform pass (ADR 0016), and a move that stood enters it only from a Review."
+source = "docs/adr/0036-a-game-lists-its-own-wrong-moves.md:43"
+check = ["test"]
+
+# held by: StrengthTests.theOpponentsOwnSearchIsBoundAndNothingElseIs
+[[promise]]
+name = "strength-bounds-only-the-opponents-search"
+says = "With one engine (ADR 0009) that means the limit is set for the opponent's move searches and cleared for every other search, the way MultiPV is already varied per search on the serial actor."
+source = "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:31"
+check = ["test"]
+
+# held by: StrengthTests.aReopenedGameComesBackAtTheRungOfItsLastEngineMove, LadderTests "each stretch is credited to its own rung, and a run does not cross rungs"
+[[promise]]
+name = "every-engine-move-records-its-elo"
+says = "Every engine move records the Elo it was made at**, as an annotation on that move — the way a judgement is (ADR 0027) and a refusal is written where it happened (ADR 0037). A 棋力 can change mid-game the way a Controller can, so a game is a sequence of stretches, and the 正着榜 credits each stretch to the rung it was played at; a stretch against a human is credited to no rung."
+source = "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:35"
+check = ["test"]
+
+# held by: StrengthTests.changingTheRungRestartsTheMoveBeingThoughtAbout
+[[promise]]
+name = "engine-options-set-between-searches"
+says = "Options are set on the serial actor between searches, never during one."
+source = "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:61"
+check = ["test"]
+
+# held by: LadderTests "a game the ladder reads is the one its 正着 was written into, through a file", NoSlipsTests.theFiguresSurviveTheFile
+[[promise]]
+name = "no-slips-figures-never-stored"
+says = "正着数, 连正 and the 正着榜 are readings of the games and are never stored on their own; the library derives and caches them the way it derives the 错题本."
+source = "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:65"
+check = ["test"]
+
+# held by: EngineClockTests.allLiveConsumersShareThePositionClock
+[[promise]]
+name = "every-live-search-on-the-shared-budget"
+says = "`EngineClockTests` holds every live search to `PositionSearches.budget`, which is the test that would have caught a clock quietly coming back."
+source = "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:49"
+check = ["test"]
+
+# held by: RejudgeTests.aPendingTriedMoveIsRewrittenInPlaceAndTheGameSaved, RejudgeTests.aTriedMoveOnAStoodMoveIsRewrittenAndTheStoodMoveKeepsItsJudgement
+[[promise]]
+name = "a-refusal-is-never-rewritten"
+says = "The refusal itself is never rewritten: the move was taken back, and that stays written where it happened ([ADR 0037](0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md)). Only the number changes."
+source = "docs/adr/0041-a-tried-move-can-be-judged-again-deeper.md:12"
+check = ["test"]
+
+# held by: PlayerSettingsTests "accounts are kept newest first, four to a site"
+[[promise]]
+name = "import-memory-four-names-per-site"
+says = "What the sheet remembers (`ImportMemory`, both stores like the lines): per site, the names that have fetched games, newest first, at most four; the count; the door."
+source = "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:19"
+check = ["test"]
+
+[[promise]]
+name = "a-name-is-kept-only-after-it-fetched"
+says = "A name is kept only after it has fetched something — a misspelling that failed is not an account, and offering it back as a chip would be offering the mistake back."
+source = "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:20"
+kept = "no test found holding a name that fetched nothing out of ImportMemory"
+
+# held by: ImportReviewTests.backgroundImportWaitsForForegroundAndCanBeCancelled
+[[promise]]
+name = "a-batch-pull-is-reviewed-at-once"
+says = "Pressing it writes every game not already in the library and **puts each one in the library's review chain at once** — this is the one place a Review starts without its own press (docs/adr/0044): the player pressed for the lot, and a batch pulled before a flight should be judged by the time the plane is up."
+source = "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:50"
+check = ["test"]
+why = "the review chain runs one game at a time on the one engine; its yielding to the foreground is held by ImportReviewTests, and no simulation exists yet"
+
+# held by: AutoFetchTests "the next day carries on from where it reached, and a deleted game stays deleted", AutoFetchTests "a pull writes at most fifty games from one account"
+[[promise]]
+name = "a-pull-carries-on-from-its-point"
+says = "It carries on from a point, not a count: each account keeps where its last pull reached, stored with the names and synced as they are, and a pull asks only for what came after it, at most fifty games (the first pull, with no point yet, takes the count the sheet remembers). Carrying on from a stored point rather than from the newest game in the library is what keeps a deleted game deleted; a fetch by hand in the sheet still lists it, because that is somebody looking."
+source = "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:70"
+check = ["test"]
+
+# held by: LadderTests "满力 is a rung of its own, and moves played with 正着 off stand under nothing", NoSlipsSessionTests.aGameSavedUnderItsOwnInterceptLineReopensOnTheRecordLine
+[[promise]]
+name = "a-judgement-keeps-its-line"
+says = "A judgement keeps the line it stood under (`under N` on the move), so a move that stood under five still says five, and the 连正榜 reads it as it always did."
+source = "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md:32"
+check = ["test"]
+
+[[promise]]
+name = "every-session-is-handed-the-players-lines"
+says = "Every way into a session — new, reopened, photographed, corrected — is handed the player's lines for this reason; a reopened game used to be judged by the standard pair whatever 关于 said, which did not matter while 把关 brought its own number and matters now."
+source = "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md:38"
+kept = "no test found holding every way into a session to the player's lines"
+
+# held by: DrillTests "a 练习 arrives under 把关, and the switch takes it out"
+[[promise]]
+name = "a-drill-arrives-under-no-slips"
+says = "The switch is forced on where the drill is made, so every door into one — the 日课 queue, 错题本's 练习 button, a screen test — gets the same game."
+source = "docs/adr/0047-practice-is-played-under-no-slips.md:16"
+check = ["test"]
+why = "a drill is made in one place, once; no order of events chooses its switch"
+
+# held by: DrillTests "a wrong answer is taken back, written down, and lands in the book"
+[[promise]]
+name = "a-practice-tried-move-counts-in-the-book"
+says = "The 试招 goes into the 错题本 through the door every other 试招 uses, so the position's 复发 counts it and 「你栽过 4 次」 includes the times you fell for it while practising."
+source = "docs/adr/0047-practice-is-played-under-no-slips.md:30"
+check = ["test"]
+
+# held by: DrillTests "a finished drill leaves one line, with how long it took", DrillTests "two devices each practising one position merge by union"
+[[promise]]
+name = "practice-log-records-an-attempt-once"
+says = "The alternative — a practice-only kind of 试招 the book skips — was considered and refused: it would have made the book's sentence depend on where you were sitting, and it would have needed the one thing this repo does not have, a second place where a mistake is true ([ADR 0029](0029-the-practice-log-records-what-happened-never-what-is-due.md)). The practice log still records the attempt exactly once, and FSRS still schedules off the log alone ([ADR 0030](0030-fsrs-decides-the-day-and-arts-decides-the-order.md)), so the two accounts do not feed each other: the book counts occasions, the log counts goes."
+source = "docs/adr/0047-practice-is-played-under-no-slips.md:32"
+check = ["test"]
+why = "a go is written by one call when the drill settles, and two devices' logs merge by union; DrillTests holds both, and no simulation exists yet"
+
+[[promise]]
+name = "every-answered-mistake-leaves-a-file"
+says = "Every answered 错题 now leaves a file in the library — a move and the engine's reply for a pass, a bare position and a 试招 for a failure."
+source = "docs/adr/0047-practice-is-played-under-no-slips.md:52"
+kept = "no test found holding a file in the library after each answered 错题"
+
+# held by: DrillTests "a 练习 arrives under 把关, and the switch takes it out"
+[[promise]]
+name = "switched-off-a-wrong-answer-still-fails"
+says = "Switched off, a wrong answer is still a wrong answer: the verdict fails, the log records the go and the book counts the 遭遇; the move is only left on the board."
+source = "docs/adr/0048-the-no-slips-switch-always-moves.md:30"
+check = ["test"]
+
+# held by: OpponentMoveTests "a position the opponent has already played from is searched again"
+[[promise]]
+name = "a-spent-entry-never-answers-a-second-opponent"
+says = "An entry that has had a move played out of it is **spent**, and a spent entry never stands in for a second opponent: the search runs again, at the everyday 搜索预算."
+source = "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:24"
+check = ["test"]
+
+# held by: PositionSearchTests.theStoreKeepsTheDeepestResultItKnows
+[[promise]]
+name = "store-never-commits-a-shallower-result"
+says = "`PositionSearches` never commits a shallower result over a deeper one, which a re-search of a position a 复判 had answered would otherwise have done (ADR 0041)."
+source = "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:59"
+check = ["test"]
+
+# held by: OpponentMoveTests "the opponent plays the move the toss picked, not the first line"
+[[promise]]
+name = "play-now-plays-what-the-toss-picked"
+says = "马上走 plays what the toss picked, not the first line: both read `thinkingBest`, which is settled once per snapshot by `opponentMove`, so the two can never name different moves."
+source = "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:64"
+check = ["test"]
+
+[[promise]]
+name = "the-board-never-moves-for-a-new-line"
+says = "Nothing it depends on changes during a game, so the board still never moves because the engine found another line."
+source = "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:13"
+kept = "no test found holding the iPad layout still while the engine's line changes"
+
+# held by: DeckFloorTests.boardAlwaysUsesTheFullWidth
+[[promise]]
+name = "every-phone-gets-a-full-width-board"
+says = "`DeckFloor` still holds every phone to a full-width board in one column."
+source = "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:40"
+check = ["test"]
+
+# held by: CollectionsTests "a mate the opponent's move allowed is a 杀招, seen from the side that can give it"
+[[promise]]
+name = "a-found-position-opens-from-the-side-to-move"
+says = "Both sides' shots are kept — the opponent's is the same question with the board turned — so opening one always shows the side to move at the bottom."
+source = "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:10"
+check = ["test"]
+
+# held by: CollectionsTests "a position that is an owed 错题 is scheduled as that, once"
+[[promise]]
+name = "a-mistake-is-scheduled-once"
+says = "A position that is a 错题 is scheduled as a 错题 and only once."
+source = "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:21"
+check = ["test"]
+
+# held by: EngineBuildTests "a CPU without dotprod gets the armv8 build, and one with it gets dotprod"
+[[promise]]
+name = "the-device-name-is-never-consulted"
+says = "The device's name is never consulted."
+source = "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:40"
+check = ["test"]
