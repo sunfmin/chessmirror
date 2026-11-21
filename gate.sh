@@ -14,7 +14,20 @@ done
 
 # Release and one test at a time, as README.md's "Build and test" says: the recognition memory
 # checks measure the test process's footprint, so tests running beside them would be counted.
-swift test -c release --no-parallel
+#
+# What failed is printed again last: a reader who keeps only the tail of this output would
+# otherwise see "1 issue" and not which test it was.
+log=$(mktemp)
+status=0
+swift test -c release --no-parallel > "$log" 2>&1 || status=$?
+cat "$log"
+if [ "$status" -ne 0 ]; then
+    echo "gate: the tests failed; what failed:" >&2
+    grep -E '✘|recorded an issue|error:' "$log" | grep -v '^✘ Test run with' | head -40 >&2
+    rm -f "$log"
+    exit "$status"
+fi
+rm -f "$log"
 
 # The armv8 engine is what an A12 runs: no dotprod instruction may reach it (docs/adr/0052).
 scripts/dotprod-confined.sh \
