@@ -39,6 +39,9 @@ xcodebuild -project Chessmirror.xcodeproj -scheme Chessmirror -configuration Rel
   -destination "generic/platform=iOS" -derivedDataPath /tmp/dd-appstore -archivePath "$archive" \
   "${sign_in[@]}" CURRENT_PROJECT_VERSION="$stamp" archive
 
+# What the store hands to an A12 iPad too: its armv8 engine must hold no dotprod (docs/adr/0052).
+../scripts/dotprod-confined.sh "$archive/Products/Applications/Chessmirror.app/Chessmirror"
+
 echo "==> exporting for the store"
 cat > "$work/export.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

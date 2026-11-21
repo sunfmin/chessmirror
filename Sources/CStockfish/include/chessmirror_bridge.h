@@ -223,14 +223,29 @@ typedef enum {
 } CfEngineStatus;
 
 /*
+  Which of the two Stockfish builds an engine runs on (docs/adr/0052). Both are the same
+  engine from the same sources, and search the same tree node for node; the dotprod build
+  is faster and is an illegal instruction on a CPU without FEAT_DotProd (an A12). The
+  caller asks the CPU and says which; nothing here guesses.
+*/
+typedef enum {
+    CF_BUILD_ARMV8   = 0,
+    CF_BUILD_DOTPROD = 1
+} CfEngineBuild;
+
+/*
   Absolute paths to the two weights files. Both are required, and both are
   checked before Stockfish sees them: Network::verify calls exit(EXIT_FAILURE)
   when a net did not load, which in an app means the process simply vanishes.
   Returns NULL and sets *status on failure.
 */
-CfEngine *cf_engine_create(const char     *bigNetPath,
+CfEngine *cf_engine_create(CfEngineBuild   build,
+                           const char     *bigNetPath,
                            const char     *smallNetPath,
                            CfEngineStatus *status);
+
+/* The build the engine was created on. */
+CfEngineBuild cf_engine_build(const CfEngine *engine);
 
 void cf_engine_destroy(CfEngine *engine);
 

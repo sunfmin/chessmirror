@@ -16,3 +16,7 @@ done
 # "Build and test" says (the recognition memory checks measure the test process's footprint, so
 # tests running beside them would be counted), measured against .slimfit/baseline.json.
 slimfit check
+
+# The armv8 engine is what an A12 runs: no dotprod instruction may reach it (docs/adr/0052).
+scripts/dotprod-confined.sh \
+    "$(swift build -c release --show-bin-path)/ChessmirrorKitTests.xctest/Contents/MacOS/ChessmirrorKitTests"
