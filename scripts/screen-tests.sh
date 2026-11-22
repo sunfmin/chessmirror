@@ -71,14 +71,17 @@ if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
     exit 1
 fi
 
+# The summary goes through a file: sh's echo would turn the \n inside its strings into newlines.
+summary=$out/summary.json
+rm -f "$summary"
 if [ -d "$results" ]; then
-    summary=$(xcrun xcresulttool get test-results summary --path "$results" --compact)
-    echo "$summary" | jq -r '"screen-tests: \(.result): \(.passedTests) passed, \(.failedTests) failed, \(.skippedTests) skipped, \(.expectedFailures) known issues, on \(.devicesAndConfigurations[0].device.deviceName // "?") (\(.devicesAndConfigurations[0].device.osVersion // "?"))"'
-    echo "$summary" | jq -r '.testFailures[]? | "  \(.testIdentifierString): \(.failureText)"'
+    xcrun xcresulttool get test-results summary --path "$results" --compact > "$summary"
+    jq -r '"screen-tests: \(.result): \(.passedTests) passed, \(.failedTests) failed, \(.skippedTests) skipped, \(.expectedFailures) known issues, on \(.devicesAndConfigurations[0].device.deviceName // "?") (\(.devicesAndConfigurations[0].device.osVersion // "?"))"' "$summary"
+    jq -r '.testFailures[]? | "  \(.testIdentifierString): \(.failureText)"' "$summary"
 fi
 if [ "$rc" -ne 0 ]; then
     # A build that failed leaves no tests to name: the compiler's errors are in the log.
-    if [ ! -d "$results" ] || [ "$(echo "$summary" | jq '.failedTests')" = 0 ]; then
+    if [ ! -s "$summary" ] || [ "$(jq '.failedTests' "$summary")" = 0 ]; then
         grep -E 'error:|BUILD FAILED|TEST FAILED|Testing failed' "$log" | head -40 >&2
     fi
     echo "screen-tests: failed (exit $rc); full log: $log" >&2

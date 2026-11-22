@@ -7,6 +7,14 @@
 # `factorium worker exclusive` on 18 cores (chessmirror#2): before, `swift test` alone, 221s
 # at load 44-29 (785 tests in 147s); after, `slimfit check` 206s warm at load 40-35, 289s from
 # a cold build (`slimfit init`, at load 24-36).
+#
+# Both also run the app's screen tests (scripts/screen-tests.sh: App/ScreenTests, 111 tests, on
+# an iPhone 17 simulator), and both stay ./gate.sh because together they fit in 900s. Measured
+# 2026-11-22/23 under `factorium worker exclusive` on 18 cores (chessmirror#21): the gate before,
+# 134s at load 28-48; ScreenTests alone 316s cold (fresh DerivedData, at load 24-22, beside
+# another gate) and 301s warm (268s of it the tests, at load 11-5); the gate with them 328s green at load 7-11 (318s red, a test failed on purpose).
+# Split them into a slow gate of their own if the gate nears 900s. A run is bounded at 660s
+# (SCREEN_TESTS_LIMIT), because a simulator that never launches the tests hangs xcodebuild.
 
 [gate]
 fast = "./gate.sh"
