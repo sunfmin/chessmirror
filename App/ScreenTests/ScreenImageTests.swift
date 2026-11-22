@@ -8,20 +8,25 @@ import UIKit
 @Suite(.serialized)
 struct ScreenImageTests {
     /// With nothing listening SwiftUI builds no accessibility tree, and a harness that handed back
-    /// that silence would pass every `#expect(!rendered.says(…))` in the suite.
+    /// that silence would pass every `#expect(!rendered.says(…))` in the suite. A tree SwiftUI has
+    /// already built outlives the switch going off (measured: the words still came back), so the
+    /// harness holds a screen to the switch itself, and to its words.
     @Test("a screen drawn with the accessibility switch off fails rather than passes")
     func switchedOffFails() async {
         #expect(ScreenImage.listen(), "the switch exists on this runtime")
+        #expect(ScreenImage.isListening)
         ScreenImage.listen(false)
         defer { ScreenImage.listen(true) }
+        #expect(!ScreenImage.isListening, "and it can be put off")
 
         await withKnownIssue("the harness hears nothing and says so") {
-            let rendered = await ScreenImage.write("harness-switched-off", size: CGSize(width: 300, height: 200)) {
+            _ = await ScreenImage.write("harness-switched-off", size: CGSize(width: 300, height: 200)) {
                 Text("Something to say")
             }
-            #expect(!rendered.says("Something to say"))
         } matching: { issue in
-            issue.comments.contains { $0.rawValue.contains("said nothing") }
+            // In a process that has not drawn a screen yet, the tree is never built and the words
+            // are gone too (measured, running this suite alone): both are the harness failing.
+            issue.comments.contains { $0.rawValue.contains("switch is off") || $0.rawValue.contains("said nothing") }
         }
     }
 
@@ -60,6 +65,7 @@ struct ScreenImageTests {
                 Spacer()
             }
             .frame(width: size.width, height: size.height, alignment: .top)
+            .ignoresSafeArea()
         }
         let frame = try #require(rendered.frames(of: "Press").first)
         #expect(abs(frame.midX - 150) < 1 && abs(frame.minY - 100) < 1, "\(frame)")

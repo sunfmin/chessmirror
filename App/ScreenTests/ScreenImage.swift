@@ -71,6 +71,12 @@ enum ScreenImage {
             Issue.record(
                 "_AXSSetAutomationEnabled is not in libAccessibility: nothing builds the accessibility tree, so no screen can say anything",
                 sourceLocation: sourceLocation)
+        } else if !isListening {
+            // SwiftUI keeps a tree it has built after the switch goes off, so the words alone
+            // would not show this; the switch itself is what a screen drawn now is heard by.
+            Issue.record(
+                "the accessibility switch is off: what this screen says cannot be trusted to be heard",
+                sourceLocation: sourceLocation)
         }
         // Nothing moves: a picture is of where things end up, and a screen is settled when its
         // words stop changing, which an animation in flight would only put off.
@@ -151,6 +157,15 @@ enum ScreenImage {
     }
 
     private static var switchedOn: Bool?
+
+    /// Whether the switch is on now, as libAccessibility itself answers; as it was last put, on a
+    /// runtime without the getter.
+    static var isListening: Bool {
+        guard let library = dlopen("/usr/lib/libAccessibility.dylib", RTLD_NOW),
+            let symbol = dlsym(library, "_AXSAutomationEnabled")
+        else { return switchedOn == true }
+        return unsafeBitCast(symbol, to: (@convention(c) () -> Bool).self)()
+    }
 
     private static let automation: (@convention(c) (Bool) -> Void)? = {
         guard let library = dlopen("/usr/lib/libAccessibility.dylib", RTLD_NOW),
