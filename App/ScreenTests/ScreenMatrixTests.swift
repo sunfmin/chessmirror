@@ -98,8 +98,6 @@ struct ScreenMatrix {
         // A navigation bar is the 54 pt under the top of the safe area.
         let inBar = breach.word.frame.maxY <= rendered.safeArea.minY + 54
         switch (breach.rule, screen) {
-        case (.smallControl, .game), (.smallControl, .drill):
-            return "chessmirror#26: the game screen's bar and record controls are under 44×44 pt"
         case (.smallControl, .library):
             return "chessmirror#28: 拉新棋 and its hint line are under 44 pt tall"
         case (.smallControl, .importSheet), (.smallControl, .editor):

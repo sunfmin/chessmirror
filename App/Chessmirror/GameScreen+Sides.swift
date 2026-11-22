@@ -61,7 +61,7 @@ extension GameScreen {
                 if live, session.activePunishment == nil { action }
                 unfoldButton(colour)
             }
-            .frame(minHeight: 30)
+            .frame(minHeight: 44)
             // One row of facts, and it stays one row. At an accessibility size the labels gave way
             // to each other by wrapping, so 「让引擎走」 stood in its capsule on two lines and the
             // bar grew a row taller — which is a row taken off the board for a button's label.
@@ -74,7 +74,9 @@ extension GameScreen {
         }
         .padding(.leading, 13)
         .padding(.trailing, 8)
-        .padding(.vertical, 7)
+        // The row is the 44 pt its controls need, so the bar is as tall as it was with 7 pt
+        // above and below a 30 pt row; the chips, when unfolded, keep their 7 pt under them.
+        .padding(.bottom, unfolded == colour ? 7 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(live ? Palette.raised : Palette.parchment)
         // The side on the clock, said as a mark down the edge of its own bar rather than as a
@@ -183,6 +185,7 @@ extension GameScreen {
             }
             .font(.caption)
             .foregroundStyle(Palette.inkSoft)
+            .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .disabled(session.isOccupied)
@@ -199,7 +202,7 @@ extension GameScreen {
             Image(systemName: unfolded == colour ? "chevron.up" : "chevron.down")
                 .font(.caption2)
                 .foregroundStyle(Palette.inkSoft)
-                .frame(width: 30, height: 30)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -293,14 +296,14 @@ extension GameScreen {
     }
 
     func arrow(
-        _ symbol: String, label: String, enabled: Bool, width: CGFloat = 30,
+        _ symbol: String, label: String, enabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.caption2)
                 .foregroundStyle(Palette.inkSoft)
-                .frame(width: width, height: 30)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
