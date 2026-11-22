@@ -110,8 +110,6 @@ struct ScreenMatrix {
             return inBar
                 ? "chessmirror#29: navigation bar text buttons report 36 pt tall"
                 : "chessmirror#31: About's List pickers report 34 pt tall"
-        case (.overlap, .editor) where row == .accessibilityText:
-            return "chessmirror#30: at accessibility text sizes the editor's hint overlaps its board"
         default:
             return nil
         }
