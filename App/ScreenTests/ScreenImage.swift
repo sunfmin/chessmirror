@@ -28,6 +28,18 @@ enum ScreenImage {
     struct Word: Equatable {
         let text: String
         let frame: CGRect
+        /// What kind of thing VoiceOver says it is: a button, an adjustable, static text.
+        var traits: UIAccessibilityTraits = []
+        /// The part of it a scroll view lets be seen: the frame cut to what each scroll view it is
+        /// in shows, along the way that one scrolls. Empty for something scrolled out of sight.
+        var shown: CGRect? = nil
+        /// The class that said it, so the system's own chrome can be told from the app's.
+        var kind: String = ""
+
+        /// Something a finger presses, which is held to the 44×44 pt a finger needs.
+        var isControl: Bool {
+            !traits.intersection([.button, .link, .adjustable, .keyboardKey]).isEmpty
+        }
     }
 
     /// One rendered screen: the file it was written to, and every word it drew and where.
@@ -47,6 +59,71 @@ enum ScreenImage {
         /// Where each word containing `text` was drawn, so a test can hold the layout to something.
         func frames(of text: String) -> [CGRect] {
             elements.filter { $0.text.contains(text) }.map(\.frame)
+        }
+
+        /// One way a screen breaks the layout rules every screen keeps.
+        struct Breach: CustomStringConvertible {
+            enum Rule: Equatable { case outsideSafeArea, overlap, smallControl }
+            let rule: Rule
+            /// The element that breaks it, with `frame` the whole of it and `shown` what is seen.
+            let word: Word
+            let description: String
+        }
+
+        /// Every way this screen breaks the layout rules every screen keeps: everything labelled
+        /// inside the safe area, no two labelled things on top of each other, and every control at
+        /// least 44×44 pt.
+        func layoutBreaches() -> [Breach] {
+            // A label and a value of one element come back as two words with one frame.
+            var merged: [Word] = []
+            for word in elements where !word.frame.isEmpty {
+                if let at = merged.firstIndex(where: { $0.frame == word.frame }) {
+                    let both = merged[at]
+                    merged[at] = Word(text: both.text + " / " + word.text, frame: both.frame,
+                                      traits: both.traits.union(word.traits), shown: both.shown, kind: both.kind)
+                } else {
+                    merged.append(word)
+                }
+            }
+            // What is on screen, as much of it as is: not what is scrolled out of sight, and not
+            // the system's own scroll indicators, which are drawn over content by design.
+            func seen(_ word: Word) -> CGRect { word.shown ?? word.frame }
+            let visible = merged.filter { word in
+                let part = seen(word)
+                return !word.kind.contains("ScrollIndicator") && !part.isNull && part.width > 0.5 && part.height > 0.5
+            }
+            // A container holds what it labels, which is not the two of them on top of each other:
+            // the toolbar around its buttons, a picker's row around its value.
+            func holds(_ outer: Word, _ inner: Word) -> Bool {
+                seen(outer) != seen(inner) && seen(outer).insetBy(dx: -0.5, dy: -0.5).contains(seen(inner))
+            }
+            let shown = visible.filter { word in !visible.contains { holds(word, $0) } }
+            func describe(_ word: Word) -> String {
+                let f = word.frame
+                return "「\(word.text)」 at (\(Int(f.minX)),\(Int(f.minY)) \(Int(f.width))×\(Int(f.height)))"
+            }
+            var breaches: [Breach] = []
+            let inside = safeArea.insetBy(dx: -0.5, dy: -0.5)
+            for word in shown where !inside.contains(seen(word)) {
+                breaches.append(Breach(rule: .outsideSafeArea, word: word,
+                                       description: "\(describe(word)) is outside the safe area \(safeArea)"))
+            }
+            for (i, a) in shown.enumerated() {
+                for b in shown[(i + 1)...] {
+                    let both = seen(a).intersection(seen(b))
+                    if !both.isNull, both.width > 0.5, both.height > 0.5 {
+                        breaches.append(Breach(rule: .overlap, word: a,
+                                               description: "\(describe(a)) overlaps \(describe(b))"))
+                    }
+                }
+            }
+            // Its whole frame, not the part a scroll view shows: scrolled into view, that is its size.
+            // Every control, containers too: a picker's row holding its value is still pressed.
+            for word in visible where word.isControl && (word.frame.width < 43.5 || word.frame.height < 43.5) {
+                breaches.append(Breach(rule: .smallControl, word: word,
+                                       description: "\(describe(word)) is a control smaller than 44×44 pt"))
+            }
+            return breaches
         }
     }
 
@@ -323,6 +400,44 @@ enum ScreenImage {
     /// handful of layers and hangs the words off elements that are not views at all.
     ///
     /// An element's frame is given in screen points; it comes back in `root`'s.
+    /// `frame` cut to what the scroll views holding `object` show of it, or nil when none does.
+    ///
+    /// A scroll view shows its bounds less the insets its bars take, and cuts only along the way
+    /// it scrolls: a list too wide for its screen is still too wide, but its fortieth row being
+    /// under the fold is what a list is for.
+    private static func shown(_ frame: CGRect, of object: NSObject, in root: UIView) -> CGRect? {
+        // Swift sees `accessibilityContainer` only on UIAccessibilityElement; every element answers it.
+        let up = NSSelectorFromString("accessibilityContainer")
+        func container(of node: NSObject) -> NSObject? {
+            node.responds(to: up) ? node.perform(up)?.takeUnretainedValue() as? NSObject : nil
+        }
+        var node: NSObject? = container(of: object)
+        var view: UIView? = object as? UIView
+        for _ in 0..<64 where view == nil {
+            guard let current = node else { break }
+            view = current as? UIView
+            node = container(of: current)
+        }
+        var cut: CGRect?
+        var ancestor = view
+        while let current = ancestor {
+            if let scroller = current as? UIScrollView, scroller !== object {
+                let inset = scroller.adjustedContentInset
+                let showing = scroller.bounds.inset(by: inset)
+                var window = root.convert(showing, from: scroller)
+                let tall = scroller.contentSize.height > showing.height + 0.5
+                let wide = scroller.contentSize.width > showing.width + 0.5
+                if !tall { window = CGRect(x: window.minX, y: -.greatestFiniteMagnitude / 2,
+                                           width: window.width, height: .greatestFiniteMagnitude) }
+                if !wide { window = CGRect(x: -.greatestFiniteMagnitude / 2, y: window.minY,
+                                           width: .greatestFiniteMagnitude, height: window.height) }
+                if tall || wide { cut = (cut ?? frame).intersection(window) }
+            }
+            ancestor = current.superview
+        }
+        return cut
+    }
+
     private static func harvest(
         _ node: Any, from root: UIView, into found: inout [Word], seen: inout Set<ObjectIdentifier>
     ) {
@@ -338,7 +453,9 @@ enum ScreenImage {
                 (root as? UIWindow ?? root.window)?.windowScene.map { root.convert(onScreen, from: $0.coordinateSpace) }
                 ?? onScreen
             for text in [label, value].compactMap(\.self) {
-                found.append(Word(text: text, frame: frame))
+                found.append(Word(
+                    text: text, frame: frame, traits: object.accessibilityTraits,
+                    shown: shown(frame, of: object, in: root), kind: String(describing: type(of: object))))
             }
         }
 

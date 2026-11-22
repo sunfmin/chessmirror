@@ -136,6 +136,12 @@ with animations off; it fails a test whose screen never settles, that it cannot 
 accessibility switch missing or off), or that says nothing. Each word comes back with its frame in
 window points (`Rendered.elements`, `frames(of:)`), beside the window's bounds and safe area.
 
+`ScreenMatrix` draws every screen once per row of the matrix the others do not vary — dark, the
+accessibility3 text size, the 375×667 pt iPhone SE, and each of the eight languages — and holds each
+to `Rendered.layoutBreaches()`: everything labelled inside the safe area (as far as its scroll view
+shows it), no two labelled things overlapping, every control at least 44×44 pt. A breach already
+filed is a `withKnownIssue` naming its issue; any other fails.
+
 ## Command line
 
 From the repository root:
