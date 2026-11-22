@@ -1,12 +1,12 @@
 {
   "suites": {
     "swift": {
-      "prod_lines": 12772,
-      "test_lines": 13898,
-      "tests": 791,
+      "prod_lines": 12770,
+      "test_lines": 14062,
+      "tests": 797,
       "failures": 0,
-      "test_seconds": 265.348,
-      "covered_lines": 9501,
+      "test_seconds": 100.343,
+      "covered_lines": 9497,
       "uncovered_lines": 722
     }
   },
@@ -14,8 +14,8 @@
   "kept": [],
   "measured": {
     "swift": {
-      "uncovered_lines": 722,
-      "test_seconds": 286.33
+      "uncovered_lines": 724,
+      "test_seconds": 100.343
     }
   }
 }
