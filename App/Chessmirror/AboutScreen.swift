@@ -19,8 +19,9 @@ struct AboutScreen: View {
             List {
                 Section {
                     VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        NameAndMark(spacing: 8) {
                             Text(localized("app.name")).font(.title2.bold())
+                        } mark: {
                             Text(localized("app.mark")).eyebrow()
                         }
                         Text(localized("about.what"))

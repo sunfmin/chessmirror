@@ -67,6 +67,88 @@ struct ScreenMatrix {
             case .importSheet: localized("import.title")
             }
         }
+
+        /// The names this screen draws that a squeezed layout broke (chessmirror#32), each in the
+        /// face it is set in at the row's text size.
+        @MainActor func names(at row: Row) -> [Name] {
+            let size = row.typeSize
+            switch self {
+            case .importSheet:
+                return ImportDoors.Door.allCases.map { door in
+                    Name(text: door.label, font: Name.face(.footnote, door == .link ? .semibold : .regular, at: size),
+                         padding: CGSize(width: 22, height: 12))
+                }
+            case .library:
+                return [
+                    Name(text: localized("app.name"), font: .systemFont(ofSize: 34, weight: .bold), tracking: 6),
+                    Name(text: localized("app.mark"), font: Name.face(.caption2, .medium, at: size), tracking: 3),
+                ]
+            case .about:
+                return [
+                    Name(text: localized("app.name"), font: Name.face(.title2, .bold, at: size)),
+                    Name(text: localized("app.mark"), font: Name.face(.caption1, .medium, at: size), tracking: 2),
+                ]
+            case .game, .drill:
+                // The bars are set no larger than the first accessibility size (`chromeType`).
+                return [Name(text: Controller.engine.playerName,
+                             font: Name.face(.caption1, .regular, at: min(size, .accessibility1)), byPrefix: true)]
+            case .book, .editor, .collection:
+                return []
+            }
+        }
+    }
+
+    /// A name the screen draws, which is never broken inside a word nor cut short: each word of it
+    /// on one line, and as many lines as the words need. What it is drawn in is stated here, so it
+    /// can be measured the way it is set; the accessibility tree hands back the whole text whether
+    /// or not the screen showed all of it, and the frame it was given is what says which.
+    struct Name {
+        let text: String
+        let font: UIFont
+        var tracking: CGFloat = 0
+        /// What the frame holds besides the text: a chip's padding.
+        var padding = CGSize.zero
+        /// Matched by its start rather than whole: the engine's bar names a rung after the engine.
+        var byPrefix = false
+
+        func matches(_ word: ScreenImage.Word) -> Bool {
+            byPrefix ? word.text.hasPrefix(text) : word.text == text
+        }
+
+        /// Why the text cannot be in `frame` whole, or nil when it can.
+        func breach(in frame: CGRect) -> String? {
+            let width = frame.width - padding.width + 1
+            func measure(_ part: String) -> CGFloat {
+                (part as NSString).size(withAttributes: [.font: font, .kern: tracking]).width
+            }
+            var lines = 0
+            var line: CGFloat = 0
+            let space = measure(" ")
+            for part in text.split(whereSeparator: \.isWhitespace) {
+                let size = measure(String(part))
+                if size > width {
+                    return "is \(Int(frame.width)) pt wide, too narrow for 「\(part)」 (\(Int(size)) pt) on one line"
+                }
+                if lines == 0 || line + space + size > width {
+                    lines += 1
+                    line = size
+                } else {
+                    line += space + size
+                }
+            }
+            let tall = CGFloat(lines) * font.lineHeight
+            if tall > frame.height - padding.height + 1 {
+                return "is \(Int(frame.height)) pt tall, short of the \(lines) line(s) its words need (\(Int(tall)) pt): cut off"
+            }
+            return nil
+        }
+
+        /// The system face for a text style at a text size, as SwiftUI sets it.
+        static func face(_ style: UIFont.TextStyle, _ weight: UIFont.Weight, at size: DynamicTypeSize) -> UIFont {
+            let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(size))
+            let point = UIFont.preferredFont(forTextStyle: style, compatibleWith: traits).pointSize
+            return .systemFont(ofSize: point, weight: weight)
+        }
     }
 
     nonisolated static var cases: [(Screen, Row)] {
@@ -80,6 +162,16 @@ struct ScreenMatrix {
         defer { Speech.language = spoken }
         let rendered = try await draw(screen, row)
         #expect(rendered.says(screen.ownWord), "\(screen) in \(row) does not say \(screen.ownWord)")
+        for name in screen.names(at: row) {
+            let drawn = rendered.elements.filter(name.matches)
+            guard let first = drawn.min(by: { $0.frame.minY < $1.frame.minY }) else {
+                Issue.record("\(screen) at \(row) does not draw the name 「\(name.text)」")
+                continue
+            }
+            if let broken = name.breach(in: first.frame) {
+                Issue.record("\(screen) at \(row): 「\(first.text)」 \(broken)")
+            }
+        }
         for breach in rendered.layoutBreaches() {
             if let known = Self.known(breach, on: screen, at: row, in: rendered) {
                 withKnownIssue(known) { Issue.record("\(screen) at \(row): \(breach)") }

@@ -395,3 +395,28 @@ extension View {
         frame(maxWidth: width).frame(maxWidth: .infinity)
     }
 }
+
+/// The name and its mark, side by side on one baseline while the line holds both, the mark under
+/// the name when it does not.
+///
+/// Never the two squeezed into one line: at an accessibility text size the mark grows and the
+/// name does not, and an `HStack` answered that by breaking CHESSMIRROR inside itself, 「CHESSMIR- /
+/// ROR」 (chessmirror#32). Stacked, a mark still too wide for the screen shrinks rather than breaks.
+struct NameAndMark<Name: View, Mark: View>: View {
+    var spacing: CGFloat = 10
+    @ViewBuilder let name: Name
+    @ViewBuilder let mark: Mark
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: spacing) {
+                name.fixedSize()
+                mark.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                name.lineLimit(1).minimumScaleFactor(0.5)
+                mark.lineLimit(1).minimumScaleFactor(0.5)
+            }
+        }
+    }
+}
