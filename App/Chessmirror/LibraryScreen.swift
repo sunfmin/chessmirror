@@ -569,8 +569,9 @@ struct LibraryScreen: View {
                     Text(reading.text)
                         .font(.caption)
                         .foregroundStyle(reading.isAlarm ? Palette.alarm : Palette.inkSoft)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
                         .multilineTextAlignment(.leading)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -631,14 +632,16 @@ struct LibraryScreen: View {
                         .foregroundStyle(Palette.inkSoft)
                 }
             }
-            .frame(width: 44, height: 32)
+            .frame(width: 44, height: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(autoFetch.phase == .pulling)
         .accessibilityLabel(localized("autoFetch.refresh"))
-        // The tap target hangs off the right edge, so the glyph sits on the margin the rows end at.
+        // The tap target hangs off the right edge, so the glyph sits on the margin the rows end at,
+        // and over the row's top and bottom, so a 44 pt target does not make the header taller.
         .padding(.trailing, -12)
+        .padding(.vertical, -6)
     }
 
     private func note(_ text: String, symbol: String) -> some View {
