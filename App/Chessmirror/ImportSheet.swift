@@ -122,6 +122,9 @@ struct ImportSheet: View {
                     doors.open(candidate)
                 } label: {
                     Chip(label: candidate.label, isOn: door == candidate)
+                        // The chip is drawn its own size; the hit region around it is a finger.
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
