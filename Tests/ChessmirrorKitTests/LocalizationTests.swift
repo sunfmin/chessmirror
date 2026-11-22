@@ -116,4 +116,17 @@ import Testing
             #expect(localized("import.plan.games", plural: 3) == "3 局")
         }
     }
+
+    /// The side picker names who moves for a side by these: the two seats are told apart in
+    /// words, and each one says its own word rather than the other's.
+    @Test func eachSeatIsNamedForItself() {
+        Speech.speaking(.chinese) {
+            #expect(Controller.hand.label == "手动")
+            #expect(Controller.engine.label == "引擎")
+        }
+        Speech.speaking(.english) {
+            #expect(Controller.hand.label == "By hand")
+            #expect(Controller.engine.label == "Engine")
+        }
+    }
 }
