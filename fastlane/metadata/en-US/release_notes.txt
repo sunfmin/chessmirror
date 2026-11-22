@@ -1,0 +1,4 @@
+• The engine is now Stockfish 19: stronger, and it reaches the same depth in about a quarter less time, on every device.
+• Newer iPhones and iPads use their CPU's faster instructions for the engine.
+• An import's review is now one row and one tap.
+• Fixed: a search nobody waited for could keep running in the background.
