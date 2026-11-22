@@ -189,8 +189,6 @@ struct ScreenMatrix {
         _ breach: ScreenImage.Rendered.Breach, on screen: Screen, at row: Row, in rendered: ScreenImage.Rendered
     ) -> Comment? {
         switch (breach.rule, screen) {
-        case (.overlap, .editor) where row == .accessibilityText:
-            return "chessmirror#30: at accessibility text sizes the editor's hint overlaps its board"
         default:
             return nil
         }

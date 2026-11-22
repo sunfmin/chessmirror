@@ -221,7 +221,10 @@ struct ConfirmPositionScreen: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(height: 24)
+        // At least a line tall, so the board does not jump as the hint changes; and free to grow
+        // when large text wraps it, so it never runs under the board (chessmirror#30).
+        .frame(minHeight: 24)
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 16)
     }
 
