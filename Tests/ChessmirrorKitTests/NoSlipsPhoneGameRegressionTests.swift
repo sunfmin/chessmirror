@@ -18,6 +18,15 @@ import Testing
 // 16 → 10.72, 18 → 9.65, 20 → 9.66, 21 → 11.92, 22 → 11.24, 23 → 12.62, 24 → 11.68, 26 → 12.41
 // (2026-11-22). Twenty-one is the shallowest depth of the run that keeps refusing, at ~10s,
 // the same as the timed search took alone.
+//
+// That was Stockfish 18's reading. Stockfish 19 (chessmirror#15) does not call 19. Kxh3 a mistake
+// at any depth: one thread, the same session, 16 → 8.80, 18 → 8.15, 20 → 4.62, 21 → 4.34,
+// 22 → 6.06, 23 → 5.64, 24 → 5.20, 25 → 5.47, 26 → 5.02. It finds the game lost earlier, and at
+// depth twenty-one weighs White's moves from move 14 on as 14. Re1 14.30, 15. Bh2 11.03, then
+// 16. g3 to 22. Nh4 all under ten (Kxh3 4.34, Rg1 3.90, the rest 0). So the move this test plays
+// through the gate is now 14. Re1, the one sf_19 refuses at every depth it was read at:
+// 16 → 15.45, 18 → 18.01, 20 → 16.40, 21 → 14.30, 22 → 12.53, 23 → 16.52, 24 → 19.53
+// (2026-11-22). Same game, same gate, same depth; a stronger engine's mistake.
 @MainActor
 @Test func phoneGameInterceptionDiagnosis() async throws {
         try await Quietly.alone {
@@ -29,9 +38,9 @@ import Testing
     Qh5+ 22. Nh4 Qxh4# 0-1
     """)
     let engine = DepthOnly(try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)), depth: 21)
-    let index = 36
+    let index = 26  // 14. Re1
     let position = try #require(Game(startFEN: PGN.standardStartFEN,
                                     uciMoves: Array(pgn.game.uciMoves.prefix(index))))
     let session = GameSession.fresh(position, engine: engine)

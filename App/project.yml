@@ -25,8 +25,8 @@ targets:
     platform: iOS
     sources:
       - path: Chessmirror
-      # A folder reference, so both nets land in the bundle as files the engine can be
-      # given a path to. They are 112 MiB of the app's size and the reason it can play
+      # A folder reference, so the net lands in the bundle as a file the engine can be
+      # given a path to. They are 94 MiB of the app's size and the reason it can play
       # chess on a plane.
       - path: ../Resources/Nets
         type: folder

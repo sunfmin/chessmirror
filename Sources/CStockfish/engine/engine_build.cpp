@@ -11,6 +11,7 @@
 #include <string_view>
 #include <vector>
 
+#include "../stockfish/attacks.h"
 #include "../stockfish/bitboard.h"
 #include "../stockfish/engine.h"
 #include "../stockfish/misc.h"
@@ -77,7 +78,7 @@ bool setOption(void* instance, const char* name, const char* value) {
     return true;
 }
 
-void* create(const char* bigNetPath, const char* smallNetPath) {
+void* create(const char* netPath) {
     chessmirrorInitialiseTables();
 
     Instance* wrapper = nullptr;
@@ -90,11 +91,10 @@ void* create(const char* bigNetPath, const char* smallNetPath) {
         return nullptr;
     }
 
-    // Setting the option runs its handler, which loads that net. The constructor
-    // already tried the bare default names against an empty directory and failed
-    // harmlessly; these absolute paths are the load that counts.
-    setOption(wrapper, "EvalFile", bigNetPath);
-    setOption(wrapper, "EvalFileSmall", smallNetPath);
+    // Setting the option runs its handler, which loads the net. The constructor
+    // already tried the bare default name against an empty directory and failed
+    // harmlessly; this absolute path is the load that counts.
+    setOption(wrapper, "EvalFile", netPath);
 
     wrapper->engine.set_on_update_full([wrapper](const Engine::InfoFull& info) {
         if (wrapper->onInfo == nullptr)
@@ -139,10 +139,12 @@ void* create(const char* bigNetPath, const char* smallNetPath) {
     // empty one throws std::bad_function_call from inside the search. Engine::go begins
     // by verifying the networks, so leaving that hook alone means every search aborts the
     // process on its first line. These two are the ones with nothing to say to the app —
-    // "currently searching move 23" during a ten-million-node iteration, and "Network
-    // replica 1: Shared memory." — so they are installed to be dropped, deliberately.
+    // "currently searching move 23" during a ten-million-node iteration, "Network
+    // replica 1: Shared memory." and sf_19's new "a search has started" — so they are
+    // installed to be dropped, deliberately.
     wrapper->engine.set_on_iter([](const Engine::InfoIter&) {});
-    wrapper->engine.set_on_verify_networks([](std::string_view) {});
+    wrapper->engine.set_on_verify_network([](std::string_view) {});
+    wrapper->engine.set_on_start([] {});
 
     return wrapper;
 }
@@ -153,7 +155,7 @@ void destroy(void* instance) {
     delete static_cast<Instance*>(instance);
 }
 
-void go(void*                           instance,
+bool go(void*                           instance,
         const char*                     startFen,
         const std::vector<std::string>& moves,
         const CfSearchLimits*           limits,
@@ -172,7 +174,13 @@ void go(void*                           instance,
     engine.onInfo  = onInfo;
     engine.onBest  = onBestMove;
 
-    engine.engine.set_position(std::string(startFen), moves);
+    // The dispatcher has vetted the FEN and replayed the moves, so this cannot refuse; if
+    // it ever does, there is no search rather than one over whatever half of the position
+    // was written before the refusal. sf_19's own UCI loop answers a refusal by ending the
+    // process (UCIEngine::terminate_on_critical_error), which is why the bridge never goes
+    // through it.
+    if (engine.engine.set_position(std::string(startFen), moves).has_value())
+        return false;
 
     Search::LimitsType searchLimits;
     searchLimits.startTime = now();
@@ -191,6 +199,7 @@ void go(void*                           instance,
         searchLimits.infinite = 1;
 
     engine.engine.go(searchLimits);
+    return true;
 }
 
 void stop(void* instance) { of(instance).engine.stop(); }
@@ -203,7 +212,7 @@ void clear(void* instance) { of(instance).engine.search_clear(); }
 void chessmirrorInitialiseTables() {
     static std::once_flag once;
     std::call_once(once, [] {
-        Bitboards::init();
+        Attacks::init();
         Position::init();
     });
 }

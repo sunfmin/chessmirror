@@ -27,11 +27,16 @@ void cf_global_init(void);
 /* ------------------------------------------------------------- FEN validity */
 
 /*
-  Why this exists at all: Stockfish 18's Position::set does no validation. Its
+  Why this exists at all: Stockfish 18's Position::set did no validation — its
   asserts vanish under NDEBUG, square<KING>() is undefined without exactly one
-  king, and the castling parser scans for a rook with an unbounded loop that
-  walks off the board when the FEN claims a right no rook can support. Every FEN
-  is therefore vetted here before Stockfish is allowed to see it.
+  king, and its castling parser walked off the board when the FEN claimed a right
+  no rook could support. Stockfish 19's does validate, and that is no safer: its
+  UCI loop answers a refused FEN, position or command with `info string CRITICAL
+  ERROR` and exit(1), and the engine lives in the app's own process. So every FEN
+  is still vetted here, against every rule sf_19 has and the ones it does not, and
+  handed over only once it passes, in the one-space-per-field form sf_19 reads.
+  The bridge never goes through the UCI loop; what sf_19's Position::set refuses
+  anyway is refused here too (CF_FEN_MALFORMED) rather than half-set.
 */
 typedef enum {
     CF_FEN_OK = 0,
@@ -39,17 +44,19 @@ typedef enum {
     CF_FEN_BAD_PIECE_CHAR,             /* placement field has an unknown glyph */
     CF_FEN_BAD_RANK_WIDTH,             /* a rank does not add up to 8 files    */
     CF_FEN_BAD_RANK_COUNT,             /* not 8 ranks                          */
-    CF_FEN_TOO_MANY_PIECES,            /* >32 on the board, or >16 for a side  */
+    CF_FEN_TOO_MANY_PIECES,            /* >16 for a side, or more promoted
+                                          pieces than that side has lost pawns */
     CF_FEN_TOO_MANY_PAWNS,             /* >8 pawns for a side                  */
     CF_FEN_MISSING_KING,               /* a side has no king                   */
     CF_FEN_EXTRA_KING,                 /* a side has more than one king        */
     CF_FEN_PAWN_ON_BACK_RANK,          /* pawn on rank 1 or rank 8             */
     CF_FEN_BAD_SIDE_TO_MOVE,
-    CF_FEN_BAD_CASTLING,               /* glyph outside KQkq-                  */
+    CF_FEN_BAD_CASTLING,               /* glyph outside KQkq-, or past four    */
     CF_FEN_CASTLING_WITHOUT_ROOK,      /* the unbounded-loop hazard            */
     CF_FEN_CASTLING_WITHOUT_KING,      /* king not on its home square          */
     CF_FEN_BAD_EN_PASSANT,
-    CF_FEN_BAD_CLOCK,
+    CF_FEN_BAD_CLOCK,                  /* halfmove outside 0...150, fullmove
+                                          outside 1...100000                   */
     CF_FEN_SIDE_NOT_TO_MOVE_IN_CHECK   /* also covers adjacent kings           */
 } CfFenIssue;
 
@@ -64,6 +71,15 @@ typedef struct {
 } CfFenVerdict;
 
 CfFenVerdict cf_validate_fen(const char *fen);
+
+/*
+  What sf_19's own Position::set says of `fen`, as it is and unvetted: true when it
+  refuses it. Nothing in the app calls this; it is how the tests show that every
+  input cf_validate_fen refuses on sf_19's account is one sf_19 really refuses, so
+  the list above cannot fall behind the vendored engine unnoticed. Safe to call on
+  anything because sf_19 checks before it trusts (sf_18's Position::set was not).
+*/
+bool cf_stockfish_refuses_fen(const char *fen);
 
 /* ------------------------------------------------------------------- rules  */
 
@@ -234,15 +250,30 @@ typedef enum {
 } CfEngineBuild;
 
 /*
-  Absolute paths to the two weights files. Both are required, and both are
-  checked before Stockfish sees them: Network::verify calls exit(EXIT_FAILURE)
-  when a net did not load, which in an app means the process simply vanishes.
-  Returns NULL and sets *status on failure.
+  What the vendored Stockfish calls itself ("Stockfish 19"): its own
+  engine_version_info, so the name the app shows and writes has one home and it
+  is the source that was vendored.
 */
-CfEngine *cf_engine_create(CfEngineBuild   build,
-                           const char     *bigNetPath,
-                           const char     *smallNetPath,
-                           CfEngineStatus *status);
+const char *cf_engine_name(void);
+
+/*
+  The file name of the one network the vendored Stockfish was released with
+  (its EvalFileDefaultName, "nn-<sha256 prefix>.nnue"): what the app's bundle,
+  the tests and the CLI look for, so the name has one home and it is Stockfish's.
+*/
+const char *cf_engine_net_name(void);
+
+/*
+  The absolute path to the weights file. It is checked before Stockfish sees it:
+  Network::verify calls exit(EXIT_FAILURE) when the net did not load, which in an
+  app means the process simply vanishes. Returns NULL and sets *status on failure.
+*/
+CfEngine *cf_engine_create(CfEngineBuild build, const char *netPath, CfEngineStatus *status);
+
+/* The UCI_Elo the vendored Stockfish accepts, from its own Skill::LowestElo and
+   HighestElo; a value outside them is ignored by the option, silently. */
+int32_t cf_engine_lowest_elo(void);
+int32_t cf_engine_highest_elo(void);
 
 /* The build the engine was created on. */
 CfEngineBuild cf_engine_build(const CfEngine *engine);

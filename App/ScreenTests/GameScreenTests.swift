@@ -151,7 +151,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("白方"))
         #expect(rendered.says("手动"))
         #expect(rendered.says("黑方"))
-        #expect(rendered.says("Stockfish 18"), "the engine by name; its rung is on the same line")
+        #expect(rendered.says("Stockfish 19"), "the engine by name; its rung is on the same line")
         #expect(rendered.says(SearchLimit.standard.label), "the shared search limit stays visible")
         #expect(
             !rendered.says("谁走"),
@@ -237,7 +237,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("马上走"))
         #expect(!rendered.says("+0.38"), "the engine's move is walked without its opinion being shown")
         #expect(rendered.says("白方"))
-        #expect(rendered.says("Stockfish 18"), "the engine by name, on its own bar")
+        #expect(rendered.says("Stockfish 19"), "the engine by name, on its own bar")
         #expect(rendered.says(SearchLimit.standard.label))
         #expect(rendered.says("手动"), "and the side a person is holding says so too")
         #expect(
@@ -288,7 +288,7 @@ struct GameScreenScreenshots {
 
         #expect(rendered.says("白方"))
         #expect(rendered.says("黑方"))
-        #expect(rendered.says("Stockfish 18"))
+        #expect(rendered.says("Stockfish 19"))
         // The current clock stays visible; alternative clocks stay in the folded settings.
         #expect(!rendered.says("每步"))
         #expect(!rendered.says("3 秒"))
@@ -644,7 +644,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("第 8 步 Nf6"))
         #expect(rendered.says("该走了"))
         #expect(rendered.says("让引擎走"))
-        #expect(rendered.says("Stockfish 18"), "which still plays Black")
+        #expect(rendered.says("Stockfish 19"), "which still plays Black")
     }
 
     // ------------------------------------------------------------------- the study
@@ -986,7 +986,7 @@ struct GameScreenScreenshots {
 
     // ---------------------------------------------------------------- 棋力
 
-    /// The rung on the engine's own bar (docs/adr/0038): 「Stockfish 18 · 1800」 at a rung, the
+    /// The rung on the engine's own bar (docs/adr/0038): 「Stockfish 19 · 1800」 at a rung, the
     /// name alone at 满力, and for VoiceOver the word for what the number is.
     @Test("the engine's bar names its rung, and only its name at 满力")
     func theEngineBarNamesItsRung() async throws {
@@ -1028,7 +1028,7 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-rung-hands") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
-        #expect(!rendered.says("Stockfish 18"))
+        #expect(!rendered.says("Stockfish 19"))
         #expect(!rendered.says("棋力"))
     }
 
@@ -1049,7 +1049,7 @@ struct GameScreenScreenshots {
         let rendered = await ScreenImage.write("game-reopened-rung") {
             screen(session, engine: ScriptedEngine(Self.searching, isEndless: true))
         }
-        #expect(rendered.says("Stockfish 18 · 2000"))
+        #expect(rendered.says("Stockfish 19 · 2000"))
     }
 
     // ------------------------------------------------------------------- glue

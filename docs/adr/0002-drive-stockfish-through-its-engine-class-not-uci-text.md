@@ -18,13 +18,18 @@ recover the very structs (`InfoFull`) the callbacks already hand us.
 - The NNUE networks ship as bundle resources (compiled with `NNUE_EMBEDDING_OFF`), which
   avoids making incbin's assembly embedding work under Xcode. "Fully local" is about the
   networks never being fetched, not about them living inside the executable.
-- The pinned version is the `sf_18` release, and pinning to a release rather than master
-  has a price worth writing down: sf_18 wants **two** networks
-  (`nn-c288c895ea92.nnue`, 69.4 MiB, and `nn-37f18f62d772.nnue`, 2.7 MiB) set through the
-  `EvalFile`/`EvalFileSmall` options followed by `load_networks()`, where master has one
-  network and a `load_network(path)`. Master also validates FENs where sf_18 does not
-  (see ADR-0008). The release's reproducibility is still worth those differences.
-- Constructing an `Engine` loads the networks immediately and exits the process if they
-  are missing, so anything that does not need evaluation — validation, legal moves,
-  perft — is built on `Position` directly and stays testable without the 72 MiB of
+- The pinned version is the `sf_19` release (ADR-0053; it was `sf_18` until chessmirror#15).
+  Pinning to a release rather than master is worth its lag: an upgrade is one ticket that
+  re-measures and re-pins, not a drift. sf_19 wants **one** network
+  (`nn-1a298aa575a0.nnue`, 94 MiB), set through the `EvalFile` option; sf_18 wanted two,
+  through `EvalFile` and `EvalFileSmall`. The file's name is Stockfish's own
+  `EvalFileDefaultName`, which the bridge hands to Swift (`EngineService.netFileName`), so the
+  bundle, the tests and the CLI cannot look for a different file than the engine was built for.
+- Constructing an `Engine` loads the network immediately and exits the process if it
+  is missing, so anything that does not need evaluation — validation, legal moves,
+  perft — is built on `Position` directly and stays testable without the 94 MiB of
   weights.
+- Driving the class rather than the UCI loop matters more under sf_19: its loop answers a
+  refused FEN, position or move with `info string CRITICAL ERROR` and `exit(1)`, where
+  `Engine::set_position` returns the refusal. The bridge never goes through the loop, and
+  never hands the class anything it would refuse (ADR-0053).

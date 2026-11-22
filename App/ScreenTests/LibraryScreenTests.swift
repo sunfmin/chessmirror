@@ -424,7 +424,7 @@ struct LibraryScreenScreenshots {
             #expect(ScreenImage.activate("最长连正 3", in: window))
             await ScreenImage.settle()
             let words = ScreenImage.words(in: window)
-            #expect(words.contains { $0.contains("Stockfish 18 · 2200") }, "the game, at its rung")
+            #expect(words.contains { $0.contains("\(EngineService.name) · 2200") }, "the game, at its rung")
             #expect(words.contains { $0.contains("连正 3") }, "with its run of three")
         }) {
             LibraryScreen(autoFetch: .quiet)

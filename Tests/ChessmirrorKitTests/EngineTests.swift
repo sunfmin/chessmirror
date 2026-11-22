@@ -3,7 +3,7 @@ import Foundation
 import Synchronization
 import Testing
 
-/// The weights, found by path rather than copied into the test bundle: they are 112 MiB,
+/// The weights, found by path rather than copied into the test bundle: they are 94 MiB,
 /// and duplicating them into every build product to run the tests is a poor trade.
 enum Nets {
     static let directory = URL(fileURLWithPath: #filePath)
@@ -12,13 +12,10 @@ enum Nets {
         .deletingLastPathComponent()  // ios
         .appendingPathComponent("Resources/Nets")
 
-    static let big = directory.appendingPathComponent("nn-c288c895ea92.nnue")
-    static let small = directory.appendingPathComponent("nn-37f18f62d772.nnue")
+    /// The one sf_19 wants, by the name its source gives it.
+    static let net = directory.appendingPathComponent(EngineService.netFileName)
 
-    static var arePresent: Bool {
-        FileManager.default.fileExists(atPath: big.path)
-            && FileManager.default.fileExists(atPath: small.path)
-    }
+    static var arePresent: Bool { FileManager.default.fileExists(atPath: net.path) }
 }
 
 /// One engine for the whole suite, because building a thread pool and a table per test
@@ -28,8 +25,7 @@ enum Nets {
 private let shared: EngineService? = {
     guard Nets.arePresent else { return nil }
     return try? EngineService(
-        bigNetURL: Nets.big,
-        smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 2, hashMegabytes: 64, multiPV: 3)
     )
 }()
@@ -61,7 +57,7 @@ struct EngineTests {
         // the process simply vanishes. The bridge checks the files first; this is that check.
         let absent = Nets.directory.appendingPathComponent("nn-000000000000.nnue")
         #expect(throws: EngineService.StartupFailure.networkMissing) {
-            _ = try EngineService(bigNetURL: absent, smallNetURL: absent)
+            _ = try EngineService(netURL: absent)
         }
     
         }}
@@ -75,7 +71,7 @@ struct EngineTests {
         defer { try? FileManager.default.removeItem(at: stub) }
 
         #expect(throws: EngineService.StartupFailure.networkTooSmall) {
-            _ = try EngineService(bigNetURL: stub, smallNetURL: stub)
+            _ = try EngineService(netURL: stub)
         }
     
         }}

@@ -1,3 +1,4 @@
+import CStockfish
 import Foundation
 
 /// 棋力 — the Elo the engine is bound to for its own moves, picked from a fixed ladder
@@ -17,7 +18,7 @@ public enum Strength: Hashable, Sendable {
     /// Bound to an Elo with Stockfish's own `UCI_LimitStrength` and `UCI_Elo`.
     case elo(Int)
 
-    /// What the engine's bar calls the engine at this rung: 「Stockfish 18 · 1800」, or the name
+    /// What the engine's bar calls the engine at this rung: 「Stockfish 19 · 1800」, or the name
     /// alone at 满力 (docs/adr/0038).
     public var engineName: String {
         let name = Controller.engine.playerName
@@ -34,8 +35,10 @@ public enum Strength: Hashable, Sendable {
     /// game is one a newcomer can play rather than a wall (docs/adr/0038).
     public static let standard = ladder[0]
 
-    /// What Stockfish 18 accepts for `UCI_Elo`.
-    public static let eloRange = 1320...3190
+    /// What the vendored Stockfish accepts for `UCI_Elo`: its own `Skill::LowestElo...HighestElo`,
+    /// read from its source (1320...3190 in sf_18 and sf_19 alike). A value outside it the option
+    /// ignores without a word, so a rung outside it would be a rung that plays at full strength.
+    public static let eloRange = Int(cf_engine_lowest_elo())...Int(cf_engine_highest_elo())
 
     public var elo: Int? {
         if case .elo(let elo) = self { return elo }

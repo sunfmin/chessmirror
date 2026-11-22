@@ -3,10 +3,11 @@ import CStockfish
 /// Why a FEN cannot be used, in the terms the Confirm Position screen needs to explain
 /// it — an issue, whose side it is, and which squares to point at.
 ///
-/// This is not a nicety. Stockfish 18 validates nothing: its asserts are compiled out,
-/// `square<KING>()` is undefined without exactly one king, and the castling parser hunts
-/// for a rook in a loop with no lower bound, walking off the board when the FEN claims a
-/// right no rook can support. Nothing reaches the engine unvetted.
+/// This is not a nicety. Stockfish 18 validated nothing — `square<KING>()` was undefined
+/// without exactly one king, and its castling parser walked off the board when the FEN claimed
+/// a right no rook could support. Stockfish 19 validates, and refuses through its UCI loop by
+/// ending the process, which in an app is the app (docs/adr/0053). So this asks every rule
+/// sf_19 has, first, and nothing reaches the engine unvetted.
 public enum FENIssue: Hashable, Sendable {
     case malformed
     case badPieceCharacter

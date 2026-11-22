@@ -121,24 +121,33 @@ public final class EngineService: @unchecked Sendable {
     /// The Stockfish build this engine was started on, as the bridge reports it.
     public let build: EngineBuild
 
+    /// What the vendored Stockfish calls itself — 「Stockfish 19」 — read from its own source, so
+    /// the screens, the PGN tags and the cache below cannot name a different engine than the one
+    /// that is linked in.
+    public static let name = String(cString: cf_engine_name())
+
+    /// The file name of the one network the vendored Stockfish was released with (docs/adr/0002),
+    /// from its source too: the bundle, the tests and `chessmirror-cli` all look for this name.
+    public static let netFileName = String(cString: cf_engine_net_name())
+
     /// `cpu` is whose instructions the engine may use; the build is chosen from it, once,
     /// here (docs/adr/0052).
     public init(
-        bigNetURL: URL, smallNetURL: URL, configuration: Configuration = Configuration(),
+        netURL: URL, configuration: Configuration = Configuration(),
         cpu: CPUFeatures = .current
     ) throws {
         #if os(iOS) && !targetEnvironment(simulator)
+        // Named for the engine, because a search another engine made is not this one's answer.
+        let engine = Self.name.lowercased().replacingOccurrences(of: " ", with: "")
         positionSearches = PositionSearches(storage: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appending(path: "live-stockfish18-10s20-v1.json"))
+            .appending(path: "live-\(engine)-10s20-v1.json"))
         #else
         positionSearches = PositionSearches()
         #endif
         cf_global_init()
         var status = CF_ENGINE_OK
-        let created = bigNetURL.withUnsafeFileSystemRepresentation { big in
-            smallNetURL.withUnsafeFileSystemRepresentation { small in
-                cf_engine_create(EngineBuild(for: cpu).bridged, big, small, &status)
-            }
+        let created = netURL.withUnsafeFileSystemRepresentation { net in
+            cf_engine_create(EngineBuild(for: cpu).bridged, net, &status)
         }
         guard let created else { throw StartupFailure(status) }
         handle = EngineHandle(pointer: created)

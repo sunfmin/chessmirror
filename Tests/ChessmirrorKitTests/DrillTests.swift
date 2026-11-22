@@ -102,7 +102,7 @@ private func engine(
     let log = PracticeLog(url: directory.appending(path: "practice.jsonl"))
     // Depth twenty with no clock: the judgement's ten seconds came first under a loaded gate and
     // the move was judged at nineteen (chessmirror#13), which is the machine, not the contract.
-    let engine = DepthOnly(try EngineService(bigNetURL: Nets.big, smallNetURL: Nets.small,
+    let engine = DepthOnly(try EngineService(netURL: Nets.net,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)), depth: 20)
     let drill = try #require(Drill(position: afterNf3, engine: engine, log: log))
     let library = GameLibrary(folder: GameFolder(url: directory))
@@ -124,7 +124,11 @@ private func engine(
     #expect(session.game.plies.count == 2, "the engine answers for White, not the student's Black")
     #expect(session.isHandTurn)
     let before = session.game.uciMoves
-    let move = try #require(session.game.state.legalMoves.first)
+    // A developing move no engine refuses, not the first legal one: practice is played under 把关
+    // (docs/adr/0047), and the first legal move here, …a6, stood under Stockfish 18 and costs
+    // enough under Stockfish 19 to be refused on some two-thread runs (chessmirror#15). What this
+    // contract is about is the game going on, not whether …a6 is good.
+    let move = try #require(session.game.state.move(matching: "g8f6"))
     session.play(move)
     await session.settled()
     #expect(session.game.uciMoves == before + [move.uci])

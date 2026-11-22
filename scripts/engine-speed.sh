@@ -5,8 +5,9 @@
 # them (chessmirror#4, #13): one search thread from the start position to a fixed depth, under
 # `nice -n 19` so the rest of the machine is not the thing measured, the builds run interleaved
 # round by round so a load that comes and goes falls on all of them alike. Each run prints its
-# nodes, its nps and the load average when it started; the mean (and median) nps per build
-# comes at the end, with the fewest core cycles a run took (see below).
+# nodes, its nps, the time it took to reach the depth and the load average when it started; the
+# mean (and median) nps and time per build come at the end, with the fewest core cycles a run took
+# (see below).
 #
 # A build is a chessmirror-cli binary copied aside after `swift build -c release`, named, with any
 # extra flags for `analyse` after commas. To compare a change, both engine builds, before and after:
@@ -17,7 +18,9 @@
 #                           after=/tmp/after   after-armv8=/tmp/after,--no-dotprod
 #
 # Every build of one engine must print the same node count: a build that searched a different
-# tree is a different engine, not a faster one, and the script says so.
+# tree is a different engine, not a faster one, and the script says so. Two different engines (sf_18
+# against sf_19, chessmirror#15) search different trees to the same depth, so between them it is the
+# time to the depth that compares, not the nodes or the nps.
 set -eu
 
 depth=25
@@ -62,9 +65,11 @@ while [ "$round" -le "$rounds" ]; do
         last=$(printf '%s\n' "$out" | grep '^depth ' | tail -n 1)
         nodes=$(printf '%s\n' "$last" | awk '{ for (i = 1; i < NF; i++) if ($(i + 1) == "nodes") print $i }')
         nps=$(printf '%s\n' "$last" | awk '{ for (i = 1; i < NF; i++) if ($(i + 1) == "nps") { sub(/k$/, "", $i); print $i } }')
-        printf 'round %d  %-16s %-8s load %5s  %s nodes  %sk nps  %s Mcycles\n' \
-            "$round" "$name" "$build" "$load" "$nodes" "$nps" "$mcycles"
-        printf '%s %s %s %s\n' "$name" "$nodes" "$nps" "$mcycles" >> "$results"
+        # The search's own clock at the depth: what a player waits for an answer of that depth.
+        ms=$(printf '%s\n' "$last" | awk '{ for (i = 1; i < NF; i++) if ($(i + 1) == "ms") print $i }')
+        printf 'round %d  %-16s %-8s load %5s  %s nodes  %sk nps  %s ms  %s Mcycles\n' \
+            "$round" "$name" "$build" "$load" "$nodes" "$nps" "$ms" "$mcycles"
+        printf '%s %s %s %s %s\n' "$name" "$nodes" "$nps" "$mcycles" "$ms" >> "$results"
     done
     round=$((round + 1))
 done
@@ -77,12 +82,15 @@ echo
 echo "over $rounds rounds, depth $depth, 1 thread:"
 for spec in "$@"; do
     name=${spec%%=*}
-    awk -v n="$name" '$1 == n { v[++c] = $3; s += $3; nodes[$2] = 1; if (!m || $4 < m) m = $4 }
+    awk -v n="$name" '$1 == n { v[++c] = $3; s += $3; w[c] = $5; ts += $5; nodes[$2] = 1
+            if (!m || $4 < m) m = $4; if (!f || $5 < f) f = $5 }
         END {
             for (i = 2; i <= c; i++) for (j = i; j > 1 && v[j - 1] > v[j]; j--) { t = v[j]; v[j] = v[j - 1]; v[j - 1] = t }
+            for (i = 2; i <= c; i++) for (j = i; j > 1 && w[j - 1] > w[j]; j--) { t = w[j]; w[j] = w[j - 1]; w[j - 1] = t }
             median = (c % 2) ? v[(c + 1) / 2] : (v[c / 2] + v[c / 2 + 1]) / 2
+            tmedian = (c % 2) ? w[(c + 1) / 2] : (w[c / 2] + w[c / 2 + 1]) / 2
             k = 0; for (x in nodes) k++
-            printf "  %-16s mean %5.0fk nps  median %5.0fk nps  fewest %6d Mcycles%s\n", n, s / c, median, m,
-                (k > 1 ? "  (node count varied between runs!)" : "")
+            printf "  %-16s mean %5.0fk nps  median %5.0fk nps  fewest %6d Mcycles  to depth: mean %6.0f ms  median %6.0f ms  fastest %6d ms%s\n",
+                n, s / c, median, m, ts / c, tmedian, f, (k > 1 ? "  (node count varied between runs!)" : "")
         }' "$results"
 done

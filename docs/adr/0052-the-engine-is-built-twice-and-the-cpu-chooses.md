@@ -22,7 +22,8 @@ CStockfish, so there is one copy of the sources and nothing to keep in step — 
 Two copies of Stockfish in one binary would collide symbol for symbol. They don't, because every
 symbol Stockfish defines is inside `namespace Stockfish`, and the dotprod target defines
 `Stockfish=StockfishDotprod`: the preprocessor moves the whole second copy into a namespace of its
-own. That is a define, not an edit — the vendored tree stays sf_18 verbatim, as VENDORED.txt says.
+own. That is a define, not an edit — the vendored tree stays verbatim (sf_19 now, ADR-0053), as
+VENDORED.txt says.
 
 Only the engine is worth the second copy. The bridge's rules queries — FEN vetting, legal moves,
 control, exchanges, perft — run on the armv8 build's tables wherever they run; a dot product is no
@@ -42,6 +43,12 @@ answer cannot.
 
 The two builds walk the same tree: one thread to a fixed depth searches the same number of nodes
 in both, which a test holds. Dotprod changes how the NNUE layers multiply, not what they answer.
+
+sf_19 ships the same design in its own Makefile (`ARCH=arm64-universal`: the tree built as armv8
+and as armv8-dotprod, renamed apart, picked at start from the CPU) and it does not replace this
+one: it renames with an LTO-object and awk pass that SwiftPM cannot run, and its CPU query is
+`getauxval` or `IsProcessorFeaturePresent`, Linux and Windows only — on Darwin sf_19 builds the
+dotprod slice alone (`macos-lipo`). A define and a sysctl do the same here with nothing to run (ADR-0053).
 
 ## What it buys: about 2.5%, not 14%
 

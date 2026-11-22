@@ -29,7 +29,7 @@ extension GameScreen {
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Palette.ink)
                 if session.controller(for: colour) == .engine {
-                    // The engine by name, with the rung it is on — 「Stockfish 18 · 1800」, or
+                    // The engine by name, with the rung it is on — 「Stockfish 19 · 1800」, or
                     // the name alone at 满力 — and pressing it is how another rung is picked
                     // (docs/adr/0038). On the bar rather than among the chips, because the rung
                     // is a fact about the opponent the way the clock is, and it changes mid-game

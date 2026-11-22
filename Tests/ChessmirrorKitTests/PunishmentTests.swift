@@ -12,7 +12,7 @@ enum PunishmentExit: CaseIterable { case solve, reveal, skip }
 func realPunishmentReturnsToRetryAndPersistsOnlyTheOriginalAttempt(exit: PunishmentExit) async throws {
         try await Quietly.alone {
     let engine = try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN,
