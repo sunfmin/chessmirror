@@ -2,7 +2,8 @@
 # formula: no [cut].
 #
 # Both gates are ./gate.sh: the package's tests, once, through `slimfit check` (slimfit.toml:
-# release and serial, as README.md's "Build and test" says). Measured 2026-11-21 under
+# release, as scripts/test.sh runs them and README.md's "Build and test" says). Measured
+# 2026-11-21 under
 # `factorium worker exclusive` on 18 cores (chessmirror#2): before, `swift test` alone, 221s
 # at load 44-29 (785 tests in 147s); after, `slimfit check` 206s warm at load 40-35, 289s from
 # a cold build (`slimfit init`, at load 24-36).

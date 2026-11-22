@@ -29,7 +29,6 @@ import Testing
 // (2026-11-22). Same game, same gate, same depth; a stronger engine's mistake.
 @MainActor
 @Test func phoneGameInterceptionDiagnosis() async throws {
-        try await Quietly.alone {
     let pgn = try PGN(parsing: """
     [Result "0-1"]
     1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. d3 Nf6 5. Bg5 h6 6. Bh4 d6 7. O-O a6 8. c3 Ba7
@@ -73,6 +72,5 @@ import Testing
         // depth, or this test no longer exercises a refusal.
         Issue.record("at depth \(judged.depth) the real phone position must still demonstrate a mistake")
     }
-
-        }}
+}
 
