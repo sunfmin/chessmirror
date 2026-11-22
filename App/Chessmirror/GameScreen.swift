@@ -22,6 +22,8 @@ struct GameScreen: View {
     @Environment(EngineHost.self) var engine
     @Environment(GameLibrary.self) var library
     @Environment(\.dismiss) var dismiss
+    /// Whether a side's bar has room for its facts on its own row (`playerBar`).
+    @Environment(\.dynamicTypeSize) var typeSize
     @State var selected: Square?
     /// Set by a tap on a cell of the record strip, for the one cursor change that tap causes:
     /// the strip is not to move under the finger that is on it. A cell that was tapped was on
@@ -129,7 +131,7 @@ struct GameScreen: View {
                 }
                 .accessibilityLabel(localized("board.faceToFace"))
                 .accessibilityValue(localized(session.isFaceToFace ? "screen.on" : "noSlips.off"))
-                flip.frame(width: 44, height: 44)
+                flip
                 Menu {
                     // 复盘 is not here. It was a destination, then a switch in the navigation bar,
                     // and it is a press on 重新打分 below; what it leaves is the curve behind the
@@ -261,7 +263,7 @@ struct GameScreen: View {
         VStack(spacing: 0) {
             playerBar(topColour).chromeType()
             board.frame(width: side, height: side)
-            standing.padding(.horizontal, 12).frame(width: side).padding(.vertical, 6).chromeType()
+            standing.padding(.horizontal, 12).frame(width: side).padding(.bottom, 6).chromeType()
             playerBar(bottomColour).chromeType()
         }
         .frame(width: side)

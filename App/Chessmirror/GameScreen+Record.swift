@@ -29,7 +29,7 @@ extension GameScreen {
     /// is a ground and the numbers are said in words underneath.
     var record: some View {
         HStack(spacing: 8) {
-            arrow("chevron.left", label: localized("record.previous"), enabled: session.cursor > 0, width: 14)
+            arrow("chevron.left", label: localized("record.previous"), enabled: session.cursor > 0)
             { walk(-1) }
             moveStrip
             arrow(
@@ -45,10 +45,9 @@ extension GameScreen {
                 }
             }
         }
-        .frame(minHeight: 30)
+        .frame(minHeight: 44)
         .padding(.leading, 13)
         .padding(.trailing, 8)
-        .padding(.vertical, 7)
         .background(Palette.analysis.opacity(0.06))
         .overlay(alignment: .leading) {
             Rectangle().fill(Palette.analysis).frame(width: 3)
@@ -362,8 +361,8 @@ extension GameScreen {
                             if let black = row.black { half(black) }
                         }
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Palette.chipRest, in: RoundedRectangle(cornerRadius: 9))
+                        // The card is drawn inside the 44 pt its cells take, as tall as it was round them.
+                        .background { RoundedRectangle(cornerRadius: 9).fill(Palette.chipRest).padding(.vertical, 4) }
                     }
                 }
                 .padding(.horizontal, 2)
@@ -417,6 +416,8 @@ extension GameScreen {
                     in: RoundedRectangle(cornerRadius: 9)
                 )
                 .overlay(alignment: .bottom) { slipMark(cell.mark) }
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .id(0)
@@ -483,6 +484,9 @@ extension GameScreen {
                     }
                 }
                 .overlay(alignment: .bottom) { slipMark(cell.mark) }
+                // The finger's 44 pt around the same drawing: the card grows to hold it, not the ink.
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)

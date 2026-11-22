@@ -222,7 +222,7 @@ extension GameScreen {
             }
             .font(.caption)
             .foregroundStyle(session.isNoSlipsOn ? Palette.analysis : Palette.inkSoft)
-            .frame(minHeight: 30)
+            .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -115,18 +115,25 @@ struct ImportSheet: View {
     // ------------------------------------------------------------------ parts
 
     /// The four doors. A chip each, because that is the app's one selector idiom.
+    ///
+    /// Whole chips to a row: one row at the reader's usual size, two at an accessibility size. In
+    /// an `HStack` the four were squeezed into a row that could not hold them, and each name broke
+    /// inside itself — 「liche / ss」, 「国象 / 联盟」 (chessmirror#32).
     private var doorChips: some View {
-        HStack(spacing: 8) {
+        Wrapping(spacing: 8, lineSpacing: 8) {
             ForEach(Door.allCases, id: \.self) { candidate in
                 Button {
                     doors.open(candidate)
                 } label: {
                     Chip(label: candidate.label, isOn: door == candidate)
+                        // The chip is drawn its own size; the hit region around it is a finger.
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The one field, with the text this door had. Marked in the alarm colour when the failure

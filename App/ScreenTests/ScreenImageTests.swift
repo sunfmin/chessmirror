@@ -73,4 +73,34 @@ struct ScreenImageTests {
         #expect(rendered.bounds == CGRect(origin: .zero, size: size))
         #expect(rendered.safeArea.contains(frame))
     }
+
+    /// A list row whose content is one control is pressed anywhere on the row — real taps opened an
+    /// About picker's menu over 49 pt of its 52 pt row while it reported 34 pt (chessmirror#31) —
+    /// so it is held to its row. A small button beside a row's text is pressed only where it is.
+    @Test("a control that is its list row's content is held to the row, and nothing else is")
+    func rowContentIsHeldToItsRow() async throws {
+        let rendered = await ScreenImage.write("harness-list-row", size: CGSize(width: 390, height: 400)) {
+            List {
+                Picker("Pick", selection: .constant(1)) {
+                    Text("One").tag(1)
+                    Text("Two").tag(2)
+                }
+                HStack {
+                    Text("Words")
+                    Spacer()
+                    Button("Go") {}.buttonStyle(.borderless).font(.caption2)
+                }
+            }
+        }
+        let breaches = rendered.layoutBreaches().filter { $0.rule == .smallControl }
+        let picker = try #require(rendered.elements.first { $0.text.hasPrefix("Pick") && $0.isControl },
+                                 "\(rendered.elements.map { "\($0.text) \($0.traits.rawValue) \($0.frame)" })")
+        let row = try #require(picker.row, "the picker is its row's content: \(picker.frame)")
+        #expect(row.height >= 44 && row.contains(picker.frame), "\(row) holds \(picker.frame)")
+        #expect(!breaches.contains { $0.word.text.hasPrefix("Pick") }, "\(breaches)")
+        let go = try #require(rendered.elements.first { $0.text == "Go" })
+        #expect(go.row == nil, "a button beside a row's text is not the row: \(go.frame)")
+        #expect(go.frame.height >= 44 || breaches.contains { $0.word.text == "Go" },
+                "and a small one is still a breach: \(breaches)")
+    }
 }
