@@ -51,7 +51,9 @@ import ChessmirrorKitTesting
         #expect(reading.line.isEmpty, "nothing is drawn until there is an answer")
         #expect(reading.arrows.isEmpty)
 
-        let deadline = ContinuousClock.now + .seconds(5)
+        // Generous, because it only bounds a hang: under the full suite's load the answer has taken
+        // over 5 s to come back (12.5 s, chessmirror#30's gate), while alone it takes milliseconds.
+        let deadline = ContinuousClock.now + .seconds(30)
         while session.replyReading?.isAsking == true, ContinuousClock.now < deadline {
             await Task.yield()
         }
