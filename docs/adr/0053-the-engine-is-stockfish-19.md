@@ -76,4 +76,25 @@ Apple-silicon Mac, and the A12 crash 0052 exists to avoid on an iPad. A namespac
 
 ## What it buys
 
-MEASUREMENTS
+Measured on the development Mac (M5 Max) on 2026-11-22 with `scripts/engine-speed.sh -r 5`: the
+start position to depth 25 on one thread, the four builds interleaved, at a load average of 16–23
+(chessmirror#15 has every run). The script now prints each run's time to the depth, because two
+versions search different trees and nodes per second compare nothing between them.
+
+| build   | time to depth 25, fastest / median | nodes     | median nps |
+|---------|------------------------------------|-----------|------------|
+| sf_18 dotprod | 2647 / 2854 ms               | 3,654,468 | 1280k      |
+| sf_19 dotprod | 1870 / 1918 ms (−29% / −33%) | 1,975,369 | 1029k      |
+| sf_18 armv8   | 2786 / 2895 ms               | 3,654,468 | 1262k      |
+| sf_19 armv8   | 2036 / 2213 ms (−27% / −24%) | 1,975,369 |  892k      |
+
+sf_19 is slower per node, because each evaluation costs more, and needs 46% fewer nodes for the
+depth. It reaches the depth about a quarter to a third sooner on both builds, the armv8 one an A12
+runs included, and plays stronger there. The fewest core cycles for a whole run fell 27% (dotprod)
+and 23% (armv8). The package's tests, which search a great deal, went from 265 s to 186 s in the
+gate.
+
+Pinned numbers moved with the network: the start position's depth-10 node count is 8663 (sf_18:
+12507). One test's premise did not survive: sf_19 does not call 19. Kxh3 in the phone game a
+mistake at any depth from 16 to 26, so that regression now plays 14. Re1, which sf_19 refuses at
+every depth from 16 to 24 (chessmirror#15 has both series).
