@@ -11,7 +11,7 @@ import UIKit
 /// They come out at the size of whatever simulator the run is on, which is how the store wants
 /// them: once on a 6.9-inch iPhone and once on a 13-inch iPad (docs/appstore.md has the two
 /// commands). Each is written as `store-<store language>-<iphone|ipad>-<n>-<what>.png`, and
-/// `fastlane store_screenshots` sorts them into the store's languages by that name.
+/// `appstore.sh page` sorts them into the store's languages by that name.
 @MainActor
 @Suite(.serialized)
 struct StoreScreenshotTests {
