@@ -34,11 +34,27 @@ For a new version, raise `MARKETING_VERSION` in `App/project.yml` (both targets)
 | --- | --- |
 | Name, subtitle, keywords, description, the two URLs, categories, copyright | `fastlane/metadata/` — the files deliver reads; edit them there |
 | Pictures | `App/ScreenTests/StoreScreenshotTests.swift` draws them |
-| Age rating (everything "none": 4+) | `fastlane/age-rating.json` |
+| Age rating (everything "none": 4+) | `fastlane/age-rating.json` — deliver sends its keys to the ageRatingDeclaration as they are, so a question Apple adds needs a key here (see below) |
 | App privacy ("Data Not Collected") | `fastlane/app-privacy.json`; the reasons are `docs/privacy.md`, which is also the privacy policy the store links to |
 | Notes for the reviewer | `fastlane/review-notes.txt` |
 | Reviewer's contact | the `chessmirror` profile in mytokens (`APP_REVIEW_*`) |
 | Export compliance | `ITSAppUsesNonExemptEncryption: false` in `App/project.yml` |
+
+### The age rating's newer questions
+
+JSON takes no comments, and any key in the file goes to the API, so the reasons live here.
+Apple asked these after 1.0; submitting 1.1 stopped on `socialMedia` having no value
+(`ENTITY_ERROR.ATTRIBUTE.REQUIRED`, 2026-11-22). All are booleans in the App Store Connect API's
+ageRatingDeclaration, and each is `false`, which keeps the rating at 4+:
+
+- `socialMedia`: no social media features. Nothing is posted, followed or shared with others.
+- `datingAndRelationships`: the app connects no one with anyone.
+- `sharedLocation`: the app never reads the location, let alone shares it.
+
+Left out on purpose: `socialMediaAgeRestricted` (asked only of an app with social media), and
+`kidsAgeBand`, `gracRatingClassificationNumber`, `developerAgeRatingInfoUrl`,
+`ageRatingOverride*`, `koreaAgeRatingOverride`, which are not questions but settings for apps in
+the Kids category, a Korean rating, or an override; this app uses none.
 
 ## Signing in
 
