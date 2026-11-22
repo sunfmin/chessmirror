@@ -188,13 +188,7 @@ struct ScreenMatrix {
     private static func known(
         _ breach: ScreenImage.Rendered.Breach, on screen: Screen, at row: Row, in rendered: ScreenImage.Rendered
     ) -> Comment? {
-        // A navigation bar is the 54 pt under the top of the safe area.
-        let inBar = breach.word.frame.maxY <= rendered.safeArea.minY + 54
         switch (breach.rule, screen) {
-        case (.smallControl, .importSheet), (.smallControl, .editor):
-            return inBar ? "chessmirror#29: navigation bar text buttons report 36 pt tall" : nil
-        case (.smallControl, .about):
-            return inBar ? "chessmirror#29: navigation bar text buttons report 36 pt tall" : nil
         default:
             return nil
         }

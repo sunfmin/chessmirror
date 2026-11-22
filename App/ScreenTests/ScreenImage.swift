@@ -35,14 +35,18 @@ enum ScreenImage {
         var shown: CGRect? = nil
         /// The class that said it, so the system's own chrome can be told from the app's.
         var kind: String = ""
+        /// Where a finger lands on it, when that is not its frame: a navigation bar's item, whose
+        /// hit region UIKit widens past the frame it reports (chessmirror#29: Cancel reports 78×36
+        /// and hit-tests over its 86×44 glass platter). Nil for everything else.
+        var reach: CGRect? = nil
         /// The list row it is the whole content of, when it is: a row whose content is one control
         /// is that control, and a finger pressing anywhere on the row presses it. Its frame is
         /// only the content inside the row's margins — an About picker reports 34 pt in a 52 pt
         /// row, and real taps open its menu over 49 pt of that row (chessmirror#31).
         var row: CGRect? = nil
 
-        /// Where a finger presses it: its row, when it is one, else its own frame.
-        var pressed: CGRect { row ?? frame }
+        /// Where a finger presses it: its reach in a bar, its row in a list, else its own frame.
+        var pressed: CGRect { reach ?? row ?? frame }
 
         /// Something a finger presses, which is held to the 44×44 pt a finger needs.
         var isControl: Bool {
@@ -129,7 +133,9 @@ enum ScreenImage {
             // Every control, containers too: a picker's row holding its value is still pressed.
             for word in visible where word.isControl && (word.pressed.width < 43.5 || word.pressed.height < 43.5) {
                 breaches.append(Breach(rule: .smallControl, word: word,
-                                       description: "\(describe(word)) is a control smaller than 44×44 pt"))
+                                       description: "\(describe(word)) is a control smaller than 44×44 pt"
+                                           + (word.pressed == word.frame ? ""
+                                              : ", pressed over \(Int(word.pressed.width))×\(Int(word.pressed.height))")))
             }
             return breaches
         }
@@ -434,6 +440,30 @@ enum ScreenImage {
         return cut
     }
 
+    /// The region over which the window hands a touch to the same view as at `frame`'s centre,
+    /// when that view is in a navigation bar; nil anywhere else. Found by hit-testing out from the
+    /// centre along both axes, half a point at a time, as far as a finger could need (44 pt).
+    ///
+    /// Only bar items: SwiftUI's own controls answer a hit test with the hosting view that holds
+    /// the whole screen, so the same walk would call a 27 pt button as tall as the screen.
+    private static func reach(of frame: CGRect, in root: UIView) -> CGRect? {
+        let centre = CGPoint(x: frame.midX, y: frame.midY)
+        guard !frame.isEmpty, let hit = root.hitTest(centre, with: nil) else { return nil }
+        var ancestor: UIView? = hit
+        while let view = ancestor, !(view is UINavigationBar) { ancestor = view.superview }
+        guard ancestor != nil else { return nil }
+        func lands(_ dx: CGFloat, _ dy: CGFloat) -> Bool {
+            root.hitTest(CGPoint(x: centre.x + dx, y: centre.y + dy), with: nil) === hit
+        }
+        func extent(_ dx: CGFloat, _ dy: CGFloat) -> CGFloat {
+            var step: CGFloat = 0
+            while step < 44, lands(dx * (step + 0.5), dy * (step + 0.5)) { step += 0.5 }
+            return step + 0.25  // the edge is between the last point that lands and the first that misses
+        }
+        let left = extent(-1, 0), right = extent(1, 0), up = extent(0, -1), down = extent(0, 1)
+        return CGRect(x: centre.x - left, y: centre.y - up, width: left + right, height: up + down)
+    }
+
     /// The view an element is, or the nearest one holding it.
     private static func view(of object: NSObject) -> UIView? {
         // Swift sees `accessibilityContainer` only on UIAccessibilityElement; every element answers it.
@@ -483,6 +513,7 @@ enum ScreenImage {
                 found.append(Word(
                     text: text, frame: frame, traits: object.accessibilityTraits,
                     shown: shown(frame, of: object, in: root), kind: String(describing: type(of: object)),
+                    reach: object.accessibilityTraits.contains(.button) ? reach(of: frame, in: root) : nil,
                     row: row(filledBy: frame, of: object, in: root)))
             }
         }

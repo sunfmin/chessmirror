@@ -215,6 +215,7 @@
 "edit.advanced.show" = "易位和吃过路兵";
 "edit.advanced.hide" = "收起易位和吃过路兵";
 "edit.copyFEN" = "复制 FEN";
+"edit.more" = "更多";
 "edit.reset" = "摆成开局";
 "edit.clear" = "清空棋盘";
 "edit.photo" = "照片";

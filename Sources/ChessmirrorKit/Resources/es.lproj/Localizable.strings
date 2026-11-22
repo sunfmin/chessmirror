@@ -195,6 +195,7 @@
 "edit.advanced.show" = "Enroque y captura al paso";
 "edit.advanced.hide" = "Ocultar enroque y captura al paso";
 "edit.copyFEN" = "Copiar FEN";
+"edit.more" = "Más";
 "edit.reset" = "Poner la posición inicial";
 "edit.clear" = "Vaciar el tablero";
 "edit.photo" = "Foto";
