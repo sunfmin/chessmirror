@@ -129,7 +129,7 @@ struct GameScreen: View {
                 }
                 .accessibilityLabel(localized("board.faceToFace"))
                 .accessibilityValue(localized(session.isFaceToFace ? "screen.on" : "noSlips.off"))
-                flip.frame(width: 44, height: 44)
+                flip
                 Menu {
                     // 复盘 is not here. It was a destination, then a switch in the navigation bar,
                     // and it is a press on 重新打分 below; what it leaves is the curve behind the
@@ -261,7 +261,7 @@ struct GameScreen: View {
         VStack(spacing: 0) {
             playerBar(topColour).chromeType()
             board.frame(width: side, height: side)
-            standing.padding(.horizontal, 12).frame(width: side).padding(.vertical, 6).chromeType()
+            standing.padding(.horizontal, 12).frame(width: side).padding(.bottom, 6).chromeType()
             playerBar(bottomColour).chromeType()
         }
         .frame(width: side)
