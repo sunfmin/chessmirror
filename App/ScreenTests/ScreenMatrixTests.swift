@@ -115,8 +115,9 @@ struct ScreenMatrix {
             byPrefix ? word.text.hasPrefix(text) : word.text == text
         }
 
-        /// Why the text cannot be in `frame` whole, or nil when it can.
-        func breach(in frame: CGRect) -> String? {
+        /// Why `drawn` — this name as the screen said it, the rung and all — cannot be in `frame`
+        /// whole, or nil when it can.
+        func breach(of drawn: String, in frame: CGRect) -> String? {
             let width = frame.width - padding.width + 1
             func measure(_ part: String) -> CGFloat {
                 (part as NSString).size(withAttributes: [.font: font, .kern: tracking]).width
@@ -124,7 +125,7 @@ struct ScreenMatrix {
             var lines = 0
             var line: CGFloat = 0
             let space = measure(" ")
-            for part in text.split(whereSeparator: \.isWhitespace) {
+            for part in drawn.split(whereSeparator: \.isWhitespace) {
                 let size = measure(String(part))
                 if size > width {
                     return "is \(Int(frame.width)) pt wide, too narrow for 「\(part)」 (\(Int(size)) pt) on one line"
@@ -168,7 +169,7 @@ struct ScreenMatrix {
                 Issue.record("\(screen) at \(row) does not draw the name 「\(name.text)」")
                 continue
             }
-            if let broken = name.breach(in: first.frame) {
+            if let broken = name.breach(of: first.text, in: first.frame) {
                 Issue.record("\(screen) at \(row): 「\(first.text)」 \(broken)")
             }
         }
