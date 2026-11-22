@@ -21,6 +21,8 @@ extension GameScreen {
         } label: {
             Image(systemName: "arrow.up.arrow.down")
                 .foregroundStyle(Palette.ink)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localized("game.flip"))
