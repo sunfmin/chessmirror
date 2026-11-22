@@ -43,6 +43,14 @@ let stockfishDefines: [CXXSetting] = [
     // The NNUE networks ship as bundle resources and are loaded by path, so incbin's
     // assembly embedding never has to work under Xcode.
     .define("NNUE_EMBEDDING_OFF"),
+    // Never coverage-instrumented, though slimfit's test run passes --enable-code-coverage to
+    // every target: clang takes the last of each flag pair, and these come after SwiftPM's
+    // -fprofile-instr-generate -fcoverage-mapping. slimfit counts this repo's Swift alone, so no
+    // engine line was ever in its numbers, and the counters only slowed every search the tests
+    // run (chessmirror#16, whose comment has the runs): slimfit's test command on an M5 Max at
+    // load 10-34, 797 tests, took 204.9 s and 123.4 s with the engine instrumented, 71.0 s without
+    // (realPunishmentReturnsToRetry... 27.9/23.3 -> 6.4 s, measureRealImportReview 68.8/21.2 -> 9.0 s).
+    .unsafeFlags(["-fno-profile-instr-generate", "-fno-coverage-mapping"]),
 ]
 
 // What ARCH=apple-silicon adds to ARCH=armv8, and the rename that lets both builds be linked
