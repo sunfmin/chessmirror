@@ -20,3 +20,8 @@ slimfit check
 # The armv8 engine is what an A12 runs: no dotprod instruction may reach it (docs/adr/0052).
 scripts/dotprod-confined.sh \
     "$(swift build -c release --show-bin-path)/ChessmirrorKitTests.xctest/Contents/MacOS/ChessmirrorKitTests"
+
+# The app's screen tests (App/ScreenTests), which only an app-hosted bundle on a simulator can
+# run: no `swift test` reaches them, and a landing that broke every screen would otherwise land.
+# Bounded and explained in scripts/screen-tests.sh; why they are in this one gate, factorium.toml.
+scripts/screen-tests.sh

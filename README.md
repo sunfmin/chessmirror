@@ -111,11 +111,18 @@ footprint check has to join the suites the script runs alone.
 
 ## Screen snapshots
 
-From `App/`, with an installed iPhone 17 simulator:
+The gate runs them (`gate.sh`, through `scripts/screen-tests.sh`): the project generated from
+`App/project.yml`, then the app-hosted `ScreenTests` bundle on an iPhone 17 simulator, picked by
+id (created if the machine has none), with its own DerivedData, package checkout and result
+bundle under `.build/screen-tests/`. A failure prints the failing tests' messages from the result
+bundle; the full log stays in `.build/screen-tests/xcodebuild.log`.
+
+From the repository root, all of them, or one suite or test the same way:
 
 ```bash
-xcodebuild test -project Chessmirror.xcodeproj -scheme Chessmirror \
-  -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64
+scripts/screen-tests.sh
+scripts/screen-tests.sh -only-testing:ScreenTests/GameScreenTests
+scripts/screen-tests.sh -only-testing:'ScreenTests/GameScreenTests/<test>()'
 ```
 
 Tests write PNGs under `App/out/`; these generated images are not versioned.
