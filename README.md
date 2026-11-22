@@ -112,10 +112,13 @@ footprint check has to join the suites the script runs alone.
 ## Screen snapshots
 
 The gate runs them (`gate.sh`, through `scripts/screen-tests.sh`): the project generated from
-`App/project.yml`, then the app-hosted `ScreenTests` bundle on an iPhone 17 simulator, picked by
-id (created if the machine has none), with its own DerivedData, package checkout and result
-bundle under `.build/screen-tests/`. A failure prints the failing tests' messages from the result
-bundle; the full log stays in `.build/screen-tests/xcodebuild.log`.
+`App/project.yml`, then the app-hosted `ScreenTests` bundle on an iPhone 17 simulator of the
+run's own. The run creates it (on the installed iPhone 17's iOS, else the newest), names it
+`screen-tests <pid> iPhone 17` and deletes it after, whether it passed, failed or ran out of
+time. No run uses a simulator by name or shares one, because two runs on one device kill each
+other's tests. The run also keeps its own DerivedData, package checkout and result bundle under
+`.build/screen-tests/`. A failure prints the failing tests' messages from the result bundle; the
+full log stays in `.build/screen-tests/xcodebuild.log`.
 
 From the repository root, all of them, or one suite or test the same way:
 

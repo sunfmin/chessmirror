@@ -14,6 +14,11 @@
 # 134s at load 28-48; ScreenTests alone 316s cold (fresh DerivedData, at load 24-22, beside
 # another gate) and 301s warm (268s of it the tests, at load 11-5); the gate with them 328s
 # green at load 7-11 (318s red, a test failed on purpose).
+# Each run makes its own simulator and deletes it after (chessmirror#24: two runs on one shared
+# device killed each other's tests). Measured 2026-11-23 under `factorium worker exclusive`:
+# create ~0s, boot 12s at load 3 and 17-19s at load 63-70, shutdown + delete 9s; ScreenTests
+# alone 328s cold (fresh DerivedData, load 70-3) and 306s warm (load 3), against 316s and 301s
+# on the shared device; two warm runs started at once in two worktrees both green in 338s.
 # Split them into a slow gate of their own if the gate nears 900s. A run is bounded at 660s
 # (SCREEN_TESTS_LIMIT), because a simulator that never launches the tests hangs xcodebuild.
 
