@@ -1,2 +1,3 @@
-Vendored from https://github.com/official-stockfish/Stockfish tag sf_18
+Vendored from https://github.com/official-stockfish/Stockfish tag sf_19
+(commit edb0d9db6731067ec50ce619ff372b463bc4dd5d).
 main.cpp and Makefile removed; everything else verbatim.

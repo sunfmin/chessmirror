@@ -112,7 +112,7 @@ struct AboutScreen: View {
 
                 Section(localized("about.version")) {
                     row(localized("app.name"), Self.version)
-                    row(localized("about.engine"), "Stockfish 18")
+                    row(localized("about.engine"), EngineService.name)
                     switch engine.status {
                     case .ready: row(localized("about.engineStatus"), localized("about.ready"))
                     case .starting:

@@ -439,7 +439,7 @@ func moveChangeUsesTheSameTwoScoresAsTheBar(_ score: Int) async throws {
 @Test func realPreparedMoveWaitsForThePlayedPositionBeforeTheOpponentSearch() async throws {
         try await Quietly.alone {
     let engine = try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -646,7 +646,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 @Test func noSlipsRejectsMateAndPreservesTheRetry() async throws {
         try await Quietly.alone {
     let engine = try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["f2f3", "e7e5"]))
@@ -687,7 +687,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 @Test func suspendingNoSlipsRestoresTheUnjudgedPosition() async throws {
         try await Quietly.alone {
     let engine = try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1)
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN))

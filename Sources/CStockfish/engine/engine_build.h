@@ -20,10 +20,11 @@
 
 struct CfEngineBuildOps {
     /* Null when the engine could not be allocated. */
-    void *(*create)(const char *bigNetPath, const char *smallNetPath);
+    void *(*create)(const char *netPath);
     void (*destroy)(void *instance);
     bool (*setOption)(void *instance, const char *name, const char *value);
-    void (*go)(void                           *instance,
+    /* False when Stockfish refused the position, and nothing was searched. */
+    bool (*go)(void                           *instance,
                const char                     *startFen,
                const std::vector<std::string> &moves,
                const CfSearchLimits           *limits,

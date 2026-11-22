@@ -3,7 +3,7 @@ import Foundation
 /// The app's one engine, and how it came to be there or not.
 ///
 /// There is exactly one for the whole app (docs/adr/0009), so this is the thing screens
-/// share rather than something they each build. Starting it means reading 112 MiB of
+/// share rather than something they each build. Starting it means reading 94 MiB of
 /// weights and building a thread pool, which is why the library is on screen first and the
 /// engine arrives a moment later.
 @Observable @MainActor public final class EngineHost {
@@ -36,28 +36,18 @@ import Foundation
         return reason
     }
 
-    /// Where the two NNUE files are. Injected rather than read off `Bundle.main`, because the
-    /// bundle is the *app's* answer and this now lives beside the engine it starts: the package's
-    /// own tests and `chessmirror-cli` find the same weights in the source tree.
-    private let nets: @Sendable () -> Nets?
-
-    /// The two NNUE files sf_18 wants (docs/adr/0002).
-    public struct Nets: Sendable {
-        public let big: URL
-        public let small: URL
-
-        public init(big: URL, small: URL) {
-            self.big = big
-            self.small = small
-        }
-    }
+    /// Where the NNUE file is — the one sf_19 wants, named `EngineService.netFileName`
+    /// (docs/adr/0002). Injected rather than read off `Bundle.main`, because the bundle is the
+    /// *app's* answer and this now lives beside the engine it starts: the package's own tests and
+    /// `chessmirror-cli` find the same weights in the source tree.
+    private let net: @Sendable () -> URL?
 
     /// The standing subscriptions to this host's two facts. One list, so anything that follows
     /// the host says so here instead of keeping its own `withObservationTracking` chain.
     @ObservationIgnored private var watchers: [UUID: @MainActor () -> Void] = [:]
 
-    public init(nets: @escaping @Sendable () -> Nets?) {
-        self.nets = nets
+    public init(net: @escaping @Sendable () -> URL?) {
+        self.net = net
     }
 
     /// A subscription to the host, which stops when this is dropped or `stop()` is called.
@@ -95,21 +85,21 @@ import Foundation
         }
     }
 
-    /// A host that is handed its engine rather than reading 112 MiB of weights to build one: how a
+    /// A host that is handed its engine rather than reading 94 MiB of weights to build one: how a
     /// screenshot test puts the screens into the state the app reaches a moment after it opens.
     public init(_ engine: any Engine) {
-        nets = { nil }
+        net = { nil }
         service = engine
         status = .ready
     }
 
     public func start() async {
         guard service == nil, status == .starting else { return }
-        let nets = nets
-        let outcome = await Task.detached(priority: .userInitiated) { Self.build(nets()) }.value
+        let net = net
+        let outcome = await Task.detached(priority: .userInitiated) { Self.build(net()) }.value
         switch outcome {
         case .success(let service):
-            // The app can perfectly well have left while 112 MiB of weights were being read,
+            // The app can perfectly well have left while 94 MiB of weights were being read,
             // and an engine that arrives to an empty screen should arrive paused.
             if !isActive { service.pause() }
             self.service = service
@@ -137,20 +127,17 @@ import Foundation
 
     // The build happens off the main thread, so everything it touches is nonisolated.
 
-    private nonisolated static func build(_ nets: Nets?)
+    private nonisolated static func build(_ net: URL?)
         -> Result<EngineService, EngineService.StartupFailure>
     {
-        guard let nets else { return .failure(.networkMissing) }
-        let big = nets.big
-        let small = nets.small
+        guard let net else { return .failure(.networkMissing) }
         do {
             // Two cores are left to the UI by default. The hash is smaller than the
             // desktop default because iOS will kill an app that treats a phone like a
             // workstation, and 128 MiB is plenty for the depths a game reaches.
             return .success(
                 try EngineService(
-                    bigNetURL: big,
-                    smallNetURL: small,
+                    netURL: net,
                     configuration: .init(hashMegabytes: 128, multiPV: 3)
                 )
             )

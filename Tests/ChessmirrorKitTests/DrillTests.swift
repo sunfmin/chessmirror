@@ -102,7 +102,7 @@ private func engine(
     let log = PracticeLog(url: directory.appending(path: "practice.jsonl"))
     // Depth twenty with no clock: the judgement's ten seconds came first under a loaded gate and
     // the move was judged at nineteen (chessmirror#13), which is the machine, not the contract.
-    let engine = DepthOnly(try EngineService(bigNetURL: Nets.big, smallNetURL: Nets.small,
+    let engine = DepthOnly(try EngineService(netURL: Nets.net,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)), depth: 20)
     let drill = try #require(Drill(position: afterNf3, engine: engine, log: log))
     let library = GameLibrary(folder: GameFolder(url: directory))

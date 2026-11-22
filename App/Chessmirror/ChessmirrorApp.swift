@@ -3,12 +3,9 @@ import SwiftUI
 
 @main
 struct ChessmirrorApp: App {
-    @State private var engine = EngineHost(nets: {
+    @State private var engine = EngineHost(net: {
         // The app's answer to "where are the weights" (docs/adr/0002): they ride in the bundle.
-        guard let big = Bundle.main.url(forResource: "nn-c288c895ea92", withExtension: "nnue", subdirectory: "Nets"),
-              let small = Bundle.main.url(forResource: "nn-37f18f62d772", withExtension: "nnue", subdirectory: "Nets")
-        else { return nil }
-        return EngineHost.Nets(big: big, small: small)
+        Bundle.main.url(forResource: EngineService.netFileName, withExtension: nil, subdirectory: "Nets")
     })
     @State private var library: GameLibrary
     /// The 自建集, in a folder inside the library's (docs/adr/0051).

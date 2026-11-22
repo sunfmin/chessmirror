@@ -8,7 +8,7 @@ import ChessmirrorKitTesting
 @MainActor
 @Test func automaticFindingsDoNotDisplaceEngineMoves() async throws {
         try await Quietly.alone {
-    let engine = try EngineService(bigNetURL: Nets.big, smallNetURL: Nets.small,
+    let engine = try EngineService(netURL: Nets.net,
                                   configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1))
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     let session = GameSession.fresh(game, controllers: [.white: .engine, .black: .hand], engine: engine)
@@ -77,7 +77,7 @@ import ChessmirrorKitTesting
 @Test func backgroundImportWaitsForForegroundAndCanBeCancelled() async throws {
         try await Quietly.alone {
     let engine = try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)
     )
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
@@ -118,7 +118,7 @@ import ChessmirrorKitTesting
 @Test func realImportedScoresCannotHideLocalMistakes() async throws {
         try await Quietly.alone {
     let engine = try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)
     )
     var plain = try PGN(parsing: "1. f3 e5 2. g4 Qh4# 0-1")
@@ -153,7 +153,7 @@ import ChessmirrorKitTesting
         15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8# 1-0
         """)
     let engine = try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 2, hashMegabytes: 32, multiPV: 1)
     )
     let started = ContinuousClock.now

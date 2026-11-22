@@ -47,7 +47,7 @@ import ChessmirrorKitTesting
 /// The real C++ search receives both limits together and stops for either one.
 @Test func nativeSearchStopsAtWhicheverLimitArrivesFirst() async throws {
         try await Quietly.alone {
-    let engine = try EngineService(bigNetURL: Nets.big, smallNetURL: Nets.small,
+    let engine = try EngineService(netURL: Nets.net,
                                    configuration: .init(threads: 2, hashMegabytes: 32))
     let game = try #require(Game(startFEN: PGN.standardStartFEN))
     for budget in [SearchBudget.timeOrDepth(.milliseconds(100), 40), .timeOrDepth(.seconds(10), 4)] {

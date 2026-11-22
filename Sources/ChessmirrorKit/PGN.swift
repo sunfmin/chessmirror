@@ -100,8 +100,15 @@ public struct PGN: Hashable, Sendable {
         // An imported game keeps the two real people in its roster; which of them is the player
         // is `trackedSide`, said by the import (docs/adr/0028).
         if origin != .imported {
-            written.setTag(Tags.white, to: (seats[.white] ?? .hand).playerName)
-            written.setTag(Tags.black, to: (seats[.black] ?? .hand).playerName)
+            for colour in [PieceColour.white, .black] {
+                let seat = seats[colour] ?? .hand
+                // A game keeps the engine's name it was saved with: a game the Stockfish 18 days
+                // wrote still says so when it is saved again (chessmirror#15).
+                if seat == .engine, let carried = written.playerName(colour), Controller.isEngine(carried) {
+                    continue
+                }
+                written.setTag(Tags.player(colour), to: seat.playerName)
+            }
             // The standard Elo tags, for other tools, when the whole game was at one rung; a game
             // that changed rung says so per move and nowhere else (docs/adr/0038).
             written.setTag("WhiteElo", to: game.constantElo(of: .white).map(String.init))
@@ -685,9 +692,8 @@ public struct PGN: Hashable, Sendable {
         // rung of its own: a file that writes rungs writes one on every engine move, and a move
         // without one there is a hand's.
         if !game.plies.contains(where: { $0.strength != nil }) {
-            let engine = Controller.engine.playerName
             for colour in [PieceColour.white, .black]
-            where tags.first(where: { $0.name == Tags.player(colour) })?.value == engine {
+            where (tags.first(where: { $0.name == Tags.player(colour) })?.value).map(Controller.isEngine) == true {
                 for index in game.plies.indices where game.mover(ofPly: index + 1) == colour {
                     game.setStrength(.full, atPly: index)
                 }

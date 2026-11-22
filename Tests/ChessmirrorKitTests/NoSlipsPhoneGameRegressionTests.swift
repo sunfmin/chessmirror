@@ -29,7 +29,7 @@ import Testing
     Qh5+ 22. Nh4 Qxh4# 0-1
     """)
     let engine = DepthOnly(try EngineService(
-        bigNetURL: Nets.big, smallNetURL: Nets.small,
+        netURL: Nets.net,
         configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)), depth: 21)
     let index = 36
     let position = try #require(Game(startFEN: PGN.standardStartFEN,

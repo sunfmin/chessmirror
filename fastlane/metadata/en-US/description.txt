@@ -4,7 +4,7 @@ PHOTOGRAPH A BOARD
 Point the camera at a real board, a book diagram or a screenshot. Chessmirror reads the position on the device, lets you correct any piece, the side to move and castling rights, and opens it as a game.
 
 PLAY WITH NO SLIPS
-Play against Stockfish 18, built into the app, at a strength you choose. With No Slips on, a move that gives away too much is handed back to you before it is played — and written down, so you meet that position again.
+Play against Stockfish 19, built into the app, at a strength you choose. With No Slips on, a move that gives away too much is handed back to you before it is played — and written down, so you meet that position again.
 
 A MISTAKE BOOK THAT WRITES ITSELF
 Every costly move becomes an entry: one position, however many games it turned up in, with what you played and what it cost in winning chances. Import your games from lichess or Chess.com by username, or paste a PGN or FEN, and have every move scored locally.

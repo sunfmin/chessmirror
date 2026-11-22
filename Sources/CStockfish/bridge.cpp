@@ -1,5 +1,6 @@
 #include "include/chessmirror_bridge.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
@@ -15,9 +16,12 @@
 
 #include "engine/engine_build.h"
 #include "stockfish/bitboard.h"
+#include "stockfish/evaluate.h"
+#include "stockfish/misc.h"
 #include "stockfish/movegen.h"
 #include "stockfish/perft.h"
 #include "stockfish/position.h"
+#include "stockfish/search.h"
 #include "stockfish/types.h"
 #include "stockfish/uci.h"
 
@@ -56,6 +60,8 @@ struct Verdict {
 struct Placement {
     int  pieceCount[2]  = {0, 0};
     int  pawnCount[2]   = {0, 0};
+    // Knights, bishops, rooks, queens, by Stockfish's piece-type number.
+    int  officers[2][QUEEN + 1] = {};
     int  kingSquare[2]  = {CF_NO_SQUARE, CF_NO_SQUARE};
     int  extraKing[2]   = {CF_NO_SQUARE, CF_NO_SQUARE};
     bool rookOnHome[2]  = {false, false};  // any rook on that colour's rank 1/8
@@ -133,6 +139,8 @@ bool parsePlacement(const std::string& field, Placement& out, Verdict& bad) {
             if (rank == (colour == 0 ? 0 : 7))
                 out.rookOnHome[colour] = true;
         }
+        if (upper != 'P' && upper != 'K')
+            out.officers[colour][std::strchr(known, upper) - known + 1]++;
 
         ++file;
     }
@@ -148,6 +156,18 @@ bool parsePlacement(const std::string& field, Placement& out, Verdict& bad) {
         return false;
     }
     return true;
+}
+
+// The fields of a FEN, one space between each. sf_19 reads a FEN a character at a
+// time and takes a second space between two fields as the next field (an en passant
+// square of " " is a refusal), where a person typing one, and this validator, see
+// fields. Whatever Stockfish is handed goes through this.
+std::string canonical(const std::string& fen) {
+    std::istringstream stream(fen);
+    std::string        field, joined;
+    while (stream >> field)
+        joined += (joined.empty() ? "" : " ") + field;
+    return joined;
 }
 
 Verdict validate(const std::string& fen) {
@@ -173,6 +193,14 @@ Verdict validate(const std::string& fen) {
             return Verdict(CF_FEN_TOO_MANY_PIECES, colour);
         if (board.pawnCount[colour] > 8)
             return Verdict(CF_FEN_TOO_MANY_PAWNS, colour);
+        // Every piece past a side's starting set is a promoted pawn, and that pawn is
+        // gone: three queens and eight pawns is not a position any game reaches. sf_19
+        // refuses it ("Too many pieces"), so it is refused here first.
+        const int* officers = board.officers[colour];
+        const int  promoted = std::max(officers[KNIGHT] - 2, 0) + std::max(officers[BISHOP] - 2, 0)
+                           + std::max(officers[ROOK] - 2, 0) + std::max(officers[QUEEN] - 1, 0);
+        if (promoted > 8 - board.pawnCount[colour])
+            return Verdict(CF_FEN_TOO_MANY_PIECES, colour);
     }
 
     if (!board.pawnsOnBackRank.empty())
@@ -186,6 +214,9 @@ Verdict validate(const std::string& fen) {
     if (sideToMove != "w" && sideToMove != "b")
         return Verdict(CF_FEN_BAD_SIDE_TO_MOVE);
 
+    // sf_19 refuses a fifth right; KQkq is all there are.
+    if (castling.size() > 4)
+        return Verdict(CF_FEN_BAD_CASTLING);
     if (castling != "-")
         for (char right : castling)
         {
@@ -218,16 +249,20 @@ Verdict validate(const std::string& fen) {
     {
         if (halfmove < 0 || halfmove > 150)
             return Verdict(CF_FEN_BAD_CLOCK);
-        if ((stream >> fullmove) && fullmove < 1)
+        // sf_19's ceiling on the game's length, which no real game is near.
+        if ((stream >> fullmove) && (fullmove < 1 || fullmove > 100000))
             return Verdict(CF_FEN_BAD_CLOCK);
     }
 
-    // Only now is the FEN safe to hand over: kings exist, castling rights have a
-    // rook to find. The last rule needs a real Position to answer.
+    // Only now is the FEN safe to hand over: every rule sf_19's Position::set has is
+    // asked above. The last rule needs a real Position to answer. sf_19 refusing it
+    // anyway means a rule of its own is missing from this list; the FEN is refused
+    // rather than half-set (FenValidationTests holds the list to sf_19's).
     cf_global_init();
     StateInfo state;
     Position  position;
-    position.set(fen, false, &state);
+    if (position.set(canonical(fen), false, &state).has_value())
+        return Verdict(CF_FEN_MALFORMED);
 
     const Color mover  = position.side_to_move();
     const Color waiter = ~mover;
@@ -239,6 +274,15 @@ Verdict validate(const std::string& fen) {
 }
 
 }  // namespace
+
+bool cf_stockfish_refuses_fen(const char *fen) {
+    if (fen == nullptr)
+        return true;
+    cf_global_init();
+    StateInfo state;
+    Position  position;
+    return position.set(std::string(fen), false, &state).has_value();
+}
 
 CfFenVerdict cf_validate_fen(const char *fen) {
     if (fen == nullptr)
@@ -268,7 +312,8 @@ struct Replay {
 
         cf_global_init();
         states.emplace_back();
-        position.set(std::string(startFen), false, &states.back());
+        if (position.set(canonical(startFen), false, &states.back()).has_value())
+            return false;
         keys.push_back(position.state()->key);
 
         for (int32_t i = 0; i < moveCount; ++i)
@@ -482,7 +527,8 @@ uint64_t cf_perft(const char *fen, int depth) {
     cf_global_init();
     StateInfo state;
     Position  position;
-    position.set(std::string(fen), false, &state);
+    if (position.set(canonical(fen), false, &state).has_value())
+        return 0;
 
     if (depth <= 0)
         return 1;
@@ -508,44 +554,48 @@ struct CfEngine {
     void*                   instance;
 };
 
-CfEngine *cf_engine_create(CfEngineBuild   build,
-                           const char     *bigNetPath,
-                           const char     *smallNetPath,
-                           CfEngineStatus *status) {
+const char *cf_engine_name(void) {
+    static const std::string name = engine_version_info();
+    return name.c_str();
+}
+
+const char *cf_engine_net_name(void) { return EvalFileDefaultName; }
+
+int32_t cf_engine_lowest_elo(void) { return Search::Skill::LowestElo; }
+int32_t cf_engine_highest_elo(void) { return Search::Skill::HighestElo; }
+
+CfEngine *cf_engine_create(CfEngineBuild build, const char *netPath, CfEngineStatus *status) {
     auto report = [status](CfEngineStatus value) {
         if (status != nullptr)
             *status = value;
     };
 
-    if (bigNetPath == nullptr || smallNetPath == nullptr)
+    if (netPath == nullptr)
     {
         report(CF_ENGINE_NET_MISSING);
         return nullptr;
     }
 
-    // Checked here, before Stockfish sees them, because Network::verify answers a
+    // Checked here, before Stockfish sees it, because Network::verify answers a
     // failed load with exit(EXIT_FAILURE) — in an app, the process just vanishes.
-    for (const char *path : {bigNetPath, smallNetPath})
+    std::ifstream probe(netPath, std::ios::binary | std::ios::ate);
+    if (!probe)
     {
-        std::ifstream probe(path, std::ios::binary | std::ios::ate);
-        if (!probe)
-        {
-            report(CF_ENGINE_NET_MISSING);
-            return nullptr;
-        }
-        // The smaller of the two real nets is a few megabytes; anything under one
-        // is a truncated download or the wrong file entirely.
-        if (probe.tellg() < std::streamoff(1024 * 1024))
-        {
-            report(CF_ENGINE_NET_TOO_SMALL);
-            return nullptr;
-        }
+        report(CF_ENGINE_NET_MISSING);
+        return nullptr;
+    }
+    // The real net is 94 MiB; anything under one is a truncated download or the
+    // wrong file entirely.
+    if (probe.tellg() < std::streamoff(1024 * 1024))
+    {
+        report(CF_ENGINE_NET_TOO_SMALL);
+        return nullptr;
     }
 
     const CfEngineBuildOps& ops = build == CF_BUILD_DOTPROD
                                   ? StockfishDotprod::chessmirrorEngineBuild()
                                   : Stockfish::chessmirrorEngineBuild();
-    void* instance = ops.create(bigNetPath, smallNetPath);
+    void* instance = ops.create(netPath);
     CfEngine* engine = instance == nullptr ? nullptr : new (std::nothrow) CfEngine{build, &ops, instance};
     if (engine == nullptr)
     {
@@ -596,8 +646,8 @@ bool cf_engine_go(CfEngine             *engine,
     for (int32_t i = 0; i < moveCount; ++i)
         played.emplace_back(moves[i]);
 
-    engine->ops->go(engine->instance, startFen, played, limits, context, onInfo, onBestMove);
-    return true;
+    return engine->ops->go(engine->instance, canonical(startFen).c_str(), played, limits, context,
+                           onInfo, onBestMove);
 }
 
 void cf_engine_stop(CfEngine *engine) {

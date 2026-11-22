@@ -19,7 +19,7 @@ let stockfishDefines: [CXXSetting] = [
     // the cost is that the vendored C++ cannot be stepped through, which is not something
     // anyone does to it.
     //
-    // `-O3` and nothing else, though the sf_18 Makefile's clang build (optimize=yes) adds more:
+    // `-O3` and nothing else, though the Stockfish Makefile's clang build (optimize=yes) adds more:
     // each was measured with scripts/engine-speed.sh on an M5 Max and none bought anything
     // (chessmirror#13, whose comment has the runs):
     // - `-funroll-loops` and `-mdynamic-no-pic`: the binary is byte for byte the one `-O3`
@@ -75,6 +75,9 @@ let package = Package(
             exclude: [
                 "stockfish/VENDORED.txt",
                 "stockfish/incbin/UNLICENCE",
+                // sf_19's own runtime CPU dispatch, for its Makefile's universal builds:
+                // this package does the same with two targets (docs/adr/0052).
+                "stockfish/universal",
             ],
             publicHeadersPath: "include",
             cxxSettings: stockfishDefines
@@ -86,6 +89,9 @@ let package = Package(
             exclude: [
                 "stockfish/VENDORED.txt",
                 "stockfish/incbin/UNLICENCE",
+                // sf_19's own runtime CPU dispatch, for its Makefile's universal builds:
+                // this package does the same with two targets (docs/adr/0052).
+                "stockfish/universal",
             ],
             // No header of its own is anyone's business; engine_build.h is the one bridge.cpp reads.
             publicHeadersPath: "engine",

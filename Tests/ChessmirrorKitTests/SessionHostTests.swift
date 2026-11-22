@@ -66,7 +66,7 @@ struct SessionHostTests {
     @Test func theEngineArrivingIsTakenAndSearched() async throws {
         try await Quietly.alone {
         let game = try #require(Game(startFEN: PGN.standardStartFEN))
-        let host = EngineHost(nets: { .init(big: Nets.big, small: Nets.small) })
+        let host = EngineHost(net: { Nets.net })
         let session = GameSession.fresh(game)
         defer { session.disappear() }
         session.noSlips(at: 10)

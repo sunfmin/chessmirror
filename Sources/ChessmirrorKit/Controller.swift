@@ -17,9 +17,20 @@ public enum Controller: String, Hashable, Sendable, CaseIterable, Codable {
     public var playerName: String {
         switch self {
         case .hand: "手动"
-        case .engine: "Stockfish 18"
+        case .engine: EngineService.name
         }
     }
+
+    /// Whether a PGN player tag is one this app wrote for its engine: the engine linked in now,
+    /// or one it was before. A game keeps the tag it was saved with (chessmirror#15), so a file
+    /// from the Stockfish 18 days still says so, and is still the engine's.
+    public static func isEngine(_ playerName: String) -> Bool {
+        playerName == engine.playerName || formerEngineNames.contains(playerName)
+    }
+
+    /// What the engine was called in files this app wrote with an earlier Stockfish. Append, never
+    /// edit: a name here is in somebody's library.
+    static let formerEngineNames: Set<String> = ["Stockfish 18"]
 }
 
 /// What a Review has to say about one move, by how much worse the position got.

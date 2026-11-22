@@ -12,7 +12,7 @@ func fail(_ message: String) -> Never {
     exit(1)
 }
 
-/// Where the NNUE weights are. They are 112 MiB and live in the repository, not in this
+/// Where the NNUE weights are. They are 94 MiB and live in the repository, not in this
 /// binary. A developer tool may reasonably know where the repository it was built from is;
 /// anyone moving things about can say so.
 let netsDirectory =
@@ -95,7 +95,7 @@ case "analyse":
         return Int(arguments[index + 1])
     }
 
-    // The weights are 112 MiB and live in the repository, not in this binary. A developer
+    // The weights are 94 MiB and live in the repository, not in this binary. A developer
     // tool may reasonably know where the repository it was built from is; anyone moving
     // things about can say so.
     let nets = ProcessInfo.processInfo.environment["CHESSMIRROR_NETS"].map { URL(filePath: $0) }
@@ -106,8 +106,7 @@ case "analyse":
     let service: EngineService
     do {
         service = try EngineService(
-            bigNetURL: nets.appending(path: "nn-c288c895ea92.nnue"),
-            smallNetURL: nets.appending(path: "nn-37f18f62d772.nnue"),
+            netURL: nets.appending(path: EngineService.netFileName),
             configuration: .init(threads: flagValue("--threads")),
             // `--no-dotprod` runs the build an A12 gets, on a machine that could do better.
             cpu: arguments.contains("--no-dotprod") ? CPUFeatures(hasDotProd: false) : .current

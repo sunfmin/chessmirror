@@ -31,7 +31,7 @@ public enum SearchBudget: Hashable, Sendable {
 /// instead of having to be played into one: a test hands it an engine that reports a fixed
 /// Analysis, and everything above the seam — `retune`, `record`, the Score written against a
 /// ply, every view — is the real code. The alternative is to reach those states by loading
-/// 112 MiB of weights and waiting on a search whose numbers are different every run.
+/// 94 MiB of weights and waiting on a search whose numbers are different every run.
 ///
 /// It lives here, beside `EngineService`, rather than in the app: an interface belongs on the
 /// side of the seam that both adapters can reach, and the tests that most need a substitute are

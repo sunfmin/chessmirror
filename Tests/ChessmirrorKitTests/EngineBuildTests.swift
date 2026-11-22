@@ -18,7 +18,7 @@ struct EngineBuildTests {
         try await Quietly.alone {
             try #require(Nets.arePresent, "the NNUE weights are missing — see README.md")
             let engine = try EngineService(
-                bigNetURL: Nets.big, smallNetURL: Nets.small,
+                netURL: Nets.net,
                 configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1),
                 cpu: CPUFeatures(hasDotProd: false)
             )
@@ -44,7 +44,7 @@ struct EngineBuildTests {
                 // Only where this machine can run dotprod; elsewhere one build is all there is.
                 guard !hasDotProd || CPUFeatures.current.hasDotProd else { continue }
                 let engine = try EngineService(
-                    bigNetURL: Nets.big, smallNetURL: Nets.small,
+                    netURL: Nets.net,
                     configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1),
                     cpu: CPUFeatures(hasDotProd: hasDotProd)
                 )
