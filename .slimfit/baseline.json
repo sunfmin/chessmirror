@@ -12,6 +12,16 @@
   },
   "loosened": [],
   "kept": [],
+  "kept_files": [
+    {
+      "suite": "swift",
+      "file": "Sources/ChessmirrorKit/GameSession.swift",
+      "prod_lines": 894,
+      "commits_90d": 48,
+      "commits_total": 48,
+      "reason": "Already deep: GameSession is the game screen's one observable seam; its concepts sit behind their own modules (Findings/Deck, TacticsFinder, StripQuestions, ImportReview, Toss, EngineHost), its acts are split into +Landing/+Clock/+Walk, and its private state (review facts, refusal map, hold) is unread by any test. The churn is features landing at the screen's seam, each already folded into one reading and one press (ac0b320, 521d217, 6993d3c); moving more out would add pass-throughs, not depth."
+    }
+  ],
   "measured": {
     "swift": {
       "uncovered_lines": 715,
