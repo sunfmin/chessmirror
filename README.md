@@ -130,7 +130,11 @@ scripts/screen-tests.sh -only-testing:'ScreenTests/GameScreenTests/<test>()'
 
 Tests write PNGs under `App/out/`; these generated images are not versioned.
 `ScreenImage.write` renders real SwiftUI screens, with scripted responses at the engine boundary.
-Inspect the images as well as their accessibility assertions.
+Inspect the images as well as their accessibility assertions. It waits, at most 2 s, until the
+screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own),
+with animations off; it fails a test whose screen never settles, that it cannot hear (the
+accessibility switch missing or off), or that says nothing. Each word comes back with its frame in
+window points (`Rendered.elements`, `frames(of:)`), beside the window's bounds and safe area.
 
 ## Command line
 

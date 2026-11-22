@@ -1,5 +1,6 @@
 import Darwin
 import SwiftUI
+import Testing
 import UIKit
 
 @testable import Chessmirror
@@ -23,17 +24,34 @@ enum ScreenImage {
         .deletingLastPathComponent()  // App
         .appending(path: "out", directoryHint: .isDirectory)
 
-    /// One rendered screen: the file it was written to, and every word it drew.
+    /// One word on screen and where it was drawn, in the window's own points.
+    struct Word: Equatable {
+        let text: String
+        let frame: CGRect
+    }
+
+    /// One rendered screen: the file it was written to, and every word it drew and where.
     struct Rendered {
         let url: URL
         /// The accessibility tree, flattened. It is the only account SwiftUI will give of the text
         /// it drew — and it is the same account VoiceOver reads out, so a screen that says nothing
         /// here is a screen that says nothing to anybody.
-        let words: [String]
+        let elements: [Word]
+        /// The window the screen was drawn in, and the part of it the safe areas leave.
+        let bounds: CGRect
+        let safeArea: CGRect
 
+        var words: [String] { elements.map(\.text) }
         func says(_ text: String) -> Bool { words.contains { $0.contains(text) } }
         func count(of text: String) -> Int { words.count { $0.contains(text) } }
+        /// Where each word containing `text` was drawn, so a test can hold the layout to something.
+        func frames(of text: String) -> [CGRect] {
+            elements.filter { $0.text.contains(text) }.map(\.frame)
+        }
     }
+
+    /// How long a screen may take to stop changing before the test says it never did.
+    static let settleLimit: Duration = .seconds(2)
 
     /// - Parameters:
     ///   - size: the screen to draw on, when it is not the phone the suite is running on. A window
@@ -46,11 +64,31 @@ enum ScreenImage {
         style: UIUserInterfaceStyle = .light,
         size: CGSize? = nil,
         interact: ((UIWindow) async -> Void)? = nil,
+        sourceLocation: SourceLocation = #_sourceLocation,
         of subject: () -> some View
     ) async -> Rendered {
-        _ = isListening
+        if !listen() {
+            Issue.record(
+                "_AXSSetAutomationEnabled is not in libAccessibility: nothing builds the accessibility tree, so no screen can say anything",
+                sourceLocation: sourceLocation)
+        } else if !isListening {
+            // SwiftUI keeps a tree it has built after the switch goes off, so the words alone
+            // would not show this; the switch itself is what a screen drawn now is heard by.
+            Issue.record(
+                "the accessibility switch is off: what this screen says cannot be trusted to be heard",
+                sourceLocation: sourceLocation)
+        }
+        // Nothing moves: a picture is of where things end up, and a screen is settled when its
+        // words stop changing, which an animation in flight would only put off.
+        let animating = UIView.areAnimationsEnabled
+        UIView.setAnimationsEnabled(false)
+        defer { UIView.setAnimationsEnabled(animating) }
         let window = newWindow(style: style, size: size)
-        let controller = UIHostingController(rootView: subject())
+        let controller = UIHostingController(
+            rootView: subject().transaction {
+                $0.disablesAnimations = true
+                $0.animation = nil
+            })
         controller.overrideUserInterfaceStyle = style
         // Clear rather than the hosting controller's default white, which would otherwise show
         // through the safe areas and light up the edges of a dark screen.
@@ -58,10 +96,12 @@ enum ScreenImage {
         window.rootViewController = controller
         window.makeKeyAndVisible()
         window.layoutIfNeeded()
-        await settle()
-        if let interact {
-            await interact(window)
-            await settle()
+        await $drawing.withValue(window) {
+            await settle(sourceLocation: sourceLocation)
+            if let interact {
+                await interact(window)
+                await settle(sourceLocation: sourceLocation)
+            }
         }
 
         let image = UIGraphicsImageRenderer(bounds: window.bounds).image { context in
@@ -75,7 +115,16 @@ enum ScreenImage {
         )
         try? image.pngData()?.write(to: url, options: .atomic)
 
-        let rendered = Rendered(url: url, words: words(in: window))
+        let rendered = Rendered(
+            url: url, elements: elements(in: window), bounds: window.bounds,
+            safeArea: window.bounds.inset(by: window.safeAreaInsets))
+        // A screen that says nothing is a harness that heard nothing, and it would pass every
+        // `#expect(!rendered.says(…))` there is.
+        if rendered.elements.isEmpty {
+            Issue.record(
+                "\(name) said nothing: no accessibility element on screen, so nothing about it can be checked",
+                sourceLocation: sourceLocation)
+        }
         // The window is done with, and a key window left standing would still be the key one when
         // the next screenshot puts its own on screen.
         window.isHidden = true
@@ -84,19 +133,45 @@ enum ScreenImage {
 
     // ----------------------------------------------------------------- plumbing
 
-    /// Puts something on the other end of the accessibility tree, once.
+    /// Puts something on the other end of the accessibility tree, or takes it away.
     ///
     /// SwiftUI does not build that tree unless somebody is listening: with no VoiceOver there are
     /// no elements, and a screenshot test that asks what the screen says gets silence. This is the
     /// switch the UI-testing runner throws before it reads a screen, and it is only reachable by
     /// hand — which is fair enough for a lever no shipping app has any business pulling.
-    private static let isListening: Bool = {
+    ///
+    /// The first screen switches it on; after that it stays as it was last put, so a test can
+    /// switch it off and see the harness fail. Answers whether the switch exists at all: it is a
+    /// private symbol, and any iOS release may take it away.
+    @discardableResult
+    static func listen(_ on: Bool? = nil) -> Bool {
+        guard let automation else { return false }
+        if let on {
+            automation(on)
+            switchedOn = on
+        } else if switchedOn == nil {
+            automation(true)
+            switchedOn = true
+        }
+        return true
+    }
+
+    private static var switchedOn: Bool?
+
+    /// Whether the switch is on now, as libAccessibility itself answers; as it was last put, on a
+    /// runtime without the getter.
+    static var isListening: Bool {
+        guard let library = dlopen("/usr/lib/libAccessibility.dylib", RTLD_NOW),
+            let symbol = dlsym(library, "_AXSAutomationEnabled")
+        else { return switchedOn == true }
+        return unsafeBitCast(symbol, to: (@convention(c) () -> Bool).self)()
+    }
+
+    private static let automation: (@convention(c) (Bool) -> Void)? = {
         guard let library = dlopen("/usr/lib/libAccessibility.dylib", RTLD_NOW),
             let symbol = dlsym(library, "_AXSSetAutomationEnabled")
-        else { return false }
-        typealias Listen = @convention(c) (Bool) -> Void
-        unsafeBitCast(symbol, to: Listen.self)(true)
-        return true
+        else { return nil }
+        return unsafeBitCast(symbol, to: (@convention(c) (Bool) -> Void).self)
     }()
 
     /// A window the size of the device the test is running on, on the host app's own scene so
@@ -113,15 +188,40 @@ enum ScreenImage {
         return window
     }
 
-    /// Long enough for the screen to have been told everything it is going to be told.
+    /// The window being drawn, for a `settle()` called from inside an `interact`.
+    @TaskLocal private static var drawing: UIWindow?
+
+    /// Until the screen has been told everything it is going to be told.
     ///
     /// A screen asks for its Analysis in `onAppear`, and the answer arrives on the main actor a
-    /// hop later and then animates into place. A picture taken before that is a picture of a
-    /// screen nobody has said anything to yet, which is not the screen anyone wanted to see.
-    static func settle() async {
-        for _ in 0..<14 {
+    /// hop later. A picture taken before that is a picture of a screen nobody has said anything to
+    /// yet, which is not the screen anyone wanted to see. So the screen is settled when two
+    /// harvests of its words in a row are the same and `until` holds of them; if that has not
+    /// happened in `settleLimit`, the test fails with the last words seen.
+    static func settle(
+        until condition: ([String]) -> Bool = { _ in true },
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async {
+        guard let window = drawing else {
+            Issue.record("settle() outside a screen being drawn", sourceLocation: sourceLocation)
+            return
+        }
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: settleLimit)
+        var last: [String]?
+        while true {
             await Task.yield()
-            try? await Task.sleep(for: .milliseconds(50))
+            try? await Task.sleep(for: .milliseconds(25))
+            window.layoutIfNeeded()
+            let now = words(in: window)
+            if now == last, condition(now) { return }
+            if clock.now >= deadline {
+                Issue.record(
+                    "the screen did not settle in \(settleLimit); it last said: \(now.joined(separator: " | "))",
+                    sourceLocation: sourceLocation)
+                return
+            }
+            last = now
         }
     }
 
@@ -176,10 +276,13 @@ enum ScreenImage {
     }
 
     /// Everything on screen that has a word attached to it.
-    static func words(in view: UIView) -> [String] {
-        var found: [String] = []
+    static func words(in view: UIView) -> [String] { elements(in: view).map(\.text) }
+
+    /// Every word on screen, with where it was drawn in `view`'s points.
+    static func elements(in view: UIView) -> [Word] {
+        var found: [Word] = []
         var seen: Set<ObjectIdentifier> = []
-        harvest(view, into: &found, seen: &seen)
+        harvest(view, from: view, into: &found, seen: &seen)
         return found
     }
 
@@ -218,30 +321,41 @@ enum ScreenImage {
 
     /// Walks views and accessibility elements together, because SwiftUI draws its text into a
     /// handful of layers and hangs the words off elements that are not views at all.
+    ///
+    /// An element's frame is given in screen points; it comes back in `root`'s.
     private static func harvest(
-        _ node: Any, into found: inout [String], seen: inout Set<ObjectIdentifier>
+        _ node: Any, from root: UIView, into found: inout [Word], seen: inout Set<ObjectIdentifier>
     ) {
         guard let object = node as? NSObject,
             seen.insert(ObjectIdentifier(object)).inserted
         else { return }
 
-        if let label = object.accessibilityLabel, !label.isEmpty { found.append(label) }
-        if let value = object.accessibilityValue, !value.isEmpty { found.append(value) }
+        let label = object.accessibilityLabel.flatMap { $0.isEmpty ? nil : $0 }
+        let value = object.accessibilityValue.flatMap { $0.isEmpty ? nil : $0 }
+        if label != nil || value != nil {
+            let onScreen = object.accessibilityFrame
+            let frame =
+                (root as? UIWindow ?? root.window)?.windowScene.map { root.convert(onScreen, from: $0.coordinateSpace) }
+                ?? onScreen
+            for text in [label, value].compactMap(\.self) {
+                found.append(Word(text: text, frame: frame))
+            }
+        }
 
         if let elements = object.accessibilityElements {
-            for element in elements { harvest(element, into: &found, seen: &seen) }
+            for element in elements { harvest(element, from: root, into: &found, seen: &seen) }
         } else {
             let count = object.accessibilityElementCount()
             if count != NSNotFound, count > 0 {
                 for index in 0..<count {
                     guard let element = object.accessibilityElement(at: index) else { continue }
-                    harvest(element, into: &found, seen: &seen)
+                    harvest(element, from: root, into: &found, seen: &seen)
                 }
             }
         }
 
         if let view = object as? UIView {
-            for subview in view.subviews { harvest(subview, into: &found, seen: &seen) }
+            for subview in view.subviews { harvest(subview, from: root, into: &found, seen: &seen) }
         }
     }
 }
