@@ -97,8 +97,9 @@ xcodebuild -project Chessmirror.xcodeproj -scheme Chessmirror \
   -destination 'generic/platform=iOS Simulator' ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
 ```
 
-Debug recognition tests run substantially slower than release tests. Engine tests need the two
-real NNUE files in `Resources/Nets`, not Git LFS pointers. Edit `App/project.yml` and regenerate
+Debug recognition tests run substantially slower than release tests. Engine tests need the real
+NNUE file in `Resources/Nets` (the one sf_19 names, `EngineService.netFileName`), not a Git LFS
+pointer. Edit `App/project.yml` and regenerate
 the Xcode project when changing build settings or adding screen tests.
 Run the full suite serially: recognition memory checks measure the test process footprint, so
 unrelated concurrent tests would be included in their measurements.
