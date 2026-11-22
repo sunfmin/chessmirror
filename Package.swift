@@ -32,8 +32,14 @@ let stockfishDefines: [CXXSetting] = [
     // - `-fno-exceptions`: no fewer instructions (-0.2%, +0.7%), no faster, and the bridge's
     //   failure path is a `catch`.
     // The rest of the Makefile's clang line is warnings, an `-arch`/deployment target SwiftPM
-    // already passes, or for compilers and platforms this is not (clang < 16, Android, Windows);
-    // its profile-guided build is the next ticket's.
+    // already passes, or for compilers and platforms this is not (clang < 16, Android, Windows).
+    // - Its `profile-build` (chessmirror#14, whose comment has the runs and how it was built): a
+    //   profile of sf_19's own bench, both builds, `-fprofile-generate`/`-fprofile-use`, measured
+    //   against this build on an M5 Max. Same tree; 2.4% (dotprod) and 1.7% (armv8) fewer
+    //   instructions, fewest cycles -2.9%/-1.4% and -1.3%/-1.1% over two runs of 15 and 30 rounds:
+    //   about as little as `-flto` bought, for a committed 548 KB profile to remake on every tag,
+    //   define or bridge edit, which SwiftPM and clang do not keep current by themselves (the
+    //   profile is no build dependency, and the prelinked objects label it front-end). Not taken.
     .unsafeFlags(["-O3"]),
     .define("IS_64BIT"),
     .define("USE_PREFETCH"),
