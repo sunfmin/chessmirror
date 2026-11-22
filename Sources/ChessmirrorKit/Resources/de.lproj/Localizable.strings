@@ -195,6 +195,7 @@
 "edit.advanced.show" = "Rochade und en passant";
 "edit.advanced.hide" = "Rochade und en passant ausblenden";
 "edit.copyFEN" = "FEN kopieren";
+"edit.more" = "Mehr";
 "edit.reset" = "Grundstellung aufbauen";
 "edit.clear" = "Brett leeren";
 "edit.photo" = "Foto";

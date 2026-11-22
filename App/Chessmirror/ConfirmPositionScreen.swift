@@ -172,7 +172,11 @@ struct ConfirmPositionScreen: View {
                         Label(localized("edit.clear"), systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    // A Label, not a bare Image: the bar then draws the menu as its own bar button,
+                    // pressed over its whole 44×44 glass. A bare Image is hosted as a SwiftUI
+                    // button the bar holds to 30×36, and that is all a finger can press
+                    // (chessmirror#29 measured both on the simulator).
+                    Label(localized("edit.more"), systemImage: "ellipsis.circle")
                 }
             }
         }

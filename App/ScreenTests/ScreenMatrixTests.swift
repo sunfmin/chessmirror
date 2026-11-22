@@ -104,12 +104,8 @@ struct ScreenMatrix {
             return "chessmirror#27: the import sheet's door buttons are 27 pt tall"
         case (.smallControl, .library):
             return "chessmirror#28: 拉新棋 and its hint line are under 44 pt tall"
-        case (.smallControl, .importSheet), (.smallControl, .editor):
-            return inBar ? "chessmirror#29: navigation bar text buttons report 36 pt tall" : nil
-        case (.smallControl, .about):
-            return inBar
-                ? "chessmirror#29: navigation bar text buttons report 36 pt tall"
-                : "chessmirror#31: About's List pickers report 34 pt tall"
+        case (.smallControl, .about) where !inBar:
+            return "chessmirror#31: About's List pickers report 34 pt tall"
         case (.overlap, .editor) where row == .accessibilityText:
             return "chessmirror#30: at accessibility text sizes the editor's hint overlaps its board"
         default:

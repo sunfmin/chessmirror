@@ -181,6 +181,7 @@
 "edit.advanced.show" = "キャスリングとアンパッサン";
 "edit.advanced.hide" = "キャスリングとアンパッサンを閉じる";
 "edit.copyFEN" = "FEN をコピー";
+"edit.more" = "その他";
 "edit.reset" = "初期局面に並べる";
 "edit.clear" = "盤を空にする";
 "edit.photo" = "写真";

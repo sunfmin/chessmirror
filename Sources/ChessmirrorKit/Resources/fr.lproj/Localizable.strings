@@ -195,6 +195,7 @@
 "edit.advanced.show" = "Roque et prise en passant";
 "edit.advanced.hide" = "Masquer roque et prise en passant";
 "edit.copyFEN" = "Copier la FEN";
+"edit.more" = "Plus";
 "edit.reset" = "Position initiale";
 "edit.clear" = "Vider l'échiquier";
 "edit.photo" = "Photo";

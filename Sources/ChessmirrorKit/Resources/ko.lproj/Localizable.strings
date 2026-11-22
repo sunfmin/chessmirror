@@ -181,6 +181,7 @@
 "edit.advanced.show" = "캐슬링과 앙파상";
 "edit.advanced.hide" = "캐슬링과 앙파상 접기";
 "edit.copyFEN" = "FEN 복사";
+"edit.more" = "더 보기";
 "edit.reset" = "초기 국면으로";
 "edit.clear" = "판 비우기";
 "edit.photo" = "사진";

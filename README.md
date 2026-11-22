@@ -139,7 +139,8 @@ window points (`Rendered.elements`, `frames(of:)`), beside the window's bounds a
 `ScreenMatrix` draws every screen once per row of the matrix the others do not vary — dark, the
 accessibility3 text size, the 375×667 pt iPhone SE, and each of the eight languages — and holds each
 to `Rendered.layoutBreaches()`: everything labelled inside the safe area (as far as its scroll view
-shows it), no two labelled things overlapping, every control at least 44×44 pt. A breach already
+shows it), no two labelled things overlapping, every control at least 44×44 pt (a navigation bar item by where hit-testing hands it
+a touch, which UIKit widens past the frame it reports). A breach already
 filed is a `withKnownIssue` naming its issue; any other fails.
 
 ## Command line

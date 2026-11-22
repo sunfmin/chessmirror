@@ -195,6 +195,7 @@
 "edit.advanced.show" = "Roque e en passant";
 "edit.advanced.hide" = "Esconder roque e en passant";
 "edit.copyFEN" = "Copiar FEN";
+"edit.more" = "Mais";
 "edit.reset" = "Pôr a posição inicial";
 "edit.clear" = "Esvaziar o tabuleiro";
 "edit.photo" = "Foto";

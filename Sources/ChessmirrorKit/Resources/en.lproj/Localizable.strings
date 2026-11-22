@@ -230,6 +230,7 @@
 "edit.advanced.show" = "Castling and en passant";
 "edit.advanced.hide" = "Hide castling and en passant";
 "edit.copyFEN" = "Copy FEN";
+"edit.more" = "More";
 "edit.reset" = "Set up the opening";
 "edit.clear" = "Clear the board";
 "edit.photo" = "Photo";
