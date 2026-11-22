@@ -22,49 +22,47 @@ struct EngineRefusalTests {
         arguments: [CF_BUILD_ARMV8, CF_BUILD_DOTPROD]
     )
     func refusedInputsNeverReachTheEngine(build: CfEngineBuild) async throws {
-        try await Quietly.alone {
-            try #require(Nets.arePresent, "the NNUE weights are missing — see README.md")
-            if build == CF_BUILD_DOTPROD {
-                try #require(CPUFeatures.current.hasDotProd, "this Mac cannot run the dotprod build")
-            }
-            var status = CF_ENGINE_OK
-            let engine = try #require(
-                Nets.net.withUnsafeFileSystemRepresentation { cf_engine_create(build, $0, &status) }
-            )
-            defer { cf_engine_destroy(engine) }
+        try #require(Nets.arePresent, "the NNUE weights are missing — see README.md")
+        if build == CF_BUILD_DOTPROD {
+            try #require(CPUFeatures.current.hasDotProd, "this Mac cannot run the dotprod build")
+        }
+        var status = CF_ENGINE_OK
+        let engine = try #require(
+            Nets.net.withUnsafeFileSystemRepresentation { cf_engine_create(build, $0, &status) }
+        )
+        defer { cf_engine_destroy(engine) }
 
-            let heard = Heard()
-            let context = Unmanaged.passUnretained(heard).toOpaque()
-            let onBest: CfBestMoveCallback = { context, best, _ in
-                let heard = Unmanaged<Heard>.fromOpaque(context!).takeUnretainedValue()
-                heard.bestMoves.withLock { $0.append(String(cString: best!)) }
-            }
-            var limits = CfSearchLimits(movetimeMs: 0, depth: 6, nodes: 0)
+        let heard = Heard()
+        let context = Unmanaged.passUnretained(heard).toOpaque()
+        let onBest: CfBestMoveCallback = { context, best, _ in
+            let heard = Unmanaged<Heard>.fromOpaque(context!).takeUnretainedValue()
+            heard.bestMoves.withLock { $0.append(String(cString: best!)) }
+        }
+        var limits = CfSearchLimits(movetimeMs: 0, depth: 6, nodes: 0)
 
-            func go(_ fen: String, _ moves: [String] = []) -> Bool {
-                var pointers = moves.map { strdup($0) }
-                defer { pointers.forEach { free($0) } }
-                return pointers.withUnsafeMutableBufferPointer { buffer in
-                    buffer.baseAddress!.withMemoryRebound(to: UnsafePointer<CChar>?.self, capacity: max(buffer.count, 1)) {
-                        cf_engine_go(engine, fen, $0, Int32(moves.count), &limits, context, nil, onBest)
-                    }
+        func go(_ fen: String, _ moves: [String] = []) -> Bool {
+            var pointers = moves.map { strdup($0) }
+            defer { pointers.forEach { free($0) } }
+            return pointers.withUnsafeMutableBufferPointer { buffer in
+                buffer.baseAddress!.withMemoryRebound(to: UnsafePointer<CChar>?.self, capacity: max(buffer.count, 1)) {
+                    cf_engine_go(engine, fen, $0, Int32(moves.count), &limits, context, nil, onBest)
                 }
             }
-
-            for (fen, _) in sf19Refusals {
-                #expect(!go(fen), "\(fen) was handed to the engine")
-                cf_engine_wait(engine)
-            }
-            // A legal start and a move that is not legal in it: sf_19's set_position refuses that
-            // too ("Illegal move"), so it is stopped at the replay before the engine is asked.
-            #expect(!go(PGN.standardStartFEN, ["e2e5"]))
-            cf_engine_wait(engine)
-            #expect(heard.bestMoves.withLock { $0.isEmpty }, "nothing refused was searched")
-
-            #expect(go(PGN.standardStartFEN, ["e2e4"]))
-            cf_engine_wait(engine)
-            let best = heard.bestMoves.withLock { $0 }
-            #expect(best.count == 1 && best.first != "(none)", "the engine searched on: \(best)")
         }
+
+        for (fen, _) in sf19Refusals {
+            #expect(!go(fen), "\(fen) was handed to the engine")
+            cf_engine_wait(engine)
+        }
+        // A legal start and a move that is not legal in it: sf_19's set_position refuses that
+        // too ("Illegal move"), so it is stopped at the replay before the engine is asked.
+        #expect(!go(PGN.standardStartFEN, ["e2e5"]))
+        cf_engine_wait(engine)
+        #expect(heard.bestMoves.withLock { $0.isEmpty }, "nothing refused was searched")
+
+        #expect(go(PGN.standardStartFEN, ["e2e4"]))
+        cf_engine_wait(engine)
+        let best = heard.bestMoves.withLock { $0 }
+        #expect(best.count == 1 && best.first != "(none)", "the engine searched on: \(best)")
     }
 }

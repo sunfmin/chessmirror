@@ -89,7 +89,7 @@ From the repository root:
 
 ```bash
 swift build
-swift test -c release --no-parallel
+scripts/test.sh
 swift test --filter EngineTests
 cd App
 xcodegen generate
@@ -101,8 +101,13 @@ Debug recognition tests run substantially slower than release tests. Engine test
 NNUE file in `Resources/Nets` (the one sf_19 names, `EngineService.netFileName`), not a Git LFS
 pointer. Edit `App/project.yml` and regenerate
 the Xcode project when changing build settings or adding screen tests.
-Run the full suite serially: recognition memory checks measure the test process footprint, so
-unrelated concurrent tests would be included in their measurements.
+Run the full suite with `scripts/test.sh`, as the gate does (`slimfit.toml`'s `test_command`):
+release, as two runs of the one test bundle. The footprint checks (`RecognitionMemoryTests`)
+run first, one at a time with nothing beside them: they measure the test process's footprint,
+so any test running in the same process would be counted in it. Everything else then runs side
+by side, which bounds the run by its longest tests rather than their sum. A footprint read in
+the side-by-side run fails the test (`Tests/ChessmirrorKitTests/Footprint.swift`), so a new
+footprint check has to join the suites the script runs alone.
 
 ## Screen snapshots
 

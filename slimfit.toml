@@ -1,16 +1,15 @@
-# The package's tests run as ./gate.sh always ran them: release, and one test at a time
-# (README.md, "Build and test": the recognition memory checks measure the test process, so
-# tests running beside them would be counted). The Swift preset's commands, changed in two
-# places: -c release (and .build/release) in place of the debug build, and --no-parallel in
-# place of --parallel --num-workers 1, which runs Swift Testing's suites side by side (seen
-# here: suites started interleaved). The tests are all Swift Testing, which writes
-# xunit-swift-testing.xml without --parallel too.
+# The package's tests run as scripts/test.sh runs them, which is how README.md's "Build and test"
+# says to run them: release, as two runs of the one test bundle. The footprint checks
+# (RecognitionMemoryTests) run first, one at a time and alone: they measure the test process, so
+# a test running beside them would be counted. The rest run side by side, Swift Testing's
+# default. The script merges the two runs' xunit reports into the one slimfit reads
+# ($SLIMFIT_OUT/xunit-swift-testing.xml), so the suite still has one test count.
 #
 # The build is `swift test` running no test: `swift build -c release --build-tests` cannot build
 # the @testable imports (`swift test` turns testability on, `swift build` has no flag for it),
 # and `-Xswiftc -enable-testing` builds what `swift test` then builds again (79s, measured here).
 #
-# Coverage is merged here from the run's .profraw files: `swift test` writes default.profdata
+# Coverage is merged here from both runs' .profraw files: `swift test` writes default.profdata
 # only when every test passes, so a failing test would read as no coverage report instead of
 # as a failure.
 [[suite]]
@@ -18,4 +17,4 @@ name = "swift"
 preset = "swift"
 root = "."
 build_command = 'swift test -c release --no-parallel --enable-code-coverage --filter slimfit-builds-only-no-test-has-this-name'
-test_command = '''swift test -c release --no-parallel --enable-code-coverage --xunit-output "$SLIMFIT_OUT/xunit.xml"; rc=$?; bin=$(find .build/release/ -maxdepth 1 -name '*.xctest' | head -1); xcrun llvm-profdata merge -sparse .build/release/codecov/*.profraw -o "$SLIMFIT_OUT/default.profdata"; xcrun llvm-cov export -format=lcov -instr-profile="$SLIMFIT_OUT/default.profdata" "$bin/Contents/MacOS/$(basename "$bin" .xctest)" > "$SLIMFIT_OUT/lcov.info"; exit $rc'''
+test_command = '''scripts/test.sh --xunit-output "$SLIMFIT_OUT/xunit.xml" --enable-code-coverage; rc=$?; bin=$(find .build/release/ -maxdepth 1 -name '*.xctest' | head -1); xcrun llvm-profdata merge -sparse .build/release/codecov/*.profraw -o "$SLIMFIT_OUT/default.profdata"; xcrun llvm-cov export -format=lcov -instr-profile="$SLIMFIT_OUT/default.profdata" "$bin/Contents/MacOS/$(basename "$bin" .xctest)" > "$SLIMFIT_OUT/lcov.info"; exit $rc'''

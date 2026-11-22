@@ -15,18 +15,16 @@ struct EngineBuildTests {
 
     @Test("given a CPU without dotprod, the engine started is the armv8 one")
     func aCPUWithoutDotprodStartsTheArmv8Engine() async throws {
-        try await Quietly.alone {
-            try #require(Nets.arePresent, "the NNUE weights are missing — see README.md")
-            let engine = try EngineService(
-                netURL: Nets.net,
-                configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1),
-                cpu: CPUFeatures(hasDotProd: false)
-            )
-            // What the bridge says it created, not what was asked for.
-            #expect(engine.build == .armv8)
-            let game = try #require(Game(startFEN: PGN.standardStartFEN))
-            #expect(await engine.evaluate(game, budget: .depth(4)) != nil)
-        }
+        try #require(Nets.arePresent, "the NNUE weights are missing — see README.md")
+        let engine = try EngineService(
+            netURL: Nets.net,
+            configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1),
+            cpu: CPUFeatures(hasDotProd: false)
+        )
+        // What the bridge says it created, not what was asked for.
+        #expect(engine.build == .armv8)
+        let game = try #require(Game(startFEN: PGN.standardStartFEN))
+        #expect(await engine.evaluate(game, budget: .depth(4)) != nil)
     }
 
     /// The two builds are one engine: dotprod changes how the NNUE layers multiply, not what
@@ -35,33 +33,31 @@ struct EngineBuildTests {
     /// speed would not be the armv8 build's speed bought cheaper.
     @Test("both builds search the same tree, node for node")
     func bothBuildsSearchTheSameTree() async throws {
-        try await Quietly.alone {
-            try #require(Nets.arePresent, "the NNUE weights are missing — see README.md")
-            let game = try #require(
-                Game(startFEN: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"))
-            var nodes: [EngineBuild: UInt64] = [:]
-            for hasDotProd in [false, true] {
-                // Only where this machine can run dotprod; elsewhere one build is all there is.
-                guard !hasDotProd || CPUFeatures.current.hasDotProd else { continue }
-                let engine = try EngineService(
-                    netURL: Nets.net,
-                    configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1),
-                    cpu: CPUFeatures(hasDotProd: hasDotProd)
-                )
-                var last: Analysis?
-                for await analysis in engine.analyse(game, budget: .depth(10), lines: 1) {
-                    last = analysis
-                }
-                nodes[engine.build] = try #require(last).nodes
+        try #require(Nets.arePresent, "the NNUE weights are missing — see README.md")
+        let game = try #require(
+            Game(startFEN: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"))
+        var nodes: [EngineBuild: UInt64] = [:]
+        for hasDotProd in [false, true] {
+            // Only where this machine can run dotprod; elsewhere one build is all there is.
+            guard !hasDotProd || CPUFeatures.current.hasDotProd else { continue }
+            let engine = try EngineService(
+                netURL: Nets.net,
+                configuration: .init(threads: 1, hashMegabytes: 16, multiPV: 1),
+                cpu: CPUFeatures(hasDotProd: hasDotProd)
+            )
+            var last: Analysis?
+            for await analysis in engine.analyse(game, budget: .depth(10), lines: 1) {
+                last = analysis
             }
-            if CPUFeatures.current.hasDotProd {
-                #expect(nodes[.armv8] != nil && nodes[.armv8] == nodes[.dotprod])
-            }
-            // And the same tree as the vendored engine searches: the count Stockfish sf_19
-            // reaches here (sf_18's was 12507, chessmirror#15), which a compiler flag
-            // (chessmirror#13) or a define that changed the search, rather than how fast it runs,
-            // would move.
-            #expect(nodes[.armv8] == 8663)
+            nodes[engine.build] = try #require(last).nodes
         }
+        if CPUFeatures.current.hasDotProd {
+            #expect(nodes[.armv8] != nil && nodes[.armv8] == nodes[.dotprod])
+        }
+        // And the same tree as the vendored engine searches: the count Stockfish sf_19
+        // reaches here (sf_18's was 12507, chessmirror#15), which a compiler flag
+        // (chessmirror#13) or a define that changed the search, rather than how fast it runs,
+        // would move.
+        #expect(nodes[.armv8] == 8663)
     }
 }

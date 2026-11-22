@@ -12,9 +12,9 @@ for net in Resources/Nets/*.nnue; do
     fi
 done
 
-# The tests, once, through slimfit (slimfit.toml): release and one test at a time, as README.md's
-# "Build and test" says (the recognition memory checks measure the test process's footprint, so
-# tests running beside them would be counted), measured against .slimfit/baseline.json.
+# The tests, once, through slimfit (slimfit.toml): release, as scripts/test.sh runs them and
+# README.md's "Build and test" says (the footprint checks alone, since they measure the test
+# process; the rest side by side), measured against .slimfit/baseline.json.
 slimfit check
 
 # The armv8 engine is what an A12 runs: no dotprod instruction may reach it (docs/adr/0052).

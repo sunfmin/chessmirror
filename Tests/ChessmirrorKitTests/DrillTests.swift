@@ -95,7 +95,6 @@ private func engine(
 /// move in the same session → persisted PGN, without a second practice attempt.
 @MainActor
 @Test func practiceFlowsIntoTheSameGame() async throws {
-        try await Quietly.alone {
     let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
@@ -124,11 +123,15 @@ private func engine(
     #expect(session.game.plies.count == 2, "the engine answers for White, not the student's Black")
     #expect(session.isHandTurn)
     let before = session.game.uciMoves
-    // A developing move no engine refuses, not the first legal one: practice is played under 把关
-    // (docs/adr/0047), and the first legal move here, …a6, stood under Stockfish 18 and costs
-    // enough under Stockfish 19 to be refused on some two-thread runs (chessmirror#15). What this
-    // contract is about is the game going on, not whether …a6 is good.
-    let move = try #require(session.game.state.move(matching: "g8f6"))
+    // The engine's own first choice, read from the very search 把关 judges the move from: practice
+    // is played under 把关 (docs/adr/0047), and a move that search has a Line for costs exactly
+    // nothing (`weigh`), so it stands however the two threads split the tree. A named move does
+    // not: …a6 stood under Stockfish 18 and was refused on some two-thread runs under 19
+    // (chessmirror#15), and …Nf6 was refused at depth twenty, a 12.8 drop, in one run of four
+    // beside the rest of the suite (chessmirror#17). What this contract is about is the game
+    // going on, not whether a move is good.
+    let answer = try #require(await engine.positionResult(session.game)?.bestMove)
+    let move = try #require(session.game.state.move(matching: answer))
     session.play(move)
     await session.settled()
     #expect(session.game.uciMoves == before + [move.uci])
@@ -137,8 +140,7 @@ private func engine(
     let saved = try PGN(parsing: String(contentsOf: url, encoding: .utf8))
     #expect(saved.game.uciMoves == session.game.uciMoves)
     #expect(saved.game.plies.first?.judgement?.depth == 20)
-
-        }}
+}
 
 @MainActor
 @Test("a move that is not the engine's first choice passes, so long as it costs little")
