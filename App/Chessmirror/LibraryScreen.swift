@@ -249,11 +249,12 @@ struct LibraryScreen: View {
     private var masthead: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                NameAndMark {
                     Text(localized("app.name"))
                         .font(.system(size: 34, weight: .bold))
                         .tracking(6)
                         .foregroundStyle(Palette.ink)
+                } mark: {
                     Text(localized("app.mark"))
                         .font(.caption2.weight(.medium))
                         .tracking(3)

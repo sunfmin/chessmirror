@@ -22,29 +22,19 @@ extension GameScreen {
     /// rather than in a deck: the button that plays a move, and the move it would play.
     func playerBar(_ colour: PieceColour) -> some View {
         let live = session.isOnClock(colour)
+        // Who is playing, on the row of the side's own facts while the reader's text leaves room;
+        // at an accessibility size, a row of its own under it, whole words to a line. Squeezed
+        // into one row the engine's name was cut to 「Stockfish 1…」 and the rung — the one thing
+        // it is there to say — was gone (chessmirror#32). Decided by the text size and not by
+        // measuring, so nothing on the row moves while a thumb is on 让引擎走.
+        let ownRow = typeSize.isAccessibilitySize
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Swatch(colour: colour)
                 Text(colour.label)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Palette.ink)
-                if session.controller(for: colour) == .engine {
-                    // The engine by name, with the rung it is on — 「Stockfish 19 · 1800」, or
-                    // the name alone at 满力 — and pressing it is how another rung is picked
-                    // (docs/adr/0038). On the bar rather than among the chips, because the rung
-                    // is a fact about the opponent the way the clock is, and it changes mid-game
-                    // the way a Controller does.
-                    rungMenu
-                    // What the engine gets over a move: the 搜索预算 every live position search
-                    // gets, said so nobody waits for a clock that does not exist (docs/adr/0039).
-                    Text(PlayerSettings.shared.searchLimit.label)
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                } else {
-                    Text(session.controller(for: colour).label)
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSoft)
-                }
+                if !ownRow { player(colour) }
                 if live {
                     Text(localized("game.toPlay"))
                         .font(.caption.weight(.semibold))
@@ -67,6 +57,10 @@ extension GameScreen {
             // bar grew a row taller — which is a row taken off the board for a button's label.
             .lineLimit(1)
 
+            if ownRow {
+                Wrapping(spacing: 8, lineSpacing: 4) { player(colour) }
+            }
+
             if unfolded == colour {
                 chips(for: colour)
                     .padding(.top, 2)
@@ -86,6 +80,25 @@ extension GameScreen {
         }
         .overlay(alignment: .top) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
         .overlay(alignment: .bottom) { Rectangle().fill(Palette.hairline).frame(height: 0.5) }
+    }
+
+    /// Who plays this colour: the engine by name, with the rung it is on — 「Stockfish 19 · 1800」,
+    /// or the name alone at 满力 — and pressing it is how another rung is picked (docs/adr/0038).
+    /// On the bar rather than among the chips, because the rung is a fact about the opponent the
+    /// way the clock is, and it changes mid-game the way a Controller does.
+    @ViewBuilder func player(_ colour: PieceColour) -> some View {
+        if session.controller(for: colour) == .engine {
+            rungMenu
+            // What the engine gets over a move: the 搜索预算 every live position search
+            // gets, said so nobody waits for a clock that does not exist (docs/adr/0039).
+            Text(PlayerSettings.shared.searchLimit.label)
+                .font(.caption)
+                .foregroundStyle(Palette.inkSoft)
+        } else {
+            Text(session.controller(for: colour).label)
+                .font(.caption)
+                .foregroundStyle(Palette.inkSoft)
+        }
     }
 
     /// The one button down here that plays a move, in the bar of the side it would play for.

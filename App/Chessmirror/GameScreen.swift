@@ -22,6 +22,8 @@ struct GameScreen: View {
     @Environment(EngineHost.self) var engine
     @Environment(GameLibrary.self) var library
     @Environment(\.dismiss) var dismiss
+    /// Whether a side's bar has room for its facts on its own row (`playerBar`).
+    @Environment(\.dynamicTypeSize) var typeSize
     @State var selected: Square?
     /// Set by a tap on a cell of the record strip, for the one cursor change that tap causes:
     /// the strip is not to move under the finger that is on it. A cell that was tapped was on
