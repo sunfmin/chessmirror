@@ -36,9 +36,17 @@ enum ScreenImage {
         /// The class that said it, so the system's own chrome can be told from the app's.
         var kind: String = ""
         /// Where a finger lands on it, when that is not its frame: a navigation bar's item, whose
-        /// hit region UIKit widens past the frame it reports (chessmirror#29: 取消 reports 56×36
-        /// and is pressed over a 64×44 glass platter). Nil for everything else.
+        /// hit region UIKit widens past the frame it reports (chessmirror#29: Cancel reports 78×36
+        /// and hit-tests over its 86×44 glass platter). Nil for everything else.
         var reach: CGRect? = nil
+        /// The list row it is the whole content of, when it is: a row whose content is one control
+        /// is that control, and a finger pressing anywhere on the row presses it. Its frame is
+        /// only the content inside the row's margins — an About picker reports 34 pt in a 52 pt
+        /// row, and real taps open its menu over 49 pt of that row (chessmirror#31).
+        var row: CGRect? = nil
+
+        /// Where a finger presses it: its reach in a bar, its row in a list, else its own frame.
+        var pressed: CGRect { reach ?? row ?? frame }
 
         /// Something a finger presses, which is held to the 44×44 pt a finger needs.
         var isControl: Bool {
@@ -123,14 +131,11 @@ enum ScreenImage {
             }
             // Its whole frame, not the part a scroll view shows: scrolled into view, that is its size.
             // Every control, containers too: a picker's row holding its value is still pressed.
-            // A bar item's reach rather than its frame: the 44×44 is for the finger, and UIKit gives
-            // a bar item more of the bar than the frame it reports.
-            for word in visible where word.isControl {
-                let pressed = word.reach ?? word.frame
-                guard pressed.width < 43.5 || pressed.height < 43.5 else { continue }
+            for word in visible where word.isControl && (word.pressed.width < 43.5 || word.pressed.height < 43.5) {
                 breaches.append(Breach(rule: .smallControl, word: word,
                                        description: "\(describe(word)) is a control smaller than 44×44 pt"
-                                           + (word.reach.map { ", pressed over \(Int($0.width))×\(Int($0.height))" } ?? "")))
+                                           + (word.pressed == word.frame ? ""
+                                              : ", pressed over \(Int(word.pressed.width))×\(Int(word.pressed.height))")))
             }
             return breaches
         }
@@ -415,20 +420,8 @@ enum ScreenImage {
     /// it scrolls: a list too wide for its screen is still too wide, but its fortieth row being
     /// under the fold is what a list is for.
     private static func shown(_ frame: CGRect, of object: NSObject, in root: UIView) -> CGRect? {
-        // Swift sees `accessibilityContainer` only on UIAccessibilityElement; every element answers it.
-        let up = NSSelectorFromString("accessibilityContainer")
-        func container(of node: NSObject) -> NSObject? {
-            node.responds(to: up) ? node.perform(up)?.takeUnretainedValue() as? NSObject : nil
-        }
-        var node: NSObject? = container(of: object)
-        var view: UIView? = object as? UIView
-        for _ in 0..<64 where view == nil {
-            guard let current = node else { break }
-            view = current as? UIView
-            node = container(of: current)
-        }
         var cut: CGRect?
-        var ancestor = view
+        var ancestor = view(of: object)
         while let current = ancestor {
             if let scroller = current as? UIScrollView, scroller !== object {
                 let inset = scroller.adjustedContentInset
@@ -471,6 +464,37 @@ enum ScreenImage {
         return CGRect(x: centre.x - left, y: centre.y - up, width: left + right, height: up + down)
     }
 
+    /// The view an element is, or the nearest one holding it.
+    private static func view(of object: NSObject) -> UIView? {
+        // Swift sees `accessibilityContainer` only on UIAccessibilityElement; every element answers it.
+        let up = NSSelectorFromString("accessibilityContainer")
+        func container(of node: NSObject) -> NSObject? {
+            node.responds(to: up) ? node.perform(up)?.takeUnretainedValue() as? NSObject : nil
+        }
+        var node: NSObject? = container(of: object)
+        var view: UIView? = object as? UIView
+        for _ in 0..<64 where view == nil {
+            guard let current = node else { break }
+            view = current as? UIView
+            node = container(of: current)
+        }
+        return view
+    }
+
+    /// The frame, in `root`'s points, of the list row `frame` is the whole content of: the row's
+    /// cell less its content's layout margins, to the point. Nil for anything else — a small
+    /// button beside a row's text is not its row's content, and is pressed only where it is.
+    private static func row(filledBy frame: CGRect, of object: NSObject, in root: UIView) -> CGRect? {
+        var ancestor = view(of: object)
+        while let current = ancestor, !(current is UICollectionViewCell) { ancestor = current.superview }
+        guard let cell = ancestor as? UICollectionViewCell else { return nil }
+        let content = cell.contentView
+        let inside = root.convert(content.bounds.inset(by: content.layoutMargins), from: content)
+        let close = abs(inside.minX - frame.minX) <= 1 && abs(inside.maxX - frame.maxX) <= 1
+            && abs(inside.minY - frame.minY) <= 1 && abs(inside.maxY - frame.maxY) <= 1
+        return close ? root.convert(cell.bounds, from: cell) : nil
+    }
+
     private static func harvest(
         _ node: Any, from root: UIView, into found: inout [Word], seen: inout Set<ObjectIdentifier>
     ) {
@@ -489,7 +513,8 @@ enum ScreenImage {
                 found.append(Word(
                     text: text, frame: frame, traits: object.accessibilityTraits,
                     shown: shown(frame, of: object, in: root), kind: String(describing: type(of: object)),
-                    reach: object.accessibilityTraits.contains(.button) ? reach(of: frame, in: root) : nil))
+                    reach: object.accessibilityTraits.contains(.button) ? reach(of: frame, in: root) : nil,
+                    row: row(filledBy: frame, of: object, in: root)))
             }
         }
 
