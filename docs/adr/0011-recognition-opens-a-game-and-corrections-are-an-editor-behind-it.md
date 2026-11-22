@@ -30,9 +30,9 @@ from it:
   common case is free and the rare case is no longer free. It is knowingly a risk — a
   player can start moving on a mirrored or misread board — and the mitigations are the
   ringed squares, the thumbnail, and how cheap the fix is.
-- The validator is untouched and still the safety mechanism 0008 describes: Stockfish 18's
-  `Position::set` validates nothing, so an arbitrary arrangement must be refused before
-  the engine sees it. It now runs on the way *out of* the editor instead of on the way
+- The validator is untouched and still the safety mechanism 0008 describes: an arbitrary
+  arrangement must be refused before the engine sees it (Stockfish 18's `Position::set`
+  validated nothing; sf_19's refuses by ending the process, ADR-0053). It now runs on the way *out of* the editor instead of on the way
   *into* the Game, which is the same code guarding the same door. Recognition's own FEN
   goes through it too, before a session is built — and **failing it sends the picture to the
   editor, not back to the camera**. An illegal reading is not a failed recognition: the board

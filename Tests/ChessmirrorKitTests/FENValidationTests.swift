@@ -155,5 +155,5 @@ func extraSpacesAreNotARefusal() {
     let spaced = "  4k3/8/8/8/8/8/8/4K3   w  -  -  0  1 "
     #expect(cf_stockfish_refuses_fen(spaced), "sf_19 would refuse it as typed")
     #expect(Rules.validate(fen: spaced).isUsable)
-    #expect(Rules.perft(fen: spaced, depth: 1) == 10)
+    #expect(Rules.perft(fen: spaced, depth: 1) == 5, "Kd1 Kd2 Ke2 Kf2 Kf1")
 }

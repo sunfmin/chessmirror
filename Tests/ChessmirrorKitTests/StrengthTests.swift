@@ -50,8 +50,8 @@ import ChessmirrorKitTesting
     /// The engine's bar names the engine with the rung it is on, and the name alone at 满力.
     @Test("the engine is named with its rung")
     func theEngineIsNamedWithItsRung() {
-        #expect(Strength.elo(1800).engineName == "Stockfish 18 · 1800")
-        #expect(Strength.full.engineName == "Stockfish 18")
+        #expect(Strength.elo(1800).engineName == "Stockfish 19 · 1800")
+        #expect(Strength.full.engineName == "Stockfish 19")
     }
 
     /// One move by hand under 正着, answered by the engine: the judging searches, the engine's own

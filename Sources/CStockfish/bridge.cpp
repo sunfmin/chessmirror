@@ -255,13 +255,17 @@ Verdict validate(const std::string& fen) {
     }
 
     // Only now is the FEN safe to hand over: every rule sf_19's Position::set has is
-    // asked above. The last rule needs a real Position to answer. sf_19 refusing it
-    // anyway means a rule of its own is missing from this list; the FEN is refused
-    // rather than half-set (FenValidationTests holds the list to sf_19's).
+    // asked above but the last, which needs a real Position to answer. sf_19 asks it
+    // too, as its very last check, after the position is fully set — so its refusal
+    // there leaves a Position this can read the attacked king from. Any other refusal
+    // means a rule of sf_19's is missing from this list; the FEN is refused rather than
+    // read half-set (FENValidationTests holds the list to sf_19's).
     cf_global_init();
-    StateInfo state;
-    Position  position;
-    if (position.set(canonical(fen), false, &state).has_value())
+    StateInfo   state;
+    Position    position;
+    const auto  refused       = position.set(canonical(fen), false, &state);
+    const char* kingCapturable = "Unsupported position. King can be captured.";
+    if (refused.has_value() && std::strcmp(refused->what(), kingCapturable) != 0)
         return Verdict(CF_FEN_MALFORMED);
 
     const Color mover  = position.side_to_move();
@@ -269,6 +273,9 @@ Verdict validate(const std::string& fen) {
     if (position.attackers_to(position.square<KING>(waiter)) & position.pieces(mover))
         return Verdict(CF_FEN_SIDE_NOT_TO_MOVE_IN_CHECK, waiter == WHITE ? 0 : 1)
           .mark(int(position.square<KING>(waiter)));
+    // sf_19 and this rule disagreeing is a refusal still.
+    if (refused.has_value())
+        return Verdict(CF_FEN_MALFORMED);
 
     return Verdict();
 }
