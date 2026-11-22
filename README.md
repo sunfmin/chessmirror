@@ -130,6 +130,10 @@ swift run chessmirror-cli analyse '8/8/8/8/8/8/4K3/7k w - - 0 1' 16
 
 Replace `board.png` with your image. `CHESSMIRROR_NETS` overrides the source-tree model path.
 
+To compare how fast two engine builds search, copy each build's `chessmirror-cli` aside and run
+`scripts/engine-speed.sh before=<one> after=<other>` (add `,--no-dotprod` to a build for the A12's
+engine); its header has the whole recipe.
+
 ## Persistence and design
 
 Games are PGN files, with optional photographs alongside them. The append-only practice log is

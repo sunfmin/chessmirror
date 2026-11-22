@@ -30,7 +30,7 @@ import Testing
     """)
     let engine = DepthOnly(try EngineService(
         bigNetURL: Nets.big, smallNetURL: Nets.small,
-        configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)))
+        configuration: .init(threads: 1, hashMegabytes: 32, multiPV: 1)), depth: 21)
     let index = 36
     let position = try #require(Game(startFEN: PGN.standardStartFEN,
                                     uciMoves: Array(pgn.game.uciMoves.prefix(index))))
@@ -47,7 +47,7 @@ import Testing
         print("Phone regression: \(index / 2 + 1). \(san) refused, drop=\(refused.drop) depth=\(String(describing: refused.depth))")
         #expect(refused.san == san, "the move that was refused came back")
         #expect(refused.drop >= 10, "a refusal under a line of ten must have cost ten")
-        #expect(refused.depth == DepthOnly.depth, "judged at the one depth the search is bound to")
+        #expect(refused.depth == engine.depth, "judged at the one depth the search is bound to")
         #expect(session.game.plies.count == position.plies.count)
     } else {
         // What is a failure — the bug this test was written for — is a move that stands with
@@ -67,20 +67,3 @@ import Testing
 
         }}
 
-/// The real engine, searched to one fixed depth with no clock: a time bound makes the depth a
-/// search reaches a fact about the machine's load, and so its verdict. Everything else is the
-/// engine's own.
-private final class DepthOnly: Engine {
-    static let depth = 21
-    let engine: EngineService
-    let positionSearches = PositionSearches()
-    init(_ engine: EngineService) { self.engine = engine }
-    var isPaused: Bool { engine.isPaused }
-    func analyse(
-        _ game: Game, budget: SearchBudget, lines: Int, strength: Strength
-    ) -> AsyncStream<Analysis> {
-        engine.analyse(game, budget: .depth(Self.depth), lines: lines, strength: strength)
-    }
-    func pause() { engine.pause() }
-    func resume() { engine.resume() }
-}

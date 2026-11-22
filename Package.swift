@@ -18,6 +18,22 @@ let stockfishDefines: [CXXSetting] = [
     // development actually runs, so they get the same `-O3` the Stockfish Makefile uses;
     // the cost is that the vendored C++ cannot be stepped through, which is not something
     // anyone does to it.
+    //
+    // `-O3` and nothing else, though the sf_18 Makefile's clang build (optimize=yes) adds more:
+    // each was measured with scripts/engine-speed.sh on an M5 Max and none bought anything
+    // (chessmirror#13, whose comment has the runs):
+    // - `-funroll-loops` and `-mdynamic-no-pic`: the binary is byte for byte the one `-O3`
+    //   alone links. Clang's -O3 already unrolls, and on arm64 the relocation model changes
+    //   no instruction.
+    // - `-flto=full`: 1.1-1.4% fewer instructions over the same tree, but no faster: over 25
+    //   interleaved rounds its median nps was +1.2% (dotprod) and -1.0% (armv8) of `-O3`'s,
+    //   its fewest cycles -0.2% and -1.3%, inside the 2% one build varies between its own
+    //   runs. Not worth a link step that merges both engine copies into one module.
+    // - `-fno-exceptions`: no fewer instructions (-0.2%, +0.7%), no faster, and the bridge's
+    //   failure path is a `catch`.
+    // The rest of the Makefile's clang line is warnings, an `-arch`/deployment target SwiftPM
+    // already passes, or for compilers and platforms this is not (clang < 16, Android, Windows);
+    // its profile-guided build is the next ticket's.
     .unsafeFlags(["-O3"]),
     .define("IS_64BIT"),
     .define("USE_PREFETCH"),
