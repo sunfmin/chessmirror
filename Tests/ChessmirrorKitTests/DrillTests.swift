@@ -124,7 +124,11 @@ private func engine(
     #expect(session.game.plies.count == 2, "the engine answers for White, not the student's Black")
     #expect(session.isHandTurn)
     let before = session.game.uciMoves
-    let move = try #require(session.game.state.legalMoves.first)
+    // A developing move no engine refuses, not the first legal one: practice is played under 把关
+    // (docs/adr/0047), and the first legal move here, …a6, stood under Stockfish 18 and costs
+    // enough under Stockfish 19 to be refused on some two-thread runs (chessmirror#15). What this
+    // contract is about is the game going on, not whether …a6 is good.
+    let move = try #require(session.game.state.move(matching: "g8f6"))
     session.play(move)
     await session.settled()
     #expect(session.game.uciMoves == before + [move.uci])
