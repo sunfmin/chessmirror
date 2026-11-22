@@ -62,6 +62,11 @@
     "source": "docs/adr/0043-a-game-branches-where-a-move-is-played-over-another.md:19",
     "why": "the same promise as playing-over-a-move-never-writes-it-out, registered from CONTEXT.md:213"
   },
+  "09327fa78239": {
+    "mark": "promise",
+    "sentence": "分析行 (Review row)**: What an imported game says of its Review, and the one thing a caller reads of it (`ReviewRow`): offered (and whether it can start, and whether the last try failed), running (how far it has got), or done (how many 错招 it found). Nil for every game played here.",
+    "source": "CONTEXT.md:82"
+  },
   "0971bf32de4c": {
     "mark": "promise",
     "sentence": "自动集 (Found collection)**: 杀招 and 战术, one 收藏集 each, derived from the games the app has judged: a position where the side to move — the player or the opponent — has a shot is in one of them, and a position with a mate is in 杀招 only.",
@@ -126,6 +131,11 @@
     "sentence": "No screen called the three methods or read the rung count; the only callers were three kit tests.",
     "source": "docs/adr/0042-the-hint-ladder-has-no-rung-to-press.md:11",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "157431f0420b": {
+    "mark": "promise",
+    "sentence": "return* a `PositionSetError`; the bridge checks every one of them, and a refusal means no search and a failed Rules Query, never a half-set position.",
+    "source": "docs/adr/0053-the-engine-is-stockfish-19.md:35"
   },
   "15a56cbf30fc": {
     "mark": "not",
@@ -264,6 +274,11 @@
     "mark": "promise",
     "sentence": "喜爱 (Favourites)**: The 自建集 that is always there, cannot be renamed or deleted, and is where the heart puts a position unless the player picks another.",
     "source": "CONTEXT.md:178"
+  },
+  "29987d5eebdb": {
+    "mark": "promise",
+    "sentence": "The bridge never goes through the UCI loop (0002). `Engine::set_position` and `Position::set`",
+    "source": "docs/adr/0053-the-engine-is-stockfish-19.md:34"
   },
   "2bc1aab1649e": {
     "mark": "not",
@@ -689,6 +704,11 @@
     "source": "docs/adr/0043-a-game-branches-where-a-move-is-played-over-another.md:26",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "6d1bfbce346a": {
+    "mark": "not",
+    "sentence": "sf_19 ships the same design in its own Makefile (`ARCH=arm64-universal`: the tree built as armv8 and as armv8-dotprod, renamed apart, picked at start from the CPU) and it does not replace this one: it renames with an LTO-object and awk pass that SwiftPM cannot run, and its CPU query is `getauxval` or `IsProcessorFeaturePresent`, Linux and Windows only — on Darwin sf_19 builds the dotprod slice alone (`macos-lipo`). A define and a sysctl do the same here with nothing to run (ADR-0053).",
+    "source": "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:47"
+  },
   "6d668d3d81a8": {
     "mark": "promise",
     "sentence": "Never below the 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be worth remembering without being worth drilling.",
@@ -721,6 +741,11 @@
     "sentence": "`cardFloor` (120pt) is what the board's reserve is aimed at and what the tests hold every screen to; it is not a clamp in the layout.",
     "source": "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md:30",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "7499424d9cac": {
+    "mark": "not",
+    "sentence": "Measured on the development Mac (M5 Max) on 2026-11-22 with `scripts/engine-speed.sh -r 5`: the start position to depth 25 on one thread, the four builds interleaved, at a load average of 16–23 (chessmirror#15 has every run). The script now prints each run's time to the depth, because two versions search different trees and nodes per second compare nothing between them.",
+    "source": "docs/adr/0053-the-engine-is-stockfish-19.md:79"
   },
   "75940077ec6a": {
     "mark": "promise",
@@ -957,6 +982,16 @@
     "source": "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md:9",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "945365f2f152": {
+    "mark": "promise",
+    "sentence": "It waits, at most 2 s, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own), with animations off; it fails a test whose screen never settles, that it cannot hear (the accessibility switch missing or off), or that says nothing.",
+    "source": "README.md:133"
+  },
+  "95f72bed8fe7": {
+    "mark": "promise",
+    "sentence": "`ScreenMatrix` draws every screen once per row of the matrix the others do not vary — dark, the accessibility3 text size, the 375×667 pt iPhone SE, and each of the eight languages — and holds each to `Rendered.layoutBreaches()`: everything labelled inside the safe area (as far as its scroll view shows it), no two labelled things overlapping, every control at least 44×44 pt where a finger presses it (a control that is its list row's whole content is measured as the row; a navigation bar item by where hit-testing hands it a touch, which UIKit widens past the frame it reports). A breach already filed is a `withKnownIssue` naming its issue; any other fails.",
+    "source": "README.md:139"
+  },
   "9689614a18df": {
     "mark": "not",
     "sentence": "Two devices moving in the same game within the same seconds is the only way to lose a move, and conflict versions plus a UI to reconcile them is a great deal of machinery for one person drilling puzzles.",
@@ -1021,6 +1056,11 @@
     "sentence": "At a rung this never happened — Stockfish's `Skill` picks among its top lines with a clock-seeded random (ADR 0038) — and 满力 now has the same idea, explicit and bounded: 掷子 (`Toss`) picks at random among the lines the search scores within fifteen centipawns of its first, from the mover's side.",
     "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:39",
     "why": "the same promise as toss-within-fifteen-centipawns, registered from CONTEXT.md:247"
+  },
+  "9e38f7c9ec1d": {
+    "mark": "promise",
+    "sentence": "The validator asks every rule sf_19's `Position::set` has, before Stockfish sees the FEN, and names it in the terms the Confirm Position screen already explains.",
+    "source": "docs/adr/0053-the-engine-is-stockfish-19.md:37"
   },
   "a07265e8a7db": {
     "mark": "promise",
@@ -1106,6 +1146,11 @@
     "sentence": "The first design gave every 收藏集 a queue of its own, 「练这一组」, and that is exactly the practice docs/adr/0032 refuses: a block of 杀招 tells the player the answer is a mate before they look, which trains Einstellung and flatters the one who does it.",
     "source": "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md:16",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "abcd5b7d93ba": {
+    "mark": "promise",
+    "sentence": "The bridge never goes through the loop, and never hands the class anything it would refuse (ADR-0053).",
+    "source": "docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md:34"
   },
   "abd9d383328e": {
     "mark": "not",
@@ -1202,6 +1247,11 @@
     "sentence": "A shot that is only taking a loose piece, or that gains too little 胜率, is not kept.",
     "source": "CONTEXT.md:168"
   },
+  "bc487ed142f1": {
+    "mark": "not",
+    "sentence": "On Darwin the Makefile's `macos-lipo` builds the arm64 slice as dotprod alone — right for every Apple-silicon Mac, and the A12 crash 0052 exists to avoid on an iPad.",
+    "source": "docs/adr/0053-the-engine-is-stockfish-19.md:73"
+  },
   "bc648bf95cbb": {
     "mark": "not",
     "sentence": "Only sound moves stand.",
@@ -1247,6 +1297,11 @@
     "source": "CONTEXT.md:243",
     "why": "the same promise as strength-never-shapes-what-a-move-costs, registered from CONTEXT.md:103"
   },
+  "c5b0c35be46a": {
+    "mark": "promise",
+    "sentence": "sf_19 added three the validator did not have, each mapped to an issue that already had words: more promoted pieces than pawns gone (*too many pieces*), more than four castling rights (*bad castling*) and a fullmove number past 100000 (*bad clock*). And sf_19 reads a FEN a character at a time, so a second space between fields is a refused en passant square to it; the bridge hands it every FEN with one space per field.",
+    "source": "docs/adr/0053-the-engine-is-stockfish-19.md:39"
+  },
   "c5b4a650ba88": {
     "mark": "promise",
     "sentence": "A 复判 goes past it by a fixed rule, never by a second budget.",
@@ -1267,6 +1322,11 @@
     "mark": "promise",
     "sentence": "**Only a Review writes `Ply.evaluation`.** One engine, one uniform Depth, one pass over the whole Game.",
     "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:26"
+  },
+  "ca5cd4eddc2a": {
+    "mark": "not",
+    "sentence": "Re1, which sf_19 refuses at every depth from 16 to 24 (chessmirror#15 has both series).",
+    "source": "docs/adr/0053-the-engine-is-stockfish-19.md:99"
   },
   "ca8a45dedd2a": {
     "mark": "promise",

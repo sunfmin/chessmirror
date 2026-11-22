@@ -510,3 +510,59 @@ name = "the-device-name-is-never-consulted"
 says = "The device's name is never consulted."
 source = "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md:40"
 check = ["test"]
+
+# held by: ScreenImageTests "a screen that never settles fails, saying what it last said", "a screen drawn with the accessibility switch off fails rather than passes", "a screen that says nothing fails rather than passes"
+[[promise]]
+name = "a-screen-test-fails-unsettled-unheard-or-silent"
+says = "It waits, at most 2 s, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own), with animations off; it fails a test whose screen never settles, that it cannot hear (the accessibility switch missing or off), or that says nothing."
+source = "README.md:133"
+check = ["test"]
+
+# held by: ScreenMatrix (every screen at every row, held to Rendered.layoutBreaches()), ScreenImageTests "a control that is its list row's content is held to the row, and nothing else is"
+[[promise]]
+name = "every-screen-is-held-to-layout-breaches"
+says = "`ScreenMatrix` draws every screen once per row of the matrix the others do not vary — dark, the accessibility3 text size, the 375×667 pt iPhone SE, and each of the eight languages — and holds each to `Rendered.layoutBreaches()`: everything labelled inside the safe area (as far as its scroll view shows it), no two labelled things overlapping, every control at least 44×44 pt where a finger presses it (a control that is its list row's whole content is measured as the row; a navigation bar item by where hit-testing hands it a touch, which UIKit widens past the frame it reports). A breach already filed is a `withKnownIssue` naming its issue; any other fails."
+source = "README.md:139"
+check = ["test"]
+
+# held by: GameOffersTests.theReviewRowSaysWhereTheReviewHasGot ("a game played here has nothing to review")
+[[promise]]
+name = "a-game-played-here-has-no-review-row"
+says = "Nil for every game played here."
+source = "CONTEXT.md:82"
+check = ["test"]
+
+# held by: EngineRefusalTests.refusedInputsNeverReachTheEngine — every input sf_19 refuses is handed to a live engine of both builds at the bridge; one through the UCI loop would exit(1) the test process
+[[promise]]
+name = "the-bridge-never-uses-the-uci-loop"
+says = "The bridge never goes through the loop, and never hands the class anything it would refuse (ADR-0053)."
+source = "docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md:34"
+check = ["test"]
+
+# held by: EngineRefusalTests.refusedInputsNeverReachTheEngine
+[[promise]]
+name = "the-bridge-never-uses-the-uci-loop-sf19"
+says = "The bridge never goes through the UCI loop (0002)."
+source = "docs/adr/0053-the-engine-is-stockfish-19.md:34"
+check = ["test"]
+
+# held by: EngineRefusalTests.refusedInputsNeverReachTheEngine (nothing refused is searched, and the same engine then searches on)
+[[promise]]
+name = "a-refused-position-is-never-searched"
+says = "the bridge checks every one of them, and a refusal means no search and a failed Rules Query, never a half-set position."
+source = "docs/adr/0053-the-engine-is-stockfish-19.md:35"
+check = ["test"]
+
+# held by: FENValidationTests "every FEN sf_19 refuses is refused by the validator first" (one FEN per refusal in sf_19's Position::set)
+[[promise]]
+name = "the-validator-refuses-first-what-sf19-refuses"
+says = "The validator asks every rule sf_19's `Position::set` has, before Stockfish sees the FEN, and names it in the terms the Confirm Position screen already explains."
+source = "docs/adr/0053-the-engine-is-stockfish-19.md:37"
+check = ["test"]
+
+# held by: FENValidationTests "a FEN with spaces to spare is a position, handed over with one space per field", "every FEN sf_19 refuses is refused by the validator first"
+[[promise]]
+name = "the-bridge-hands-one-space-per-field"
+says = "sf_19 added three the validator did not have, each mapped to an issue that already had words: more promoted pieces than pawns gone (*too many pieces*), more than four castling rights (*bad castling*) and a fullmove number past 100000 (*bad clock*). And sf_19 reads a FEN a character at a time, so a second space between fields is a refused en passant square to it; the bridge hands it every FEN with one space per field."
+source = "docs/adr/0053-the-engine-is-stockfish-19.md:39"
+check = ["test"]
