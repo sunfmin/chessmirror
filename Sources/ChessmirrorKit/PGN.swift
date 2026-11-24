@@ -260,7 +260,7 @@ public struct PGN: Hashable, Sendable {
         // The starting position's Score goes before the first move, which is where PGN puts a
         // comment about the position a game begins in. Without it the first move's quality
         // cannot be recomputed from the file, because there is nothing to compare it against.
-        let baseline = game.startEvaluation.map { ["{[%eval \($0.pgnText)]}"] } ?? []
+        let baseline = game.startEvaluation.map { ["{\(Scanner.evalToken($0))}"] } ?? []
         // A Game recognised from a picture usually starts mid-game, and may start with black
         // to move — in which case PGN wants "12... Nf6" before the first white move.
         return baseline
@@ -287,15 +287,10 @@ public struct PGN: Hashable, Sendable {
         guard !game.pendingTried.isEmpty else { return [] }
         let body = game.pendingTried
             .flatMap { pending in
-                pending.tries.map { Self.attempt($0, named: "pending", at: pending.ply) }
+                pending.tries.map { Scanner.triedToken($0, named: "pending", at: pending.ply) }
             }
             .joined(separator: " ")
         return ["{\(body)}"]
-    }
-
-    /// One refused move, as a token. The spelling lives with the reader (`Scanner.triedToken`).
-    private static func attempt(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
-        Scanner.triedToken(attempt, named: name, at: ply)
     }
 
     /// One line of moves, with its Variations in brackets after the moves they replace —
@@ -321,37 +316,9 @@ public struct PGN: Hashable, Sendable {
                 written.append("\(number)...")
             }
             written.append(ply.san)
-            // One or the other, never both: which slot a file's Scores landed in was decided
-            // once by whether it carried a Review Depth, so writing either back out under
-            // the same tag is what makes the round trip exact.
-            var comment: [String] = []
-            if let judgement = ply.judgement {
-                comment.append(Scanner.judgementToken(judgement))
-            }
-            // The 棋力 the engine played this move at (docs/adr/0038). Only on the engine's own
-            // moves, and 满力 written as `full` rather than left off: a hand move has no token.
-            if let strength = ply.strength {
-                comment.append("[%strength \(strength.text)]")
-            }
-            if let evaluation = ply.evaluation ?? ply.importedEvaluation {
-                comment.append("[%eval \(evaluation.pgnText)]")
-            }
-            // The Line the same search produced, in the same braced convention. SAN rather than
-            // UCI: it is read back by replaying it, so either would do, and only one of the two
-            // is a thing a person opening the file in anything else can read (docs/adr/0021).
-            if !ply.line.isEmpty {
-                comment.append("[%line \(ply.line.joined(separator: " "))]")
-            }
-            // What 把关 took back here, and how many hints were open when the move that stands
-            // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
-            // they were played, because a reader that only knows `[%eval]` skips them the same
-            // way it already skips everything else in a comment.
-            for attempt in ply.tried {
-                comment.append(Self.attempt(attempt, named: "tried"))
-            }
-            if ply.hints > 0 {
-                comment.append("[%hint \(ply.hints)]")
-            }
+            // What the file says about the move beyond its SAN. The spelling of every token
+            // lives with its reader (`Scanner.annotations(of:)`).
+            var comment = Scanner.annotations(of: ply)
             // Which line is the 树干 (docs/adr/0043). The line a file is written as is the 树干
             // and a bracketed line is a 树枝 unless the file says otherwise, and it says so only
             // where that default is wrong: `[%trunk]` on the head of a bracketed line that is
@@ -359,9 +326,9 @@ public struct PGN: Hashable, Sendable {
             // either inherits, and a reader that knows only the mainline reads a marker it does
             // not know as nothing, the same as every other comment here.
             if isVariation, index == 0 {
-                if ply.isTrunk { comment.append("[%trunk]") }
+                if ply.isTrunk { comment.append(Scanner.trunkMarker) }
             } else if !ply.isTrunk, afterTrunk {
-                comment.append("[%branch]")
+                comment.append(Scanner.branchMarker)
             }
             if !comment.isEmpty {
                 written.append("{" + comment.joined(separator: " ") + "}")
@@ -384,9 +351,6 @@ public struct PGN: Hashable, Sendable {
         }
         return written
     }
-
-    /// A drop, as the file says it: `-23%`, the sign saying it is what the move *cost*.
-    static func percent(_ drop: Double) -> String { "-\(drop)%" }
 
     private static func rosterDefault(_ name: String, _ game: Game) -> String {
         switch name {
@@ -729,6 +693,10 @@ public struct PGN: Hashable, Sendable {
 
 /// A hand-rolled scanner: PGN's movetext is a handful of token shapes, and pulling in a
 /// parser generator to skip nested variations would cost more than it explains.
+///
+/// The one home of the `[%…]` grammar this app writes in a move's comment: each token is spelled
+/// here, beside the reader that reads it back, so the two cannot drift apart. `PGN.text` asks
+/// `annotations(of:)` what a move's comment says and never spells a token itself.
 private struct Scanner {
     private let characters: [Character]
     private var index = 0
@@ -799,8 +767,8 @@ private struct Scanner {
                 if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
                 if let judgement = Self.judgement(in: comment) { tokens.append(.judgement(judgement)) }
                 if let strength = Self.strength(in: comment) { tokens.append(.strength(strength)) }
-                if comment.contains("[%branch]") { tokens.append(.branch) }
-                if comment.contains("[%trunk]") { tokens.append(.trunk) }
+                if comment.contains(Self.branchMarker) { tokens.append(.branch) }
+                if comment.contains(Self.trunkMarker) { tokens.append(.trunk) }
             case ";":
                 _ = read(while: { !$0.isNewline })
             case "(":
@@ -828,6 +796,54 @@ private struct Scanner {
         return tokens
     }
 
+    // ------------------------------------------------------------ one move's comment
+
+    /// Everything the file says about one move in its comment, as tokens, in the order they are
+    /// written. Which line is the 树干 is not here: that depends on the line around the move, and
+    /// `PGN.text` adds `branchMarker` or `trunkMarker` where it applies.
+    static func annotations(of ply: Game.Ply) -> [String] {
+        var tokens: [String] = []
+        // One or the other, never both: which slot a file's Scores landed in was decided
+        // once by whether it carried a Review Depth, so writing either back out under
+        // the same tag is what makes the round trip exact.
+        if let judgement = ply.judgement {
+            tokens.append(judgementToken(judgement))
+        }
+        // The 棋力 the engine played this move at (docs/adr/0038). Only on the engine's own
+        // moves, and 满力 written as `full` rather than left off: a hand move has no token.
+        if let strength = ply.strength {
+            tokens.append("[%strength \(strength.text)]")
+        }
+        if let evaluation = ply.evaluation ?? ply.importedEvaluation {
+            tokens.append(evalToken(evaluation))
+        }
+        // The Line the same search produced, in the same braced convention. SAN rather than
+        // UCI: it is read back by replaying it, so either would do, and only one of the two
+        // is a thing a person opening the file in anything else can read (docs/adr/0021).
+        if !ply.line.isEmpty {
+            tokens.append("[%line \(ply.line.joined(separator: " "))]")
+        }
+        // What 把关 took back here, and how many hints were open when the move that stands
+        // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
+        // they were played, because a reader that only knows `[%eval]` skips them the same
+        // way it already skips everything else in a comment.
+        for attempt in ply.tried {
+            tokens.append(triedToken(attempt, named: "tried"))
+        }
+        if ply.hints > 0 {
+            tokens.append("[%hint \(ply.hints)]")
+        }
+        return tokens
+    }
+
+    /// Which line is the 树干 (docs/adr/0043): `[%trunk]` on the head of a bracketed line that is
+    /// the 树干, `[%branch]` on the Ply where the written line leaves it.
+    static let branchMarker = "[%branch]"
+    static let trunkMarker = "[%trunk]"
+
+    /// A Score as the file says it, after a move or before the first one.
+    static func evalToken(_ score: Score) -> String { "[%eval \(score.pgnText)]" }
+
     private static func evaluation(in comment: String) -> Score? {
         Self.body(of: "eval", in: comment).flatMap { Score(pgnText: $0) }
     }
@@ -853,7 +869,8 @@ private struct Scanner {
     /// One refused move, as a token — a 试招, or one at a position no move has carried yet, which
     /// differs in the name and in carrying the position with it. Read back by `attempts(of:)`.
     static func triedToken(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
-        var body = "\(attempt.san) \(PGN.percent(attempt.drop))"
+        // The drop as `-23%`: the sign says it is what the move *cost*.
+        var body = "\(attempt.san) -\(attempt.drop)%"
         if attempt.notFound { body += " notfound" }
         // The Depth after the flag, so a reader that knows only the older forms still sees them
         // as a prefix (docs/adr/0041). Absent when unknown, never written as a guess.
