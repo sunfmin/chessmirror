@@ -17,7 +17,7 @@ func savedRecordFacesSideToMove() throws {
     )
     let entry = GameLibrary.Entry(
         url: URL(filePath: "/games/chessmirror-black-to-move.pgn"),
-        pgn: PGN(game: blackToMove, tags: [PGN.Tag(GameOrigin.tagName, GameOrigin.recognised.rawValue)]),
+        pgn: PGN(game: blackToMove, tags: [PGN.Tag(PGN.Tags.source, GameOrigin.recognised.rawValue)]),
         modified: Date(timeIntervalSince1970: 1_786_000_000)
     )
     #expect(try #require(GameSession.opened(entry).session).orientation == .blackAtBottom)
@@ -40,7 +40,7 @@ func trackedRecordFacesItsPlayer() throws {
         game: try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"])),
         tags: [
             PGN.Tag("White", "Someone"), PGN.Tag("Black", "Me"),
-            PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue),
+            PGN.Tag(PGN.Tags.source, GameOrigin.imported.tagValue),
         ]
     )
     asBlack.track(.black)
@@ -207,7 +207,7 @@ func anImportTrackedAsBlackSitsAsBlack() throws {
         game: try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"])),
         tags: [
             PGN.Tag("White", "Someone"), PGN.Tag("Black", "Me"),
-            PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue),
+            PGN.Tag(PGN.Tags.source, GameOrigin.imported.tagValue),
         ]
     )
     imported.track(.black)

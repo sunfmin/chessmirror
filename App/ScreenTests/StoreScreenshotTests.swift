@@ -45,7 +45,7 @@ struct StoreScreenshotTests {
             tags: [
                 PGN.Tag("White", Controller.hand.playerName),
                 PGN.Tag("Black", Controller.hand.playerName),
-                PGN.Tag(GameLibrary.nameTag, gameName),
+                PGN.Tag(PGN.Tags.name, gameName),
             ]
         )
         try pgn.text.write(to: directory.appending(path: "scholar.pgn"), atomically: true, encoding: .utf8)

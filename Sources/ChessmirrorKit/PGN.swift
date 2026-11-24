@@ -73,16 +73,26 @@ public struct PGN: Hashable, Sendable {
         public static let source = "Source"
         /// The 记录线 把关 stopped the player at (docs/adr/0046).
         public static let intercept = "Intercept"
+        /// The line 把关 would come back on at, from when it had a dial of its own; read only to
+        /// be dropped (docs/adr/0046).
+        public static let interceptPreference = "InterceptPreference"
+        /// The Depth of this app's own Review, derived from the Game and never kept in `tags`
+        /// (docs/adr/0016).
+        public static let reviewDepth = "ReviewDepth"
+        /// A start other than the standard one: `SetUp` says there is one, `FEN` says which.
+        public static let setUp = "SetUp"
+        public static let fen = "FEN"
 
         /// The roster name for one colour.
         public static func player(_ colour: PieceColour) -> String {
             colour == .white ? white : black
         }
-    }
 
-    static let interceptTag = Tags.intercept
-    static let interceptPreferenceTag = "InterceptPreference"
-    static let trackedSideTag = Tags.trackedSide
+        /// The standard Elo tag for one colour.
+        public static func elo(_ colour: PieceColour) -> String {
+            colour == .white ? "WhiteElo" : "BlackElo"
+        }
+    }
 
     /// The file this app writes for a game it holds: the Game, and the facts about the game that
     /// are not moves — who sat at each side, where it came from, the lines it is judged by —
@@ -111,15 +121,16 @@ public struct PGN: Hashable, Sendable {
             }
             // The standard Elo tags, for other tools, when the whole game was at one rung; a game
             // that changed rung says so per move and nowhere else (docs/adr/0038).
-            written.setTag("WhiteElo", to: game.constantElo(of: .white).map(String.init))
-            written.setTag("BlackElo", to: game.constantElo(of: .black).map(String.init))
+            for colour in [PieceColour.white, .black] {
+                written.setTag(Tags.elo(colour), to: game.constantElo(of: colour).map(String.init))
+            }
         }
         written.setTag(Tags.result, to: game.resultToken)
-        written.setTag(Self.interceptTag, to: lines.intercept.map(String.init(describing:)))
+        written.setTag(Tags.intercept, to: lines.intercept.map(String.init(describing:)))
         // The line 把关 would come back on at, from when it had a dial of its own. It has none
         // now (docs/adr/0046), so a file that carried one stops carrying it.
-        written.setTag(Self.interceptPreferenceTag, to: nil)
-        written.setTag(GameOrigin.tagName, to: origin.tagValue)
+        written.setTag(Tags.interceptPreference, to: nil)
+        written.setTag(Tags.source, to: origin.tagValue)
         if written.tag(Tags.date) == nil {
             written.tags.append(Self.dateTag())
         }
@@ -130,29 +141,29 @@ public struct PGN: Hashable, Sendable {
     /// reopened comes back with 把关 on and stops at the player's 记录线 as it is now; the number
     /// here is the account of the moves already played (docs/adr/0046).
     public var intercept: Double? {
-        guard let value = tag(Self.interceptTag).flatMap(Double.init), value.isFinite,
+        guard let value = tag(Tags.intercept).flatMap(Double.init), value.isFinite,
               JudgementLines.scale.contains(value) else { return nil }
         return value
     }
 
     /// Where the game came from. Not a standard tag; readers that do not know it ignore it.
     public var origin: GameOrigin {
-        GameOrigin(rawValue: tag(GameOrigin.tagName) ?? "") ?? .fresh
+        GameOrigin(rawValue: tag(Tags.source) ?? "") ?? .fresh
     }
 
     /// What the game is called, if anybody has said. Its own tag rather than `Event`: PGN has no
     /// tag for the name of a single game, and the precedent for adding one is `Source`.
     public var name: String? {
-        tag(GameLibrary.nameTag).flatMap { $0.isEmpty ? nil : $0 }
+        tag(Tags.name).flatMap { $0.isEmpty ? nil : $0 }
     }
 
     public mutating func setName(_ name: String?) {
-        setTag(GameLibrary.nameTag, to: name)
+        setTag(Tags.name, to: name)
     }
 
     /// Which side of an imported game is the player's, said by the import (docs/adr/0028).
     public var trackedSide: PieceColour? {
-        switch tag(Self.trackedSideTag) {
+        switch tag(Tags.trackedSide) {
         case "white": .white
         case "black": .black
         default: nil
@@ -160,7 +171,7 @@ public struct PGN: Hashable, Sendable {
     }
 
     public mutating func track(_ side: PieceColour?) {
-        setTag(Self.trackedSideTag, to: side.map { $0 == .white ? "white" : "black" })
+        setTag(Tags.trackedSide, to: side.map { $0 == .white ? "white" : "black" })
     }
 
     /// The colours the player moved themselves, read off the roster.
@@ -174,7 +185,7 @@ public struct PGN: Hashable, Sendable {
     /// person holding the phone is a question the import knows the answer to and this does not,
     /// and answering it by guessing would fill the book with somebody else's blunders.
     public var handColours: Set<PieceColour> {
-        if tag(Self.trackedSideTag) != nil {
+        if tag(Tags.trackedSide) != nil {
             return trackedSide.map { [$0] } ?? []
         }
         var found: Set<PieceColour> = []
@@ -223,17 +234,17 @@ public struct PGN: Hashable, Sendable {
             written.insert(name)
         }
         if game.startFEN != Self.standardStartFEN {
-            lines.append("[SetUp \"1\"]")
-            lines.append("[FEN \"\(game.startFEN)\"]")
-            written.formUnion(["SetUp", "FEN"])
+            lines.append("[\(Tags.setUp) \"1\"]")
+            lines.append("[\(Tags.fen) \"\(game.startFEN)\"]")
+            written.formUnion([Tags.setUp, Tags.fen])
         }
         // Derived from the Game, never carried in `tags`, so there is one home for the fact
         // (docs/adr/0016). Its presence is also what tells a reader whose engine the
         // `[%eval]` comments below came from: with the tag they are this app's Review, at
         // this Depth; without it they are somebody else's, at a Depth nobody wrote down.
         if let depth = game.reviewDepth {
-            lines.append("[ReviewDepth \"\(depth)\"]")
-            written.insert("ReviewDepth")
+            lines.append("[\(Tags.reviewDepth) \"\(depth)\"]")
+            written.insert(Tags.reviewDepth)
         }
         roster.removeAll { written.contains($0.name) }
         for tag in roster {
@@ -249,7 +260,7 @@ public struct PGN: Hashable, Sendable {
         // The starting position's Score goes before the first move, which is where PGN puts a
         // comment about the position a game begins in. Without it the first move's quality
         // cannot be recomputed from the file, because there is nothing to compare it against.
-        let baseline = game.startEvaluation.map { ["{[%eval \($0.pgnText)]}"] } ?? []
+        let baseline = game.startEvaluation.map { ["{\(Scanner.evalToken($0))}"] } ?? []
         // A Game recognised from a picture usually starts mid-game, and may start with black
         // to move — in which case PGN wants "12... Nf6" before the first white move.
         return baseline
@@ -276,15 +287,10 @@ public struct PGN: Hashable, Sendable {
         guard !game.pendingTried.isEmpty else { return [] }
         let body = game.pendingTried
             .flatMap { pending in
-                pending.tries.map { Self.attempt($0, named: "pending", at: pending.ply) }
+                pending.tries.map { Scanner.triedToken($0, named: "pending", at: pending.ply) }
             }
             .joined(separator: " ")
         return ["{\(body)}"]
-    }
-
-    /// One refused move, as a token. The spelling lives with the reader (`Scanner.triedToken`).
-    private static func attempt(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
-        Scanner.triedToken(attempt, named: name, at: ply)
     }
 
     /// One line of moves, with its Variations in brackets after the moves they replace —
@@ -310,37 +316,9 @@ public struct PGN: Hashable, Sendable {
                 written.append("\(number)...")
             }
             written.append(ply.san)
-            // One or the other, never both: which slot a file's Scores landed in was decided
-            // once by whether it carried a Review Depth, so writing either back out under
-            // the same tag is what makes the round trip exact.
-            var comment: [String] = []
-            if let judgement = ply.judgement {
-                comment.append(Scanner.judgementToken(judgement))
-            }
-            // The 棋力 the engine played this move at (docs/adr/0038). Only on the engine's own
-            // moves, and 满力 written as `full` rather than left off: a hand move has no token.
-            if let strength = ply.strength {
-                comment.append("[%strength \(strength.text)]")
-            }
-            if let evaluation = ply.evaluation ?? ply.importedEvaluation {
-                comment.append("[%eval \(evaluation.pgnText)]")
-            }
-            // The Line the same search produced, in the same braced convention. SAN rather than
-            // UCI: it is read back by replaying it, so either would do, and only one of the two
-            // is a thing a person opening the file in anything else can read (docs/adr/0021).
-            if !ply.line.isEmpty {
-                comment.append("[%line \(ply.line.joined(separator: " "))]")
-            }
-            // What 把关 took back here, and how many hints were open when the move that stands
-            // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
-            // they were played, because a reader that only knows `[%eval]` skips them the same
-            // way it already skips everything else in a comment.
-            for attempt in ply.tried {
-                comment.append(Self.attempt(attempt, named: "tried"))
-            }
-            if ply.hints > 0 {
-                comment.append("[%hint \(ply.hints)]")
-            }
+            // What the file says about the move beyond its SAN. The spelling of every token
+            // lives with its reader (`Scanner.annotations(of:)`).
+            var comment = Scanner.annotations(of: ply)
             // Which line is the 树干 (docs/adr/0043). The line a file is written as is the 树干
             // and a bracketed line is a 树枝 unless the file says otherwise, and it says so only
             // where that default is wrong: `[%trunk]` on the head of a bracketed line that is
@@ -348,9 +326,9 @@ public struct PGN: Hashable, Sendable {
             // either inherits, and a reader that knows only the mainline reads a marker it does
             // not know as nothing, the same as every other comment here.
             if isVariation, index == 0 {
-                if ply.isTrunk { comment.append("[%trunk]") }
+                if ply.isTrunk { comment.append(Scanner.trunkMarker) }
             } else if !ply.isTrunk, afterTrunk {
-                comment.append("[%branch]")
+                comment.append(Scanner.branchMarker)
             }
             if !comment.isEmpty {
                 written.append("{" + comment.joined(separator: " ") + "}")
@@ -374,18 +352,12 @@ public struct PGN: Hashable, Sendable {
         return written
     }
 
-    /// A drop, as the file says it: `-23%`, the sign saying it is what the move *cost*.
-    static func percent(_ drop: Double) -> String { "-\(drop)%" }
-
     private static func rosterDefault(_ name: String, _ game: Game) -> String {
         switch name {
-        case "Event": "chessmirror"
-        case "Site": "chessmirror"
-        case "Date": "????.??.??"
-        case "Round": "-"
-        case "White": "?"
-        case "Black": "?"
-        case "Result": game.resultToken
+        case Tags.event, Tags.site: "chessmirror"
+        case Tags.date: "????.??.??"
+        case Tags.round: "-"
+        case Tags.result: game.resultToken
         default: "?"
         }
     }
@@ -579,7 +551,7 @@ public struct PGN: Hashable, Sendable {
         var scanner = Scanner(text)
         let tags = scanner.readTags()
 
-        let startFEN = tags.first { $0.name == "FEN" }?.value ?? Self.standardStartFEN
+        let startFEN = tags.first { $0.name == Tags.fen }?.value ?? Self.standardStartFEN
         guard var game = Game(startFEN: startFEN) else {
             throw ParseError.unusableStartingPosition(Rules.validate(fen: startFEN).issue)
         }
@@ -590,7 +562,7 @@ public struct PGN: Hashable, Sendable {
         // nobody recorded, and are kept only to be shown as somebody else's number
         // (docs/adr/0016). A file this app wrote before the tag existed therefore reads as
         // unreviewed, which is the honest answer rather than the convenient one.
-        let reviewDepth = (tags.first { $0.name == "ReviewDepth" }?.value).flatMap { Int($0) }
+        let reviewDepth = (tags.first { $0.name == Tags.reviewDepth }?.value).flatMap { Int($0) }
         let isReviewed = reviewDepth != nil
         game.setReviewDepth(reviewDepth)
         // One frame per open bracket (docs/adr/0043). Moves always go to the innermost one,
@@ -702,7 +674,7 @@ public struct PGN: Hashable, Sendable {
         // And a judgement written before the 拦截线 travelled with it stood under the file's
         // 拦截线, when the file has one: 把关 was on when the game was saved, which is the best
         // account there is of whether it was on when the move was played.
-        if let intercept = (tags.first { $0.name == Self.interceptTag }?.value).flatMap(Double.init) {
+        if let intercept = (tags.first { $0.name == Tags.intercept }?.value).flatMap(Double.init) {
             for index in game.plies.indices {
                 guard let judgement = game.plies[index].judgement, judgement.intercept == nil else { continue }
                 game.setJudgement(
@@ -714,13 +686,17 @@ public struct PGN: Hashable, Sendable {
 
         // ReviewDepth does not stay in `tags`: it lives on the Game and `text` writes it back
         // from there, so the fact has one home and cannot be written twice or drift.
-        self.tags = tags.filter { $0.name != "ReviewDepth" }
+        self.tags = tags.filter { $0.name != Tags.reviewDepth }
         self.game = game
     }
 }
 
 /// A hand-rolled scanner: PGN's movetext is a handful of token shapes, and pulling in a
 /// parser generator to skip nested variations would cost more than it explains.
+///
+/// The one home of the `[%…]` grammar this app writes in a move's comment: each token is spelled
+/// here, beside the reader that reads it back, so the two cannot drift apart. `PGN.text` asks
+/// `annotations(of:)` what a move's comment says and never spells a token itself.
 private struct Scanner {
     private let characters: [Character]
     private var index = 0
@@ -791,8 +767,8 @@ private struct Scanner {
                 if let hints = Self.hint(in: comment) { tokens.append(.hint(hints)) }
                 if let judgement = Self.judgement(in: comment) { tokens.append(.judgement(judgement)) }
                 if let strength = Self.strength(in: comment) { tokens.append(.strength(strength)) }
-                if comment.contains("[%branch]") { tokens.append(.branch) }
-                if comment.contains("[%trunk]") { tokens.append(.trunk) }
+                if comment.contains(Self.branchMarker) { tokens.append(.branch) }
+                if comment.contains(Self.trunkMarker) { tokens.append(.trunk) }
             case ";":
                 _ = read(while: { !$0.isNewline })
             case "(":
@@ -820,6 +796,54 @@ private struct Scanner {
         return tokens
     }
 
+    // ------------------------------------------------------------ one move's comment
+
+    /// Everything the file says about one move in its comment, as tokens, in the order they are
+    /// written. Which line is the 树干 is not here: that depends on the line around the move, and
+    /// `PGN.text` adds `branchMarker` or `trunkMarker` where it applies.
+    static func annotations(of ply: Game.Ply) -> [String] {
+        var tokens: [String] = []
+        // One or the other, never both: which slot a file's Scores landed in was decided
+        // once by whether it carried a Review Depth, so writing either back out under
+        // the same tag is what makes the round trip exact.
+        if let judgement = ply.judgement {
+            tokens.append(judgementToken(judgement))
+        }
+        // The 棋力 the engine played this move at (docs/adr/0038). Only on the engine's own
+        // moves, and 满力 written as `full` rather than left off: a hand move has no token.
+        if let strength = ply.strength {
+            tokens.append("[%strength \(strength.text)]")
+        }
+        if let evaluation = ply.evaluation ?? ply.importedEvaluation {
+            tokens.append(evalToken(evaluation))
+        }
+        // The Line the same search produced, in the same braced convention. SAN rather than
+        // UCI: it is read back by replaying it, so either would do, and only one of the two
+        // is a thing a person opening the file in anything else can read (docs/adr/0021).
+        if !ply.line.isEmpty {
+            tokens.append("[%line \(ply.line.joined(separator: " "))]")
+        }
+        // What 把关 took back here, and how many hints were open when the move that stands
+        // was finally played (docs/adr/0027). One `[%tried]` per refused move, in the order
+        // they were played, because a reader that only knows `[%eval]` skips them the same
+        // way it already skips everything else in a comment.
+        for attempt in ply.tried {
+            tokens.append(triedToken(attempt, named: "tried"))
+        }
+        if ply.hints > 0 {
+            tokens.append("[%hint \(ply.hints)]")
+        }
+        return tokens
+    }
+
+    /// Which line is the 树干 (docs/adr/0043): `[%trunk]` on the head of a bracketed line that is
+    /// the 树干, `[%branch]` on the Ply where the written line leaves it.
+    static let branchMarker = "[%branch]"
+    static let trunkMarker = "[%trunk]"
+
+    /// A Score as the file says it, after a move or before the first one.
+    static func evalToken(_ score: Score) -> String { "[%eval \(score.pgnText)]" }
+
     private static func evaluation(in comment: String) -> Score? {
         Self.body(of: "eval", in: comment).flatMap { Score(pgnText: $0) }
     }
@@ -845,7 +869,8 @@ private struct Scanner {
     /// One refused move, as a token — a 试招, or one at a position no move has carried yet, which
     /// differs in the name and in carrying the position with it. Read back by `attempts(of:)`.
     static func triedToken(_ attempt: Game.Ply.Tried, named name: String, at ply: Int? = nil) -> String {
-        var body = "\(attempt.san) \(PGN.percent(attempt.drop))"
+        // The drop as `-23%`: the sign says it is what the move *cost*.
+        var body = "\(attempt.san) -\(attempt.drop)%"
         if attempt.notFound { body += " notfound" }
         // The Depth after the flag, so a reader that knows only the older forms still sees them
         // as a prefix (docs/adr/0041). Absent when unknown, never written as a guess.

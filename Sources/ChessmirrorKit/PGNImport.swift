@@ -835,7 +835,7 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         var pgn = chapter.pgn
         if let side { pgn.track(side) }
         pgn.setName(chapter.name)
-        pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
+        pgn.setTag(PGN.Tags.source, to: GameOrigin.imported.tagValue)
         let url = library.newURL()
         guard library.write(pgn, to: url) else { return nil }
         return GameLibrary.Entry(url: url, pgn: pgn, modified: Date())
@@ -883,8 +883,8 @@ extension PGNImport {
         var imported = 0
         for chapter in chapters {
             var pgn = chapter.pgn
-            pgn.setTag(GameLibrary.nameTag, to: chapter.name)
-            pgn.setTag(GameOrigin.tagName, to: GameOrigin.imported.tagValue)
+            pgn.setTag(PGN.Tags.name, to: chapter.name)
+            pgn.setTag(PGN.Tags.source, to: GameOrigin.imported.tagValue)
             if let account, let side = Self.side(of: account, in: pgn) { pgn.track(side) }
             // A fresh name per chapter, asked right before the write so two chapters
             // landing in one second cannot collide (`GameLibrary.newURL` logic).
