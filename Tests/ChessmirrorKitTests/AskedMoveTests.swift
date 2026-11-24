@@ -264,7 +264,7 @@ struct AskedMove {
         let reopened = try #require(GameSession.opened(GameLibrary.Entry(
             url: URL(filePath: "/games/chessmirror-photo.pgn"),
             pgn: PGN(game: game, tags: [
-                PGN.Tag(GameOrigin.tagName, GameOrigin.recognised.rawValue)
+                PGN.Tag(PGN.Tags.source, GameOrigin.recognised.rawValue)
             ]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )).session)
@@ -280,7 +280,7 @@ struct AskedMove {
         let imported = try #require(GameSession.opened(GameLibrary.Entry(
             url: URL(filePath: "/games/somebody-elses.pgn"),
             pgn: PGN(game: game, tags: [
-                PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue)
+                PGN.Tag(PGN.Tags.source, GameOrigin.imported.tagValue)
             ]),
             modified: Date(timeIntervalSince1970: 1_786_000_000)
         )).session)

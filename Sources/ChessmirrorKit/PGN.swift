@@ -73,16 +73,26 @@ public struct PGN: Hashable, Sendable {
         public static let source = "Source"
         /// The 记录线 把关 stopped the player at (docs/adr/0046).
         public static let intercept = "Intercept"
+        /// The line 把关 would come back on at, from when it had a dial of its own; read only to
+        /// be dropped (docs/adr/0046).
+        public static let interceptPreference = "InterceptPreference"
+        /// The Depth of this app's own Review, derived from the Game and never kept in `tags`
+        /// (docs/adr/0016).
+        public static let reviewDepth = "ReviewDepth"
+        /// A start other than the standard one: `SetUp` says there is one, `FEN` says which.
+        public static let setUp = "SetUp"
+        public static let fen = "FEN"
 
         /// The roster name for one colour.
         public static func player(_ colour: PieceColour) -> String {
             colour == .white ? white : black
         }
-    }
 
-    static let interceptTag = Tags.intercept
-    static let interceptPreferenceTag = "InterceptPreference"
-    static let trackedSideTag = Tags.trackedSide
+        /// The standard Elo tag for one colour.
+        public static func elo(_ colour: PieceColour) -> String {
+            colour == .white ? "WhiteElo" : "BlackElo"
+        }
+    }
 
     /// The file this app writes for a game it holds: the Game, and the facts about the game that
     /// are not moves — who sat at each side, where it came from, the lines it is judged by —
@@ -111,15 +121,16 @@ public struct PGN: Hashable, Sendable {
             }
             // The standard Elo tags, for other tools, when the whole game was at one rung; a game
             // that changed rung says so per move and nowhere else (docs/adr/0038).
-            written.setTag("WhiteElo", to: game.constantElo(of: .white).map(String.init))
-            written.setTag("BlackElo", to: game.constantElo(of: .black).map(String.init))
+            for colour in [PieceColour.white, .black] {
+                written.setTag(Tags.elo(colour), to: game.constantElo(of: colour).map(String.init))
+            }
         }
         written.setTag(Tags.result, to: game.resultToken)
-        written.setTag(Self.interceptTag, to: lines.intercept.map(String.init(describing:)))
+        written.setTag(Tags.intercept, to: lines.intercept.map(String.init(describing:)))
         // The line 把关 would come back on at, from when it had a dial of its own. It has none
         // now (docs/adr/0046), so a file that carried one stops carrying it.
-        written.setTag(Self.interceptPreferenceTag, to: nil)
-        written.setTag(GameOrigin.tagName, to: origin.tagValue)
+        written.setTag(Tags.interceptPreference, to: nil)
+        written.setTag(Tags.source, to: origin.tagValue)
         if written.tag(Tags.date) == nil {
             written.tags.append(Self.dateTag())
         }
@@ -130,29 +141,29 @@ public struct PGN: Hashable, Sendable {
     /// reopened comes back with 把关 on and stops at the player's 记录线 as it is now; the number
     /// here is the account of the moves already played (docs/adr/0046).
     public var intercept: Double? {
-        guard let value = tag(Self.interceptTag).flatMap(Double.init), value.isFinite,
+        guard let value = tag(Tags.intercept).flatMap(Double.init), value.isFinite,
               JudgementLines.scale.contains(value) else { return nil }
         return value
     }
 
     /// Where the game came from. Not a standard tag; readers that do not know it ignore it.
     public var origin: GameOrigin {
-        GameOrigin(rawValue: tag(GameOrigin.tagName) ?? "") ?? .fresh
+        GameOrigin(rawValue: tag(Tags.source) ?? "") ?? .fresh
     }
 
     /// What the game is called, if anybody has said. Its own tag rather than `Event`: PGN has no
     /// tag for the name of a single game, and the precedent for adding one is `Source`.
     public var name: String? {
-        tag(GameLibrary.nameTag).flatMap { $0.isEmpty ? nil : $0 }
+        tag(Tags.name).flatMap { $0.isEmpty ? nil : $0 }
     }
 
     public mutating func setName(_ name: String?) {
-        setTag(GameLibrary.nameTag, to: name)
+        setTag(Tags.name, to: name)
     }
 
     /// Which side of an imported game is the player's, said by the import (docs/adr/0028).
     public var trackedSide: PieceColour? {
-        switch tag(Self.trackedSideTag) {
+        switch tag(Tags.trackedSide) {
         case "white": .white
         case "black": .black
         default: nil
@@ -160,7 +171,7 @@ public struct PGN: Hashable, Sendable {
     }
 
     public mutating func track(_ side: PieceColour?) {
-        setTag(Self.trackedSideTag, to: side.map { $0 == .white ? "white" : "black" })
+        setTag(Tags.trackedSide, to: side.map { $0 == .white ? "white" : "black" })
     }
 
     /// The colours the player moved themselves, read off the roster.
@@ -174,7 +185,7 @@ public struct PGN: Hashable, Sendable {
     /// person holding the phone is a question the import knows the answer to and this does not,
     /// and answering it by guessing would fill the book with somebody else's blunders.
     public var handColours: Set<PieceColour> {
-        if tag(Self.trackedSideTag) != nil {
+        if tag(Tags.trackedSide) != nil {
             return trackedSide.map { [$0] } ?? []
         }
         var found: Set<PieceColour> = []
@@ -223,17 +234,17 @@ public struct PGN: Hashable, Sendable {
             written.insert(name)
         }
         if game.startFEN != Self.standardStartFEN {
-            lines.append("[SetUp \"1\"]")
-            lines.append("[FEN \"\(game.startFEN)\"]")
-            written.formUnion(["SetUp", "FEN"])
+            lines.append("[\(Tags.setUp) \"1\"]")
+            lines.append("[\(Tags.fen) \"\(game.startFEN)\"]")
+            written.formUnion([Tags.setUp, Tags.fen])
         }
         // Derived from the Game, never carried in `tags`, so there is one home for the fact
         // (docs/adr/0016). Its presence is also what tells a reader whose engine the
         // `[%eval]` comments below came from: with the tag they are this app's Review, at
         // this Depth; without it they are somebody else's, at a Depth nobody wrote down.
         if let depth = game.reviewDepth {
-            lines.append("[ReviewDepth \"\(depth)\"]")
-            written.insert("ReviewDepth")
+            lines.append("[\(Tags.reviewDepth) \"\(depth)\"]")
+            written.insert(Tags.reviewDepth)
         }
         roster.removeAll { written.contains($0.name) }
         for tag in roster {
@@ -379,13 +390,10 @@ public struct PGN: Hashable, Sendable {
 
     private static func rosterDefault(_ name: String, _ game: Game) -> String {
         switch name {
-        case "Event": "chessmirror"
-        case "Site": "chessmirror"
-        case "Date": "????.??.??"
-        case "Round": "-"
-        case "White": "?"
-        case "Black": "?"
-        case "Result": game.resultToken
+        case Tags.event, Tags.site: "chessmirror"
+        case Tags.date: "????.??.??"
+        case Tags.round: "-"
+        case Tags.result: game.resultToken
         default: "?"
         }
     }
@@ -579,7 +587,7 @@ public struct PGN: Hashable, Sendable {
         var scanner = Scanner(text)
         let tags = scanner.readTags()
 
-        let startFEN = tags.first { $0.name == "FEN" }?.value ?? Self.standardStartFEN
+        let startFEN = tags.first { $0.name == Tags.fen }?.value ?? Self.standardStartFEN
         guard var game = Game(startFEN: startFEN) else {
             throw ParseError.unusableStartingPosition(Rules.validate(fen: startFEN).issue)
         }
@@ -590,7 +598,7 @@ public struct PGN: Hashable, Sendable {
         // nobody recorded, and are kept only to be shown as somebody else's number
         // (docs/adr/0016). A file this app wrote before the tag existed therefore reads as
         // unreviewed, which is the honest answer rather than the convenient one.
-        let reviewDepth = (tags.first { $0.name == "ReviewDepth" }?.value).flatMap { Int($0) }
+        let reviewDepth = (tags.first { $0.name == Tags.reviewDepth }?.value).flatMap { Int($0) }
         let isReviewed = reviewDepth != nil
         game.setReviewDepth(reviewDepth)
         // One frame per open bracket (docs/adr/0043). Moves always go to the innermost one,
@@ -702,7 +710,7 @@ public struct PGN: Hashable, Sendable {
         // And a judgement written before the 拦截线 travelled with it stood under the file's
         // 拦截线, when the file has one: 把关 was on when the game was saved, which is the best
         // account there is of whether it was on when the move was played.
-        if let intercept = (tags.first { $0.name == Self.interceptTag }?.value).flatMap(Double.init) {
+        if let intercept = (tags.first { $0.name == Tags.intercept }?.value).flatMap(Double.init) {
             for index in game.plies.indices {
                 guard let judgement = game.plies[index].judgement, judgement.intercept == nil else { continue }
                 game.setJudgement(
@@ -714,7 +722,7 @@ public struct PGN: Hashable, Sendable {
 
         // ReviewDepth does not stay in `tags`: it lives on the Game and `text` writes it back
         // from there, so the fact has one home and cannot be written twice or drift.
-        self.tags = tags.filter { $0.name != "ReviewDepth" }
+        self.tags = tags.filter { $0.name != Tags.reviewDepth }
         self.game = game
     }
 }

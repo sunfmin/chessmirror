@@ -412,7 +412,7 @@ func importedOriginReadsBack() throws {
         url: URL(filePath: "/games/x.pgn"),
         pgn: PGN(
             game: Game(startFEN: PGN.standardStartFEN)!,
-            tags: [PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue)]
+            tags: [PGN.Tag(PGN.Tags.source, GameOrigin.imported.tagValue)]
         ),
         modified: Date()
     )
@@ -437,7 +437,7 @@ func importedGamePlayedOnKeepsItsOrigin() throws {
             game: Game(startFEN: PGN.standardStartFEN)!,
             tags: [
                 PGN.Tag("Event", "Wood Pecker"),
-                PGN.Tag(GameOrigin.tagName, GameOrigin.imported.tagValue),
+                PGN.Tag(PGN.Tags.source, GameOrigin.imported.tagValue),
             ]
         ),
         modified: Date()
@@ -452,7 +452,7 @@ func importedGamePlayedOnKeepsItsOrigin() throws {
         "the Event somebody else's file carried named their tournament; this one is ours"
     )
     #expect(
-        session.pgn.tag(GameOrigin.tagName) == "imported",
+        session.pgn.tag(PGN.Tags.source) == "imported",
         "and where the game came from is the part worth keeping"
     )
 }

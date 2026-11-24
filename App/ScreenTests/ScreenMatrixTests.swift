@@ -282,7 +282,7 @@ struct ScreenMatrix {
         let pgn = PGN(game: game, tags: [
             PGN.Tag("White", Controller.hand.playerName),
             PGN.Tag("Black", Controller.hand.playerName),
-            PGN.Tag(GameLibrary.nameTag, "Wednesday"),
+            PGN.Tag(PGN.Tags.name, "Wednesday"),
         ])
         try pgn.text.write(to: directory.appending(path: "scholar.pgn"), atomically: true, encoding: .utf8)
         return GameLibrary(folder: GameFolder(url: directory))

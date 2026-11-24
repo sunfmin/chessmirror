@@ -15,11 +15,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// to play, so the list keeps it apart from the ones they did.
     case practised
 
-    /// Written into the PGN so the distinction survives a relaunch. Not a standard tag;
-    /// PGN has no opinion about where a position came from, and readers ignore what they do
-    /// not know.
-    public static let tagName = PGN.Tags.source
-
+    /// Written into the PGN (`PGN.Tags.source`) so the distinction survives a relaunch.
     public var tagValue: String { rawValue }
     public var label: String {
         switch self {

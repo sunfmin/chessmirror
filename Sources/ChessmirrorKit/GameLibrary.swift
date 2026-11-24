@@ -87,9 +87,6 @@ import Foundation
         entries.first { $0.url == url }
     }
 
-    /// The tag a game's own name lives in.
-    public nonisolated static let nameTag = PGN.Tags.name
-
     public func sortedByName(_ list: [Entry]) -> [Entry] {
         list.sorted { Self.reads($0.title, before: $1.title) }
     }
@@ -114,7 +111,7 @@ import Foundation
     /// Renames a game, or takes its name away again with nil.
     @discardableResult
     public func rename(_ entry: Entry, to name: String?) -> Bool {
-        setTags([(Self.nameTag, name)], on: entry)
+        setTags([(PGN.Tags.name, name)], on: entry)
     }
 
     /// Rewrites any number of a game's tags, in one read and one write.

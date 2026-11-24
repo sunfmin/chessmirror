@@ -178,7 +178,7 @@ struct ImportScreenScreenshots {
         #expect(files.count == 2)
         for file in files {
             let pgn = try PGN(parsing: String(contentsOf: file, encoding: .utf8) ?? "")
-            #expect(pgn.tag(GameOrigin.tagName) == GameOrigin.imported.tagValue)
+            #expect(pgn.tag(PGN.Tags.source) == GameOrigin.imported.tagValue)
         }
     }
 

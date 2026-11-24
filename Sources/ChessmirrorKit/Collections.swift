@@ -269,9 +269,9 @@ public struct PlayerCollection: Hashable, Sendable {
     public var pgnText: String {
         entries.map { entry in
             var tags: [(String, String)] = [
-                ("Event", name),
-                ("SetUp", "1"),
-                ("FEN", entry.position.text + " 0 1"),
+                (PGN.Tags.event, name),
+                (PGN.Tags.setUp, "1"),
+                (PGN.Tags.fen, entry.position.text + " 0 1"),
                 (Self.addedTag, entry.added.ISO8601Format()),
             ]
             if let game = entry.game { tags.append((Self.gameTag, game)) }
@@ -288,7 +288,7 @@ public struct PlayerCollection: Hashable, Sendable {
         var entries: [Entry] = []
         var tags: [String: String] = [:]
         func close() {
-            if let fen = tags["FEN"], let key = PositionKey(fen: fen),
+            if let fen = tags[PGN.Tags.fen], let key = PositionKey(fen: fen),
                 !entries.contains(where: { $0.position == key })
             {
                 entries.append(
@@ -314,7 +314,7 @@ public struct PlayerCollection: Hashable, Sendable {
                 if value.hasPrefix("\""), value.hasSuffix("\""), value.count >= 2 {
                     value = String(value.dropFirst().dropLast())
                 }
-                if key == "Event", !tags.isEmpty { close() }
+                if key == PGN.Tags.event, !tags.isEmpty { close() }
                 tags[key] = value.replacingOccurrences(of: "\\\"", with: "\"")
                     .replacingOccurrences(of: "\\\\", with: "\\")
             } else if !line.isEmpty, !tags.isEmpty {

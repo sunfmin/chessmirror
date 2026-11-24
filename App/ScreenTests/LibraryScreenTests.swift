@@ -55,7 +55,7 @@ struct LibraryScreenScreenshots {
                 PGN(
                     game: played, seats: [.white: .hand, .black: .engine], origin: .fresh,
                     lines: JudgementLines(noSlips: true),
-                    carrying: [PGN.Tag(GameLibrary.nameTag, "第\(number)盘")]
+                    carrying: [PGN.Tag(PGN.Tags.name, "第\(number)盘")]
                 ),
                 to: directory.appending(path: "played-\(number).pgn")
             ))
@@ -69,7 +69,7 @@ struct LibraryScreenScreenshots {
                 PGN(
                     game: position, seats: [.black: .hand, .white: .engine],
                     origin: .practised, lines: JudgementLines(noSlips: true),
-                    carrying: [PGN.Tag(GameLibrary.nameTag, "练习\(number)")]
+                    carrying: [PGN.Tag(PGN.Tags.name, "练习\(number)")]
                 ),
                 to: directory.appending(path: "drill-\(number).pgn")
             ))
