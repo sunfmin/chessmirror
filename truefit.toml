@@ -566,3 +566,16 @@ name = "the-bridge-hands-one-space-per-field"
 says = "sf_19 added three the validator did not have, each mapped to an issue that already had words: more promoted pieces than pawns gone (*too many pieces*), more than four castling rights (*bad castling*) and a fullmove number past 100000 (*bad clock*). And sf_19 reads a FEN a character at a time, so a second space between fields is a refused en passant square to it; the bridge hands it every FEN with one space per field."
 source = "docs/adr/0053-the-engine-is-stockfish-19.md:39"
 check = ["test"]
+
+[[promise]]
+name = "usage-strings-never-promise-no-upload"
+says = "The photograph filed beside a recognised game goes to iCloud with it, so the camera and photo library usage strings can no longer say 不会上传."
+source = "docs/adr/0012-the-library-is-a-folder-in-icloud-drive.md:36"
+kept = "no test found holding the camera and photo library usage strings off 不会上传; they are Info.plist text in App/project.yml and each InfoPlist.strings"
+
+# held by: ImportScreenScreenshots "opening a game from an account's door tracks that account's side without asking"
+[[promise]]
+name = "a-game-through-an-accounts-door-records-its-side"
+says = "Through a player's door every game that comes down is that account's game, so a row is told from their side — a swatch for the colour they had, the opponent, 胜 / 负 / 和, when — and opening it records their side without the 「记录哪一方的错题？」"
+source = "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:33"
+check = ["test"]
