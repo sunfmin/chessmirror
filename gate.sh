@@ -12,6 +12,11 @@ for net in Resources/Nets/*.nnue; do
     fi
 done
 
+# The documents (docfit.toml): each registered under one kind, within its budget, its pointers
+# there, and no file citing this host's tracker anew, against .docfit/baseline.json. First, as
+# it takes well under a second.
+docfit check
+
 # The tests, once, through slimfit (slimfit.toml): release, as scripts/test.sh runs them and
 # README.md's "Build and test" says (the footprint checks alone, since they measure the test
 # process; the rest side by side), measured against .slimfit/baseline.json.
