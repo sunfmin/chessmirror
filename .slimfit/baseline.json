@@ -20,6 +20,14 @@
       "commits_90d": 48,
       "commits_total": 48,
       "reason": "Already deep: GameSession is the game screen's one observable seam; its concepts sit behind their own modules (Findings/Deck, TacticsFinder, StripQuestions, ImportReview, Toss, EngineHost), its acts are split into +Landing/+Clock/+Walk, and its private state (review facts, refusal map, hold) is unread by any test. The churn is features landing at the screen's seam, each already folded into one reading and one press (ac0b320, 521d217, 6993d3c); moving more out would add pass-throughs, not depth."
+    },
+    {
+      "suite": "swift",
+      "file": "Sources/ChessmirrorKit/PGN.swift",
+      "prod_lines": 687,
+      "commits_90d": 12,
+      "commits_total": 12,
+      "reason": "Already deep: PGN is the one module that knows the file format — its interface is init(game:seats:origin:lines:carrying:), text, init(parsing:), split, and the typed tag readings (origin, intercept, trackedSide, handColours, orientation, playedOn/playedDay); its Scanner and the writer's token/wrap/escape helpers are private and no test reaches them. Its churn is the format's facts moving in (tag names a4485e1, comment tokens beside their reader ac3db1c, where one game ends a84bda9) and features landing as tags; splitting writer from reader would put the token spellings in two places, and moving tag readings out would make pass-throughs, not depth."
     }
   ],
   "measured": {
