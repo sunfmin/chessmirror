@@ -32,7 +32,7 @@ branches, and the tests that photographed them.
   always allowed to show the assessment; what is gone is the strip *saying* it.
 - **收下 has no surface at present.** The settlement row was only reachable with the flag off, so
   it had already been off every phone since the press went. `Game.settlement` and `Settlement` stay
-  in the kit, tested, for the day it is given one (CONTEXT.md, 收下).
+  in the kit, tested, for the day it is given one (GLOSSARY.md, 收下).
 - ADR 0015's file is not in this repository; where it is cited, "the opinion is off at the start of
   every Game and turned on by one deliberate press" is read as: off, and there is no press. ADR
   0020's strip is otherwise unchanged — depth while it climbs, a bar the badge draws.

@@ -27,7 +27,7 @@ public struct JudgementLines: Hashable, Sendable, Codable {
     }
     /// Where a written-down move also earns practice time. **Never below the 记录线** — practice
     /// time is spent on things that were written down, so a value under it is read as the 记录线
-    /// itself. CONTEXT.md said so for a year and nothing held it: the settings sheet offered the
+    /// itself. GLOSSARY.md said so for a year and nothing held it: the settings sheet offered the
     /// same six numbers for both lines, and a 入列线 of five under a 记录线 of twenty enrolled
     /// nothing that was not already enrolled at twenty while the sheet said five.
     public var enqueue: Double {

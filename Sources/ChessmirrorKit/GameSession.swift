@@ -450,7 +450,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
 
     // ------------------------------------------------------------- the Review of an import
     //
-    // One reading and one press (分析行, CONTEXT.md): `reviewRow` says everything a caller may
+    // One reading and one press (分析行, GLOSSARY.md): `reviewRow` says everything a caller may
     // know of the Review, and `review()` asks for it. The facts below are what the row is made
     // of, private so that no caller, and no test, reads past it.
 
@@ -1550,7 +1550,7 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
         ScoreCurve(scores: (0...game.plies.count).map { historyScore(atPly: $0) })
     }
 
-    /// 连正 for the sides the player is moving, read out of the game (CONTEXT.md).
+    /// 连正 for the sides the player is moving, read out of the game (GLOSSARY.md).
     public var noSlips: Game.NoSlips { game.noSlips(by: mine) }
 
     /// A Ply this session was asked to walk to when its screen arrives, if any.

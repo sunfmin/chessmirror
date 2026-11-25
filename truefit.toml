@@ -4,7 +4,7 @@
 
 # Where chessmirror makes its promises: the README, the domain language, the decisions.
 [promises]
-sources = ["README.md", "CONTEXT.md", "docs/adr/*.md"]
+sources = ["README.md", "GLOSSARY.md", "docs/adr/*.md"]
 
 # No [contract] standins: chessmirror runs no program from a command line, so it has no stand-in
 # truefit can hold to a real one. The fakes in Sources/ChessmirrorKitTesting are not:
@@ -50,116 +50,116 @@ check = ["test"]
 [[promise]]
 name = "a-drop-is-never-positive"
 says = "Never positive: the best move costs nothing, and every other move costs something."
-source = "CONTEXT.md:21"
+source = "GLOSSARY.md:21"
 kept = "no test found holding a 掉幅 to never above zero"
 
 [[promise]]
 name = "best-is-the-searchs-first-line"
 says = "A fact about which move it was, read off that search, never a 掉幅 that rounded to zero — two equally good moves are both 0.0%, and only one of them is 最佳."
-source = "CONTEXT.md:26"
+source = "GLOSSARY.md:26"
 kept = "no test found that holds 最佳 to the first line against a tie at 0.0%"
 
 # held by: StandingTests.theCurveReadsTheJudgementBeforeTheReview
 [[promise]]
 name = "score-curve-never-off-the-live-search"
 says = "分数曲线 (Score curve)**: The record's Scores as one shape: a level per position of a game, high where White is doing well, nil where nobody has scored it, drawn under the record strip once two positions are known (`ScoreCurve`). It is read off the record — the 细判 written on each move first, then the Review — and never off the live search."
-source = "CONTEXT.md:75"
+source = "GLOSSARY.md:75"
 check = ["test"]
 
 # held by: StrengthTests.judgementsAreAtFullStrengthWhateverTheRung
 [[promise]]
 name = "strength-never-shapes-what-a-move-costs"
 says = "The only dial 把关 has on the judgement of a move — the engine's 棋力 shapes the opponent it plays, never what a move costs."
-source = "CONTEXT.md:103"
+source = "GLOSSARY.md:103"
 check = ["test"]
 
 # held by: JudgementTests "the 入列线 never sits below the 记录线, however the pair is made"
 [[promise]]
 name = "queue-line-never-below-record-line"
 says = "Never below the 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be worth remembering without being worth drilling."
-source = "CONTEXT.md:112"
+source = "GLOSSARY.md:112"
 check = ["test"]
 why = "two settings and the clamp between them; nothing runs at once or out of order"
 
 [[promise]]
 name = "a-mate-position-is-in-mates-only"
 says = "自动集 (Found collection)**: 杀招 and 战术, one 收藏集 each, derived from the games the app has judged: a position where the side to move — the player or the opponent — has a shot is in one of them, and a position with a mate is in 杀招 only."
-source = "CONTEXT.md:165"
+source = "GLOSSARY.md:165"
 kept = "no test found holding that a position with a mate is never also in 战术"
 
 # held by: CollectionsTests "a gift that leaves the side to move well placed is a 战术 — unless it is just a free piece"
 [[promise]]
 name = "a-free-piece-is-not-a-kept-shot"
 says = "A shot that is only taking a loose piece, or that gains too little 胜率, is not kept."
-source = "CONTEXT.md:168"
+source = "GLOSSARY.md:168"
 check = ["test"]
 
 [[promise]]
 name = "own-collections-are-never-scheduled"
 says = "They are never scheduled — practising one is 计划外练习 — because what a player picks to repeat, FSRS would read as what they know best (docs/adr/0032). _Avoid_: 文件夹, 分组"
-source = "CONTEXT.md:173"
+source = "GLOSSARY.md:173"
 kept = "no test found holding that a 自建集 position is never scheduled"
 
 # held by: CollectionsTests "喜爱 is always there and cannot be renamed or deleted; other sets can"
 [[promise]]
 name = "favourites-always-there"
 says = "喜爱 (Favourites)**: The 自建集 that is always there, cannot be renamed or deleted, and is where the heart puts a position unless the player picks another."
-source = "CONTEXT.md:178"
+source = "GLOSSARY.md:178"
 check = ["test"]
 
 # held by: GameOffersTests "the 把关 switch always moves"
 [[promise]]
 name = "no-slips-switch-always-moves"
 says = "The switch always moves — mid-move, under an exercise, in a 练习, with no engine yet — and a move being weighed is ruled under what it says when the weighing ends (docs/adr/0048). The switch and the door are named for what the app does — somebody is at the gate — because 正着, the word for the move, read as nonsense on a switch: 「正着 开」."
-source = "CONTEXT.md:194"
+source = "GLOSSARY.md:194"
 check = ["test"]
 
 # held by: VariationTests "branching twice from one ply keeps both lines"
 [[promise]]
 name = "playing-over-a-move-never-writes-it-out"
 says = "Playing over a move never writes it out: what followed moves in beside the new move, whole, and the record can switch between them (docs/adr/0043). A game is a tree of lines with one 树干 — the line it arrived as, imported or played out — and every other line a 树枝, inked in its own colour."
-source = "CONTEXT.md:213"
+source = "GLOSSARY.md:213"
 check = ["test"]
 
 # held by: OpponentMoveTests "the toss picks only between moves the search scores within a pawn's fifteenth"
 [[promise]]
 name = "toss-within-fifteen-centipawns"
 says = "掷子 (Toss)**: How a 满力 opponent picks between moves its own search cannot tell apart: at random, among the lines scored within fifteen centipawns of the first, from its own side."
-source = "CONTEXT.md:247"
+source = "GLOSSARY.md:247"
 check = ["test"]
 
 # held by: OpponentMoveTests "a mate is never tossed for"
 [[promise]]
 name = "a-mate-is-never-tossed-for"
 says = "A mate is never tossed for."
-source = "CONTEXT.md:249"
+source = "GLOSSARY.md:249"
 check = ["test"]
 
 # held by: NoSlipsTests.aRefusalWaitingAtTheEndZeroesTheRun, NoSlipsTests.switchingNoSlipsOffPausesTheRunRatherThanResettingIt
 [[promise]]
 name = "only-a-tried-move-ends-a-run"
 says = "Only a 试招 ends a run; switching 把关 off pauses it."
-source = "CONTEXT.md:260"
+source = "GLOSSARY.md:260"
 check = ["test"]
 
 # held by: ImportReviewTests.realImportedScoresCannotHideLocalMistakes, ReviewProvenanceTests "an imported game's Scores are kept as somebody else's, and judged by nothing"
 [[promise]]
 name = "only-the-judge-names-a-mistake"
 says = "**The only thing allowed to call something a 错题.**"
-source = "CONTEXT.md:296"
+source = "GLOSSARY.md:296"
 check = ["test"]
 
 # held by: SearchLimitTests "the standard budget is ten seconds or depth twenty, and 复判 is depth 28 within a minute"
 [[promise]]
 name = "rejudge-goes-deeper-by-a-fixed-rule"
 says = "A 复判 goes past it by a fixed rule, never by a second budget."
-source = "CONTEXT.md:305"
+source = "GLOSSARY.md:305"
 check = ["test"]
 
 [[promise]]
 name = "rejudge-only-on-request"
 says = "Asked for by the player, one move at a time, never run on its own."
-source = "CONTEXT.md:317"
+source = "GLOSSARY.md:317"
 kept = "no test found holding that no 复判 starts unasked"
 
 [[promise]]
@@ -529,7 +529,7 @@ check = ["test"]
 [[promise]]
 name = "a-game-played-here-has-no-review-row"
 says = "Nil for every game played here."
-source = "CONTEXT.md:82"
+source = "GLOSSARY.md:82"
 check = ["test"]
 
 # held by: EngineRefusalTests.refusedInputsNeverReachTheEngine — every input sf_19 refuses is handed to a live engine of both builds at the bridge; one through the UCI loop would exit(1) the test process

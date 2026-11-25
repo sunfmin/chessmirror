@@ -4,7 +4,7 @@ import Testing
 
 @testable import ChessmirrorKit
 
-/// 自动拉局 (CONTEXT.md, docs/adr/0045): the 本人账号's new games, once a day and on a press,
+/// 自动拉局 (GLOSSARY.md, docs/adr/0045): the 本人账号's new games, once a day and on a press,
 /// carried on from where the last pull reached. Driven through a scripted network and a real
 /// library in a temporary folder, so what is checked is what lands on disk.
 @MainActor

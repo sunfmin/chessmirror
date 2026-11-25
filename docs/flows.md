@@ -1,7 +1,7 @@
 # 主干 / Mainlines
 
 棋镜把你走错的每一步变成一道你会再走一遍的题。下面四条主干是这件事的全部路线；
-名词在 [CONTEXT.md](../CONTEXT.md) 里，为什么在 [docs/adr/](./adr/) 里，这里只说**发生了什么，按什么顺序**。
+名词在 [GLOSSARY.md](../GLOSSARY.md) 里，为什么在 [docs/adr/](./adr/) 里，这里只说**发生了什么，按什么顺序**。
 
 每一步下面那行反引号是它在代码里的落点。核对它们：`skills/mainline/scripts/verify-anchors.sh`。
 
@@ -39,7 +39,7 @@
 **这里会分叉。** 把关关掉 → 不再退回，但细判照做（[adr/0046](./adr/0046-no-slips-is-a-switch-not-a-dial.md)）。
 开关任何时候都能按，判断中途也行：这手按判完那一刻的开关裁（[adr/0048](./adr/0048-the-no-slips-switch-always-moves.md)）。
 引擎不在或棋局已结束 → 第 1 步就放行，这步棋无判地站住。
-被退回的试招可以单独要求复判，更深地重算，但「它被退回过」这件事不会因此消失（CONTEXT.md 复判）。
+被退回的试招可以单独要求复判，更深地重算，但「它被退回过」这件事不会因此消失（GLOSSARY.md 复判）。
 
 ---
 

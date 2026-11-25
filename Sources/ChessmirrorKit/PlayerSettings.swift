@@ -130,7 +130,7 @@ import Observation
 
     // ------------------------------------------------------------------ 搜索预算
 
-    /// The budget every live search runs on (CONTEXT.md). The standard one until somebody moves
+    /// The budget every live search runs on (GLOSSARY.md). The standard one until somebody moves
     /// a dial. Installed settings hand it to `PositionSearches.limit` as it changes.
     public var searchLimit: SearchLimit {
         didSet {

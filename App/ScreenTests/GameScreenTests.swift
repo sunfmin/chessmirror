@@ -1003,7 +1003,7 @@ struct GameScreenScreenshots {
         #expect(rendered.says("棋力"), "VoiceOver says what the number is")
     }
 
-    /// The bar says the 搜索预算 the setting names, not a fixed line (CONTEXT.md): with the time
+    /// The bar says the 搜索预算 the setting names, not a fixed line (GLOSSARY.md): with the time
     /// alone counting, the time alone is said — and the kit's every live search runs on it.
     @Test("the engine's bar says the budget the player set")
     func theEngineBarSaysTheBudget() async throws {

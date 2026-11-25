@@ -27,7 +27,7 @@ extension GameScreen {
                 noSlipsSwitch
                     .fixedSize(horizontal: true, vertical: false)
                 // How far the game has gone without a slip, and how far since the last one:
-                // 连正, read off the game rather than counted (CONTEXT.md). On the row that
+                // 连正, read off the game rather than counted (GLOSSARY.md). On the row that
                 // names 把关 and on no row of its own.
                 if let tally = strip.tally {
                     Text(localized("noSlips.tally", tally.run))
@@ -172,7 +172,7 @@ extension GameScreen {
         .padding(.bottom, 4)
     }
 
-    /// 复判, on the reading's own line (CONTEXT.md, 复判; docs/adr/0041): the depth the 试招 was
+    /// 复判, on the reading's own line (GLOSSARY.md, 复判; docs/adr/0041): the depth the 试招 was
     /// judged at, when it carries one, and the one more thing the reading offers — the move judged
     /// again, deeper. While that runs, the button's place shows the depth climbing; when the
     /// number lands, the chip and the line change together and the depth here says how deep.

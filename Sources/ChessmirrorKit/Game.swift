@@ -128,10 +128,10 @@ public struct Game: Hashable, Sendable {
             /// Every move that lands is weighed, not only under 把关, and the two are told apart
             /// here: 连正 counts the moves that *stood* — that could have been taken back and
             /// were not — and a move nothing would have refused is not one of those
-            /// (CONTEXT.md, 连正).
+            /// (GLOSSARY.md, 连正).
             public let intercept: Double?
             /// 最佳: the move was the engine's own first choice, by the search that judged it
-            /// (CONTEXT.md). Written down, because it is a fact about which move it was and not
+            /// (GLOSSARY.md). Written down, because it is a fact about which move it was and not
             /// one a 掉幅 of nought can stand in for: two equally good moves both cost nothing.
             public let best: Bool
 
@@ -736,7 +736,7 @@ public struct Game: Hashable, Sendable {
     }
 
     /// 最佳: whether the move at `ply` was the engine's own first choice from the position it
-    /// was played from (CONTEXT.md). By the judgement that let it stand, which wrote the fact
+    /// was played from (GLOSSARY.md). By the judgement that let it stand, which wrote the fact
     /// down; or by the Review, whose Line from the position before names the move it wanted
     /// there. Never by a cost that rounded to nought.
     public func isBest(atPly ply: Int) -> Bool {

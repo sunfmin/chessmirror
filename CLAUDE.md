@@ -1,13 +1,3 @@
-## Agent skills
-
-### Issue tracker
-
-Issues live in factorium's local tracker (checkout `chessmirror`), via `factorium issue`. See `docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
-
 ## Deploy to the phone after every change
 
 Anything that changes what the app does or looks like ends on the phone, without being asked.

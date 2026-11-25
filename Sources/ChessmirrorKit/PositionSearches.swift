@@ -12,7 +12,7 @@ import Synchronization
 /// searching. A deeper search nobody is waiting for any more is cancelled and writes nothing:
 /// what it reached is in the engine's hash table, not in here, and the next ask continues from it.
 public actor PositionSearches {
-    /// The 搜索预算 every live search runs on (CONTEXT.md): one for the whole process, because
+    /// The 搜索预算 every live search runs on (GLOSSARY.md): one for the whole process, because
     /// it is a fact about the app and not about any one store or session — judgement, the
     /// finder, the engine's own move and a move a thumb asked for are all this one search, and a
     /// caller standing in for a finished one has no business restating it. The standard budget

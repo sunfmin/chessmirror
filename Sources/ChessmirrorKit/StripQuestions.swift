@@ -51,7 +51,7 @@ public struct ReplyReading: Equatable, Sendable {
 }
 
 /// A 复判 under way: which 试招 on the strip is being judged again, and how deep both ends
-/// have got (CONTEXT.md, 复判; docs/adr/0041).
+/// have got (GLOSSARY.md, 复判; docs/adr/0041).
 public struct Rejudging: Equatable, Sendable {
     /// Which of `reading.wrongs`.
     public let index: Int

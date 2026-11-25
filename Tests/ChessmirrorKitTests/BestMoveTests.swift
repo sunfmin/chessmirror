@@ -3,7 +3,7 @@ import Foundation
 import Testing
 
 /// Contract: 最佳 is a fact about which move it was, written on the move when it stands and read
-/// off the Review otherwise — never a 掉幅 that rounded to nought (CONTEXT.md).
+/// off the Review otherwise — never a 掉幅 that rounded to nought (GLOSSARY.md).
 @Suite struct BestMoveTests {
     private static func line(_ cp: Int, _ moves: [(String, String)]) -> Line {
         Line(score: .centipawns(cp), uciMoves: moves.map(\.0), san: moves.map(\.1))

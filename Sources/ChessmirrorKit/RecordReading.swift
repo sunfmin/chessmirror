@@ -165,7 +165,7 @@ public struct RecordReading: Sendable {
     public enum Caption: Hashable, Sendable {
         /// Nobody measured this move: a blank of the same height, which is not the same as zero.
         case unmeasured
-        /// The engine's own first choice (CONTEXT.md: 最佳). A fact about which move it was, so it
+        /// The engine's own first choice (GLOSSARY.md: 最佳). A fact about which move it was, so it
         /// wins over a cost that did not round to nought — two searches disagree by a point.
         case best
         /// Another move that cost nothing: information — the move was right — and not 最佳.

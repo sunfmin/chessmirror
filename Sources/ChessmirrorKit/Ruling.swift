@@ -181,7 +181,7 @@ extension Game {
     /// if it was measured, and the refusals made where it was played from, which it takes with it.
     ///
     /// The judgement carries the 拦截线 it stood under, and none when 把关 was off, which is how
-    /// 连正 tells a move that stood from a move that was merely measured (CONTEXT.md, 连正).
+    /// 连正 tells a move that stood from a move that was merely measured (GLOSSARY.md, 连正).
     mutating func letStand(
         atPly ply: Int, drop: Double?, score: Score?, depth: Int, lines: JudgementLines,
         best: Bool = false

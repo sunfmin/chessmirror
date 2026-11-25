@@ -291,7 +291,7 @@ struct LibraryScreen: View {
     }
 
     /// What the app is for, at the top and in the heaviest type it has: practise the moves you
-    /// got wrong, and play a game that will not let one stand (CONTEXT.md).
+    /// got wrong, and play a game that will not let one stand (GLOSSARY.md).
     ///
     /// These used to be the fourth and fifth rows, under three ways of handing the app a picture.
     /// A picture is how a position gets *in*; it is not what anybody opened the app to do. The

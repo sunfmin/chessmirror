@@ -1,7 +1,7 @@
 import Foundation
 
 /// 细判 of one move: what the app's own engine, at its own depth, says the move cost
-/// (CONTEXT.md, docs/adr/0027).
+/// (GLOSSARY.md, docs/adr/0027).
 ///
 /// **One act, wherever a move is weighed.** 把关 refusing a move as it lands, a drill judging an
 /// attempt, the 惩罚 exercise checking a reply, the badge after a move stands, and a legacy game
@@ -102,7 +102,7 @@ extension GameState {
 extension Engine {
     /// Weighs the move that took `position` to `played`: the 细判 of one move, at `budget` — the
     /// 搜索预算 every live position search gets, unless a 复判 asks for `PositionSearches.deeper`,
-    /// in which case both ends go to the same deeper level (CONTEXT.md, 复判; docs/adr/0041).
+    /// in which case both ends go to the same deeper level (GLOSSARY.md, 复判; docs/adr/0041).
     /// The budget is the one thing that varies between the everyday judgement and the deeper
     /// one; everything else — the outcome settled without a search, a move read off the first
     /// search's own Lines, the 应招, the depth the answer is worth — is this one act.

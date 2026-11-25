@@ -1,6 +1,6 @@
 import Foundation
 
-/// 掷子 — how the opponent picks between moves it cannot tell apart (CONTEXT.md, docs/adr/0049).
+/// 掷子 — how the opponent picks between moves it cannot tell apart (GLOSSARY.md, docs/adr/0049).
 ///
 /// Stockfish at 满力 has no opinion about variety: the same position on the same budget gives the
 /// same move every time, so an opponent that always played its first line played the same game

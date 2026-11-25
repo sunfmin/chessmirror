@@ -7,7 +7,7 @@ the two ends often stop at different depths, and a tactical position can stop we
 so the number on the 已退回 chip is sometimes a number nobody should trust. [ADR 0034](0034-a-refused-move-keeps-the-reply-it-earned.md)
 said nothing needs to run again once a move is judged; this reopens that for one act.
 
-**The player can ask for a 复判 of one 试招 from its chip (CONTEXT.md, 复判): both ends are searched
+**The player can ask for a 复判 of one 试招 from its chip (GLOSSARY.md, 复判): both ends are searched
 to the same deeper level — depth 28, each end capped at sixty seconds — and the move's 掉幅, 应招
 and the depth they were worked out at are rewritten in place, in the game file.** The refusal
 itself is never rewritten: the move was taken back, and that stays written where it happened
@@ -45,7 +45,7 @@ Three things follow that a reader of the code will otherwise find surprising:
 
 ## Since then
 
-The everyday budget became the player's 搜索预算 (CONTEXT.md): time, depth, and which of the two
+The everyday budget became the player's 搜索预算 (GLOSSARY.md): time, depth, and which of the two
 stops the search. The deeper level is therefore relative rather than fixed — eight plies deeper and
 six times as long, stopped the same way — which at the standard budget is exactly the depth 28
 within a minute above. `PositionSearches.deeper` is still the one identity a 复判 search carries.

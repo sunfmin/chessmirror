@@ -1,7 +1,7 @@
 import Foundation
 
 // What the domain's own values are called on screen. The values live in this package's types and
-// in CONTEXT.md; this is only how each of them is said — in whichever language the app is
+// in GLOSSARY.md; this is only how each of them is said — in whichever language the app is
 // currently speaking (docs/adr/0019).
 //
 // One file rather than one extension per type, and in the package rather than in the app,
