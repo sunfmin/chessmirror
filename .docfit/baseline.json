@@ -1,0 +1,248 @@
+{
+  "App/Chessmirror/ConfirmPositionScreen.swift": {
+    "local_refs": 2
+  },
+  "App/Chessmirror/GameScreen+Sides.swift": {
+    "local_refs": 1
+  },
+  "App/Chessmirror/ImportSheet.swift": {
+    "local_refs": 1
+  },
+  "App/Chessmirror/Palette.swift": {
+    "local_refs": 1
+  },
+  "App/ScreenTests/ScreenImage.swift": {
+    "local_refs": 2
+  },
+  "App/ScreenTests/ScreenImageTests.swift": {
+    "local_refs": 1
+  },
+  "App/ScreenTests/ScreenMatrixTests.swift": {
+    "local_refs": 1
+  },
+  "GLOSSARY.md": {
+    "bytes": 18144,
+    "paragraph": 624
+  },
+  "Package.swift": {
+    "local_refs": 3
+  },
+  "README.md": {
+    "bytes": 11986,
+    "measurements": 3,
+    "paragraph": 956,
+    "pointers": [
+      "App/out/"
+    ]
+  },
+  "Sources/ChessmirrorKit/Controller.swift": {
+    "local_refs": 1
+  },
+  "Sources/ChessmirrorKit/PGN.swift": {
+    "local_refs": 1
+  },
+  "Sources/ChessmirrorKit/PositionSearches.swift": {
+    "local_refs": 1
+  },
+  "Tests/ChessmirrorKitTests/DepthOnly.swift": {
+    "local_refs": 1
+  },
+  "Tests/ChessmirrorKitTests/DrillTests.swift": {
+    "local_refs": 3
+  },
+  "Tests/ChessmirrorKitTests/EngineBuildTests.swift": {
+    "local_refs": 2
+  },
+  "Tests/ChessmirrorKitTests/EngineNameTests.swift": {
+    "local_refs": 1
+  },
+  "Tests/ChessmirrorKitTests/EngineRefusalTests.swift": {
+    "local_refs": 1
+  },
+  "Tests/ChessmirrorKitTests/FENValidationTests.swift": {
+    "local_refs": 1
+  },
+  "Tests/ChessmirrorKitTests/NoSlipsPhoneGameRegressionTests.swift": {
+    "local_refs": 2
+  },
+  "Tests/ChessmirrorKitTests/ReplyReadingTests.swift": {
+    "local_refs": 1
+  },
+  "docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md": {
+    "local_refs": 1
+  },
+  "docs/adr/0004-piece-paths-are-copied-into-swift-verbatim.md": {
+    "pointers": [
+      "ADR-0005"
+    ]
+  },
+  "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md": {
+    "paragraph": 866
+  },
+  "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md": {
+    "bytes": 5486,
+    "paragraph": 774
+  },
+  "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md": {
+    "bytes": 5295,
+    "paragraph": 1075
+  },
+  "docs/adr/0012-the-library-is-a-folder-in-icloud-drive.md": {
+    "paragraph": 746
+  },
+  "docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md": {
+    "bytes": 3733,
+    "paragraph": 1021
+  },
+  "docs/adr/0014-the-import-sheet-has-four-doors-and-one-pipeline-behind-them.md": {
+    "pointers": [
+      "docs/adr/0014"
+    ]
+  },
+  "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md": {
+    "bytes": 3906,
+    "pointers": [
+      "0021-the-layer-names-a-few-squares-instead-of-reporting-them-all.md",
+      "ADR 0021"
+    ]
+  },
+  "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md": {
+    "bytes": 4550,
+    "paragraph": 734
+  },
+  "docs/adr/0020-advice-runs-in-ten-second-stints-and-the-strip-says-so.md": {
+    "bytes": 4559,
+    "paragraph": 695,
+    "pointers": [
+      "0021-the-layer-names-a-few-squares-instead-of-reporting-them-all.md",
+      "ADR 0021"
+    ]
+  },
+  "docs/adr/0025-the-decks-room-is-part-of-the-boards-budget.md": {
+    "bytes": 8016,
+    "paragraph": 1272
+  },
+  "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md": {
+    "bytes": 3600,
+    "paragraph": 603,
+    "pointers": [
+      "0017-criticality-is-a-rank-within-a-game-not-a-number-of-centipawns.md",
+      "ADR 0017"
+    ]
+  },
+  "docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md": {
+    "paragraph": 633,
+    "pointers": [
+      "ADR 0018"
+    ]
+  },
+  "docs/adr/0030-fsrs-decides-the-day-and-arts-decides-the-order.md": {
+    "bytes": 3185
+  },
+  "docs/adr/0031-the-player-no-longer-declares-a-reason.md": {
+    "bytes": 3100,
+    "paragraph": 681,
+    "pointers": [
+      "ADR 0015",
+      "ADR 0022"
+    ]
+  },
+  "docs/adr/0032-the-daily-is-one-queue-and-cannot-be-sharded.md": {
+    "paragraph": 708
+  },
+  "docs/adr/0033-the-pixels-decide-whether-a-picture-was-drawn-or-photographed.md": {
+    "bytes": 3322,
+    "paragraph": 669
+  },
+  "docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md": {
+    "bytes": 4554
+  },
+  "docs/adr/0035-tilling-weighs-a-move-wherever-it-is-played.md": {
+    "paragraph": 734
+  },
+  "docs/adr/0036-a-game-lists-its-own-wrong-moves.md": {
+    "bytes": 6736,
+    "paragraph": 1188
+  },
+  "docs/adr/0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md": {
+    "bytes": 5010,
+    "paragraph": 733
+  },
+  "docs/adr/0038-strength-bounds-the-opponent-and-never-the-judge.md": {
+    "bytes": 4838,
+    "paragraph": 704
+  },
+  "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md": {
+    "bytes": 3531,
+    "paragraph": 606
+  },
+  "docs/adr/0040-the-engines-opinion-has-no-switch.md": {
+    "bytes": 3180,
+    "paragraph": 872,
+    "pointers": [
+      "ADR 0015"
+    ]
+  },
+  "docs/adr/0041-a-tried-move-can-be-judged-again-deeper.md": {
+    "bytes": 4003,
+    "paragraph": 666
+  },
+  "docs/adr/0043-a-game-branches-where-a-move-is-played-over-another.md": {
+    "bytes": 4135,
+    "paragraph": 786
+  },
+  "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md": {
+    "bytes": 5590,
+    "paragraph": 632
+  },
+  "docs/adr/0046-no-slips-stops-the-player-at-the-record-line.md": {
+    "bytes": 3621,
+    "paragraph": 642
+  },
+  "docs/adr/0047-practice-is-played-under-no-slips.md": {
+    "bytes": 4036,
+    "paragraph": 860
+  },
+  "docs/adr/0048-the-no-slips-switch-always-moves.md": {
+    "bytes": 3335
+  },
+  "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md": {
+    "bytes": 4206
+  },
+  "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md": {
+    "bytes": 3242,
+    "paragraph": 630
+  },
+  "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md": {
+    "bytes": 5077,
+    "local_refs": 1,
+    "paragraph": 663,
+    "pointers": [
+      "appstore.sh",
+      "deploy.sh"
+    ]
+  },
+  "docs/adr/0053-the-engine-is-stockfish-19.md": {
+    "bytes": 6480,
+    "local_refs": 4,
+    "paragraph": 817
+  },
+  "docs/appstore.md": {
+    "rehome": 6419
+  },
+  "docs/flows.md": {
+    "rehome": 12545
+  },
+  "factorium.toml": {
+    "local_refs": 5
+  },
+  "scripts/engine-speed.sh": {
+    "local_refs": 2
+  },
+  "scripts/screen-tests.sh": {
+    "local_refs": 3
+  },
+  "truefit.toml": {
+    "local_refs": 2
+  }
+}
