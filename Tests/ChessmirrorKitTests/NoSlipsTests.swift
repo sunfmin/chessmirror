@@ -6,7 +6,7 @@ import ChessmirrorKitTesting
 
 /// Contract: 连正 comes out of the game as the glossary defines it — the run of the player's moves
 /// that stood under 正着 since the last 试招 — with 正着 off pausing the run and nothing but a 试招
-/// ending it (CONTEXT.md).
+/// ending it (GLOSSARY.md).
 @MainActor
 @Suite struct NoSlipsTests {
     private static let under = Game.Ply.Judgement(

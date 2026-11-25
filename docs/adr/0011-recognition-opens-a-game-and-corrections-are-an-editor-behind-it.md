@@ -12,7 +12,7 @@ from it:
 - **The Game screen already resolves the knowable unknowables.** 视角 flips the
   Orientation, 先走 sets the side to move, and each colour's Controller is a chip — all
   of them changeable at any point in a Game, because that is what those concepts are
-  (see **Controller** in `CONTEXT.md`). The gate was asking for the same four answers one
+  (see **Controller** in `GLOSSARY.md`). The gate was asking for the same four answers one
   screen earlier, and then the Game screen had to offer them anyway.
 - **Shaky Squares survive the trip.** They are ringed on the played board for as long as
   no move has been played, and the source photograph is still one tap away. The promise

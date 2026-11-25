@@ -1,7 +1,7 @@
 import Foundation
 
 /// 门 — the import sheet's four ways in, what has been typed at each, and what the sheet says
-/// about it (CONTEXT.md, docs/adr/0014, docs/adr/0045).
+/// about it (GLOSSARY.md, docs/adr/0014, docs/adr/0045).
 ///
 /// Two doors take a username — lichess and chess.com — and fetch that player's last few games;
 /// one takes a 国象联盟 share link, which carries its game with it; and one takes any other link.

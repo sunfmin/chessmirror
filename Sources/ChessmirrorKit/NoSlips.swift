@@ -2,7 +2,7 @@ import Foundation
 
 extension Game {
     /// One of the player's own moves as 把关 reads it: whether it stood, whether a 试招 came
-    /// before it, and the 棋力 it was played against (CONTEXT.md: 连正, 连正榜).
+    /// before it, and the 棋力 it was played against (GLOSSARY.md: 连正, 连正榜).
     ///
     /// The one walk under both readers of 把关. The row under the board counts these into a 连正
     /// and the 连正榜 credits them to rungs; each keeps its own sum, and what a move *is*
@@ -52,7 +52,7 @@ extension Game {
         return moves
     }
 
-    /// 连正, read out of one game (CONTEXT.md).
+    /// 连正, read out of one game (GLOSSARY.md).
     ///
     /// **Read, never counted on the side.** A move that stood under 把关 is one carrying a
     /// judgement with the 拦截线 it stood under (`Ply.Judgement.intercept`), and a 试招 is written

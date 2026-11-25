@@ -737,7 +737,7 @@ func theSwitchSurvivesReopeningAndTheLineIsThePlayers(_ line: Double) throws {
 /// own — is weighed by the same 细判 that rules under 把关, and the record and the badge are
 /// written from that one Weighing: the same Score, the same 最佳. It used to be written from the
 /// before-table alone, with 最佳 always false, and the badge from a second weighing; the two
-/// disagreed about the engine's own first choice (CONTEXT.md, 细判, 最佳).
+/// disagreed about the engine's own first choice (GLOSSARY.md, 细判, 最佳).
 @MainActor
 @Test func theEnginesOwnMoveIsJudgedByTheOneWeighingTheBadgeReads() async throws {
     let start = try #require(Game(startFEN: PGN.standardStartFEN))

@@ -1,7 +1,7 @@
 import Foundation
 
 /// 自动拉局 — the 本人账号's new games, pulled into the library without being asked
-/// (CONTEXT.md, docs/adr/0045).
+/// (GLOSSARY.md, docs/adr/0045).
 ///
 /// Once a day, the first time the app comes forward on that day (`pullIfDue`), and again
 /// whenever the player presses for it (`pull`). Each 本人账号 — per site, the account that last

@@ -6,7 +6,7 @@ import ChessmirrorKitTesting
 /// Contract: a 复判 judges one 试招 again, deeper — both ends to depth 28 through the shared store
 /// — and rewrites that one move's 掉幅, 应招 and depth in place, saving the game. The refusal
 /// stays, the stood move keeps its judgement, and a move played or the eye moving on cancels it
-/// unwritten (CONTEXT.md, 复判; docs/adr/0041).
+/// unwritten (GLOSSARY.md, 复判; docs/adr/0041).
 @Suite("复判")
 @MainActor
 struct RejudgeTests {

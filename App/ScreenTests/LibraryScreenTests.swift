@@ -485,7 +485,7 @@ struct LibraryScreenScreenshots {
         #expect(rendered.count(of: "10%") >= 2, "both lines read 10%")
     }
 
-    /// The 搜索预算, where a person can set it (CONTEXT.md): time, depth, and which end stops
+    /// The 搜索预算, where a person can set it (GLOSSARY.md): time, depth, and which end stops
     /// the search, defaulting to ten seconds or depth twenty, whichever comes first.
     @Test("the settings sheet offers the search budget, defaulting to 10 s / depth 20, either")
     func theSearchBudgetIsOnTheSettingsSheet() async throws {

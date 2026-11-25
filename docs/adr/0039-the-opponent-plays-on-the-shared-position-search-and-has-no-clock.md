@@ -44,7 +44,7 @@ elsewhere:
   for every search that is not the opponent's own move.
 - ADR 0020's "the engine's own move is untouched: it is bounded by Thinking Time already" and
   ADR 0038's "the clock is untouched" are both read as: bounded by the shared position budget.
-- 棋力 is the one dial on the opponent (CONTEXT.md). A 拦截线 is a dial on the coach, and that is
+- 棋力 is the one dial on the opponent (GLOSSARY.md). A 拦截线 is a dial on the coach, and that is
   the other question.
 - `EngineClockTests` holds every live search to `PositionSearches.budget`, which is the test that
   would have caught a clock quietly coming back.

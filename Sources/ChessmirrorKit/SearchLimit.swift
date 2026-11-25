@@ -1,7 +1,7 @@
 import Foundation
 
 /// 搜索预算: how long and how deep every live position search goes, and which end stops it
-/// (CONTEXT.md).
+/// (GLOSSARY.md).
 ///
 /// One for the whole app — 细判, the engine's own move, the finder and a move a thumb asked for
 /// are all this one search (docs/adr/0039) — so that a 掉幅 means the same thing wherever it was

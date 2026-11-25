@@ -78,7 +78,7 @@ struct AboutScreen: View {
                 }
 
                 // The 搜索预算: how long and how deep every live search goes, and which end stops
-                // it (CONTEXT.md). One budget for everything judged live, so a 掉幅 means the same
+                // it (GLOSSARY.md). One budget for everything judged live, so a 掉幅 means the same
                 // thing wherever it was measured. The end that does not count is greyed rather
                 // than hidden: it keeps its number, and comes back when it counts again.
                 Section {

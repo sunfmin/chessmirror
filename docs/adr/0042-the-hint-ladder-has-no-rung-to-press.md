@@ -22,7 +22,7 @@ and back — is kept on its own, as `refusalByPosition`.
 
 ## Consequences
 
-- 提示层 and 放宽 are retired words in CONTEXT.md. A ladder that comes back will be designed
+- 提示层 and 放宽 are retired words in GLOSSARY.md. A ladder that comes back will be designed
   with a rung on the screen first, and will be a value the ruling is handed, not five fields
   the session restores per position.
 - `Ply.hints` and the `[%hint N]` token stay: files written while the ladder existed carry the

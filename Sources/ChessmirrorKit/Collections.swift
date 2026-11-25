@@ -24,7 +24,7 @@ public struct Sighting: Hashable, Sendable, Identifiable {
     }
 }
 
-/// One position in a 收藏集, with the games it was reached in (CONTEXT.md, 藏局).
+/// One position in a 收藏集, with the games it was reached in (GLOSSARY.md, 藏局).
 public struct Holding: Identifiable, Hashable, Sendable {
     public let position: PositionKey
     /// Every game it was reached in, newest first. Empty for a position a 自建集 was given from

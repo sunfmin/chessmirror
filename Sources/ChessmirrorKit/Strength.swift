@@ -2,7 +2,7 @@ import CStockfish
 import Foundation
 
 /// 棋力 — the Elo the engine is bound to for its own moves, picked from a fixed ladder
-/// (CONTEXT.md, docs/adr/0038).
+/// (GLOSSARY.md, docs/adr/0038).
 ///
 /// It shapes the opponent and nothing else: 细判 weighs every move at full strength whatever the
 /// 棋力, and so do hints, cards and the finder, so a 掉幅 means the same thing at every rung. 满力

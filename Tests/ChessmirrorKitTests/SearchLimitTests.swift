@@ -5,7 +5,7 @@ import Testing
 
 /// Contract: the 搜索预算 is time, depth and which end stops the search; every live search reads
 /// the one the app set; a 复判 goes past it by a fixed rule; and it survives the store as one
-/// line (CONTEXT.md, docs/adr/0039, docs/adr/0041).
+/// line (GLOSSARY.md, docs/adr/0039, docs/adr/0041).
 @Suite struct SearchLimitTests {
     @Test("the standard budget is ten seconds or depth twenty, and 复判 is depth 28 within a minute")
     func theStandardBudget() {

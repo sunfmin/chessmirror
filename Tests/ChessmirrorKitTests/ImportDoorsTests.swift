@@ -5,7 +5,7 @@ import Testing
 
 /// Contract: 门 — which door the sheet opens on, whose name is in the field, what the button
 /// says it will do, when a name is remembered, and what the sheet says about what came down
-/// (CONTEXT.md, docs/adr/0045). Every answer here was a screenshot away while it was the sheet's.
+/// (GLOSSARY.md, docs/adr/0045). Every answer here was a screenshot away while it was the sheet's.
 @MainActor
 @Suite(.speaking(.chinese)) struct ImportDoorsTests {
     /// Two of somebody's own games, in the shape the user endpoint hands them over.

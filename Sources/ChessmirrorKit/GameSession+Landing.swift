@@ -169,7 +169,7 @@ extension GameSession {
     /// own move, a move played with 把关 off, a move asked of the engine — and its judgement is
     /// written from that weighing in `measureLatestMoveChange`, the same act the badge reads. A
     /// judgement read off the before-table alone used to be written here, and it was a seventh
-    /// copy of the 细判 that disagreed with the badge about 最佳 (CONTEXT.md, 细判).
+    /// copy of the 细判 that disagreed with the badge about 最佳 (GLOSSARY.md, 细判).
     private func absorbRefusals(atPly ply: Int) {
         game.absorbPendingTried(atPly: ply)
     }
