@@ -219,6 +219,17 @@ public enum PGNImport {
 
         /// What dedup compares this against — see `PGNImport.identity(of:named:)`.
         public var identity: String { PGNImport.identity(of: pgn, named: name) }
+
+        /// The game as the library keeps it: under its chapter's name, marked imported, and
+        /// tracking `side` when one is given — the one shape 入库, 自动拉局 and opening a single
+        /// chapter all write.
+        func filed(tracking side: PieceColour?) -> PGN {
+            var filed = pgn
+            filed.setName(name)
+            filed.setTag(PGN.Tags.source, to: GameOrigin.imported.tagValue)
+            if let side { filed.track(side) }
+            return filed
+        }
     }
 
     /// Everything the download found, ready to be applied.
@@ -476,8 +487,6 @@ public enum PGNImport {
         "training", "analysis", "practice", "streamer", "insights", "features", "download",
         "password", "openings", "timeline", "tournament", "broadcast", "puzzletheme",
     ]
-
-    // -------------------------------------------------------------- splitting
 
     // --------------------------------------------------------------- reading
 
@@ -750,13 +759,6 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         }
     }
 
-    private func run(_ candidates: [URL], asked: String? = nil) async {
-        let fetching = fetcher
-        await read(asked: asked) {
-            try await FetchPlan.links(candidates).text(fetching: fetching, asked: asked)
-        }
-    }
-
     /// The one pipeline behind every door: get the text, split it, and the plan is what was
     /// readable. What differs between doors is only how the text is got, which is `source`.
     ///
@@ -823,19 +825,13 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
         _ chapter: PGNImport.ImportChapter, into library: GameLibrary,
         tracking side: PieceColour? = nil
     ) -> GameLibrary.Entry? {
-        if let existing = library.entries.first(where: { entry in
-            guard let pgn = entry.pgn else { return false }
-            return PGNImport.identity(of: pgn, named: entry.name ?? entry.title) == chapter.identity
-        }) {
+        if let existing = PGNImport.entry(holding: chapter, in: library) {
             guard let side, var pgn = existing.pgn else { return existing }
             pgn.track(side)
             guard library.write(pgn, to: existing.url) else { return nil }
             return GameLibrary.Entry(url: existing.url, pgn: pgn, modified: Date())
         }
-        var pgn = chapter.pgn
-        if let side { pgn.track(side) }
-        pgn.setName(chapter.name)
-        pgn.setTag(PGN.Tags.source, to: GameOrigin.imported.tagValue)
+        let pgn = chapter.filed(tracking: side)
         let url = library.newURL()
         guard library.write(pgn, to: url) else { return nil }
         return GameLibrary.Entry(url: url, pgn: pgn, modified: Date())
@@ -844,10 +840,7 @@ public struct URLSessionPGNFetcher: PGNFetching, Sendable {
     public func status(
         of chapter: PGNImport.ImportChapter, in library: GameLibrary, wrongByGame: [URL: Int]
     ) -> PGNImport.Status {
-        guard let entry = library.entries.first(where: { entry in
-            guard let pgn = entry.pgn else { return false }
-            return PGNImport.identity(of: pgn, named: entry.name ?? entry.title) == chapter.identity
-        }) else { return .notImported }
+        guard let entry = PGNImport.entry(holding: chapter, in: library) else { return .notImported }
         return PGNImport.Status(
             scoring: library.reviewing[entry.url],
             isReviewed: entry.pgn?.game.isReviewed == true,
@@ -873,19 +866,11 @@ extension PGNImport {
     ) -> ImportOutcome {
         // What is already there, by the same identity the incoming games are compared by: a
         // lichess game the library holds is that game whatever it has since been renamed to.
-        let existing = Set(
-            library.entries.compactMap { entry -> String? in
-                guard let pgn = entry.pgn else { return nil }
-                return identity(of: pgn, named: entry.name ?? entry.title)
-            }
-        )
+        let existing = Set(library.entries.compactMap(identity(of:)))
         let (chapters, skipped) = toWrite(plan.chapters, avoiding: existing)
         var imported = 0
         for chapter in chapters {
-            var pgn = chapter.pgn
-            pgn.setTag(PGN.Tags.name, to: chapter.name)
-            pgn.setTag(PGN.Tags.source, to: GameOrigin.imported.tagValue)
-            if let account, let side = Self.side(of: account, in: pgn) { pgn.track(side) }
+            let pgn = chapter.filed(tracking: account.flatMap { side(of: $0, in: chapter.pgn) })
             // A fresh name per chapter, asked right before the write so two chapters
             // landing in one second cannot collide (`GameLibrary.newURL` logic).
             let url = library.newURL()
@@ -899,10 +884,20 @@ extension PGNImport {
                 )
             }
         }
-        let outcome = ImportOutcome(
-            imported: imported, skipped: skipped, unreadable: plan.unreadable
-        )
-        return outcome
+        return ImportOutcome(imported: imported, skipped: skipped, unreadable: plan.unreadable)
     }
 
+    /// The entry a library already holds for this chapter's game — nil when it holds none. The
+    /// one lookup behind a row's standing and opening a chapter, by the identity dedup uses.
+    @MainActor static func entry(holding chapter: ImportChapter, in library: GameLibrary)
+        -> GameLibrary.Entry?
+    {
+        library.entries.first { identity(of: $0) == chapter.identity }
+    }
+
+    /// A library entry's identity, by the same rule as an incoming chapter's — nil for a file
+    /// that would not read.
+    static func identity(of entry: GameLibrary.Entry) -> String? {
+        entry.pgn.map { identity(of: $0, named: entry.name ?? entry.title) }
+    }
 }
