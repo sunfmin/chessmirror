@@ -25,9 +25,8 @@
     "local_refs": 3
   },
   "README.md": {
-    "bytes": 11986,
-    "measurements": 3,
-    "paragraph": 956,
+    "bytes": 11980,
+    "paragraph": 934,
     "pointers": [
       "App/out/"
     ]
