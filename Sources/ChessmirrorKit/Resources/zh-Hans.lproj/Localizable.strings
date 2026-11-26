@@ -547,6 +547,7 @@
 "collection.name" = "名字";
 "collection.kept" = "已收藏到「%@」";
 "collection.change" = "换一个";
+"game.unsaved" = "这局没能存下 · 下一步会再存";
 "collection.choose" = "收进哪些集合";
 "collection.heart" = "收藏这个局面";
 "collection.nameUnusable" = "这个名字不能用";

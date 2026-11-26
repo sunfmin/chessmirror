@@ -531,6 +531,7 @@
 "collection.name" = "Nom";
 "collection.kept" = "Gardée dans « %@ »";
 "collection.change" = "Changer";
+"game.unsaved" = "Cette partie n’a pas été enregistrée · le prochain coup réessaie";
 "collection.choose" = "Garder dans";
 "collection.heart" = "Garder cette position";
 "collection.nameUnusable" = "Ce nom ne convient pas";

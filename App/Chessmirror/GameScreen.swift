@@ -197,8 +197,9 @@ struct GameScreen: View {
                 .presentationDetents([.medium, .large])
         }
         .overlay(alignment: .bottom) {
-            if let kept = keptNotice {
-                keptLine(kept)
+            VStack(spacing: 0) {
+                if session.saveFailed { unsavedLine }
+                if let kept = keptNotice { keptLine(kept) }
             }
         }
         .task(id: keptNotice) {
@@ -234,6 +235,21 @@ struct GameScreen: View {
         }
     }
 
+
+    /// 「这局没能存下」: the last save did not land (docs/adr/0054). At the foot like the heart's
+    /// line, over the deck rather than in the column, so the board does not move when it comes
+    /// and goes; and it stays until a save lands, because the game is at risk until then.
+    private var unsavedLine: some View {
+        Label(localized("game.unsaved"), systemImage: "exclamationmark.icloud")
+            .font(.caption)
+            .foregroundStyle(Palette.alarm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+    }
 
     /// 「已收藏到「喜爱」 · 换一个」: what the heart did, and the way to put it somewhere else.
     private func keptLine(_ name: String) -> some View {

@@ -302,9 +302,18 @@ import Foundation
     /// with an iCloud account and a second device.
     public func written() async { await writeChain?.value }
 
+    /// The games whose last write did not land (docs/adr/0054). A write that fails puts its file
+    /// here and the next one to that file that lands takes it out, so the set says, for each
+    /// file, whether what is on disk is what was last asked for. Kept here rather than answered
+    /// to the caller alone, because an iCloud write fails after `write` has returned.
+    public private(set) var unsaved: Set<URL> = []
+
     @discardableResult
     public func write(_ pgn: PGN, to url: URL) -> Bool {
-        guard let data = pgn.text.data(using: .utf8) else { return false }
+        guard let data = pgn.text.data(using: .utf8) else {
+            unsaved.insert(url)
+            return false
+        }
         if folder.isCloud {
             // A coordinated write is a conversation with iCloud's daemon, and the main thread
             // is no place for a conversation that can take as long as a sync. Chained so the
@@ -316,14 +325,23 @@ import Foundation
                 let written = await Task.detached(priority: .utility) {
                     GameFolder.write(data, to: url, isCloud: true)
                 }.value
-                guard written, let self else { return }
-                self.refreshEntry(at: url, with: pgn)
+                self?.landed(written, pgn, at: url)
             }
             return true
         }
-        guard folder.write(data, to: url) else { return false }
+        let written = folder.write(data, to: url)
+        landed(written, pgn, at: url)
+        return written
+    }
+
+    /// What a write's answer changes: the row on success, `unsaved` either way.
+    private func landed(_ written: Bool, _ pgn: PGN, at url: URL) {
+        guard written else {
+            unsaved.insert(url)
+            return
+        }
+        unsaved.remove(url)
         refreshEntry(at: url, with: pgn)
-        return true
     }
 
     /// Saves in flight, in order. Nil once the chain has drained.
@@ -333,6 +351,7 @@ import Foundation
         folder.remove(entry.url)
         folder.remove(Self.pictureURL(for: entry.url))
         entries.removeAll { $0.url == entry.url }
+        unsaved.remove(entry.url)
     }
 
     // ---------------------------------------------------------------- pictures
