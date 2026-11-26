@@ -175,7 +175,7 @@ struct ConfirmPositionScreen: View {
                     // A Label, not a bare Image: the bar then draws the menu as its own bar button,
                     // pressed over its whole 44×44 glass. A bare Image is hosted as a SwiftUI
                     // button the bar holds to 30×36, and that is all a finger can press
-                    // (chessmirror#29 measured both on the simulator).
+                    // (both measured on the iPhone 17 simulator, iOS 27.2).
                     Label(localized("edit.more"), systemImage: "ellipsis.circle")
                 }
             }
@@ -222,7 +222,7 @@ struct ConfirmPositionScreen: View {
             Spacer(minLength: 0)
         }
         // At least a line tall, so the board does not jump as the hint changes; and free to grow
-        // when large text wraps it, so it never runs under the board (chessmirror#30).
+        // when large text wraps it, so it never runs under the board at accessibility text sizes.
         .frame(minHeight: 24)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 16)
