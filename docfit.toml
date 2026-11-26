@@ -1,6 +1,4 @@
-# How docfit keeps chessmirror's documents (`docfit --help`). local_issue_refs: the checkouts
-# factorium runs on this host, whose `<name>#<n>` cites its local tracker.
-local_issue_refs = ["chessmirror", "docfit", "factorium", "factum", "horizon-labs", "lore", "rolesmith", "rollmind", "sesame", "slimfit", "stablehand", "truefit"]
+# How docfit keeps chessmirror's documents (`docfit --help`).
 
 [documents]
 "CLAUDE.md" = "agent"
