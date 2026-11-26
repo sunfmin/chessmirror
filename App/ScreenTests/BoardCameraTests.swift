@@ -4,7 +4,7 @@ import Testing
 @testable import Chessmirror
 
 /// The camera with no camera behind it: the Simulator, or a phone where the discovery session
-/// found none (chessmirror#44). Attaching the preview must leave the screen standing rather than
+/// found none. Attaching the preview must leave the screen standing rather than
 /// reach for a device that is not there.
 @MainActor
 @Suite

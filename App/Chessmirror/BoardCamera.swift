@@ -195,7 +195,7 @@ nonisolated final class BoardCamera: NSObject, AVCaptureVideoDataOutputSampleBuf
     /// Hands the preview layer the rotation coordinator, so that what is on screen stays level
     /// with the ground rather than with the phone. With no camera found (the Simulator, or a
     /// phone whose discovery session came back empty) there is nothing to level, and the preview
-    /// is left as it is (chessmirror#44).
+    /// is left as it is.
     func attach(preview: AVCaptureVideoPreviewLayer) {
         guard let device = device ?? AVCaptureDevice.default(for: .video) else { return }
         let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: preview)
