@@ -36,8 +36,10 @@ struct UnsavedScreenshots {
         let unsaved = localized("game.unsaved")
         _ = await ScreenImage.write("game-unsaved", interact: { window in
             #expect(ScreenImage.words(in: window).contains { $0.contains(unsaved) })
+            // On the screen the session has the host's engine, and a move waits to be weighed
+            // before it is saved; the save that lands is asked for directly.
             try? refusing(directory, false)
-            if let move = session.game.state.move(matching: "e7e5") { session.play(move) }
+            session.save()
             await ScreenImage.settle()
             #expect(!session.saveFailed)
             #expect(
