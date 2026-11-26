@@ -9,9 +9,10 @@ import UIKit
 /// The pictures on the App Store page, drawn by the app rather than taken by hand.
 ///
 /// They come out at the size of whatever simulator the run is on, which is how the store wants
-/// them: once on a 6.9-inch iPhone and once on a 13-inch iPad (docs/appstore.md has the two
-/// commands). Each is written as `store-<store language>-<iphone|ipad>-<n>-<what>.png`, and
-/// `appstore.sh page` sorts them into the store's languages by that name.
+/// them: once on a 6.9-inch iPhone and once on a 13-inch iPad (the skill
+/// .claude/skills/release-to-app-store has the two commands). Each is written as
+/// `store-<store language>-<iphone|ipad>-<n>-<what>.png`, and `appstore.sh page` sorts them into
+/// the store's languages by that name.
 @MainActor
 @Suite(.serialized)
 struct StoreScreenshotTests {
