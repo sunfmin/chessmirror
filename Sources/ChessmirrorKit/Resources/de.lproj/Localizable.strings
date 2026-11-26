@@ -530,6 +530,7 @@
 "collection.name" = "Name";
 "collection.kept" = "In „%@“ aufgehoben";
 "collection.change" = "Ändern";
+"game.unsaved" = "Diese Partie wurde nicht gespeichert · der nächste Zug versucht es erneut";
 "collection.choose" = "Aufheben in";
 "collection.heart" = "Diese Stellung aufheben";
 "collection.nameUnusable" = "Dieser Name geht nicht";

@@ -52,5 +52,6 @@ local_issue_refs = ["chessmirror", "docfit", "factorium", "factum", "horizon-lab
 "docs/adr/0051-positions-are-kept-in-collections-and-the-found-ones-join-the-daily.md" = "adr"
 "docs/adr/0052-the-engine-is-built-twice-and-the-cpu-chooses.md" = "adr"
 "docs/adr/0053-the-engine-is-stockfish-19.md" = "adr"
+"docs/adr/0054-a-save-that-did-not-land-is-said-until-one-does.md" = "adr"
 "docs/privacy.md" = "product"
 "docs/support.md" = "product"

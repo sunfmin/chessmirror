@@ -502,6 +502,7 @@
 "collection.name" = "이름";
 "collection.kept" = "「%@」에 담았습니다";
 "collection.change" = "바꾸기";
+"game.unsaved" = "이 대국을 저장하지 못했습니다 · 다음 수에서 다시 저장합니다";
 "collection.choose" = "담을 곳";
 "collection.heart" = "이 국면 담기";
 "collection.nameUnusable" = "쓸 수 없는 이름입니다";

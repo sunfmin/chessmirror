@@ -576,6 +576,7 @@
 "collection.name" = "Name";
 "collection.kept" = "Kept in “%@”";
 "collection.change" = "Change";
+"game.unsaved" = "This game wasn’t saved · the next move tries again";
 "collection.choose" = "Keep it in";
 "collection.heart" = "Keep this position";
 "collection.nameUnusable" = "That name can’t be used";

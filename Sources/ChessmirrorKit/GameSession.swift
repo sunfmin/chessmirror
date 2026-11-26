@@ -1666,6 +1666,13 @@ public enum GameOrigin: String, Hashable, Sendable, Codable {
     /// should not leave a trail of empty games behind it. The first move is what makes a game
     /// worth keeping — and once a file exists it keeps being written to, even if the moves are
     /// taken back off it again.
+    /// Whether the last save of this game did not land: the folder refused it, here or in
+    /// iCloud. It clears at the next save that does (docs/adr/0054).
+    public var saveFailed: Bool {
+        guard let url, let library else { return false }
+        return library.unsaved.contains(url)
+    }
+
     public func save() {
         guard !isWeighing else { return }
         guard let library else { return }

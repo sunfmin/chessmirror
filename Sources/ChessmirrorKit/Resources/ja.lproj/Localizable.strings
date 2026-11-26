@@ -502,6 +502,7 @@
 "collection.name" = "名前";
 "collection.kept" = "「%@」に保存しました";
 "collection.change" = "変更";
+"game.unsaved" = "この対局は保存できませんでした · 次の一手で再保存します";
 "collection.choose" = "保存先";
 "collection.heart" = "この局面を保存";
 "collection.nameUnusable" = "この名前は使えません";
