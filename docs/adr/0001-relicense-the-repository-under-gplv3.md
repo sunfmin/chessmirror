@@ -14,3 +14,8 @@ point of the feature.
 - No proprietary or GPL-incompatible third-party code can enter the repository.
 - Because the engine is not meant to be swapped out, no abstraction layer is built to
   keep it swappable.
+
+## Since
+
+On 2026-10-08 the app went to the App Store after all, and the repository was made public: the
+store's support and privacy links point into it, and a GPLv3 binary owes its users the source.

@@ -1,7 +1,7 @@
 #!/bin/bash
 # The App Store release, in three steps that each sign in with the App Store Connect API key and
-# nothing else: no signing identity in the keychain, no web session. docs/appstore.md has the
-# order and what each step needs.
+# nothing else: no signing identity in the keychain, no web session (docs/adr/0055).
+# .claude/skills/release-to-app-store has the order and what each step needs.
 #
 #   ./appstore.sh build [--no-upload]   archive, have Xcode sign it in the cloud, validate, upload
 #   ./appstore.sh page                  words, release notes, pictures, age rating, categories
@@ -120,7 +120,7 @@ page() {
   [ $# -eq 0 ] || usage
   local fastlane=../fastlane shots stage vid
   shots=(out/store-*.png)
-  [ -e "${shots[0]}" ] || { echo "no pictures in App/out: run StoreScreenshotTests on both simulators first (docs/appstore.md)" >&2; exit 1; }
+  [ -e "${shots[0]}" ] || { echo "no pictures in App/out: run StoreScreenshotTests on both simulators first (.claude/skills/release-to-app-store)" >&2; exit 1; }
   vid=$(version_id)
 
   # The words are fastlane/metadata, in deliver's layout, which asc reads as it is. The reviewer's
@@ -168,7 +168,7 @@ page() {
   done
 
   # The age rating is the editable appInfo's ageRatingDeclaration, not the version's. Its keys go
-  # as they are in fastlane/age-rating.json (docs/appstore.md says why each is there).
+  # as they are in fastlane/age-rating.json (docs/adr/0056 says why each is there).
   echo "==> age rating"
   local info rating
   info=$(asc api GET "/v1/apps/$APP_ID/appInfos" | jq -r '[.data[] | select(.attributes.state != "READY_FOR_DISTRIBUTION")][0].id')

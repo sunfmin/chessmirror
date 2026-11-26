@@ -1,6 +1,6 @@
 # The one store step that still needs a web session: the App Privacy answers, which the App Store
 # Connect API has no call for. The rest of a release is App/appstore.sh, with the API key alone;
-# docs/appstore.md has the order. Run this only when the answers change.
+# .claude/skills/release-to-app-store has the order. Run this only when the answers change.
 #
 #   (eval "$(mytokens env calcgrid)"; fastlane privacy)
 #
