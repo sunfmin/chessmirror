@@ -23,8 +23,8 @@ through your own iCloud Drive.
   the same game, exit, or take the next question, without a separate Continue button. The verdict
   is one row: 过了 or 没过 in the colour it means, the explanation only when the move failed, and
   one full-width button — 下一题, or 退出 at the end of the queue.
-- The two standing lines, 记录线 and 入列线, both default to 10%. Either moves on its own in
-  关于 → 判决线.
+- The two standing lines, 记录线 and 入列线, each move alone in 关于 → 判决线; their
+  defaults are ADR 0027's.
 - **把关 / No Slips:** an on/off switch with no number of its own — it stops the player at the
   记录线, so a move it refuses is exactly a move that would have been written down.
   The board's No Slips label toggles interception directly.
@@ -32,7 +32,7 @@ through your own iCloud Drive.
   recommendation arrow or a separate practice/analysis eye switch.
   Refused moves return to their original position and become PGN comments on the eventual move.
   Every live human move waits for the resulting position's evaluation before the opponent starts.
-  Each position is searched once, stopping at 10 seconds or depth 20, whichever comes first.
+  Each position is searched once, to the bounds ADR 0039 sets.
   Judgement, advantage, tactics and opponent replies share the result; device caches survive relaunch.
   Turning interception off disables rollback, not this assessment gate. Search uses at most two
   threads by default, and opening the game never launches an automatic historical scoring pass.
@@ -130,8 +130,8 @@ scripts/screen-tests.sh -only-testing:'ScreenTests/GameScreenTests/<test>()'
 
 Tests write PNGs under `App/out/`; these generated images are not versioned.
 `ScreenImage.write` renders real SwiftUI screens, with scripted responses at the engine boundary.
-Inspect the images as well as their accessibility assertions. It waits, at most 2 s, until the
-screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own),
+Inspect the images as well as their accessibility assertions. It waits, at most
+`ScreenImage.settleLimit`, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own),
 with animations off; it fails a test whose screen never settles, that it cannot hear (the
 accessibility switch missing or off), or that says nothing. Each word comes back with its frame in
 window points (`Rendered.elements`, `frames(of:)`), beside the window's bounds and safe area.
