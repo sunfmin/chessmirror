@@ -581,13 +581,8 @@ public enum PGNImport {
         let white = pgn.playerName(.white) ?? "?"
         let black = pgn.playerName(.black) ?? "?"
         guard white != "?" || black != "?" else { return nil }
-        var name = localized("import.name.players", white, black)
-        let date = [pgn.tag(PGN.Tags.utcDate), pgn.tag(PGN.Tags.date)]
-            .compactMap { $0 }
-            .first { !$0.isEmpty && $0 != "????.??.??" }
-        if let date { name += " · \(date)" }
-        if let time = pgn.tag(PGN.Tags.utcTime), time.count >= 5 { name += " \(time.prefix(5))" }
-        return name
+        let players = localized("import.name.players", white, black)
+        return playedAt(pgn).map { "\(players) · \($0)" } ?? players
     }
 
     /// What dedup compares one game against another by.
