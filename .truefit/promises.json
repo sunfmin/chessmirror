@@ -44,6 +44,11 @@
     "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:3",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "055c1caab15d": {
+    "mark": "promise",
+    "sentence": "It never happened in the game; the 错题 is made of it.",
+    "source": "GLOSSARY.md:132"
+  },
   "05d96637da05": {
     "mark": "not",
     "sentence": "**自建集 are never scheduled.**",
@@ -126,6 +131,12 @@
     "sentence": "Switched off, a wrong answer is still a wrong answer: the verdict fails, the log records the go and the book counts the 遭遇; the move is only left on the board.",
     "source": "docs/adr/0048-the-no-slips-switch-always-moves.md:30"
   },
+  "14f849828f16": {
+    "mark": "not",
+    "sentence": "The reasons live here because JSON takes no comments and `appstore.sh page` sends every key of the file to the editable appInfo's ageRatingDeclaration as it is.",
+    "source": "docs/adr/0056-the-age-rating-answers-every-question-no.md:4",
+    "why": "what fastlane/age-rating.json holds and why the reasons live in the ADR: a description of a data file, not behaviour a run could break"
+  },
   "156e23ccc25b": {
     "mark": "not",
     "sentence": "No screen called the three methods or read the rung count; the only callers were three kit tests.",
@@ -188,6 +199,12 @@
     "mark": "promise",
     "sentence": "The 试招 goes into the 错题本 through the door every other 试招 uses, so the position's 复发 counts it and 「你栽过 4 次」 includes the times you fell for it while practising.",
     "source": "docs/adr/0047-practice-is-played-under-no-slips.md:30"
+  },
+  "1ac1c581d091": {
+    "mark": "not",
+    "sentence": "The answers stay on the record from one version to the next, so it runs only when they change.",
+    "source": "docs/adr/0055-the-release-signs-in-with-the-api-key-alone.md:22",
+    "why": "a fact of App Store Connect's and advice on when to run fastlane privacy: nothing a run of chessmirror could break"
   },
   "1ca3d0bc2dc6": {
     "mark": "not",
@@ -279,6 +296,11 @@
     "mark": "promise",
     "sentence": "The bridge never goes through the UCI loop (0002). `Engine::set_position` and `Position::set`",
     "source": "docs/adr/0053-the-engine-is-stockfish-19.md:34"
+  },
+  "2a1dacf3558d": {
+    "mark": "promise",
+    "sentence": "**记录线 (Record line)**: The 掉幅 at which a move is written down, and at which 把关 takes it back: 把关's only dial (docs/adr/0046).",
+    "source": "GLOSSARY.md:71"
   },
   "2bc1aab1649e": {
     "mark": "not",
@@ -373,6 +395,11 @@
     "source": "docs/adr/0013-the-camera-is-ours-and-the-viewfinder-judges-with-the-same-score.md:15",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "3342b81faf07": {
+    "mark": "promise",
+    "sentence": "**自建集 (Player collection)**: A 收藏集 the player names and fills by hand; never scheduled.",
+    "source": "GLOSSARY.md:111"
+  },
   "3468fcca3799": {
     "mark": "not",
     "sentence": "_Avoid_: 同步, 自动导入 (导入 is the whole sheet and every 门)",
@@ -460,6 +487,11 @@
     "source": "docs/adr/0011-recognition-opens-a-game-and-corrections-are-an-editor-behind-it.md:45",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "425816d2eb54": {
+    "mark": "promise",
+    "sentence": "**最佳 (Best move)**: The engine's own first choice, by the search that judged the move; never a 掉幅 that rounded to zero.",
+    "source": "GLOSSARY.md:19"
+  },
   "43f4c335f8c2": {
     "mark": "not",
     "sentence": "Everything > below about *what can go wrong* and about validating a Position before Stockfish sees it > still holds — 0011 only moves where the screen sits in the flow.",
@@ -471,6 +503,11 @@
     "sentence": "Every evaluation feeding a comparison must still come from one depth ([ADR 0016](0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md)). A threshold is more exposed to mixed provenance than a rank was, not less.",
     "source": "docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md:49",
     "why": "the same promise as only-a-review-writes-ply-evaluation, registered from docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:26"
+  },
+  "48c62a3eed60": {
+    "mark": "promise",
+    "sentence": "**粗筛 (Sift)**: Using an imported game's own evaluations to pick the moves worth judging; never decides a 错题.",
+    "source": "GLOSSARY.md:179"
   },
   "491d566b1b67": {
     "mark": "not",
@@ -488,6 +525,12 @@
     "mark": "promise",
     "sentence": "They are never scheduled — practising one is 计划外练习 — because what a player picks to repeat, FSRS would read as what they know best (docs/adr/0032). _Avoid_: 文件夹, 分组",
     "source": "GLOSSARY.md:181"
+  },
+  "4a1722cf91c2": {
+    "mark": "not",
+    "sentence": "Every question in `fastlane/age-rating.json` is answered \"none\" or `false`, which keeps the app at 4+.",
+    "source": "docs/adr/0056-the-age-rating-answers-every-question-no.md:3",
+    "why": "what fastlane/age-rating.json holds and why the reasons live in the ADR: a description of a data file, not behaviour a run could break"
   },
   "4b48ad3b6c6b": {
     "mark": "not",
@@ -522,6 +565,12 @@
     "sentence": "Search is **unbounded** when advising: iterative deepening runs for as long as the player leaves it, and the UI re-renders every `info` update, so the recommended move and score visibly change as depth climbs.",
     "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:9",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "4d50437027bc": {
+    "mark": "not",
+    "sentence": "`socialMediaAgeRestricted` is asked only of an app with social media, though `asc validate` reports it missing.",
+    "source": "docs/adr/0056-the-age-rating-answers-every-question-no.md:19",
+    "why": "a fact of Apple's age-rating API: another system's rule"
   },
   "4ecad2037bed": {
     "mark": "promise",
@@ -597,6 +646,11 @@
     "sentence": "*A move every half-second is a wall of notation.*",
     "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:26",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "5abaca4db777": {
+    "mark": "promise",
+    "sentence": "**分支 (Branch)**: A line played from an earlier position over the move that stood there; a game has one 树干, and every other line is a 树枝 (docs/adr/0043). _Avoid_: 变着, 变体, alternative, fork as the name of the line",
+    "source": "GLOSSARY.md:136"
   },
   "5add63733a14": {
     "mark": "promise",
@@ -742,6 +796,11 @@
     "source": "GLOSSARY.md:131",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "707c4a09bdc3": {
+    "mark": "promise",
+    "sentence": "`sharedLocation`: the app never reads the location, let alone shares it.",
+    "source": "docs/adr/0056-the-age-rating-answers-every-question-no.md:15"
+  },
   "7167e2a6aca2": {
     "mark": "promise",
     "sentence": "A name is kept only after it has fetched something — a misspelling that failed is not an account, and offering it back as a chip would be offering the mistake back.",
@@ -803,6 +862,11 @@
     "source": "docs/adr/0016-a-plys-evaluation-belongs-to-a-review-and-to-nothing-else.md:15",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "7b306544dd8f": {
+    "mark": "promise",
+    "sentence": "**练习日志 (Practice log)**: What the player actually did, never what is due (docs/adr/0029). _Avoid_: 进度, 统计, 状态",
+    "source": "GLOSSARY.md:95"
+  },
   "7b5eb0f026fe": {
     "mark": "not",
     "sentence": "The verdict is one row: 过了 or 没过 in the colour it means, the explanation only when the move failed, and one full-width button — 下一题, or 退出 at the end of the queue.",
@@ -842,6 +906,11 @@
     "mark": "promise",
     "sentence": "Every live human move waits for the resulting position's evaluation before the opponent starts.",
     "source": "README.md:34"
+  },
+  "8015dcf985cf": {
+    "mark": "promise",
+    "sentence": "**细判 (Judge)**: The app's own engine deciding what a move cost: the only thing that may call something a 错题.",
+    "source": "GLOSSARY.md:182"
   },
   "80cc04bb3e4d": {
     "mark": "not",
@@ -901,6 +970,12 @@
     "sentence": "Mate and tactics findings appear only when available; tap a row to expand its answer.",
     "source": "README.md:12",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "879cfb51ca24": {
+    "mark": "not",
+    "sentence": "Every move writes the game (0010), and nothing said when that write failed.",
+    "source": "docs/adr/0054-a-save-that-did-not-land-is-said-until-one-does.md:3",
+    "why": "the history of the bug ADR 0054 fixes: what the app did before, not what it does"
   },
   "88038a5d7907": {
     "mark": "not",
@@ -1010,6 +1085,11 @@
     "sentence": "It waits, at most 2 s, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own), with animations off; it fails a test whose screen never settles, that it cannot hear (the accessibility switch missing or off), or that says nothing.",
     "source": "README.md:133"
   },
+  "95aa6a788c81": {
+    "mark": "promise",
+    "sentence": "**入列线 (Enrol line)**: The 掉幅 at which a 错题 enters the 日课; never below the 记录线 (`Enrolment`).",
+    "source": "GLOSSARY.md:77"
+  },
   "95f72bed8fe7": {
     "mark": "promise",
     "sentence": "`ScreenMatrix` draws every screen once per row of the matrix the others do not vary — dark, the accessibility3 text size, the 375×667 pt iPhone SE, and each of the eight languages — and holds each to `Rendered.layoutBreaches()`: everything labelled inside the safe area (as far as its scroll view shows it), no two labelled things overlapping, every control at least 44×44 pt where a finger presses it (a control that is its list row's whole content is measured as the row; a navigation bar item by where hit-testing hands it a touch, which UIKit widens past the frame it reports). A breach already filed is a `withKnownIssue` naming its issue; any other fails.",
@@ -1079,6 +1159,16 @@
     "sentence": "At a rung this never happened — Stockfish's `Skill` picks among its top lines with a clock-seeded random (ADR 0038) — and 满力 now has the same idea, explicit and bounded: 掷子 (`Toss`) picks at random among the lines the search scores within fifteen centipawns of its first, from the mover's side.",
     "source": "docs/adr/0049-the-opponent-never-replays-a-game-it-has-already-played.md:39",
     "why": "the same promise as toss-within-fifteen-centipawns, registered from GLOSSARY.md:247"
+  },
+  "9ce7b1b30809": {
+    "mark": "promise",
+    "sentence": "**复发 (Recurrence)**: Falling for the same 错题 again: the strongest signal, and the only one allowed to jump the queue.",
+    "source": "GLOSSARY.md:63"
+  },
+  "9d5073cf8f43": {
+    "mark": "promise",
+    "sentence": "**连正 (Run)**: An unbroken run of the player's moves that stood; only a 试招 ends it.",
+    "source": "GLOSSARY.md:160"
   },
   "9e38f7c9ec1d": {
     "mark": "promise",
@@ -1153,6 +1243,11 @@
     "source": "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:33",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "a86fcf4ee6d3": {
+    "mark": "promise",
+    "sentence": "It shapes the opponent, never the judge (docs/adr/0038). _Avoid_: 难度, 级别, 等级, 档位",
+    "source": "GLOSSARY.md:150"
+  },
   "a8a3b24deaea": {
     "mark": "promise",
     "sentence": "\"Fully local\" is about the networks never being fetched, not about them living inside the executable.",
@@ -1169,6 +1264,11 @@
     "sentence": "The choice between the mirror and a named clock is offered whenever the engine holds either Controller, because time is the only dial this app has — somebody asking for a stronger opponent is asking for a longer clock, and there is nothing else to give them.",
     "source": "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md:54",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "a9e81e569a35": {
+    "mark": "promise",
+    "sentence": "**练习 (Practice)**: The act of working a 错题 or a 藏局, never a place; played under 把关 (docs/adr/0047).",
+    "source": "GLOSSARY.md:82"
   },
   "aaf0c105b803": {
     "mark": "not",
@@ -1277,6 +1377,11 @@
     "source": "docs/adr/0026-the-advantage-bar-turns-with-the-board.md:3",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "bb211a633b20": {
+    "mark": "promise",
+    "sentence": "The keychain is never asked, so a Mac with no code-signing identity (macnomac-studio) builds the release, and the personal Mac's development certificate, whose private key lives on that Mac only, is never revoked to make one.",
+    "source": "docs/adr/0055-the-release-signs-in-with-the-api-key-alone.md:9"
+  },
   "bbfa902f4fb9": {
     "mark": "promise",
     "sentence": "A shot that is only taking a loose piece, or that gains too little 胜率, is not kept.",
@@ -1331,6 +1436,11 @@
     "sentence": "It shapes the opponent and nothing else: 细判 weighs every move at full strength whatever the 棋力, so a 掉幅 means the same thing at every rung.",
     "source": "GLOSSARY.md:251",
     "why": "the same promise as strength-never-shapes-what-a-move-costs, registered from GLOSSARY.md:103"
+  },
+  "c5af22dff4f4": {
+    "mark": "promise",
+    "sentence": "**掉幅 (Cost)**: How much 胜率 a move gave away against the best move there; never positive.",
+    "source": "GLOSSARY.md:16"
   },
   "c5b0c35be46a": {
     "mark": "promise",
@@ -1463,6 +1573,11 @@
     "source": "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:40",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "e184edd51505": {
+    "mark": "promise",
+    "sentence": "**喜爱 (Favourites)**: The 自建集 that is always there, where the heart puts a position.",
+    "source": "GLOSSARY.md:114"
+  },
   "e23f06fa1ad1": {
     "mark": "promise",
     "sentence": "An index is needed — and it is a cache, rebuilt from the files and the log, never a third place where something is true.",
@@ -1578,6 +1693,11 @@
     "source": "docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md:35",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
   },
+  "f06f1be0579f": {
+    "mark": "promise",
+    "sentence": "**掌握 (Mastered)**: A 错题 whose next practice is far off: a reading, never a state anyone sets.",
+    "source": "GLOSSARY.md:89"
+  },
   "f112c9b82644": {
     "mark": "promise",
     "sentence": "The switch is forced on where the drill is made, so every door into one — the 日课 queue, 错题本's 练习 button, a screen test — gets the same game.",
@@ -1639,6 +1759,11 @@
     "sentence": "Then every live search in the app was made one search (commit 43191ca): the position in front of the player is searched once, for ten seconds or to depth twenty, and 细判, the hint ladder, the cards, an asked move and the opponent's own move all read that one result.",
     "source": "docs/adr/0039-the-opponent-plays-on-the-shared-position-search-and-has-no-clock.md:4",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "f9dde3056438": {
+    "mark": "promise",
+    "sentence": "It waits, at most `ScreenImage.settleLimit`, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own), with animations off; it fails a test whose screen never settles, that it cannot hear (the accessibility switch missing or off), or that says nothing.",
+    "source": "README.md:133"
   },
   "fa3ed970ded3": {
     "mark": "not",
