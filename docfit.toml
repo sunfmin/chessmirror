@@ -54,5 +54,6 @@
 "docs/adr/0054-a-save-that-did-not-land-is-said-until-one-does.md" = "adr"
 "docs/adr/0055-the-release-signs-in-with-the-api-key-alone.md" = "adr"
 "docs/adr/0056-the-age-rating-answers-every-question-no.md" = "adr"
+"docs/design/*.md" = "design-note"
 "docs/privacy.md" = "product"
 "docs/support.md" = "product"
