@@ -28,7 +28,7 @@ rm -rf "$results"
 # idle work, a worker's measurement) never install over each other's test runner: on one shared
 # simulator a second run kills the first's ("Test crashed with signal kill before establishing
 # connection", chessmirror#24). It is created, not cloned, from the device type and runtime of the
-# one README names (iPhone 17, newest iOS): simctl clones only a shut-down device, and the named one
+# one device_name names (iPhone 17, newest iOS): simctl clones only a shut-down device, and the named one
 # is often booted by something else. Its name carries this script's pid; the trap shuts it down and
 # deletes it on a pass, a failure, a timeout or a signal, and a run killed past its trap (SIGKILL)
 # leaves one whose pid is gone, which the next run deletes.
