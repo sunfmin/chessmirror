@@ -152,7 +152,7 @@ extension FetchPlan {
             // A JSON list that will not parse is the site handing back something we cannot read
             // as a list of games — not "what came down is not a PGN", which is what this used to
             // say and what the player had no way to act on.
-            guard let months = PGNImport.chessComArchives(in: list) else {
+            guard let months = Self.archives(in: list) else {
                 throw PGNImport.Error.unreadableArchives(.chessCom, name)
             }
             guard !months.isEmpty else {
@@ -163,9 +163,9 @@ extension FetchPlan {
             // oldest-game-first, and "the last ten" are the ten at its end.
             var text = ""
             var gathered = 0
-            for month in months.prefix(PGNImport.chessComMonthsBack) {
-                if let since, !PGNImport.chessComMonth(month, reaches: since) { break }
-                let pgn = try await fetching.fetch(PGNImport.chessComMonthURL(archive: month))
+            for month in months.prefix(Self.monthsBack) {
+                if let since, !Self.month(month, reaches: since) { break }
+                let pgn = try await fetching.fetch(month.appending(path: "pgn"))
                 let blocks = PGN.split(pgn).reversed()
                 text += blocks.joined(separator: "\n\n") + "\n\n"
                 gathered += blocks.count
@@ -177,5 +177,35 @@ extension FetchPlan {
             }
             return PGN.split(text).prefix(many).joined(separator: "\n\n")
         }
+    }
+
+    // ------------------------------------------------- the chess.com month walk
+
+    /// How many months back a chess.com import looks. A player who has not played in three
+    /// months has no recent games in any sense worth a fourth request.
+    private static let monthsBack = 3
+
+    /// The archive URLs in the list chess.com answers with, newest first — nil when what came
+    /// down is not that list.
+    private static func archives(in text: String) -> [URL]? {
+        guard let data = text.data(using: .utf8),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let archives = object["archives"] as? [String]
+        else { return nil }
+        return archives.compactMap { URL(string: $0) }.reversed()
+    }
+
+    /// Whether a chess.com monthly archive — `…/games/2026/09` — holds any day on or after
+    /// `since`. An archive URL that does not end in a year and month is kept: better one request
+    /// too many than a month of games skipped.
+    private static func month(_ archive: URL, reaches since: Date) -> Bool {
+        let parts = archive.pathComponents
+        guard parts.count >= 2, let year = Int(parts[parts.count - 2]),
+            let month = Int(parts[parts.count - 1])
+        else { return true }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let reached = utc.dateComponents([.year, .month], from: since)
+        return (year, month) >= (reached.year ?? 0, reached.month ?? 0)
     }
 }
