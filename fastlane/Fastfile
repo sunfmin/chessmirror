@@ -2,7 +2,7 @@
 # Connect API has no call for. The rest of a release is App/appstore.sh, with the API key alone;
 # .claude/skills/release-to-app-store has the order. Run this only when the answers change.
 #
-#   (eval "$(mytokens env calcgrid)"; fastlane privacy)
+#   (eval "$(optokens env calcgrid)"; fastlane privacy)
 #
 # Signs in with FASTLANE_USER and FASTLANE_SESSION — the `fastlane spaceauth` session kept in the
 # `calcgrid` profile, which is the developer account's rather than that app's. It lasts about a month.
