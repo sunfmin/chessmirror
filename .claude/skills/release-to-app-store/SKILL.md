@@ -59,8 +59,8 @@ reports `socialMediaAgeRestricted` as missing, which Apple does not ask of this 
 Its `fastlane spaceauth` session, kept in the `calcgrid` profile, lapses about monthly. The
 person runs `fastlane spaceauth -u <Apple ID>` in a terminal of their own. You run
 `optokens put calcgrid --fields "FASTLANE_SESSION"`: it prints a one-time link on stderr (on the
-tailnet, one submission, within 10 minutes) and waits. Hand that link to the person, who pastes
-the session there. Never ask for the session in a popup or a terminal, and never print it.
+tailnet, good for one submission until it expires) and waits. Hand that link to the person,
+who pastes the session there. Never ask for the session in a popup or a terminal, and never print it.
 
-optokens answers `get` and `env` from a local copy for 5 minutes, so after a Secret is changed
-on another host, give `--fresh` to the next `optokens get` or `optokens env`.
+optokens answers `get` and `env` from a local copy for a few minutes, so after a Secret
+is changed on another host, give `--fresh` to the next `optokens get` or `optokens env`.
