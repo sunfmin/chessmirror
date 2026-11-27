@@ -1,7 +1,4 @@
 {
-  "App/Chessmirror/GameScreen+Sides.swift": {
-    "local_refs": 1
-  },
   "App/Chessmirror/ImportSheet.swift": {
     "local_refs": 1
   },
@@ -22,10 +19,7 @@
   },
   "README.md": {
     "bytes": 11980,
-    "paragraph": 934,
-    "pointers": [
-      "App/out/"
-    ]
+    "paragraph": 934
   },
   "Sources/ChessmirrorKit/Controller.swift": {
     "local_refs": 1
@@ -218,9 +212,6 @@
     "bytes": 6480,
     "local_refs": 4,
     "paragraph": 817
-  },
-  "docs/flows.md": {
-    "rehome": 12545
   },
   "factorium.toml": {
     "local_refs": 5

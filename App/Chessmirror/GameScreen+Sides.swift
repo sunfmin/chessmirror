@@ -25,7 +25,7 @@ extension GameScreen {
         // Who is playing, on the row of the side's own facts while the reader's text leaves room;
         // at an accessibility size, a row of its own under it, whole words to a line. Squeezed
         // into one row the engine's name was cut to 「Stockfish 1…」 and the rung — the one thing
-        // it is there to say — was gone (chessmirror#32). Decided by the text size and not by
+        // it is there to say — was gone. Decided by the text size and not by
         // measuring, so nothing on the row moves while a thumb is on 让引擎走.
         let ownRow = typeSize.isAccessibilitySize
         return VStack(alignment: .leading, spacing: 6) {

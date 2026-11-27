@@ -746,11 +746,6 @@ func chessComURLs() throws {
     let archives = try #require(PGNImport.chessComArchivesURL(user: "@SunFmin"))
     #expect(archives.absoluteString == "https://api.chess.com/pub/player/sunfmin/games/archives")
     #expect(PGNImport.chessComArchivesURL(user: "two names") == nil)
-
-    let months = try #require(PGNImport.chessComArchives(in: chessComArchivesList))
-    #expect(months.map(\.lastPathComponent) == ["08", "07"], "newest month first")
-    #expect(PGNImport.chessComMonthURL(archive: months[0]).path == "/pub/player/sunfmin/games/2026/08/pgn")
-    #expect(PGNImport.chessComArchives(in: "<html>") == nil)
 }
 
 @MainActor

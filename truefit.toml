@@ -49,15 +49,16 @@ check = ["test"]
 
 [[promise]]
 name = "a-drop-is-never-positive"
-says = "Never positive: the best move costs nothing, and every other move costs something."
-source = "GLOSSARY.md:21"
+says = "How much 胜率 a move gave away against the best move there; never positive."
+source = "GLOSSARY.md:16"
 kept = "no test found holding a 掉幅 to never above zero"
 
+# held by: RecordReadingTests "最佳 is the engine's own choice, not a nought, and it wins over a point of noise", BestMoveTests "a ruling that lets the engine's own choice stand writes 最佳 on the move"
 [[promise]]
 name = "best-is-the-searchs-first-line"
-says = "A fact about which move it was, read off that search, never a 掉幅 that rounded to zero — two equally good moves are both 0.0%, and only one of them is 最佳."
-source = "GLOSSARY.md:26"
-kept = "no test found that holds 最佳 to the first line against a tie at 0.0%"
+says = "The engine's own first choice, by the search that judged the move; never a 掉幅 that rounded to zero."
+source = "GLOSSARY.md:19"
+check = ["test"]
 
 # held by: StandingTests.theCurveReadsTheJudgementBeforeTheReview
 [[promise]]
@@ -69,15 +70,15 @@ check = ["test"]
 # held by: StrengthTests.judgementsAreAtFullStrengthWhateverTheRung
 [[promise]]
 name = "strength-never-shapes-what-a-move-costs"
-says = "The only dial 把关 has on the judgement of a move — the engine's 棋力 shapes the opponent it plays, never what a move costs."
-source = "GLOSSARY.md:103"
+says = "It shapes the opponent, never the judge (docs/adr/0038)."
+source = "GLOSSARY.md:150"
 check = ["test"]
 
 # held by: JudgementTests "the 入列线 never sits below the 记录线, however the pair is made"
 [[promise]]
 name = "queue-line-never-below-record-line"
-says = "Never below the 记录线, and raised above it by a player who wants a wide book and a narrow queue: a mistake can be worth remembering without being worth drilling."
-source = "GLOSSARY.md:112"
+says = "The 掉幅 at which a 错题 enters the 日课; never below the 记录线 (`Enrolment`)."
+source = "GLOSSARY.md:77"
 check = ["test"]
 why = "two settings and the clamp between them; nothing runs at once or out of order"
 
@@ -96,15 +97,15 @@ check = ["test"]
 
 [[promise]]
 name = "own-collections-are-never-scheduled"
-says = "They are never scheduled — practising one is 计划外练习 — because what a player picks to repeat, FSRS would read as what they know best (docs/adr/0032). _Avoid_: 文件夹, 分组"
-source = "GLOSSARY.md:173"
+says = "A 收藏集 the player names and fills by hand; never scheduled."
+source = "GLOSSARY.md:111"
 kept = "no test found holding that a 自建集 position is never scheduled"
 
 # held by: CollectionsTests "喜爱 is always there and cannot be renamed or deleted; other sets can"
 [[promise]]
 name = "favourites-always-there"
-says = "喜爱 (Favourites)**: The 自建集 that is always there, cannot be renamed or deleted, and is where the heart puts a position unless the player picks another."
-source = "GLOSSARY.md:178"
+says = "The 自建集 that is always there, where the heart puts a position."
+source = "GLOSSARY.md:114"
 check = ["test"]
 
 # held by: GameOffersTests "the 把关 switch always moves"
@@ -138,15 +139,15 @@ check = ["test"]
 # held by: NoSlipsTests.aRefusalWaitingAtTheEndZeroesTheRun, NoSlipsTests.switchingNoSlipsOffPausesTheRunRatherThanResettingIt
 [[promise]]
 name = "only-a-tried-move-ends-a-run"
-says = "Only a 试招 ends a run; switching 把关 off pauses it."
-source = "GLOSSARY.md:260"
+says = "An unbroken run of the player's moves that stood; only a 试招 ends it."
+source = "GLOSSARY.md:160"
 check = ["test"]
 
 # held by: ImportReviewTests.realImportedScoresCannotHideLocalMistakes, ReviewProvenanceTests "an imported game's Scores are kept as somebody else's, and judged by nothing"
 [[promise]]
 name = "only-the-judge-names-a-mistake"
-says = "**The only thing allowed to call something a 错题.**"
-source = "GLOSSARY.md:296"
+says = "The app's own engine deciding what a move cost: the only thing that may call something a 错题."
+source = "GLOSSARY.md:182"
 check = ["test"]
 
 # held by: SearchLimitTests "the standard budget is ten seconds or depth twenty, and 复判 is depth 28 within a minute"
@@ -514,7 +515,7 @@ check = ["test"]
 # held by: ScreenImageTests "a screen that never settles fails, saying what it last said", "a screen drawn with the accessibility switch off fails rather than passes", "a screen that says nothing fails rather than passes"
 [[promise]]
 name = "a-screen-test-fails-unsettled-unheard-or-silent"
-says = "It waits, at most 2 s, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own), with animations off; it fails a test whose screen never settles, that it cannot hear (the accessibility switch missing or off), or that says nothing."
+says = "It waits, at most `ScreenImage.settleLimit`, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own), with animations off; it fails a test whose screen never settles, that it cannot hear (the accessibility switch missing or off), or that says nothing."
 source = "README.md:133"
 check = ["test"]
 
@@ -579,3 +580,77 @@ name = "a-game-through-an-accounts-door-records-its-side"
 says = "Through a player's door every game that comes down is that account's game, so a row is told from their side — a swatch for the colour they had, the opponent, 胜 / 负 / 和, when — and opening it records their side without the 「记录哪一方的错题？」"
 source = "docs/adr/0045-the-import-sheet-has-a-door-per-site-and-remembers-who-came-through.md:33"
 check = ["test"]
+
+# The glossary's restatements of promises the ADRs make: each is held by the
+# same tests as the ADR's, named beside it.
+
+# held by: MistakeBookTests "recurrence jumps the queue, whatever any single occasion cost", DailyTests "recurrence jumps the queue whatever any one go cost" (as recurrence-alone-jumps-the-queue)
+[[promise]]
+name = "recurrence-alone-jumps-the-queue-glossary"
+says = "the strongest signal, and the only one allowed to jump the queue."
+source = "GLOSSARY.md:63"
+check = ["test"]
+why = "the enrolment order is a pure function of the files and the log, read when asked; nothing runs at once or in an order the app does not choose"
+
+# held by: NoSlipsSessionTests.noSlipsIsASwitchThatReadsTheRecordLine
+[[promise]]
+name = "the-record-line-is-no-slips-only-dial"
+says = "The 掉幅 at which a move is written down, and at which 把关 takes it back: 把关's only dial (docs/adr/0046)."
+source = "GLOSSARY.md:71"
+check = ["test"]
+
+# held by: DrillTests "a 练习 arrives under 把关, and the switch takes it out" (as a-drill-arrives-under-no-slips)
+[[promise]]
+name = "practice-is-played-under-no-slips"
+says = "played under 把关 (docs/adr/0047)."
+source = "GLOSSARY.md:82"
+check = ["test"]
+
+# held by: DailyTests "a long run of right answers reads as 掌握, and is not a state anybody stored", DailyTests "掌握 is read off one card, with no day around it and no second FSRS"
+[[promise]]
+name = "mastered-is-a-reading-never-a-state"
+says = "A 错题 whose next practice is far off: a reading, never a state anyone sets."
+source = "GLOSSARY.md:89"
+check = ["test"]
+
+# held by: DrillTests "the log holds nothing a scheduler would have to be migrated out of" (as scheduler-output-never-written)
+[[promise]]
+name = "practice-log-never-records-what-is-due"
+says = "What the player actually did, never what is due (docs/adr/0029)."
+source = "GLOSSARY.md:95"
+check = ["test"]
+
+# held by: NoSlipsSessionTests.noSlipsRejectsMateAndPreservesTheRetry ("the rejected move must restore the entire game", the 试招 kept on its ply), MistakeBookTests "a refusal at the position a game stops on is a 遭遇"
+[[promise]]
+name = "a-tried-move-never-enters-the-game"
+says = "It never happened in the game; the 错题 is made of it."
+source = "GLOSSARY.md:132"
+check = ["test"]
+
+# held by: VariationTests "a new line from an earlier ply is a 树枝; the line it was played over stays the 树干", VariationTests "the 树干 stays the 树干 through the file, whichever line is on the board"
+[[promise]]
+name = "a-game-has-one-trunk"
+says = "a game has one 树干, and every other line is a 树枝 (docs/adr/0043)."
+source = "GLOSSARY.md:136"
+check = ["test"]
+
+# held by: ImportReviewTests.realImportedScoresCannotHideLocalMistakes, ImportReviewTests.importScoresPrioritizeButNeverExcludeLocalJudgements
+[[promise]]
+name = "a-sift-never-decides-a-mistake"
+says = "Using an imported game's own evaluations to pick the moves worth judging; never decides a 错题."
+source = "GLOSSARY.md:179"
+check = ["test"]
+
+[[promise]]
+name = "the-release-never-asks-the-keychain"
+says = "The keychain is never asked, so a Mac with no code-signing identity (macnomac-studio) builds the release, and the personal Mac's development certificate, whose private key lives on that Mac only, is never revoked to make one."
+source = "docs/adr/0055-the-release-signs-in-with-the-api-key-alone.md:9"
+kept = "only a release, App/appstore.sh against App Store Connect with the real key, shows it; the gate runs no release"
+kept_forever = true
+
+[[promise]]
+name = "the-app-never-reads-the-location"
+says = "`sharedLocation`: the app never reads the location, let alone shares it."
+source = "docs/adr/0056-the-age-rating-answers-every-question-no.md:15"
+kept = "no test found holding that no source imports CoreLocation and App/project.yml asks for no location usage string"
+kept_until = "2026-12-11"
