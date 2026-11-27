@@ -343,46 +343,13 @@ public enum PGNImport {
         return formatter
     }()
 
-    /// Whether a chess.com monthly archive — `…/games/2026/09` — holds any day on or after
-    /// `since`. An archive URL that does not end in a year and month is kept: better one request
-    /// too many than a month of games skipped.
-    public static func chessComMonth(_ archive: URL, reaches since: Date) -> Bool {
-        let parts = archive.pathComponents
-        guard parts.count >= 2, let year = Int(parts[parts.count - 2]),
-            let month = Int(parts[parts.count - 1])
-        else { return true }
-        var utc = Calendar(identifier: .gregorian)
-        utc.timeZone = TimeZone(identifier: "UTC")!
-        let reached = utc.dateComponents([.year, .month], from: since)
-        return (year, month) >= (reached.year ?? 0, reached.month ?? 0)
-    }
-
     /// The list of a chess.com player's monthly archives — nil for anything that is not a
     /// username. chess.com hands games over a month at a time, so "the last few" is a walk
-    /// back from the newest month (`ImportSession.recent`), and this is where the walk starts.
+    /// back from the newest month (`FetchPlan.recentChessCom`), and this is where the walk starts.
     public static func chessComArchivesURL(user: String) -> URL? {
         guard let name = username(user, on: .chessCom) else { return nil }
         return URL(string: "https://api.chess.com/pub/player/\(name.lowercased())/games/archives")
     }
-
-    /// The PGN of one monthly archive, given the archive's own URL from the list.
-    public static func chessComMonthURL(archive: URL) -> URL {
-        archive.appending(path: "pgn")
-    }
-
-    /// The archive URLs in the list chess.com answers with, newest first — nil when what came
-    /// down is not that list.
-    public static func chessComArchives(in text: String) -> [URL]? {
-        guard let data = text.data(using: .utf8),
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let archives = object["archives"] as? [String]
-        else { return nil }
-        return archives.compactMap { URL(string: $0) }.reversed()
-    }
-
-    /// How many months back a chess.com import looks. A player who has not played in three
-    /// months has no recent games in any sense worth a fourth request.
-    public static let chessComMonthsBack = 3
 
     /// The name as the site would accept it — nil when what was typed is not a username there.
     ///
