@@ -7,54 +7,16 @@ through your own iCloud Drive.
 
 ## Features
 
-- Camera, photo library, screenshots, image files, FEN, and shared board intake.
-- Confirm and correct pieces, side to move, and castling rights before playing.
-- Per-game controllers and engine 棋力. Mate and tactics findings appear only when
-  available; tap a row to expand its answer. On a phone the board keeps the full screen width;
-  on a wide iPad window (landscape, Split View, Stage Manager) the record and cards stand beside it.
-- **错题本:** one position across many games, with encounter history and manual dismissal. A game
-  contributes both the moves it recorded and the refusals 耕棋 took back — including the ones no
-  move ever absorbed, which is how a session that ends on a refused move gets written down. Rows
-  are named by a 96pt board, and an encounter opens the game at its position.
-- **日课:** FSRS due dates derived from practice facts, ARTS daily ordering, and ten new positions
-  per day by default. Unscheduled practice does not change due dates.
-- Practice uses the game screen's full-width board, side settings, advantage bar, history and
-  explicit multi-move findings. The first move is judged at depth 20 and logged once; play on in
-  the same game, exit, or take the next question, without a separate Continue button. The verdict
-  is one row: 过了 or 没过 in the colour it means, the explanation only when the move failed, and
-  one full-width button — 下一题, or 退出 at the end of the queue.
-- The two standing lines, 记录线 and 入列线, each move alone in 关于 → 判决线; their
-  defaults are ADR 0027's.
-- **把关 / No Slips:** an on/off switch with no number of its own — it stops the player at the
-  记录线, so a move it refuses is exactly a move that would have been written down.
-  The board's No Slips label toggles interception directly.
-  Feedback remains visible while off; answers are explicit multi-move reveals, never a single
-  recommendation arrow or a separate practice/analysis eye switch.
-  Refused moves return to their original position and become PGN comments on the eventual move.
-  Every live human move waits for the resulting position's evaluation before the opponent starts.
-  Each position is searched once, to the bounds ADR 0039 sets.
-  Judgement, advantage, tactics and opponent replies share the result; device caches survive relaunch.
-  Turning interception off disables rollback, not this assessment gate. Search uses at most two
-  threads by default, and opening the game never launches an automatic historical scoring pass.
-- A game lists its own 错题 — one entry per position, described by a small board with the move
-  number and the cost captioned under it, marked across the foot of that position on the record
-  strip in two weights (written down, and still owed), and reached by pressing the tile — the board
-  itself included — or by 下一处. Under the positions, the 试招 tried where
-  the eye is standing, and then the opponent-reply exercise when it is on: one full-width row, the
-  record row's twin, and nothing rounded. The library row says how many a game holds.
-- The advantage bar remains visible. Refused attempts appear as a compact horizontal strip
-  for the current move, with SAN and percentage cost, instead of a whole-game cost list.
-  Pressing one shows the 应招 it earned — the opponent's answer and the few moves after it, as
-  numbered chips and numbered arrows on the board. The line was kept by the search that refused
-  the move; older files are answered from the shared bounded position search.
-  Judgements preserve their achieved depth in PGN. The history curve still includes the last move.
-- A face-to-face toolbar toggle rotates the top player's pieces for over-the-board play on a phone.
-- An optional opponent-reply exercise on a temporary board, asked for inside the game's 错题 row. Replies within two percentage
-  points of the shared bounded evaluation pass; retry, Reveal, and Skip leave the real game intact.
-- Import a selected game and score every move locally at depth 16, asynchronously. Imported
-  evaluations prioritize suspected mistakes but never exclude moves from the local pass.
-  Choose which side to track when opening an imported game; original player names are preserved.
-- Simplified Chinese, English, French, Japanese, Korean, German, Spanish, and Portuguese.
+- Board intake from the camera, photos, screenshots, files, FEN and the share sheet; confirm the
+  position before playing.
+- Play against Stockfish with per-game controllers and strength; **把关 / No Slips** takes back a
+  move that crosses the 记录线.
+- **错题本:** each wrong position once, across every game it occurred in.
+- **日课:** daily practice of those positions, scheduled by FSRS.
+- Import games from the web and review every move on the device.
+- Eight languages.
+
+What each does and why is in [docs/adr/](docs/adr/); the words are in [GLOSSARY.md](GLOSSARY.md).
 
 ## Repository
 
@@ -63,21 +25,21 @@ chessmirror/
 ├── Package.swift
 ├── Sources/
 │   ├── CStockfish/        # vendored engine and C bridge
-│   ├── ChessmirrorKit/       # recognition, rules, games, practice, persistence
-│   └── chessmirror-cli/      # macOS command-line entry point
+│   ├── ChessmirrorKit/    # recognition, rules, games, practice, persistence
+│   └── chessmirror-cli/   # macOS command-line entry point
 ├── Resources/Nets/        # NNUE weights, stored with Git LFS
 ├── Tests/ChessmirrorKitTests/
 ├── App/
-│   ├── Chessmirror/          # SwiftUI screens
-│   ├── project.yml       # XcodeGen project definition
-│   └── ScreenTests/      # simulator rendering and assertions
+│   ├── Chessmirror/       # SwiftUI screens
+│   ├── project.yml        # XcodeGen project definition
+│   └── ScreenTests/       # simulator rendering and assertions
 └── docs/adr/              # design decisions
 ```
 
 ## Build and test
 
-Use Apple Silicon, Xcode with Swift 6.2 or newer, and the iOS 26 SDK. The Stockfish configuration
-targets ARM and does not support Intel simulator builds. Install XcodeGen and Git LFS:
+Use Apple Silicon, Xcode with Swift 6.2 or newer, and the iOS 26 SDK. Install XcodeGen and
+Git LFS:
 
 ```bash
 brew install xcodegen git-lfs
@@ -97,94 +59,36 @@ xcodebuild -project Chessmirror.xcodeproj -scheme Chessmirror \
   -destination 'generic/platform=iOS Simulator' ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
 ```
 
-Debug recognition tests run substantially slower than release tests. Engine tests need the real
-NNUE file in `Resources/Nets` (the one sf_19 names, `EngineService.netFileName`), not a Git LFS
-pointer. Edit `App/project.yml` and regenerate
-the Xcode project when changing build settings or adding screen tests.
-Run the full suite with `scripts/test.sh`, as the gate does (`slimfit.toml`'s `test_command`):
-release, as two runs of the one test bundle. The footprint checks (`RecognitionMemoryTests`)
-run first, one at a time with nothing beside them: they measure the test process's footprint,
-so any test running in the same process would be counted in it. Everything else then runs side
-by side, which bounds the run by its longest tests rather than their sum. A footprint read in
-the side-by-side run fails the test (`Tests/ChessmirrorKitTests/Footprint.swift`), so a new
-footprint check has to join the suites the script runs alone.
+`scripts/test.sh` runs the suite as the gate does; its header says how.
 
 ## Screen snapshots
 
-The gate runs them (`gate.sh`, through `scripts/screen-tests.sh`): the project generated from
-`App/project.yml`, then the app-hosted `ScreenTests` bundle on an iPhone 17 simulator of the
-run's own. The run creates it (on the installed iPhone 17's iOS, else the newest), names it
-`screen-tests <pid> iPhone 17` and deletes it after, whether it passed, failed or ran out of
-time. No run uses a simulator by name or shares one, because two runs on one device kill each
-other's tests. The run also keeps its own DerivedData, package checkout and result bundle under
-`.build/screen-tests/`. A failure prints the failing tests' messages from the result bundle; the
-full log stays in `.build/screen-tests/xcodebuild.log`.
-
-From the repository root, all of them, or one suite or test the same way:
+The screen tests render the real SwiftUI screens on a simulator of the run's own and write PNGs
+under `App/out/`, to look at as well as assert on. From the repository root:
 
 ```bash
 scripts/screen-tests.sh
 scripts/screen-tests.sh -only-testing:ScreenTests/GameScreenTests
-scripts/screen-tests.sh -only-testing:'ScreenTests/GameScreenTests/<test>()'
 ```
-
-Tests write PNGs under `App/out/`; these generated images are not versioned.
-`ScreenImage.write` renders real SwiftUI screens, with scripted responses at the engine boundary.
-Inspect the images as well as their accessibility assertions. It waits, at most
-`ScreenImage.settleLimit`, until the screen's words stop changing (`ScreenImage.settle(until:)` adds a condition of the test's own),
-with animations off; it fails a test whose screen never settles, that it cannot hear (the
-accessibility switch missing or off), or that says nothing. Each word comes back with its frame in
-window points (`Rendered.elements`, `frames(of:)`), beside the window's bounds and safe area.
-
-`ScreenMatrix` draws every screen once per row of the matrix the others do not vary — dark, the
-accessibility3 text size, the 375×667 pt iPhone SE, and each of the eight languages — and holds each
-to `Rendered.layoutBreaches()`: everything labelled inside the safe area (as far as its scroll view
-shows it), no two labelled things overlapping, every control at least 44×44 pt where a finger
-presses it (a control that is its list row's whole content is measured as the row; a navigation bar
-item by where hit-testing hands it a touch, which UIKit widens past the frame it reports). A breach already
-filed is a `withKnownIssue` naming its issue; any other fails.
 
 ## Command line
 
-From the repository root:
-
 ```bash
 swift run chessmirror-cli recognise board.png
-swift run chessmirror-cli recognise board.png --straight
 swift run chessmirror-cli validate '8/8/8/8/8/8/4K3/7k w - - 0 1'
-swift run chessmirror-cli perft '8/8/8/8/8/8/4K3/7k w - - 0 1' 3
 swift run chessmirror-cli analyse '8/8/8/8/8/8/4K3/7k w - - 0 1' 16
 ```
 
-Replace `board.png` with your image. `CHESSMIRROR_NETS` overrides the source-tree model path.
+`scripts/engine-speed.sh` compares two engine builds; its header has the recipe.
 
-To compare how fast two engine builds search, copy each build's `chessmirror-cli` aside and run
-`scripts/engine-speed.sh before=<one> after=<other>` (add `,--no-dotprod` to a build for the A12's
-engine); its header has the whole recipe.
-
-## Persistence and design
-
-Games are PGN files, with optional photographs alongside them. The append-only practice log is
-separate; schedules and the mistake index are derived. No Slips stores `[%tried SAN -loss%]`, an
-optional `notfound` suffix for assisted attempts, the 应招 after a bar (`[%tried Nf3 -23% | Nxe4
-Nxe4 d5]`), and `[%hint N]`. A refusal nothing has absorbed yet — the player left before finding a
-move — is written under `[%pending <plies> …]`, carrying the position it happened at and moving
-onto the move that takes it when one is played. The `Intercept` tag says
-No Slips was on, and the 记录线 it was stopping the player at. Import review stores local depth in `ReviewDepth` and ordering provenance
-in `ReviewSift`. `TrackedSide` identifies the imported side included in the personal mistake book
-without replacing the PGN's `White` and `Black` player names.
+## Design
 
 - [Confirming positions](docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md)
 - [Engine integration](docs/adr/0002-drive-stockfish-through-its-engine-class-not-uci-text.md)
 - [PGN storage](docs/adr/0010-pgn-files-are-the-storage-format.md)
-- [Eight-language tables](docs/adr/0019-the-app-speaks-eight-languages-from-tables-in-the-package.md)
 - [Win-probability judgement](docs/adr/0027-a-move-is-judged-by-the-win-probability-it-costs.md)
 - [Position identity](docs/adr/0028-a-mistake-is-a-position-and-the-games-are-its-occurrences.md)
 - [Practice facts](docs/adr/0029-the-practice-log-records-what-happened-never-what-is-due.md)
-- [Daily practice](docs/adr/0032-the-daily-is-one-queue-and-cannot-be-sharded.md)
-- [A refused move's reply](docs/adr/0034-a-refused-move-keeps-the-reply-it-earned.md)
-- [A game's own wrong moves](docs/adr/0036-a-game-lists-its-own-wrong-moves.md)
-- [A refusal nothing absorbed](docs/adr/0037-a-refusal-nothing-absorbed-is-written-where-it-happened.md)
 
 ## Licence
 

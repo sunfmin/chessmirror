@@ -20,13 +20,6 @@
   "Package.swift": {
     "local_refs": 3
   },
-  "README.md": {
-    "bytes": 11980,
-    "paragraph": 934,
-    "pointers": [
-      "App/out/"
-    ]
-  },
   "Sources/ChessmirrorKit/Controller.swift": {
     "local_refs": 1
   },
