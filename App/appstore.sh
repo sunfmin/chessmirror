@@ -32,14 +32,14 @@ fi
 # asc's flag for the same choice: say what would happen, or do it.
 if [ "$dry" = 1 ]; then commit=--dry-run; else commit=--confirm; fi
 
-# The key lives in mytokens only. Xcode, altool and asc all take it as a file, so it is one for as
+# The key lives in optokens only. Xcode, altool and asc all take it as a file, so it is one for as
 # long as this script runs.
-key_id=$(mytokens get asc-api-key --field "Key ID")
-issuer=$(mytokens get asc-api-key --field "Issuer ID")
+key_id=$(optokens get asc-api-key --field "Key ID")
+issuer=$(optokens get asc-api-key --field "Issuer ID")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 key="$work/AuthKey_$key_id.p8"
-(umask 077; mytokens get asc-api-key --field "Key (base64 .p8)" | base64 -d > "$key")
+(umask 077; optokens get asc-api-key --field "Key (base64 .p8)" | base64 -d > "$key")
 export API_PRIVATE_KEYS_DIR="$work"
 export ASC_BYPASS_KEYCHAIN=1 ASC_KEY_ID="$key_id" ASC_ISSUER_ID="$issuer" ASC_PRIVATE_KEY_PATH="$key"
 

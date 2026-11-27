@@ -1,7 +1,7 @@
 # The release signs in with the App Store Connect API key alone
 
 Building, signing, uploading, writing the store page and submitting all sign in with one App
-Store Connect API key, kept in mytokens as `asc-api-key` (Key ID, Issuer ID, the .p8 in base64),
+Store Connect API key, kept in optokens as `asc-api-key` (Key ID, Issuer ID, the .p8 in base64),
 so any Mac that has that secret can release.
 
 - **No signing identity on the Mac.** The archive is built unsigned (`CODE_SIGNING_ALLOWED=NO`)
