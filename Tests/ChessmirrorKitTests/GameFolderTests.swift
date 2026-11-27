@@ -76,6 +76,30 @@ import Testing
                 "the file saved and the file listed are one row, not two keys for one game")
     }
 
+    @Test("a kept photograph lands on disk, never over another, and never as a game")
+    func keptPhotographs() throws {
+        let directory = try directory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = GameLibrary(folder: GameFolder(url: directory))
+        let photo = RGBImage(
+            width: 8, height: 6, pixels: (0..<(8 * 6 * 3)).map { UInt8($0 % 256) }
+        )
+
+        // Kept within the same second, they share a stamp: each still gets a file of its own.
+        let urls = try (0..<3).map { _ in try #require(library.keepPhotograph(photo)) }
+        #expect(Set(urls).count == 3, "no photograph overwrites another")
+        for url in urls {
+            #expect(url.lastPathComponent.hasPrefix("chessmirror-photo-"))
+            #expect(url.pathExtension == "png")
+            let back = try #require(RGBImage(contentsOf: url), "it reads back as the picture")
+            #expect(back.width == 8 && back.height == 6)
+            #expect(back.pixels == photo.pixels)
+        }
+
+        library.reload()
+        #expect(library.entries.isEmpty, "a photograph is not a game in the list")
+    }
+
     // ---------------------------------------------------------------- connecting
 
     /// An iCloud account that can be signed into mid-test.
