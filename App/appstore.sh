@@ -123,6 +123,22 @@ page() {
   [ -e "${shots[0]}" ] || { echo "no pictures in App/out: run StoreScreenshotTests on both simulators first (.claude/skills/release-to-app-store)" >&2; exit 1; }
   vid=$(version_id)
 
+  # The age rating and the categories live on the app info, not the version, and only an app info
+  # not yet READY_FOR_DISTRIBUTION takes them. With none, every version is live and nothing on this
+  # page can be edited: a real run stops here, before it writes a thing; a dry run compares with the
+  # live app info, which is what the next version starts from.
+  local infos info editable=1
+  infos=$(asc api GET "/v1/apps/$APP_ID/appInfos")
+  info=$(jq -r '[.data[] | select(.attributes.state != "READY_FOR_DISTRIBUTION")][0].id // empty' <<<"$infos")
+  if [ -z "$info" ]; then
+    editable=0
+    [ "$dry" = 1 ] || { echo "version $version is live and its page cannot be edited: raise MARKETING_VERSION in App/project.yml first (.claude/skills/release-to-app-store)" >&2; exit 1; }
+    info=$(jq -r '[.data[] | select(.attributes.state == "READY_FOR_DISTRIBUTION")][0].id // empty' <<<"$infos")
+    [ -n "$info" ] || { echo "the store has no app info at all" >&2; exit 1; }
+  fi
+  # Said where it applies: no editable app info, so these are what the next version would change.
+  live() { [ "$editable" = 1 ] || echo "    no editable app info: compared with the live one ($info); these would apply to the next version"; }
+
   # The words are fastlane/metadata, in deliver's layout, which asc reads as it is. The reviewer's
   # contact is the `chessmirror` profile's when it is loaded (a phone number being no thing to
   # commit); without it the version keeps the contact it has.
@@ -167,11 +183,11 @@ page() {
       | show '[.localizations[] | {locale, set: .setId, files: ([.results[].state] | group_by(.) | map({(.[0]): length}) | add)}]'
   done
 
-  # The age rating is the editable appInfo's ageRatingDeclaration, not the version's. Its keys go
+  # The age rating is the appInfo's ageRatingDeclaration (picked above), not the version's. Its keys go
   # as they are in fastlane/age-rating.json (docs/adr/0056 says why each is there).
   echo "==> age rating"
-  local info rating
-  info=$(asc api GET "/v1/apps/$APP_ID/appInfos" | jq -r '[.data[] | select(.attributes.state != "READY_FOR_DISTRIBUTION")][0].id')
+  live
+  local rating
   asc api GET "/v1/appInfos/$info/ageRatingDeclaration" > "$work/rating.json"
   rating=$(jq -r '.data.id' "$work/rating.json")
   if [ "$dry" = 1 ]; then
@@ -185,6 +201,7 @@ page() {
   fi
 
   echo "==> categories"
+  live
   local m="$fastlane/metadata"
   mkdir "$work/categories"
   jq -n --arg p "$(cat "$m/primary_category.txt")" --arg p1 "$(cat "$m/primary_first_sub_category.txt")" \
