@@ -32,7 +32,9 @@ done
 ```
 
 For a new version, raise `MARKETING_VERSION` in `App/project.yml` (both targets) first and add
-`fastlane/metadata/<language>/release_notes.txt`.
+`fastlane/metadata/<language>/release_notes.txt`. While every version is live, `page` refuses to
+run (the page of a live version cannot be edited) and `page --dry-run` compares the age rating and
+categories with the live app info, as what the next version would change.
 
 The App Privacy answers are not in these steps: they stay on the record from one version to the
 next. Run `(eval "$(mytokens env calcgrid)"; fastlane privacy)` only when
