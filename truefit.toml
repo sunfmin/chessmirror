@@ -654,3 +654,11 @@ says = "`sharedLocation`: the app never reads the location, let alone shares it.
 source = "docs/adr/0056-the-age-rating-answers-every-question-no.md:15"
 kept = "no test found holding that no source imports CoreLocation and App/project.yml asks for no location usage string"
 kept_until = "2026-12-11"
+
+# held by: MistakeBookTests "the same position blundered in two games is one 错题 with two 遭遇", "the same position reached by a different move order merges"
+[[promise]]
+name = "a-wrong-position-is-one-mistake-across-games"
+says = "**错题本:** each wrong position once, across every game it occurred in."
+source = "README.md:14"
+check = ["test"]
+why = "the book is derived from the saved games as a pure function when asked; nothing runs at once or in an order the app does not choose"
