@@ -70,6 +70,37 @@ import Testing
         #expect(many == 10)
     }
 
+    /// A player's recent games are one plan, whichever asks — the 门 or 自动拉局 — and the count
+    /// is clamped there, once, for both sites alike: a slip is the nearest count that works.
+    @Test func aPlayersRecentGamesAreOnePlanWhoeverAsks() throws {
+        let since = Date(timeIntervalSince1970: 1_790_000_000)
+        #expect(
+            FetchPlan.recent(of: "@sunfmin", on: .lichess, count: 20, since: since)
+                == .recentLichess(
+                    try #require(PGNImport.recentGamesURL(user: "sunfmin", count: 20, since: since))
+                )
+        )
+        let archives = try #require(PGNImport.chessComArchivesURL(user: "sunfmin"))
+        #expect(
+            FetchPlan.recent(of: "sunfmin", on: .chessCom, count: 9_999, since: since)
+                == .recentChessCom(archives: archives, many: PGNImport.maxRecentGames, since: since)
+        )
+        #expect(
+            FetchPlan.recent(of: "sunfmin", on: .lichess, count: 9_999)
+                == .recentLichess(
+                    try #require(
+                        PGNImport.recentGamesURL(user: "sunfmin", count: PGNImport.maxRecentGames)
+                    )
+                )
+        )
+        #expect(
+            FetchPlan.recent(of: "sunfmin", on: .chessCom, count: 0)
+                == .recentChessCom(archives: archives, many: 1)
+        )
+        #expect(FetchPlan.recent(of: "two names", on: .lichess, count: 5) == nil)
+        #expect(FetchPlan.recent(of: "sunfmin", on: .chessease, count: 5) == nil, "no players there")
+    }
+
     // ------------------------------------------------------------------ the failures name themselves
 
     /// A chess.com archives list that will not parse is the site handing back something we

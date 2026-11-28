@@ -84,20 +84,9 @@ import Foundation
     ) async -> Result<Int, PGNImport.Error> {
         let since = memory.reached(name, on: site)
         let many = since == nil ? memory.count : Self.cap
-        let plan: FetchPlan
-        switch site {
-        case .lichess:
-            guard let url = PGNImport.recentGamesURL(user: name, count: many, since: since) else {
-                return .failure(.notAPlayer(site))
-            }
-            plan = .recentLichess(url)
-        case .chessCom:
-            guard let archives = PGNImport.chessComArchivesURL(user: name) else {
-                return .failure(.notAPlayer(site))
-            }
-            plan = .recentChessCom(archives: archives, many: many, since: since)
-        case .chessease:
-            return .success(0)
+        guard site != .chessease else { return .success(0) }
+        guard let plan = FetchPlan.recent(of: name, on: site, count: many, since: since) else {
+            return .failure(.notAPlayer(site))
         }
         let fetching = fetcher
         let text: String

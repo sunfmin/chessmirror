@@ -30,39 +30,44 @@ public enum FetchPlan: Equatable, Sendable {
     case recentChessCom(archives: URL, many: Int, since: Date? = nil)
 }
 
-extension PGNImport.Site {
-    /// How this site's door turns typed input into a plan. Nil when the input is not this door's
-    /// — the wrong kind of thing typed into the wrong field.
+extension FetchPlan {
+    /// A player's recent games on a site — the one plan the 门 and 自动拉局 both ask for — nil
+    /// when what was typed is not a username there, or the site has no players to ask about.
     ///
-    /// `asked` is the name as typed, which is what a failure about a person names — not as the
-    /// URL spelt them (chess.com lowercases its URLs), so the message shows the reader their own
-    /// spelling, which is the thing they are about to check.
-    public func fetchPlan(
-        for input: String, count: Int, asked: String? = nil
-    ) -> Result<FetchPlan, PGNImport.Error> {
-        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch self {
+    /// The count is clamped here, once, for both sites alike: a number nobody would type on
+    /// purpose is a slip, and the useful answer to a slip is the nearest thing that works. With
+    /// `since`, only the games begun after it, which is where 自动拉局 carries on from.
+    public static func recent(
+        of name: String, on site: PGNImport.Site, count: Int, since: Date? = nil
+    ) -> FetchPlan? {
+        let many = min(max(count, 1), PGNImport.maxRecentGames)
+        switch site {
         case .lichess:
-            if let url = PGNImport.recentGamesURL(user: typed, count: count) {
-                return .success(.recentLichess(url))
-            }
-            // Not a username: maybe a link.
-            guard let candidates = PGNImport.candidateURLs(for: typed) else {
-                return .failure(.notAPlayer(.lichess))
-            }
-            return .success(.links(candidates))
+            return PGNImport.recentGamesURL(user: name, count: many, since: since)
+                .map { .recentLichess($0) }
         case .chessCom:
-            if let archives = PGNImport.chessComArchivesURL(user: typed) {
-                let many = min(max(count, 1), PGNImport.maxRecentGames)
-                return .success(.recentChessCom(archives: archives, many: many))
-            }
-            guard let candidates = PGNImport.candidateURLs(for: typed) else {
-                return .failure(.notAPlayer(.chessCom))
-            }
-            return .success(.links(candidates))
+            return PGNImport.chessComArchivesURL(user: name)
+                .map { .recentChessCom(archives: $0, many: many, since: since) }
         case .chessease:
-            return Self.chesseasePlan(typed)
+            return nil
         }
+    }
+}
+
+extension PGNImport.Site {
+    /// How this site's door turns typed input into a plan: a username is the player's recent
+    /// games (`FetchPlan.recent`), and anything else may still be a link. A failure when it is
+    /// neither — the wrong kind of thing typed into the wrong field.
+    public func fetchPlan(for input: String, count: Int) -> Result<FetchPlan, PGNImport.Error> {
+        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if self == .chessease { return Self.chesseasePlan(typed) }
+        if let recent = FetchPlan.recent(of: typed, on: self, count: count) {
+            return .success(recent)
+        }
+        guard let candidates = PGNImport.candidateURLs(for: typed) else {
+            return .failure(.notAPlayer(self))
+        }
+        return .success(.links(candidates))
     }
 
     /// A 国象联盟 share link's plan: the game is in the fragment, or the link is cut short.
