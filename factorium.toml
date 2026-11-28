@@ -27,7 +27,10 @@ fast = "./gate.sh"
 fast_limit = 900
 slow = "./gate.sh"
 slow_limit = 900
-regenerated = [".docfit/baseline.json"]
+# Records only their own tool writes, never a landing by hand: docfit's, and slimfit's, which only
+# `slimfit ratchet` writes (the gate's `slimfit check` only reads it). A landing that conflicts
+# only there takes proving's copy and lands as its gate left it (factorium SPEC §1.12).
+regenerated = [".docfit/baseline.json", ".slimfit/baseline.json"]
 
 # Idle work (factorium SPEC §1.16): slimfit's tasks, then truefit's (truefit.toml), then docfit's
 # (docfit.toml), filed as issues while the host is idle. The version lines come first, as on
