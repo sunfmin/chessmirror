@@ -17,10 +17,6 @@
   "Package.swift": {
     "local_refs": 3
   },
-  "README.md": {
-    "bytes": 11980,
-    "paragraph": 934
-  },
   "Sources/ChessmirrorKit/Controller.swift": {
     "local_refs": 1
   },
@@ -61,9 +57,6 @@
     "pointers": [
       "ADR-0005"
     ]
-  },
-  "docs/adr/0008-a-confirm-position-gate-stands-between-recognition-and-game.md": {
-    "paragraph": 866
   },
   "docs/adr/0009-one-engine-unbounded-analysis-mirrored-opponent-time.md": {
     "bytes": 5486,

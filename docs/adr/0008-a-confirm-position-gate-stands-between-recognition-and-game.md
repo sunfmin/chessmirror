@@ -25,15 +25,14 @@ The screen exists because the failures it catches are the ones nothing else can:
 ## Consequences
 
 - Legality has to be implemented here, not borrowed. Stockfish 18's `Position::set`
-  validated **nothing** (sf_19's validates and ends the process on a refusal, which is no
-  better in an app; ADR-0053 says how the validator stands in front of it): its asserts compile out under `NDEBUG`, `square<KING>()` is
-  undefined without exactly one king, and the castling parser hunts the home rank for a
-  rook with `for (rsq = …SQ_H1; piece_on(rsq) != rook; --rsq) {}` — a loop with no lower
-  bound that reads off the board when the FEN claims a right no rook can support. A user
-  editing squares on this screen can produce exactly that. So the gate owns a validator
-  that runs before Stockfish is handed anything, and it is a safety mechanism as much as
-  a UX one. (sf_19 has a `PositionSetError` for this; the validator still answers first, with a
-  reason this screen can point at.)
+  validated **nothing**: its asserts compile out under `NDEBUG`, `square<KING>()` is
+  undefined without exactly one king, and its castling parser reads off the board when the
+  FEN claims a right no rook can support. A user editing squares on this screen can produce
+  exactly that.
+- So the gate owns a validator that runs before Stockfish is handed anything, a safety
+  mechanism as much as a UX one. sf_19's `PositionSetError` refuses such a FEN too, but by
+  ending the process in an app (ADR-0053); the validator still answers first, with a reason
+  this screen can point at.
 - Owning the validator turns out to be the better design anyway: it reports a structured
   issue with the squares to highlight — "black has two kings, here and here" — where a
   string from the engine could only be printed.
