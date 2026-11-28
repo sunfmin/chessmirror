@@ -1,7 +1,4 @@
 {
-  "App/Chessmirror/ImportSheet.swift": {
-    "local_refs": 1
-  },
   "App/Chessmirror/Palette.swift": {
     "local_refs": 1
   },
@@ -16,10 +13,6 @@
   },
   "Package.swift": {
     "local_refs": 3
-  },
-  "README.md": {
-    "bytes": 11980,
-    "paragraph": 934
   },
   "Sources/ChessmirrorKit/Controller.swift": {
     "local_refs": 1
