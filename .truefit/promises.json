@@ -148,6 +148,11 @@
     "sentence": "return* a `PositionSetError`; the bridge checks every one of them, and a refusal means no search and a failed Rules Query, never a half-set position.",
     "source": "docs/adr/0053-the-engine-is-stockfish-19.md:35"
   },
+  "159a977cb34d": {
+    "mark": "not",
+    "sentence": "Import games from the web and review every move on the device.",
+    "source": "README.md:16"
+  },
   "15a56cbf30fc": {
     "mark": "not",
     "sentence": "A mandatory screen shows the recognised Position beside the source image, highlights Shaky Squares, lets any square be edited, lets the Orientation be flipped, and exposes every Unknowable Field — side to move, castling rights, en passant square, halfmove clock.",
@@ -1118,6 +1123,11 @@
     "sentence": "**Taller than wide, or narrower than two columns** (every phone, a portrait iPad, a third or half of Split View): one column, as before.",
     "source": "docs/adr/0050-a-wide-window-puts-the-game-beside-the-board.md:16",
     "why": "a description, the history of a decision, its rationale, or a fact about another system: nothing a run of chessmirror could break"
+  },
+  "98cf8bf080fc": {
+    "mark": "promise",
+    "sentence": "**错题本:** each wrong position once, across every game it occurred in.",
+    "source": "README.md:14"
   },
   "99c465bd96a3": {
     "mark": "not",

@@ -118,7 +118,7 @@ struct ImportSheet: View {
     ///
     /// Whole chips to a row: one row at the reader's usual size, two at an accessibility size. In
     /// an `HStack` the four were squeezed into a row that could not hold them, and each name broke
-    /// inside itself — 「liche / ss」, 「国象 / 联盟」 (chessmirror#32).
+    /// inside itself — 「liche / ss」, 「国象 / 联盟」.
     private var doorChips: some View {
         Wrapping(spacing: 8, lineSpacing: 8) {
             ForEach(Door.allCases, id: \.self) { candidate in
