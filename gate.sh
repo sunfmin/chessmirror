@@ -22,6 +22,10 @@ docfit check
 # process; the rest side by side), measured against .slimfit/baseline.json.
 slimfit check
 
+# Each stand-in answers every case of its contract (truefit.toml); none yet: chessmirror drives
+# no program from a command line (see truefit.toml), so this holds the first one declared.
+truefit contract >/dev/null || truefit contract
+
 # The armv8 engine is what an A12 runs: no dotprod instruction may reach it (docs/adr/0052).
 scripts/dotprod-confined.sh \
     "$(swift build -c release --show-bin-path)/ChessmirrorKitTests.xctest/Contents/MacOS/ChessmirrorKitTests"
