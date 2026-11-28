@@ -193,6 +193,54 @@ func positionsLiveInSeveralSetsOnDisk() throws {
     #expect(library.entries.isEmpty)
 }
 
+@MainActor
+@Test("a set read for a screen carries the game each position came from, and whose move it was")
+func aSetReadsWithItsGames() throws {
+    let folder = temporaryFolder()
+    let library = GameLibrary(folder: folder)
+    // White played by hand, Black by someone else, on a day the file names.
+    let game = try #require(Game(startFEN: PGN.standardStartFEN, uciMoves: ["e2e4", "e7e5"]))
+    let pgn = PGN(
+        game: game,
+        tags: [
+            PGN.Tag("White", Controller.hand.playerName), PGN.Tag("Black", "Somebody"),
+            PGN.Tag("Date", "2026.03.04"),
+        ]
+    )
+    let url = library.directory.appending(path: "chessmirror-played.pgn")
+    #expect(library.write(pgn, to: url))
+    let played = try #require(PGN.playedDay("2026.03.04"))
+
+    let shelf = CollectionShelf(folder: folder)
+    let mine = try #require(PositionKey(fen: PGN.standardStartFEN))
+    let theirs = PositionKey("8/8/8/8/8/8/8/K6k b - -")
+    let gone = PositionKey("7k/8/8/8/8/8/8/K7 w - -")
+    let loose = PositionKey("6k1/8/8/8/8/8/8/K7 w - -")
+    let set = PlayerCollection.favouritesName
+    #expect(shelf.add(mine, to: set, game: url, ply: 0, now: now))
+    #expect(shelf.add(theirs, to: set, game: url, ply: 1, now: now + 1))
+    #expect(shelf.add(gone, to: set, game: folder.url.appending(path: "gone.pgn"), ply: 2, now: now + 2))
+    #expect(shelf.add(loose, to: set, game: url, now: now + 3))
+
+    #expect(shelf.positionCollection(named: "无此集", in: library) == nil)
+    let read = try #require(shelf.positionCollection(named: set, in: library))
+    #expect(read.kind == .player(set))
+    #expect(read.holdings.map(\.position) == [loose, gone, theirs, mine], "newest first")
+    #expect(read[gone]?.added == now + 2, "when it was kept")
+
+    let first = try #require(read[mine]?.sightings.first)
+    #expect(first.game == url.resolvingSymlinksInPath())
+    #expect(first.ply == 0)
+    #expect(first.when == played, "when the game was played, not when it was kept")
+    #expect(first.isYours == true, "White to move, and White was the player's hand")
+    #expect(read[theirs]?.sightings.first?.isYours == false, "Black to move: not theirs")
+
+    let missing = try #require(read[gone]?.sightings.first)
+    #expect(missing.when == now + 2, "a game the library no longer has: when it was kept")
+    #expect(missing.isYours == nil, "and nobody can say whose move it was")
+    #expect(read[loose]?.sightings.isEmpty == true, "no Ply, no place in the game to go back to")
+}
+
 // ------------------------------------------------------------------- 日课
 
 private func holding(_ n: Int, added: Date = now) -> Holding {
