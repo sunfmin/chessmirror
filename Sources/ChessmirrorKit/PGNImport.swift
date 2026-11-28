@@ -309,17 +309,13 @@ public enum PGNImport {
     }
 
     /// A player's recent games on lichess, most recent first — nil for anything that is not a
-    /// username.
-    ///
-    /// The count is clamped rather than refused: a number nobody would type on purpose is a
-    /// slip, and the useful answer to a slip is the nearest thing that works.
+    /// username. `count` is taken as given: `FetchPlan.recent` is where a slip is clamped.
     ///
     /// With `since`, only the games begun after it — what 自动拉局 carries on from. lichess counts
     /// `since` in milliseconds and includes a game begun on it, so the ask starts a second later.
     public static func recentGamesURL(user: String, count: Int, since: Date? = nil) -> URL? {
         guard let name = username(user, on: .lichess) else { return nil }
-        let many = min(max(count, 1), maxRecentGames)
-        var query = "max=\(many)&evals=true&clocks=false&sort=dateDesc"
+        var query = "max=\(count)&evals=true&clocks=false&sort=dateDesc"
         if let since {
             query += "&since=\(Int64((since.timeIntervalSince1970 + 1) * 1000))"
         }

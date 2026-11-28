@@ -572,7 +572,7 @@ func importedEvalsAreNotOurs() throws {
     #expect(pgn.game.quality(atPly: 1) == nil, "so no move in it can be called a mistake")
 }
 
-@Test("a username and a count make one URL, and a slip is clamped rather than refused")
+@Test("a username and a count make one URL (the clamp is FetchPlan.recent's)")
 func recentGamesURL() throws {
     let ten = try #require(PGNImport.recentGamesURL(user: "sunfmin", count: 10))
     #expect(ten.absoluteString.hasPrefix("https://lichess.org/api/games/user/sunfmin?max=10"))
@@ -582,11 +582,6 @@ func recentGamesURL() throws {
         PGNImport.recentGamesURL(user: "@sunfmin", count: 5)?.path == "/api/games/user/sunfmin",
         "the @ people type in front of a handle is not part of it"
     )
-    #expect(
-        PGNImport.recentGamesURL(user: "sunfmin", count: 9_999)?.query?
-            .contains("max=\(PGNImport.maxRecentGames)") == true
-    )
-    #expect(PGNImport.recentGamesURL(user: "sunfmin", count: 0)?.query?.contains("max=1") == true)
 
     for notAName in ["", "  ", "two names", "https://lichess.org/@/sunfmin", "a/b"] {
         #expect(PGNImport.recentGamesURL(user: notAName, count: 5) == nil, "\(notAName)")
